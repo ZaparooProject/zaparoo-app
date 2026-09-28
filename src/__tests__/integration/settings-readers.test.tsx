@@ -586,7 +586,7 @@ describe("Settings Readers Integration", () => {
       expect(screen.getByText(/loading/i)).toBeInTheDocument();
     });
 
-    it("should show no readers detected when disconnected", () => {
+    it("should show the not-connected state instead of no readers when disconnected", () => {
       useStatusStore.setState({
         connected: false,
         connectionState: ConnectionState.DISCONNECTED,
@@ -594,9 +594,10 @@ describe("Settings Readers Integration", () => {
 
       renderComponent();
 
+      expect(screen.getByText("settings.notConnected")).toBeInTheDocument();
       expect(
-        screen.getByText(/settings.readers.noReadersDetected/i),
-      ).toBeInTheDocument();
+        screen.queryByText("settings.readers.noReadersDetected"),
+      ).not.toBeInTheDocument();
     });
 
     it("should disable scan mode buttons when disconnected", () => {

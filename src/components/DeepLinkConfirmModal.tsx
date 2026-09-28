@@ -23,7 +23,7 @@ export function DeepLinkConfirmModal(props: {
       footer={
         <div className="flex gap-3">
           <Button
-            variant="outline"
+            variant="secondary"
             label={t("nav.cancel")}
             onClick={props.onCancel}
             className="flex-1"

@@ -786,6 +786,7 @@
       "termsOfService": "Términos del servicio",
       "privacyPolicy": "Política de privacidad",
       "and": "y nuestra",
+      "or": "o",
       "warp": {
         "title": "Zaparoo Warp",
         "description": "Protege los datos compatibles del dispositivo con copias de seguridad en la nube y usa Zaparoo Pro mientras Warp esté activo.",
@@ -881,6 +882,7 @@
       "updateDb.cancel": "Cancelar",
       "updateDb.resume": "Reanudar",
       "updateDb.status.ready": "La base de datos está lista",
+      "updateDb.status.noDatabase": "No se encontró ninguna base de datos",
       "updateDb.status.optimizing": "Optimizando la base de datos (lista para usar)",
       "updateDb.status.paused": "En pausa",
       "updateDb.status.throttled": "Ejecutándose a velocidad reducida",
@@ -1222,6 +1224,13 @@
         "levelFilters": "Niveles de registro",
         "totalEntries": "Entradas totales",
         "filteredEntries": "Mostrando",
+        "entriesShowing": "Mostrando {{shown}} de {{total}} entradas",
+        "entryCount_one": "{{count}} entrada",
+        "entryCount_other": "{{count}} entradas",
+        "levelDebug": "Depuración",
+        "levelInfo": "Info",
+        "levelWarn": "Aviso",
+        "levelError": "Error",
         "noEntriesFound": "Ninguna entrada de registro coincide con tus filtros",
         "fetchError": "Fallo al obtener los registros",
         "notConnected": "Conecta un dispositivo Zaparoo para acceder a los registros",
@@ -1259,6 +1268,7 @@
       }
     },
     "systemSelector": {
+      "loadError": "No se pudieron cargar los sistemas",
       "allCategoriesLabel": "Todas las categorías",
       "selectionCount": "{{count}} seleccionados",
       "clear": "Borrar",
@@ -1282,6 +1292,9 @@
       "apply": "Aplicar"
     },
     "tagSelector": {
+      "expandAll": "Expandir todo",
+      "collapseAll": "Contraer todo",
+      "unavailable": "Etiquetas no disponibles",
       "title": "Seleccionar etiquetas",
       "searchPlaceholder": "Filtrar etiquetas...",
       "searchTags": "Filtrar etiquetas",

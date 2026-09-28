@@ -88,7 +88,7 @@ export function ToggleSwitch(props: {
               "peer-focus-visible:ring-offset-2",
               "peer-focus-visible:ring-offset-background",
               {
-                "border-bd-outline": !props.disabled,
+                "border-input": !props.disabled,
                 "border-foreground-disabled": props.disabled,
               },
             )}

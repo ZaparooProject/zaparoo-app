@@ -66,6 +66,6 @@ describe("InboxButton", () => {
     expect(mockImpact).toHaveBeenCalledWith("light");
     expect(useStatusStore.getState().inboxModalOpen).toBe(true);
     expect(button).toHaveAttribute("aria-expanded", "true");
-    expect(button).toHaveAttribute("aria-pressed", "true");
+    expect(button).not.toHaveAttribute("aria-pressed");
   });
 });

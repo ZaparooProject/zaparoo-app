@@ -60,7 +60,7 @@ function LibraryBrowsePlaceholderRow(props: {
       aria-hidden="true"
       className={classNames("flex w-full items-center gap-3 px-1 py-3", {
         "h-full": !props.textZoomed,
-        "border-foreground/25 border-b": props.hasDivider,
+        "border-border border-b": props.hasDivider,
       })}
       style={{ minHeight: `${props.minHeight}px` }}
     >
@@ -171,7 +171,7 @@ function LibraryBrowseRow(props: {
         "focus-visible:ring-ring flex w-full items-center gap-3 px-1 py-3 text-left focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed",
         {
           "h-full": !props.textZoomed,
-          "border-foreground/25 border-b": props.hasDivider,
+          "border-border border-b": props.hasDivider,
         },
       )}
       style={{ minHeight: `${props.minHeight}px` }}
@@ -181,10 +181,10 @@ function LibraryBrowseRow(props: {
     >
       {isFolder ? (
         <span
-          className="text-foreground-hint bg-foreground/5 flex h-16 w-16 shrink-0 items-center justify-center rounded-md"
+          className="text-foreground-hint bg-surface-highlight flex h-16 w-16 shrink-0 items-center justify-center rounded-md"
           aria-hidden="true"
         >
-          <FolderIcon size={28} />
+          <FolderIcon size={24} />
         </span>
       ) : (
         <LibraryArtworkFrame
@@ -245,7 +245,7 @@ function LibraryBrowseRow(props: {
             <Heart size={18} fill="currentColor" aria-hidden="true" />
           </span>
         )}
-        <span aria-hidden="true">
+        <span aria-hidden="true" className="text-muted-foreground shrink-0">
           <NextIcon size="20" />
         </span>
       </span>

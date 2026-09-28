@@ -17,6 +17,8 @@ import { useHapticPress } from "@/hooks/useHapticPress";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { SystemFilterControls } from "@/components/SystemFilterControls";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { DelayedLoading } from "@/components/DelayedLoading";
 import { useAnnouncer } from "./A11yAnnouncer";
 import { SlideModal } from "./SlideModal";
 import { Button } from "./wui/Button";
@@ -83,7 +85,12 @@ export function SystemSelector({
   const deviceKey = useActiveDeviceKey();
 
   // Fetch systems data
-  const { data: systemsData, isLoading } = useQuery({
+  const {
+    data: systemsData,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ["systems", deviceKey, { all: allSystems }],
     queryFn: () => CoreAPI.systems(allSystems ? { all: true } : undefined),
     enabled: isOpen,
@@ -181,7 +188,7 @@ export function SystemSelector({
     <button
       key={id}
       className={classNames(
-        "focus-visible:ring-ring flex min-h-12 w-full items-center justify-between gap-3 rounded px-2 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset",
+        "focus-visible:ring-ring flex min-h-12 w-full items-center justify-between gap-3 rounded-md px-2 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset",
         "hover:bg-foreground/10 focus-visible:bg-foreground/10",
         { "bg-foreground/10": isSelected },
       )}
@@ -269,9 +276,27 @@ export function SystemSelector({
         />
       </div>
       {isLoading ? (
-        <div className="flex h-32 items-center justify-center">
-          <span className="text-muted-foreground">{t("loading")}</span>
-        </div>
+        <DelayedLoading>
+          <div
+            className="text-muted-foreground flex h-32 items-center justify-center gap-2"
+            role="status"
+          >
+            <LoadingSpinner size={16} className="text-primary" decorative />
+            <span>{t("loading")}</span>
+          </div>
+        </DelayedLoading>
+      ) : isError ? (
+        <EmptyState
+          className="h-32"
+          title={t("systemSelector.loadError")}
+          action={
+            <Button
+              label={t("library.tryAgain")}
+              variant="outline"
+              onClick={() => void refetch()}
+            />
+          }
+        />
       ) : filteredSystems.length === 0 ? (
         debouncedSearchQuery ? (
           <EmptyState
@@ -410,7 +435,7 @@ export function SystemSelectorTrigger({
     <button
       onClick={handleClick}
       className={classNames(
-        "wui-input border-input text-foreground focus-visible:ring-ring flex min-h-12 w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none",
+        "wui-input border-input text-foreground flex min-h-12 w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors",
         {
           "hover:border-foreground-hint": !isDisabled,
           "cursor-not-allowed opacity-50": isDisabled,

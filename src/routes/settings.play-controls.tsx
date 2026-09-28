@@ -364,7 +364,7 @@ export function PlayControlsSettings() {
               />
 
               {limitsConfig?.enabled && (
-                <div className="bg-background-secondary border-bd-filled flex flex-col gap-2 rounded-lg border p-3">
+                <div className="bg-surface-inset border-border flex flex-col gap-2 rounded-md border p-3">
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">
@@ -440,7 +440,7 @@ export function PlayControlsSettings() {
                       )}
                   </div>
 
-                  <div className="border-bd-filled flex flex-col gap-2 border-t pt-2">
+                  <div className="border-border flex flex-col gap-2 border-t pt-2">
                     <span className="text-sm font-medium">
                       {t("settings.core.playtime.dailyUsage")}
                     </span>

@@ -385,15 +385,19 @@ export function MediaScrapeCard() {
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1">
-                  <h2 id="scrape-status-title" className="text-xl">
+                  <h3 id="scrape-status-title" className="text-sm font-medium">
                     {t("settings.scrapeMedia.activeTitle")}
-                  </h2>
+                  </h3>
                   <p className="text-muted-foreground text-sm">
                     {t("settings.scrapeMedia.activeDescription")}
                   </p>
                 </div>
                 {isLiveConnected && !isPaused ? (
-                  <LoadingSpinner size={24} className="text-muted-foreground" />
+                  <LoadingSpinner
+                    size={24}
+                    className="text-muted-foreground"
+                    decorative
+                  />
                 ) : null}
               </div>
 
@@ -422,11 +426,11 @@ export function MediaScrapeCard() {
                   aria-valuemin={0}
                   aria-valuemax={100}
                   aria-label={t("settings.scrapeMedia.overallProgressLabel")}
-                  className="border-bd-filled bg-background h-[10px] w-full rounded-full border border-solid"
+                  className="border-border bg-background h-[10px] w-full rounded-full border border-solid"
                 >
                   <div
                     className={classNames(
-                      "border-background bg-button-pattern h-[8px] rounded-full border border-solid",
+                      "border-background bg-primary h-[8px] rounded-full border border-solid",
                       {
                         hidden: hasOverallProgress && currentStep === 0,
                         "animate-pulse":
@@ -462,11 +466,11 @@ export function MediaScrapeCard() {
                   aria-valuemin={0}
                   aria-valuemax={100}
                   aria-label={t("settings.scrapeMedia.progressLabel")}
-                  className="border-bd-filled bg-background h-[10px] w-full rounded-full border border-solid"
+                  className="border-border bg-background h-[10px] w-full rounded-full border border-solid"
                 >
                   <div
                     className={classNames(
-                      "border-background bg-button-pattern h-[8px] rounded-full border border-solid",
+                      "border-background bg-primary h-[8px] rounded-full border border-solid",
                       {
                         hidden:
                           hasSystemProgress &&
@@ -593,8 +597,11 @@ export function MediaScrapeCard() {
           renderStatus()
         ) : (
           <>
-            <div className="flex flex-col gap-2">
-              <label htmlFor="scraper-select" className="text-foreground">
+            <div>
+              <label
+                htmlFor="scraper-select"
+                className="mb-2 block text-sm font-medium"
+              >
                 {t("settings.scrapeMedia.scraperPlaceholder")}
               </label>
               <select
@@ -609,7 +616,7 @@ export function MediaScrapeCard() {
                 }}
                 disabled={controlsDisabled || scrapersLoading}
                 className={classNames(
-                  "wui-input border-bd-input bg-surface-inset text-foreground min-h-12 rounded-md border border-solid p-3",
+                  "wui-input border-input bg-surface-inset text-foreground min-h-12 rounded-md border border-solid p-3",
                   {
                     "cursor-not-allowed opacity-50":
                       controlsDisabled || scrapersLoading,
@@ -658,12 +665,7 @@ export function MediaScrapeCard() {
                   : t("settings.scrapeMedia")
               }
               icon={
-                isStarting ? (
-                  <LoadingSpinner
-                    size={16}
-                    className="text-foreground-disabled"
-                  />
-                ) : undefined
+                isStarting ? <LoadingSpinner size={20} decorative /> : undefined
               }
               className="w-full"
               disabled={

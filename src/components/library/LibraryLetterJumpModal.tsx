@@ -37,7 +37,7 @@ export function LibraryLetterJumpModal(props: {
       title={t("library.goToTitle")}
       fixedHeight="70vh"
     >
-      <div className="flex flex-col gap-2 py-2">
+      <div className="flex flex-col py-2">
         {indexQuery.isLoading ? (
           <DelayedLoading>
             <div className="text-muted-foreground flex items-center justify-center gap-2 py-8">
@@ -64,7 +64,7 @@ export function LibraryLetterJumpModal(props: {
             <button
               key={group.key}
               type="button"
-              className="hover:bg-foreground/10 focus-visible:ring-ring flex min-h-[48px] items-center justify-between rounded-lg px-4 py-3 text-left focus-visible:ring-2 focus-visible:outline-none"
+              className="border-border hover:bg-foreground/10 focus-visible:ring-ring flex min-h-12 w-full items-center justify-between gap-3 border-b px-2 py-3 text-left last:border-b-0 focus-visible:ring-2 focus-visible:outline-none"
               onPointerUp={handleHapticPress}
               onClick={() => props.onSelect(group)}
             >

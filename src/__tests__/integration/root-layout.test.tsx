@@ -143,6 +143,23 @@ describe("Root Layout Integration", () => {
       expect(screen.getByRole("main")).toBeInTheDocument();
     });
 
+    it("publishes the measured footer clearance on the document root", () => {
+      const { unmount } = render(<RootLayout />);
+
+      const root = document.documentElement;
+      expect(
+        root.style.getPropertyValue("--app-footer-overlay-clearance"),
+      ).toBe("92px");
+      expect(root.style.getPropertyValue("--app-footer-overlay-height")).toBe(
+        "64px",
+      );
+
+      unmount();
+      expect(
+        root.style.getPropertyValue("--app-footer-overlay-clearance"),
+      ).toBe("");
+    });
+
     it("should render the Outlet for child routes", () => {
       render(<RootLayout />);
 

@@ -535,7 +535,9 @@ describe("MediaDatabaseCard", () => {
     render(<MediaDatabaseCard />);
 
     // Wait for the query to resolve
-    expect(await screen.findByText("No database found")).toBeInTheDocument();
+    expect(
+      await screen.findByText("settings.updateDb.status.noDatabase"),
+    ).toBeInTheDocument();
   });
 
   it("should show setup status when database metadata is invalid", async () => {

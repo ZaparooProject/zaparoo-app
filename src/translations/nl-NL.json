@@ -786,6 +786,7 @@
       "termsOfService": "Servicevoorwaarden",
       "privacyPolicy": "Privacybeleid",
       "and": "en",
+      "or": "of",
       "warp": {
         "title": "Zaparoo Warp",
         "description": "Bescherm ondersteunde apparaatgegevens met cloudback-ups en gebruik Zaparoo Pro zolang Warp actief is.",
@@ -881,6 +882,7 @@
       "updateDb.cancel": "Annuleren",
       "updateDb.resume": "Hervatten",
       "updateDb.status.ready": "Database is gereed",
+      "updateDb.status.noDatabase": "Geen database gevonden",
       "updateDb.status.optimizing": "Database wordt geoptimaliseerd (klaar voor gebruik)",
       "updateDb.status.paused": "Gepauzeerd",
       "updateDb.status.throttled": "Wordt op lagere snelheid uitgevoerd",
@@ -1222,6 +1224,13 @@
         "levelFilters": "Logniveaus",
         "totalEntries": "Totaal aantal items",
         "filteredEntries": "Getoond",
+        "entriesShowing": "{{shown}} van {{total}} vermeldingen weergegeven",
+        "entryCount_one": "{{count}} vermelding",
+        "entryCount_other": "{{count}} vermeldingen",
+        "levelDebug": "Debug",
+        "levelInfo": "Info",
+        "levelWarn": "Waarschuwing",
+        "levelError": "Fout",
         "noEntriesFound": "Geen logitems komen overeen met je filters",
         "fetchError": "Logs ophalen mislukt",
         "notConnected": "Maak verbinding met een Zaparoo-apparaat om logs te bekijken",
@@ -1259,6 +1268,7 @@
       }
     },
     "systemSelector": {
+      "loadError": "Systemen konden niet worden geladen",
       "allCategoriesLabel": "Alle categorieën",
       "selectionCount": "{{count}} geselecteerd",
       "clear": "Wissen",
@@ -1282,6 +1292,9 @@
       "apply": "Toepassen"
     },
     "tagSelector": {
+      "expandAll": "Alles uitklappen",
+      "collapseAll": "Alles inklappen",
+      "unavailable": "Tags niet beschikbaar",
       "title": "Tags selecteren",
       "searchPlaceholder": "Tags filteren...",
       "searchTags": "Tags filteren",

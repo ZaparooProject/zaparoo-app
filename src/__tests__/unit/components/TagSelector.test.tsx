@@ -126,7 +126,7 @@ describe("TagSelector", () => {
       render(<TagSelector {...defaultProps} />);
 
       // Assert
-      expect(screen.getByText("loading")).toBeInTheDocument();
+      expect(await screen.findByText("loading")).toBeInTheDocument();
     });
   });
 
@@ -142,6 +142,29 @@ describe("TagSelector", () => {
       await waitFor(() => {
         expect(screen.getByText("tagSelector.unavailable")).toBeInTheDocument();
       });
+    });
+
+    it("should retry loading tags from the error state", async () => {
+      // Arrange
+      const user = userEvent.setup();
+      vi.mocked(CoreAPI.mediaTags).mockRejectedValueOnce(
+        new Error("API Error"),
+      );
+      vi.mocked(CoreAPI.mediaTags).mockResolvedValueOnce({
+        tags: [{ type: "genre", tag: "action" }],
+      });
+
+      // Act
+      render(<TagSelector {...defaultProps} />);
+      await user.click(
+        await screen.findByRole("button", { name: "library.tryAgain" }),
+      );
+
+      // Assert
+      expect(
+        await screen.findByText(/tagSelector.type.genre/),
+      ).toBeInTheDocument();
+      expect(CoreAPI.mediaTags).toHaveBeenCalledTimes(2);
     });
 
     it("should render error state when tags response is malformed", async () => {

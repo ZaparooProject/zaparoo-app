@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { SlideModal } from "@/components/SlideModal";
 import { Button } from "@/components/wui/Button";
+import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { CoreAPI } from "@/lib/coreApi";
 import { logger } from "@/lib/logger";
 import { useStatusStore } from "@/lib/store";
@@ -115,22 +116,24 @@ export function StagedTokenModal() {
       title={t("tokenStaging.title")}
       fixedHeight="auto"
       footer={
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            label={t("tokenStaging.dismiss")}
-            onClick={clearStagedToken}
-            className="flex-1"
-          />
-          <Button
-            label={t("tokenStaging.confirm")}
-            onClick={confirmStagedToken}
-            disabled={!stagedToken || confirming}
-            disabledAppearance={confirming ? "busy" : "unavailable"}
-            intent="primary"
-            className="flex-1"
-          />
-        </div>
+        <ModalActionBar
+          secondaryAction={
+            <Button
+              variant="secondary"
+              label={t("tokenStaging.dismiss")}
+              onClick={clearStagedToken}
+            />
+          }
+          primaryAction={
+            <Button
+              label={t("tokenStaging.confirm")}
+              onClick={confirmStagedToken}
+              disabled={!stagedToken || confirming}
+              disabledAppearance={confirming ? "busy" : "unavailable"}
+              intent="primary"
+            />
+          }
+        />
       }
     >
       {stagedToken && (

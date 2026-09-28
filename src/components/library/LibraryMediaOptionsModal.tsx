@@ -61,8 +61,7 @@ export function LibraryMediaOptionsModal(props: {
                   className={classNames(
                     "focus-visible:ring-ring flex min-h-12 w-full items-center justify-between gap-3 px-2 py-3 text-left focus-visible:ring-2 focus-visible:outline-none",
                     {
-                      "border-foreground/25 border-b":
-                        index < SORT_OPTIONS.length - 1,
+                      "border-border border-b": index < SORT_OPTIONS.length - 1,
                       "bg-foreground/10": selected,
                     },
                   )}

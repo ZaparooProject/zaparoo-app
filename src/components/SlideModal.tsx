@@ -411,7 +411,7 @@ export function SlideModal(props: {
                 onClick={props.close}
                 aria-label={t("nav.close")}
                 data-slide-modal-drag-handle
-                className="focus-visible:ring-ring flex h-[29px] w-full items-center justify-center bg-transparent focus-visible:ring-2 focus-visible:outline-none"
+                className="focus-visible:outline-ring relative flex h-[29px] w-full items-center justify-center bg-transparent after:absolute after:inset-x-0 after:-inset-y-[10px] after:content-[''] focus-visible:outline-2 focus-visible:-outline-offset-2"
               >
                 <span
                   aria-hidden="true"
@@ -434,10 +434,10 @@ export function SlideModal(props: {
               <button
                 type="button"
                 onClick={props.close}
-                className="hover:bg-foreground/10 focus-visible:ring-ring absolute top-[-5px] right-0 hidden h-11 w-11 items-center justify-center rounded-full opacity-70 transition-opacity hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:flex"
+                className="hover:before:bg-foreground/10 focus-visible:outline-ring absolute top-[-7px] right-0 hidden h-12 w-12 items-center justify-center rounded-full opacity-70 transition-opacity before:absolute before:inset-0.5 before:rounded-full before:content-[''] hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-1 sm:flex"
                 aria-label={t("nav.close")}
               >
-                <X className="h-5 w-5" aria-hidden="true" />
+                <X className="relative h-5 w-5" aria-hidden="true" />
               </button>
             )}
           </div>

@@ -78,11 +78,11 @@ export function ToolsTab({ onToolAction, isProcessing }: ToolsTabProps) {
         return (
           <div
             key={tool.action}
-            className="bg-background-secondary/50 space-y-4 rounded-2xl p-4"
+            className="bg-surface-raised space-y-4 rounded-lg p-4"
           >
             <div>
               <h3 className="mb-1 text-lg font-semibold">{tool.label}</h3>
-              <p className="text-foreground-secondary mb-3 text-sm">
+              <p className="text-muted-foreground mb-3 text-sm">
                 {tool.description}
               </p>
 

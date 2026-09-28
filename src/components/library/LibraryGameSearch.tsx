@@ -220,11 +220,7 @@ export function LibraryGameSearch({
         scrollContainerRef={scrollRef}
         loadingDelayMs={DEFAULT_LOADING_DELAY_MS}
       />
-      <BackToTop
-        scrollContainerRef={scrollRef}
-        threshold={200}
-        bottomOffset="calc(var(--bottom-nav-base-height) + 1rem)"
-      />
+      <BackToTop scrollContainerRef={scrollRef} threshold={200} />
     </>
   );
 

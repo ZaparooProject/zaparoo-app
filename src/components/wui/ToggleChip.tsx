@@ -53,7 +53,7 @@ export function ToggleChip(props: ToggleChipProps) {
           "bg-primary-wash shadow-inner": props.state && !props.disabled,
           "text-primary": props.state && !props.disabled,
           "border-primary": props.state && !props.disabled,
-          "border-bd-outline": !props.state && !props.disabled,
+          "border-input": !props.state && !props.disabled,
           "border-foreground-disabled": props.disabled,
           "text-foreground-disabled": props.disabled,
         },

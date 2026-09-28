@@ -377,6 +377,7 @@ export function Index() {
               disabled={!connected}
               title={t("scan.historyTitle")}
               aria-label={t("scan.historyTitle")}
+              aria-expanded={historyOpen}
             />
           </div>
         }

@@ -786,6 +786,7 @@
       "termsOfService": "Nutzungsbedingungen",
       "privacyPolicy": "Datenschutzerklärung",
       "and": "und",
+      "or": "oder",
       "warp": {
         "title": "Zaparoo Warp",
         "description": "Schütze unterstützte Gerätedaten mit Cloud-Sicherungen und verwende Zaparoo Pro, solange Warp aktiv ist.",
@@ -881,6 +882,7 @@
       "updateDb.cancel": "Abbrechen",
       "updateDb.resume": "Fortsetzen",
       "updateDb.status.ready": "Datenbank ist bereit",
+      "updateDb.status.noDatabase": "Keine Datenbank gefunden",
       "updateDb.status.optimizing": "Datenbank wird optimiert (einsatzbereit)",
       "updateDb.status.paused": "Pausiert",
       "updateDb.status.throttled": "Läuft mit reduzierter Geschwindigkeit",
@@ -1222,6 +1224,13 @@
         "levelFilters": "Protokollstufen",
         "totalEntries": "Einträge insgesamt",
         "filteredEntries": "Angezeigt",
+        "entriesShowing": "{{shown}} von {{total}} Einträgen angezeigt",
+        "entryCount_one": "{{count}} Eintrag",
+        "entryCount_other": "{{count}} Einträge",
+        "levelDebug": "Debug",
+        "levelInfo": "Info",
+        "levelWarn": "Warnung",
+        "levelError": "Fehler",
         "noEntriesFound": "Keine Protokolleinträge entsprechen deinen Filtern",
         "fetchError": "Protokolle konnten nicht abgerufen werden",
         "notConnected": "Verbinde dich mit einem Zaparoo-Gerät, um auf Protokolle zuzugreifen",
@@ -1259,6 +1268,7 @@
       }
     },
     "systemSelector": {
+      "loadError": "Systeme konnten nicht geladen werden",
       "allCategoriesLabel": "Alle Kategorien",
       "selectionCount": "{{count}} ausgewählt",
       "clear": "Leeren",
@@ -1282,6 +1292,9 @@
       "apply": "Übernehmen"
     },
     "tagSelector": {
+      "expandAll": "Alle erweitern",
+      "collapseAll": "Alle einklappen",
+      "unavailable": "Tags nicht verfügbar",
       "title": "Tags auswählen",
       "searchPlaceholder": "Tags filtern...",
       "searchTags": "Tags filtern",

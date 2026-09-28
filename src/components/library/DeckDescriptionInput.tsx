@@ -13,7 +13,7 @@ export function DeckDescriptionInput({
 
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block">
+      <label htmlFor={id} className="mb-2 block text-sm font-medium">
         {t("decks.description")}
       </label>
       <textarea
@@ -22,7 +22,7 @@ export function DeckDescriptionInput({
         maxLength={1000}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="wui-input border-input bg-surface-inset text-foreground focus-visible:ring-ring min-h-12 w-full rounded-md border border-solid p-3 focus-visible:ring-2 focus-visible:outline-none"
+        className="wui-input border-input bg-surface-inset text-foreground min-h-12 w-full rounded-md border border-solid p-3"
       />
     </div>
   );

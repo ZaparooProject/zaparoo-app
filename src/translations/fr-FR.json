@@ -786,6 +786,7 @@
       "termsOfService": "Conditions d’utilisation",
       "privacyPolicy": "Politique de confidentialité",
       "and": "et notre",
+      "or": "ou",
       "warp": {
         "title": "Zaparoo Warp",
         "description": "Protégez les données d’appareil prises en charge avec des sauvegardes cloud et utilisez Zaparoo Pro tant que Warp est actif.",
@@ -881,6 +882,7 @@
       "updateDb.cancel": "Annuler",
       "updateDb.resume": "Reprendre",
       "updateDb.status.ready": "La base de données est prête",
+      "updateDb.status.noDatabase": "Aucune base de données trouvée",
       "updateDb.status.optimizing": "Optimisation de la base de données (prête à l’emploi)",
       "updateDb.status.paused": "En pause",
       "updateDb.status.throttled": "Fonctionnement à vitesse réduite",
@@ -1222,6 +1224,13 @@
         "levelFilters": "Niveaux des journaux",
         "totalEntries": "Nombre total d’entrées",
         "filteredEntries": "Affichées",
+        "entriesShowing": "{{shown}} entrées affichées sur {{total}}",
+        "entryCount_one": "{{count}} entrée",
+        "entryCount_other": "{{count}} entrées",
+        "levelDebug": "Débogage",
+        "levelInfo": "Info",
+        "levelWarn": "Avertissement",
+        "levelError": "Erreur",
         "noEntriesFound": "Aucune entrée de journal ne correspond aux filtres",
         "fetchError": "Échec de la récupération des journaux",
         "notConnected": "Connectez-vous à un appareil Zaparoo pour accéder aux journaux",
@@ -1259,6 +1268,7 @@
       }
     },
     "systemSelector": {
+      "loadError": "Impossible de charger les systèmes",
       "allCategoriesLabel": "Toutes les catégories",
       "selectionCount": "{{count}} sélectionnés",
       "clear": "Effacer",
@@ -1282,6 +1292,9 @@
       "apply": "Appliquer"
     },
     "tagSelector": {
+      "expandAll": "Tout développer",
+      "collapseAll": "Tout réduire",
+      "unavailable": "Tags indisponibles",
       "title": "Sélectionner des tags",
       "searchPlaceholder": "Filtrer les tags...",
       "searchTags": "Filtrer les tags",

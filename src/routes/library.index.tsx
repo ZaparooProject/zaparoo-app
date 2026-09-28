@@ -40,6 +40,7 @@ import { getTabBarPanelId, getTabBarTabId } from "@/components/wui/tabBarIds";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { Button } from "@/components/wui/Button";
 import { TabBar } from "@/components/wui/TabBar";
+import { LibraryLinkButton } from "@/components/library/LibraryLinkButton";
 import { LibraryCollectionList } from "@/components/library/LibraryCollectionList";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NextIcon } from "@/lib/images";
@@ -254,13 +255,11 @@ export function Library() {
       <EmptyState
         title={t("library.databaseRequired")}
         action={
-          <Link
+          <LibraryLinkButton
             to="/settings"
             search={{ focus: "database" }}
-            className="site-button site-button-secondary flex items-center justify-center px-6"
-          >
-            {t("library.openMediaSettings")}
-          </Link>
+            label={t("library.openMediaSettings")}
+          />
         }
       />,
     );
@@ -273,7 +272,7 @@ export function Library() {
             <div
               key={titleWidth}
               data-testid="library-system-skeleton"
-              className="border-foreground/25 flex min-h-[56px] items-center justify-between gap-3 border-b px-1 py-3 last:border-b-0"
+              className="border-border flex min-h-[56px] items-center justify-between gap-3 border-b px-1 py-3 last:border-b-0"
             >
               <div className="flex flex-1 flex-col gap-2">
                 <Skeleton className={`h-5 ${titleWidth}`} />
@@ -335,14 +334,9 @@ export function Library() {
             <nav aria-label={t("library.systemsLabel")}>
               {systems.map((system, index) => {
                 const subtitle = systemSubtitle(system);
-                const rowClassName =
-                  "flex min-h-[56px] items-center justify-between gap-3 px-1 py-3 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none";
-                const rowStyle = {
-                  borderBottom:
-                    index === systems.length - 1
-                      ? undefined
-                      : "1px solid var(--edge-default)",
-                };
+                const rowClassName = `flex min-h-[56px] items-center justify-between gap-3 px-1 py-3 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none${
+                  index === systems.length - 1 ? "" : " border-border border-b"
+                }`;
                 const rowContent = (
                   <>
                     <span className="flex min-w-0 flex-col">
@@ -353,7 +347,10 @@ export function Library() {
                         </span>
                       )}
                     </span>
-                    <span aria-hidden="true">
+                    <span
+                      aria-hidden="true"
+                      className="text-muted-foreground shrink-0"
+                    >
                       <NextIcon size="20" />
                     </span>
                   </>
@@ -371,7 +368,6 @@ export function Library() {
                       }}
                       onPointerUp={handleHapticPress}
                       className={`${rowClassName} w-full text-left`}
-                      style={rowStyle}
                     >
                       {rowContent}
                     </button>
@@ -385,7 +381,6 @@ export function Library() {
                     onClick={() => beginSystemNavigation(system.id)}
                     onPointerUp={handleHapticPress}
                     className={rowClassName}
-                    style={rowStyle}
                   >
                     {rowContent}
                   </Link>
@@ -429,11 +424,7 @@ export function Library() {
         }
       >
         {content}
-        <BackToTop
-          scrollContainerRef={scrollRef}
-          threshold={200}
-          bottomOffset="calc(var(--bottom-nav-base-height) + 1rem)"
-        />
+        <BackToTop scrollContainerRef={scrollRef} threshold={200} />
       </PageFrame>
       <LibraryLaunchableModal
         isOpen={launchableOpen}

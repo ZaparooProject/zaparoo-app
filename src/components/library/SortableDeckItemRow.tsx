@@ -1,9 +1,4 @@
-import {
-  ArrowDownIcon,
-  ArrowUpIcon,
-  ChevronRightIcon,
-  GripVerticalIcon,
-} from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, GripVerticalIcon } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useSortable } from "@dnd-kit/sortable";
@@ -11,6 +6,7 @@ import { CSS } from "@dnd-kit/utilities";
 import type { DeckItem } from "@/lib/models";
 import { useHapticPress } from "@/hooks/useHapticPress";
 import { Button } from "@/components/wui/Button";
+import { NextIcon } from "@/lib/images";
 import { DeckArtwork } from "@/components/library/DeckArtwork";
 
 export function SortableDeckItemRow({
@@ -75,7 +71,7 @@ export function SortableDeckItemRow({
   );
 
   return (
-    <li className="border-foreground/25 border-b last:border-b-0">
+    <li className="border-border border-b last:border-b-0">
       <div
         ref={setNodeRef}
         style={{
@@ -111,11 +107,12 @@ export function SortableDeckItemRow({
             onClick={() => onSelect(item)}
           >
             {content}
-            <ChevronRightIcon
-              size={20}
+            <span
               aria-hidden="true"
               className="text-muted-foreground ml-auto shrink-0"
-            />
+            >
+              <NextIcon size="20" />
+            </span>
           </button>
         )}
         {editable && (

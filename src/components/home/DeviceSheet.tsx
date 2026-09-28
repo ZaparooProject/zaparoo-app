@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "@tanstack/react-router";
-import { KeyRoundIcon, Loader2, RefreshCw } from "lucide-react";
+import { KeyRoundIcon, RefreshCw } from "lucide-react";
 import { ConnectionStatusDisplay } from "@/components/ConnectionStatusDisplay";
 import { DeviceRow } from "@/components/DeviceRow";
 import { SlideModal } from "@/components/SlideModal";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Button } from "@/components/wui/Button";
 import { CircleButton } from "@/components/wui/CircleButton";
 import { ModalActionBar } from "@/components/wui/ModalActionBar";
@@ -67,6 +68,7 @@ export function DeviceSheet({ isOpen, close }: DeviceSheetProps) {
   const { name, deviceDetails, clientRoleLabel } = useActiveDeviceSummary();
   const records = useDeviceRegistry(selectRecords);
   const activeRecordId = useDeviceRegistry(selectActiveRecordId);
+  const switchHeadingId = useId();
   const scanTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const savedDevices = useMemo(() => {
@@ -165,6 +167,20 @@ export function DeviceSheet({ isOpen, close }: DeviceSheetProps) {
       isOpen={isOpen}
       close={close}
       title={t("scan.deviceSheetTitle")}
+      footer={
+        <ModalActionBar
+          primaryAction={
+            <Button
+              variant="secondary"
+              label={t("scan.deviceSheetAllDevices")}
+              onClick={() => {
+                close();
+                void router.navigate({ to: "/settings/devices" });
+              }}
+            />
+          }
+        />
+      }
     >
       <div className="flex flex-col gap-4 py-2">
         <ConnectionStatusDisplay
@@ -191,11 +207,11 @@ export function DeviceSheet({ isOpen, close }: DeviceSheetProps) {
         {showSwitchList && (
           <section
             className="flex flex-col gap-2"
-            aria-labelledby="device-switch-heading"
+            aria-labelledby={switchHeadingId}
           >
             <div className="flex min-h-12 items-center justify-between gap-2">
               <h3
-                id="device-switch-heading"
+                id={switchHeadingId}
                 className="text-muted-foreground font-bold capitalize"
               >
                 {t("scan.deviceSheetRecent")}
@@ -204,7 +220,7 @@ export function DeviceSheet({ isOpen, close }: DeviceSheetProps) {
                 <Button
                   icon={
                     isScanning ? (
-                      <Loader2 size={20} className="animate-spin" />
+                      <LoadingSpinner size={20} decorative />
                     ) : (
                       <RefreshCw size={20} />
                     )
@@ -246,11 +262,7 @@ export function DeviceSheet({ isOpen, close }: DeviceSheetProps) {
                 className="text-muted-foreground flex items-center gap-2 text-sm"
                 role="status"
               >
-                <Loader2
-                  size={16}
-                  className="animate-spin"
-                  aria-hidden="true"
-                />
+                <LoadingSpinner size={16} decorative />
                 {t("settings.networkScan.searching")}
               </p>
             )}
@@ -266,19 +278,6 @@ export function DeviceSheet({ isOpen, close }: DeviceSheetProps) {
             )}
           </section>
         )}
-
-        <ModalActionBar
-          primaryAction={
-            <Button
-              variant="secondary"
-              label={t("scan.deviceSheetAllDevices")}
-              onClick={() => {
-                close();
-                void router.navigate({ to: "/settings/devices" });
-              }}
-            />
-          }
-        />
       </div>
     </SlideModal>
   );

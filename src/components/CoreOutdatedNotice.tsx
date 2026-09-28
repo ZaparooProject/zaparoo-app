@@ -27,7 +27,7 @@ export function CoreOutdatedNotice() {
 
   return (
     <div role="alert" aria-live="polite">
-      <Card className="border-yellow-500/40 bg-yellow-500/10">
+      <Card className="border-warning bg-warning-wash">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <TriangleAlert

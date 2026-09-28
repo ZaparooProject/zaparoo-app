@@ -493,11 +493,7 @@ export function LibrarySystem() {
               </DelayedLoading>
             )}
             {content}
-            <BackToTop
-              scrollContainerRef={scrollRef}
-              threshold={200}
-              bottomOffset="calc(var(--bottom-nav-base-height) + 1rem)"
-            />
+            <BackToTop scrollContainerRef={scrollRef} threshold={200} />
           </>
         )}
       </PageFrame>

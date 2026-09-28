@@ -13,7 +13,7 @@ Do not add decorative icons, new card styles, helper text, descriptions, badges,
 Use these before creating or changing UI:
 
 - App shell: `src/components/PageFrame.tsx`, `src/components/ResponsiveContainer.tsx`, `src/components/BottomNav.tsx`, `BackToTop.tsx`, `ConnectionStatusBar.tsx`
-- WUI primitives: `src/components/wui/Button.tsx`, `ModalActionBar.tsx`, `ModalActionRail.tsx`, `HeaderButton.tsx`, `Card.tsx`, `ToggleSwitch.tsx`, `TextInput.tsx`, `Badge.tsx`, `EmptyState.tsx`, `Segmented.tsx`, `ToggleChip.tsx`, `SettingHelp.tsx`
+- WUI primitives: `src/components/wui/Button.tsx`, `ModalActionBar.tsx`, `ModalActionRail.tsx`, `HeaderButton.tsx`, `CircleButton.tsx`, `StatusPill.tsx`, `TabBar.tsx`, `Card.tsx`, `ToggleSwitch.tsx`, `TextInput.tsx`, `PinInput.tsx`, `Badge.tsx`, `EmptyState.tsx`, `Segmented.tsx`, `ToggleChip.tsx`, `SettingHelp.tsx`; `src/components/HeaderOverflowMenu.tsx`
 - Modals: `src/components/SlideModal.tsx`, `ConfirmClearModal.tsx`, `PairingModal.tsx`, `RequirementsModal.tsx`, `ProPurchase.tsx`, `home/StopConfirmModal.tsx`, `home/StagedTokenModal.tsx`
 - Settings screens: `src/routes/settings.index.tsx`, `settings.readers.tsx`, `settings.advanced.tsx`, `settings.accessibility.tsx`, `settings.media.tsx`, `settings.play-controls.tsx`, `settings.about.tsx`, `settings.help.tsx`, `settings.online.tsx`, `src/routes/-pages/Devices.tsx`, `DeviceDetail.tsx`, `Logs.tsx`
 - Create/search flows: `src/routes/create.index.tsx`, `create.custom.tsx`, `create.nfc.tsx`, `create.mappings.tsx`, `src/routes/-pages/Search.tsx`, `MappingEditor.tsx`, `ZapScriptInput.tsx`
@@ -34,11 +34,15 @@ Use semantic roles from `src/styles/theme.css` through existing Tailwind aliases
 - background: `var(--color-background)` / `bg-background`
 - foreground: `text-foreground`; secondary copy: `text-muted-foreground`
 - muted text: `text-muted-foreground`
-- disabled text: `text-foreground-disabled`
-- interaction: `text-primary`; filled button material: `bg-button-pattern`
-- status colors: `text-success`, `text-error`, `text-warning`
-- borders: `border-bd-filled`, `border-bd-outline`, `border-bd-input`
-- cards/buttons: `bg-card-pattern`, `bg-button-pattern`
+- disabled text and borders: `text-foreground-disabled`, `border-foreground-disabled`
+- interaction: `text-primary`; filled button material comes from `Button`, not a utility class
+- status colors: `text-success`, `text-error`, `text-warning`; washes `bg-success-wash`, `bg-error-wash`, `bg-warning-wash`, `bg-primary-wash`
+- borders: `border-border` for dividers and panel edges, `border-input` for field edges; `border-error` for error state
+- surfaces: `bg-surface-raised`, `bg-surface-inset`, `bg-surface-highlight`; card gradients and button caps are owned by `.wui-card` and `.wui-button` in `components.css`
+- shadows: use `--material-shadow` and `--material-highlight` (for example `shadow-[0_-4px_12px_var(--material-shadow)]`); no hardcoded black shadows
+- focus: `ring-ring` or the `--interaction` outline; never a white ring
+
+The legacy `bd-*`, `bg-button-pattern`, `bg-card-pattern` and `bg-wui-card` utilities still exist while call sites migrate. Do not use them in new code.
 
 Do not hardcode new colors unless matching a nearby existing hardcoded pattern. Prefer app tokens and WUI components.
 
@@ -50,9 +54,9 @@ Common hierarchy:
 
 - Existing translated page titles retain their source casing during this visual migration; new copy follows Online sentence case. Examples: `Manage Media`, `Play Controls`, `Create a New Tag`.
 - Section headings and field labels use sentence case: `Media database`, `Metadata scraper`, `Playtime limits`, `Session reset timeout`.
-- Page titles are left-aligned Outfit, 24px/600, tight tracking and natural wrapping. `PageHeader` owns the typography; programmatic heading focus remains, without a decorative outline.
+- Page titles are left-aligned Outfit, 20px (`text-xl`)/600, tight tracking and natural wrapping. `PageHeader` owns the typography; programmatic heading focus remains, without a decorative outline.
   - Seen across settings, create, search, logs, devices.
-- Slide modal title: left-aligned `text-lg font-semibold` above the body divider.
+- Slide modal title: `text-lg font-semibold`, centered on mobile and left-aligned from the `sm` breakpoint, above the body.
 - Home section labels: `text-muted-foreground font-bold capitalize`.
   - Used by `NowPlayingCard`, `ReaderStrip` and the home cover rows.
 - Card/list primary text: usually `font-semibold` or `font-medium` depending sibling row.
@@ -120,12 +124,12 @@ Root tab pages can omit the back button and use a left-aligned title or existing
 
 Bottom nav is its own pattern in `BottomNav`:
 
-- fixed-height nav area: `calc(80px + safeInsets.bottom)`
-- opaque raised surface `bg-surface-raised`
-- semantic top border `border-t-border`
+- below `md`: a 64px dock plus the bottom safe inset (`--bottom-nav-base-height`), full width, flush to the screen edges, flat `surface-raised` face with a top edge
+- from `md`: a contained floating bar (max 42rem, 8px corners, material shadow, 80px tall) with icon and label side by side
 - four equal nav buttons with 48px minimum hit height
-- uppercase 12px/600 labels with neutral icons; active destination uses primary text on a recessed surface with a visible border, not a blue icon accent; no glow
-- attention state uses `attention-throb` amber halo
+- uppercase 12px/600 labels with neutral icons; the active destination uses primary text on a recessed surface, a blue icon with a restrained glow, and `aria-current="page"`
+- no attention/throb animation on nav items; unread counts use `NotificationBadge`
+- `RootLayout` measures the footer and publishes `--app-footer-overlay-height` and `--app-footer-overlay-clearance` on the layout wrapper and on `:root`. Anything fixed above the nav (the global write strip, `BackToTop`) positions with the clearance variable, not `--bottom-nav-base-height`, so it clears the floating desktop bar and the status strip
 
 Global connection status uses `ConnectionStatusBar`, an in-layout strip above bottom nav:
 
@@ -138,7 +142,7 @@ Global connection status uses `ConnectionStatusBar`, an in-layout strip above bo
 `BackToTop` is the only floating circular page utility. Use it only on long,
 scrollable result or reference surfaces where returning to controls or the list
 start would otherwise require substantial reverse scrolling. It uses the
-neutral secondary `CircleButton`, clears bottom navigation and safe areas,
+neutral secondary `CircleButton`, clears the measured footer (`--app-footer-overlay-clearance` plus 1rem by default) and safe areas,
 respects reduced motion, and returns keyboard focus with the viewport. Do not
 introduce additional floating actions or use primary action colour for this
 navigation utility.
@@ -159,7 +163,9 @@ Variants:
 - `ghost`: chrome-free icon utility with only a subtle hover/pressed wash; use for small inline refresh and similar affordances
 - `text`: unframed textual action without filled treatment
 
-Intents: `default`, `primary`, `destructive`, and `pro`. `destructive` supplies the red cap and red text/border; `pro` supplies the gold cap with a dark label, and gold text/border on non-filled variants. Reserve gold action styling for premium upgrade and paid-support calls to action, such as Unlock Zaparoo Pro and Join the Patreon. Use `intent="pro"` for these actions; gold means “upgrade to premium,” not general emphasis or ordinary settings navigation.
+Intents: `default`, `primary`, `destructive`, and `pro`. `destructive` supplies the red cap and red text/border; `pro` supplies the gold cap with a dark label, and gold text/border on non-filled variants. Reserve gold action styling for every paid-upgrade or paid-support call to action: Unlock Zaparoo Pro, Get Warp, subscribe, the final Pro purchase action, and Join the Patreon. Use `intent="pro"` for these; gold means “upgrade to premium,” not general emphasis or ordinary settings navigation. An active Pro state is a status (Badge or text), not a disabled button.
+
+`intent="destructive"` alone supplies the whole destructive treatment; do not add `border-error text-error` or similar classes. Cancel is `variant="secondary"`, not `outline`.
 
 Sizes:
 
@@ -190,7 +196,7 @@ Do not build custom buttons with raw `<button>` unless implementing a specialize
 
 ### CircleButton
 
-Use `src/components/wui/CircleButton.tsx` for raised circular icon actions. It mirrors Zaparoo Online's dedicated CircleButton material rather than approximating it with a rounded generic Button. Default controls retain a 48px touch target; use `variant="secondary"` for neutral contextual actions such as Pair in the device sheet.
+Use `src/components/wui/CircleButton.tsx` for raised circular icon actions. It mirrors Zaparoo Online's dedicated CircleButton material rather than approximating it with a rounded generic Button. Default controls retain a 48px touch target; variants are `primary`, `secondary`, `destructive` and `pro`. Use `variant="secondary"` for neutral contextual actions such as Pair in the device sheet and `BackToTop`.
 
 ### HeaderButton
 
@@ -198,13 +204,26 @@ Use `HeaderButton` only for header actions: back, history, reload, close-like he
 
 Pattern:
 
-- at least 44px square hit target
-- round hit target
+- 48px square hit target with a 6px-radius raised face inset 4px inside it
 - icon-only
 - accessible name should come from `aria-label`; some existing log actions use `title`, but new icon-only header actions should include `aria-label`
 - active state interaction blue with accessible pressed state; disabled muted text
 
 Do not use `HeaderButton` inside page body.
+
+`HeaderOverflowMenu` collects secondary header actions behind one ellipsis `HeaderButton` that opens a `SlideModal` of full-width secondary buttons. Use it when a header has more actions than fit, rather than adding a fourth button.
+
+### StatusPill
+
+`StatusPill` is the content-sized header status control (Home device pill). It shares the `HeaderButton` face, keeps a 48px minimum height, truncates its label, and exposes `aria-expanded` when it opens a sheet. It never grows to fill the header.
+
+### TabBar
+
+`TabBar` is the inset tray of options behind `Segmented` and the tabbed screens (NFC Read/Tools, History Scans/Played). Pass `role="tab"` with panel ids from `tabBarIds` for real tabs, and the default `radio` role for a choice among options.
+
+### PinInput
+
+`PinInput` is the one-time-code entry used for pairing and PIN flows: individual 48px recessed slots built on the `wui-input` material, digits only, with a primary-coloured active slot and the standard disabled treatment.
 
 ### Card
 
@@ -215,7 +234,7 @@ Card style:
 - 8px corners
 - `p-4` (navigation-group shells use `p-2` around padded rows)
 - semantic subtle border
-- `bg-card-pattern`: elevated-to-raised surface gradient
+- elevated-to-raised surface gradient from `.wui-card`
 - inset material highlight and restrained shadow
 - disabled interactive cards use a permanently recessed `surface-inset` face
   with an inner shadow and clearly faded content; they do not retain the raised
@@ -257,10 +276,10 @@ Built-in style:
 
 - label above input, `mb-2 block text-sm font-medium`
 - input height `h-12`
-- recessed `--surface-inset` with inner shadow
-- `border-bd-input`
+- recessed `--surface-inset` with inner shadow (from `.wui-input`)
+- `border-input` edge; `border-error` when invalid
 - 4px corners
-- disabled border/text state
+- disabled state uses `border-foreground-disabled` and `text-foreground-disabled`
 - optional square Save action separated from the field by a gap; its position stays reserved while disabled
 - clear action remains inside the input; no attached round Save cap
 
@@ -307,7 +326,7 @@ Real patterns:
 - Compact inset tray with 48px interactive targets and a 40px visible option face; semibold labels (uppercase only for navigation tabs). Selected option rises from the tray with neutral text, edge and highlight. Not a row of blue CTA buttons.
 - Grid choices reflow as text grows instead of squeezing labels; scrolling layouts retain single-line options.
 - Arrow/Home/End selection and roving focus remain; an unselected group still has a keyboard entry point.
-- Radix Tabs use the same materials but retain their own tab semantics and keyboard handling.
+- `TabBar` with `role="tab"` provides tab semantics and panel wiring for tabbed screens; there are no Radix Tabs in the app.
 
 Do not invent a new segmented style. If a generic pattern fits, prefer `Segmented`.
 
@@ -317,8 +336,9 @@ Use `ToggleChip` for compact on/off controls, especially icon or filter-like tog
 
 Real use:
 
-- Home history button
 - Logs level filters (`compact` chips)
+
+The Home History control is a `HeaderButton`, not a chip.
 
 Do not use chips for normal settings; use `ToggleSwitch`.
 
@@ -357,9 +377,11 @@ Examples:
 
 ### Settings navigation rows
 
-Settings index nav rows use:
+The Settings index is a grid of outline-button tiles in `settings-navigation-grid`: each tile is a `site-button site-button-outline` with a muted leading icon and label, and status tiles span the full row. Do not turn the index back into a list of rows.
 
-- `settings-nav-row`: 48px minimum, 12px padding, neutral text and a trailing chevron
+Link rows inside settings subpages (Advanced, About) use `settings-nav-row`:
+
+- 48px minimum, 12px padding, neutral text and a trailing chevron
 - text on left
 - `NextIcon size="20"` right
 - related rows share a raised Card shell; rows remain flat, not individual action cards
@@ -369,7 +391,7 @@ Device history is a different settings subflow:
 
 - list wrapper `flex flex-col gap-3 pt-2`
 - rows use `DeviceRow`, which is a `Card` with active dot, primary name/address, muted address/platform/version metadata, optional lock icon, and optional right action button
-- device detail uses `flex flex-col gap-6 p-3`, TextInput for name, a home-style info section heading `font-bold text-gray-400 capitalize`, and full-width buttons
+- device detail uses `flex flex-col gap-6 p-3`, TextInput for name, a home-style info section heading `text-muted-foreground font-bold capitalize`, and full-width buttons
 
 ### Settings toggles
 
@@ -412,8 +434,8 @@ If one sibling section has no visible description, new sibling sections must not
 
 Native selects share the `wui-input` recess and 48px minimum height. Keep native picker behavior:
 
-- Settings language and scraper select: `border-bd-input bg-surface-inset text-foreground rounded-md border border-solid p-3`
-- `SimpleSystemSelect`: `border-input text-foreground w-full rounded-md border px-3 py-2` with inline `backgroundColor: var(--surface-inset)`
+- Settings language and scraper select: `wui-input border-input text-foreground min-h-12 rounded-md border border-solid p-3`
+- `SimpleSystemSelect`: `wui-input` with `border-input text-foreground w-full rounded-md border px-3 py-2`
 - labels above are often `text-foreground` or `mb-1 text-foreground`
 - disabled: opacity/cursor where nearby component does so
 
@@ -468,8 +490,9 @@ Visual behavior:
   and fields remains component-owned
 - header, scrollable body, and persistent footer form distinct zones
 - mobile drag handle uses muted foreground
-- centered mobile and left-aligned desktop `text-lg font-semibold` title;
-  compact 8px title-to-body spacing, drag handle, and desktop close action
+- `text-lg font-semibold` title, centered on mobile and left-aligned from `sm`;
+  compact 8px title-to-body spacing, drag handle, and desktop close action;
+  the drag handle and close button keep 48px hit areas around their smaller visuals, and focus uses the `ring` outline
 - safe-area bottom padding
 - focus trap and Android back handling
 
@@ -501,26 +524,26 @@ Physical NFC waits stay in context instead of opening an app-owned modal. `Reade
 
 - waiting latches the physical button down and adds a broad, slow blue halo outside its edge; do not draw an illuminated line inside the button face
 - a required re-tap uses an external amber double pulse
-- verification failure releases into an explicit Retry/Cancel state with a static red halo
+- verification failure swaps to an explicit Retry/Cancel pair: Retry stays latched (pressed face) inside a static red halo, and Cancel is an outline button; nothing pulses
 - the component always reserves one compact status line below its action, including while idle, so state text never shifts surrounding layout
 - pressing the latched waiting control again cancels the session; visible status copy says “Press again to cancel” so it cannot be mistaken for another NFC-card tap
 - labels describe the physical action; do not imply finite progress
 - state changes receive one live announcement without moving focus
-- animate the pre-rendered halo with opacity and transform rather than animating blur or box-shadow
+- the waiting halo is a solid ring whose `box-shadow` spread animates outward; the re-tap glow animates opacity. The halo colour derives from `--interaction`
 - reduced motion keeps a static illuminated state
 
-Queue or deep-link writes without a visible source control use the compact reader activity strip above bottom navigation. Native iOS NFC system UI may still appear because it is OS-owned. Do not add spinner, orbit, fake percentage, or app-owned full-screen reader overlays.
+Queue or deep-link writes without a visible source control use the compact reader activity strip above the measured footer clearance (`--app-footer-overlay-clearance`). Native iOS NFC system UI may still appear because it is OS-owned. Do not add spinner, orbit, fake percentage, or app-owned full-screen reader overlays.
 
 ### Confirm modals
 
 Confirm modal content is simple, but not one single template. New action confirmations should generally use `SlideModal` with concise text and equal-width buttons.
 
-- `StopConfirmModal`: centered paragraph, `flex flex-col gap-4 p-4`, buttons row `justify-center gap-4`, cancel outline + confirm primary.
-- Advanced error reporting confirmation matches the `StopConfirmModal` centered paragraph/buttons pattern.
-- `ConfirmClearModal` and mapping delete confirmation use `py-4`, a `flex gap-2` equal-width button row, and destructive outline styling with `border-error text-error`.
+- `StopConfirmModal`: `SlideModal` with a centered paragraph in a `p-4` body and a `ModalActionBar` footer: Cancel (`secondary`) left, confirm (`intent="primary"`) right, equal width.
+- Advanced error reporting confirmation matches the `StopConfirmModal` pattern.
+- `ConfirmClearModal` and mapping delete confirmation use `py-4` and a `flex gap-2` equal-width button row with Cancel `secondary` and the confirm action `intent="destructive"`.
 - Manage Media clean confirmation uses `SlideModal`, muted description text, and a `flex gap-2` equal-width button row.
 
-Match the existing confirmation type closest to the action. Destructive actions use visible error styling, not `intent="destructive"` alone.
+Match the existing confirmation type closest to the action. Destructive confirmations use `intent="destructive"` alone; do not add manual `border-error text-error` classes.
 
 ### Staged token modal
 
@@ -539,16 +562,25 @@ Keep it concise. Do not add extra cards/icons/status badges.
 Home is the phone-as-reader screen: scanning is the primary action and the one
 Pro is sold on, and everything below it is the connected device's live state.
 
-Order: header (logo, device pill, history) → scan slabs → Now Playing →
+Order: header (logo, device pill, history) → scan actions → Remote Keyboard → Now Playing →
 background slot → favourites → recently played → reader strip.
 
 Patterns:
 
-- Scanning uses `ActionSlab`: a tall slab for the leading mode and a short slab
-  beneath for the other. NFC leads unless the camera is the mode last used, and
-  a phone with one capability gets a single tall slab. There is no mode toggle.
-- The tap slab stays pressable while scanning: its title and accessible name
+- Scanning is `ScanActions` (`src/components/home/ScanActions.tsx`): a stacked
+  column with the leading mode first and the other mode beneath. NFC leads
+  unless the camera is the mode last used, and a phone with one capability
+  gets a single action. There is no mode toggle. The NFC action is a
+  `ReaderActivityControl` (`size="lg"`, `layout="stacked"`); the camera action
+  is a secondary stacked `Button`. When NFC is disabled the NFC slot becomes a
+  primary button that opens NFC settings.
+- While a queued or deep-link write is active, its `ReaderActivityControl`
+  replaces the scan actions; with no reader at all the section shows an
+  `EmptyState` inside a `Card`.
+- The NFC control stays pressable while scanning: its label and accessible name
   switch to the scanning/stop state and it carries `aria-pressed`.
+- Remote Keyboard is a full-width secondary `Button` below the scan actions,
+  behind the `remoteInput` feature gate and disabled while disconnected.
 - Device identity is a `StatusPill` in the Home header actions, opening a
   `SlideModal` device sheet. The sheet keeps Pair as a circular secondary icon
   action on the connected-device status row. It runs one bounded discovery pass on open,
@@ -648,7 +680,7 @@ Mapping editor uses a plain `flex flex-col gap-4` form stack:
 - `Segmented` for type/match
 - `ZapScriptInput` for override text
 - `ToggleSwitch` for enabled
-- save button primary, delete button outline with `border-error text-error`
+- save button primary, delete button `intent="destructive"`
 
 `ZapScriptInput` is its own compound editor:
 
@@ -662,13 +694,13 @@ Do not replace ZapScript editing with a plain `TextInput`.
 
 ### NFC tabs
 
-NFC utilities use shadcn `Tabs` for Read/Tools.
+NFC utilities use `TabBar` (`role="tab"`) for Read/Tools.
 
 NFC content panels use custom rounded blocks, not WUI `Card`:
 
-- wrapper: `bg-background-secondary/50 space-y-4 rounded-2xl p-4`
+- wrapper: `bg-surface-raised space-y-4 rounded-lg p-4`
 - headings: `text-lg font-semibold`
-- values: `bg-background/50 rounded-lg px-3 py-2`, often mono/small
+- values: `bg-surface-inset rounded-lg px-3 py-2`, often mono/small
 - badges for NFC booleans/tech types
 - dangerous tool warnings use red icon/text in the Tools tab
 
@@ -745,15 +777,15 @@ Do not use normal settings rows or cards for log entries.
 
 Inbox uses a `SlideModal` opened from a header `InboxButton`:
 
-- inbox button is `HeaderButton` with Bell icon and optional `attention-throb`
+- inbox button is `HeaderButton` with Bell icon and a `NotificationBadge` count
 - empty inbox uses `EmptyState` with Bell icon
-- rows are bordered boxes: `border-bd-outline rounded-md border border-solid p-3`
-- severity icon left, title `font-semibold`, body `text-foreground-hint text-sm`, timestamp `text-foreground-hint text-xs`
+- rows are `Card`s (`flex flex-row items-start gap-3`), not bordered boxes
+- severity icon left, title `text-foreground font-semibold`, body `text-muted-foreground text-sm`, timestamp `text-muted-foreground text-xs`
 - row body can expand/collapse with `line-clamp-2`
 - delete uses small text `Button` with trash icon
 - clear-all confirmation lives in modal footer, not a separate modal
 
-Do not reuse inbox bordered rows for ordinary settings/navigation lists.
+Do not reuse inbox card rows for ordinary settings/navigation lists.
 
 ## Status, loading, and progress
 
@@ -787,8 +819,7 @@ Progress bars exist for media database and scraper flows.
 
 Patterns:
 
-- database compact bar: `h-[10px]`, border, `bg-button-pattern` inner bar
-- scraper active bar: `h-5`, thicker inner bar
+- both media database and scraper bars: a `h-[10px]` `rounded-full` track with `border-border bg-background`, and an `h-[8px]` `bg-primary` fill (`animate-pulse` for indeterminate optimizing)
 - status rows use `text-sm`, muted labels, values right-aligned
 
 Do not use progress bars outside real progress work.
@@ -803,7 +834,7 @@ Choose row style by context:
 - Search result: large clickable result row with metadata and tags
 - Selector row: modal list item with selection indicator/check
 - Log row: monospaced text row with inline divider and badges
-- Inbox row: bordered modal row with severity icon and compact timestamp
+- Inbox row: `Card` row with severity icon and compact timestamp
 - Card row: only inside `Card`-based menus/status blocks
 
 Do not mix row styles in one list.
@@ -838,7 +869,7 @@ Keep existing accessibility behavior:
 - use `SlideModal` focus trap for bottom-sheet modals
 - use `useSmartSwipe` for subpage back gesture where sibling pages use it
 - use `useHaptics()` or WUI component `intent` instead of ad-hoc haptic calls
-- focus rings use the semantic interaction token; no hardcoded white ring on light surfaces
+- focus rings use the semantic interaction token (`ring-ring` or the `--interaction` outline); no hardcoded white ring on light surfaces, and `ring-offset-*` needs `ring-offset-background`
 
 Disabled controls should use component disabled props and existing disabled colors, not custom hidden interactivity.
 
@@ -863,6 +894,6 @@ Before finishing UI work, compare changed UI against nearest siblings and verify
 - same presence or absence of descriptions/helper text
 - no new card/badge/icon/progress/loading treatment introduced
 - row style matches context: settings nav vs device row vs mapping row vs search result vs log row vs inbox row
-- modal type matches job: `SlideModal` or the remaining compatibility `Dialog`; reader waits stay in context
+- modal type matches job: `SlideModal`; reader waits stay in context
 - focus rings and accessible labels intact
 - mobile safe-area and desktop max-width handled by existing shell

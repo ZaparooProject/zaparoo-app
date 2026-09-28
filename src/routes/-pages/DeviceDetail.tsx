@@ -19,6 +19,7 @@ import { invalidateLibraryImageCache } from "@/lib/libraryImageCache";
 import { PageFrame } from "@/components/PageFrame";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { Button } from "@/components/wui/Button";
+import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { TextInput } from "@/components/wui/TextInput";
 import { SlideModal } from "@/components/SlideModal";
 import { BackIcon } from "@/lib/images";
@@ -143,8 +144,7 @@ export function DeviceDetail() {
           {isActive && (
             <span
               aria-label={t("settings.activeDevice")}
-              style={{ backgroundColor: "var(--color-success)" }}
-              className="h-2 w-2 shrink-0 rounded-full"
+              className="bg-success h-2 w-2 shrink-0 rounded-full"
             />
           )}
           <span className="truncate">{headingTitle}</span>
@@ -165,11 +165,11 @@ export function DeviceDetail() {
         <section aria-labelledby="device-info-heading">
           <h2
             id="device-info-heading"
-            className="text-muted-foreground font-bold capitalize"
+            className="text-foreground mb-2 text-lg font-semibold"
           >
             {t("settings.deviceDetail.infoHeading")}
           </h2>
-          <p style={{ wordBreak: "break-all" }}>
+          <p className="break-all">
             {t("settings.deviceDetail.address", { value: endpoint.address })}
           </p>
           {record.platform && (
@@ -197,6 +197,7 @@ export function DeviceDetail() {
         <Button
           label={t("settings.deviceDetail.forget")}
           variant="outline"
+          intent="destructive"
           onClick={() => setConfirmOpen(true)}
           className="w-full"
         />
@@ -209,27 +210,27 @@ export function DeviceDetail() {
         }}
         title={t("settings.deviceDetail.forgetTitle")}
         footer={
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              label={t("settings.deviceDetail.forgetCancel")}
-              onClick={() => setConfirmOpen(false)}
-              disabled={forgetting}
-              disabledAppearance="busy"
-              className="flex-1"
-            />
-            <Button
-              variant="outline"
-              intent="destructive"
-              label={t("settings.deviceDetail.forgetConfirm")}
-              onClick={() => void handleConfirmForget()}
-              disabled={forgetting}
-              disabledAppearance="busy"
-              className={
-                forgetting ? "flex-1" : "border-error text-error flex-1"
-              }
-            />
-          </div>
+          <ModalActionBar
+            secondaryAction={
+              <Button
+                variant="secondary"
+                label={t("settings.deviceDetail.forgetCancel")}
+                onClick={() => setConfirmOpen(false)}
+                disabled={forgetting}
+                disabledAppearance="busy"
+              />
+            }
+            primaryAction={
+              <Button
+                variant="outline"
+                intent="destructive"
+                label={t("settings.deviceDetail.forgetConfirm")}
+                onClick={() => void handleConfirmForget()}
+                disabled={forgetting}
+                disabledAppearance="busy"
+              />
+            }
+          />
         }
       >
         <div className="py-4">

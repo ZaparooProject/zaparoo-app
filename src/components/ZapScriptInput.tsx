@@ -54,7 +54,7 @@ export function ZapScriptInput(props: {
       <div className="wui-editor flex flex-col">
         <textarea
           ref={textareaRef}
-          className="wui-input border-bd-input rounded-b-none border border-solid p-3 font-mono text-base leading-relaxed"
+          className="wui-input border-input rounded-b-none border border-solid p-3 font-mono text-base leading-relaxed"
           aria-label={props["aria-label"] ?? t("create.custom.textareaLabel")}
           aria-labelledby={props["aria-labelledby"]}
           aria-describedby="zapscript-char-count"
@@ -74,7 +74,7 @@ export function ZapScriptInput(props: {
           rows={props.rows ?? 4}
         />
 
-        <div className="border-bd-input bg-surface-raised rounded-b-md border border-t-0 border-solid p-3">
+        <div className="border-input bg-surface-raised rounded-b-md border border-t-0 border-solid p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div
               id="zapscript-char-count"

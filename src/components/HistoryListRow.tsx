@@ -17,7 +17,7 @@ export function HistoryListRow({
   action,
 }: HistoryListRowProps) {
   return (
-    <li className="border-bd-outline flex items-center gap-3 border-b border-solid p-3 last:border-b-0">
+    <li className="border-border flex items-center gap-3 border-b border-solid p-3 last:border-b-0">
       {leading}
       <div className="min-w-0 flex-1">
         <div className="text-foreground flex min-w-0 items-start gap-1 font-medium">

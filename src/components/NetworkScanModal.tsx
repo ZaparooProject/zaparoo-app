@@ -1,11 +1,12 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Loader2 } from "lucide-react";
 import {
   getDiscoveredDeviceIdentity,
   useNetworkScan,
   type DiscoveredDevice,
 } from "@/hooks/useNetworkScan";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
 import {
   discoveredDeviceToRegistration,
@@ -61,7 +62,11 @@ export function NetworkScanModal({
         {/* Scanning indicator */}
         {isScanning && devices.length === 0 && (
           <div className="flex flex-col items-center justify-center gap-3 py-8">
-            <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+            <LoadingSpinner
+              size={32}
+              className="text-muted-foreground"
+              decorative
+            />
             <p className="text-muted-foreground">
               {t("settings.networkScan.searching")}
             </p>
@@ -70,9 +75,16 @@ export function NetworkScanModal({
 
         {/* Error message */}
         {error && (
-          <div className="py-4 text-center">
-            <p className="text-error">{error}</p>
-          </div>
+          <EmptyState
+            title={error}
+            action={
+              <Button
+                variant="outline"
+                label={t("scan.retry")}
+                onClick={() => void startScan()}
+              />
+            }
+          />
         )}
 
         {/* Device list */}
@@ -99,7 +111,11 @@ export function NetworkScanModal({
         {/* Scanning indicator when we have results */}
         {isScanning && devices.length > 0 && (
           <div className="flex items-center justify-center gap-2 py-2">
-            <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+            <LoadingSpinner
+              size={16}
+              className="text-muted-foreground"
+              decorative
+            />
             <p className="text-muted-foreground text-sm">
               {t("settings.networkScan.stillSearching")}
             </p>

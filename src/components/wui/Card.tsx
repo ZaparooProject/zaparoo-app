@@ -36,7 +36,6 @@ export function Card(props: {
         "border-solid",
         "p-4",
         "border-border",
-        "bg-card-pattern",
         {
           "text-foreground-disabled cursor-not-allowed": props.disabled,
 

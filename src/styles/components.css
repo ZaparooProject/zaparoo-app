@@ -179,7 +179,8 @@
     opacity: 0;
   }
   .wui-reader-button-shell[data-reader-state="waiting"]::before {
-    box-shadow: 0 0 0 3px rgb(60 176 255 / 72%);
+    box-shadow: 0 0 0 3px
+      color-mix(in srgb, var(--interaction) 72%, transparent);
     opacity: 1;
     animation: reader-button-pulse 1.8s ease-out infinite;
   }
@@ -210,10 +211,12 @@
   }
   @keyframes reader-button-pulse {
     0% {
-      box-shadow: 0 0 0 0 rgb(60 176 255 / 78%);
+      box-shadow: 0 0 0 0
+        color-mix(in srgb, var(--interaction) 78%, transparent);
     }
     100% {
-      box-shadow: 0 0 0 14px rgb(60 176 255 / 0%);
+      box-shadow: 0 0 0 14px
+        color-mix(in srgb, var(--interaction) 0%, transparent);
     }
   }
   @keyframes reader-button-attention {
@@ -271,14 +274,10 @@
     text-shadow: 0 1px 0 rgb(255 255 255 / 10%);
   }
   .wui-circle-button[data-variant="destructive"] {
-    --circle-edge: var(--destructive-fill-shadow);
+    --circle-edge: #a11b1b;
     color: #ffffff;
-    background: linear-gradient(
-      180deg,
-      var(--destructive-fill-light) 0%,
-      var(--destructive-fill-mid) 50%,
-      var(--destructive-fill) 100%
-    );
+    background: linear-gradient(180deg, #da3838 0%, #cf3030 50%, #c62828 100%);
+    text-shadow: 0 -1px 0 rgb(0 0 0 / 30%);
   }
   .wui-circle-button[data-variant="pro"] {
     --circle-edge: #9a6a00;
@@ -445,6 +444,11 @@
   }
   .wui-card {
     border-radius: 8px;
+    background-image: linear-gradient(
+      180deg,
+      var(--surface-elevated),
+      var(--surface-raised)
+    );
     box-shadow:
       inset 0 1px 0 var(--material-highlight),
       0 2px 5px var(--material-shadow);

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Link, useRouter } from "@tanstack/react-router";
+import { useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { ListChecks, Pencil, X } from "lucide-react";
 import { useConnection } from "@/hooks/useConnection";
@@ -280,7 +280,7 @@ export function Devices() {
         {!registrySettled ? (
           <DelayedLoading>
             <div className="text-muted-foreground flex items-center justify-center gap-2 py-8">
-              <LoadingSpinner size={16} className="text-primary" />
+              <LoadingSpinner size={16} className="text-primary" decorative />
               <span>{t("settings.deviceHistoryLoading")}</span>
             </div>
           </DelayedLoading>
@@ -292,6 +292,15 @@ export function Devices() {
                 ? "settings.deviceHistoryError"
                 : "settings.deviceHistoryEmpty",
             )}
+            action={
+              hydrationError ? (
+                <Button
+                  variant="outline"
+                  label={t("scan.retry")}
+                  onClick={() => void deviceRegistry.hydrate()}
+                />
+              ) : undefined
+            }
           />
         ) : (
           sortedRecords.map(({ record, endpoint }) => (
@@ -323,14 +332,17 @@ export function Devices() {
                     }
                   />
                 ) : (
-                  <Link
-                    to="/settings/devices/$recordId"
-                    params={{ recordId: record.recordId }}
+                  <Button
+                    icon={<Pencil size={20} />}
+                    variant="ghost"
                     aria-label={t("settings.deviceDetails")}
-                    className="bg-background border-bd-outline focus-visible:ring-offset-background focus-visible:ring-ring flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-solid px-1.5 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-                  >
-                    <Pencil size={18} />
-                  </Link>
+                    onClick={() =>
+                      void router.navigate({
+                        to: "/settings/devices/$recordId",
+                        params: { recordId: record.recordId },
+                      })
+                    }
+                  />
                 )
               }
             />
@@ -361,7 +373,7 @@ export function Devices() {
           <ModalActionBar
             secondaryAction={
               <Button
-                variant="outline"
+                variant="secondary"
                 label={t("settings.deviceCombine.cancel")}
                 onClick={() => setCombineOpen(false)}
                 disabled={isCombining}

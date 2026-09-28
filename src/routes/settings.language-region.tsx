@@ -93,7 +93,7 @@ export function LanguageRegionSettings() {
           </label>
           <select
             id="settings-language"
-            className="wui-input border-bd-input bg-surface-inset text-foreground min-h-12 w-full rounded-md border border-solid p-3"
+            className="wui-input border-input bg-surface-inset text-foreground min-h-12 w-full rounded-md border border-solid p-3"
             value={selectedLanguage}
             onChange={(event) => i18n.changeLanguage(event.target.value)}
           >
@@ -114,7 +114,7 @@ export function LanguageRegionSettings() {
           </label>
           <select
             id="settings-system-names"
-            className="wui-input border-bd-input bg-surface-inset text-foreground min-h-12 w-full rounded-md border border-solid p-3"
+            className="wui-input border-input bg-surface-inset text-foreground min-h-12 w-full rounded-md border border-solid p-3"
             value={systemNameRegion}
             onChange={(event) =>
               setSystemNameRegion(

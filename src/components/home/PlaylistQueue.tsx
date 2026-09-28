@@ -36,7 +36,7 @@ function PlaylistQueueItem({
         aria-current={current ? "true" : undefined}
         disabled={disabled}
         data-pressed={pressed}
-        className="wui-playlist-item border-bd-outline flex min-h-12 w-full touch-manipulation items-start gap-3 border-b border-solid px-3 py-3 text-left text-sm last:border-b-0 disabled:cursor-not-allowed disabled:opacity-50"
+        className="wui-playlist-item border-border flex min-h-12 w-full touch-manipulation items-start gap-3 border-b border-solid px-3 py-3 text-left text-sm last:border-b-0 disabled:cursor-not-allowed disabled:opacity-50"
         onClick={() => {
           if (shouldFireClick()) onSelect();
         }}
@@ -97,11 +97,11 @@ export function PlaylistQueue({
       // Scrollable regions must be keyboard-focusable.
       // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
       tabIndex={0}
-      className="border-bd-filled bg-background mt-3 max-h-44 overflow-y-auto rounded-lg border border-solid shadow-inner"
+      className="border-border bg-background mt-3 max-h-44 overflow-y-auto rounded-lg border border-solid shadow-inner"
     >
       <div
         ref={headerRef}
-        className="border-bd-outline bg-surface-inset sticky top-0 z-10 flex min-h-11 items-center justify-between gap-3 border-b border-solid px-3 py-2"
+        className="border-border bg-surface-inset sticky top-0 z-10 flex min-h-11 items-center justify-between gap-3 border-b border-solid px-3 py-2"
       >
         <h3 id={headingId} className="min-w-0 truncate text-sm font-semibold">
           {playlist.name || playlist.id}

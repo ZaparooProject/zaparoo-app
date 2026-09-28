@@ -21,6 +21,7 @@ import { TextInput } from "@/components/wui/TextInput";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
 import { SettingHelp } from "@/components/wui/SettingHelp";
 import { ModalActionBar } from "@/components/wui/ModalActionBar";
+import { Card } from "@/components/wui/Card";
 import { SlideModal } from "@/components/SlideModal";
 import { NextIcon } from "@/lib/images";
 import { formatDuration, parseDuration } from "@/lib/utils";
@@ -115,7 +116,7 @@ function ProfileRow(props: {
       type="button"
       onPointerUp={handleHapticPress}
       onClick={props.onOpen}
-      className="border-bd-outline focus-visible:ring-ring flex w-full flex-row items-center justify-between gap-3 border-b border-solid px-1 py-3 text-left last:border-b-0 focus-visible:ring-2 focus-visible:outline-none"
+      className="border-border focus-visible:ring-ring flex w-full flex-row items-center justify-between gap-3 border-b border-solid px-1 py-3 text-left last:border-b-0 focus-visible:ring-2 focus-visible:outline-none"
       aria-label={t("settings.core.profiles.openProfile", {
         name: profile.name,
       })}
@@ -368,516 +369,529 @@ export function ProfileManager(props: {
       : null;
 
   return (
-    <section className="flex flex-col gap-3">
-      <h2 className="text-foreground text-lg font-semibold">
-        {t("settings.core.profiles.title")}
-      </h2>
+    <Card>
+      <section className="flex flex-col gap-3">
+        <h2 className="text-foreground text-lg font-semibold">
+          {t("settings.core.profiles.title")}
+        </h2>
 
-      <ToggleSwitch
-        label={
-          <span className="flex items-center">
-            {t("settings.core.profiles.requireForLaunch")}
-            <SettingHelp
-              title={t("settings.core.profiles.requireForLaunch")}
-              description={t("settings.core.profiles.requireForLaunchHelp")}
-            />
-          </span>
-        }
-        value={props.requireForLaunch}
-        setValue={props.onRequireForLaunchChange}
-        disabled={!props.canWriteSettings}
-        loading={props.settingsLoading || profilesQuery.isPending}
-      />
-
-      {profilesQuery.isPending ? null : profilesQuery.isError ? (
-        <EmptyState
-          size="compact"
-          title={t("settings.core.profiles.loadFailed")}
-          action={
-            <Button
-              label={t("retry")}
-              variant="outline"
-              size="sm"
-              onClick={() => void profilesQuery.refetch()}
-            />
+        <ToggleSwitch
+          label={
+            <span className="flex items-center">
+              {t("settings.core.profiles.requireForLaunch")}
+              <SettingHelp
+                title={t("settings.core.profiles.requireForLaunch")}
+                description={t("settings.core.profiles.requireForLaunchHelp")}
+              />
+            </span>
           }
+          value={props.requireForLaunch}
+          setValue={props.onRequireForLaunchChange}
+          disabled={!props.canWriteSettings}
+          loading={props.settingsLoading || profilesQuery.isPending}
         />
-      ) : profiles.length === 0 ? (
-        <EmptyState
-          size="compact"
-          title={t("settings.core.profiles.empty")}
-          action={
-            props.canManage ? (
+
+        {profilesQuery.isPending ? null : profilesQuery.isError ? (
+          <EmptyState
+            size="compact"
+            title={t("settings.core.profiles.loadFailed")}
+            action={
+              <Button
+                label={t("scan.retry")}
+                variant="outline"
+                size="sm"
+                onClick={() => void profilesQuery.refetch()}
+              />
+            }
+          />
+        ) : profiles.length === 0 ? (
+          <EmptyState
+            size="compact"
+            title={t("settings.core.profiles.empty")}
+            action={
+              props.canManage ? (
+                <Button
+                  icon={<PlusIcon size={20} />}
+                  label={t("settings.core.profiles.add")}
+                  intent="primary"
+                  onClick={openNew}
+                />
+              ) : undefined
+            }
+          />
+        ) : (
+          <div className="flex flex-col">
+            {profiles.map((profile) => (
+              <ProfileRow
+                key={profile.profileId}
+                profile={profile}
+                active={activeQuery.data?.profileId === profile.profileId}
+                onOpen={() =>
+                  props.canManage
+                    ? openEdit(profile)
+                    : selectSwitchProfile(profile)
+                }
+              />
+            ))}
+          </div>
+        )}
+
+        {profiles.length > 0 && (
+          <div className="flex gap-2">
+            {props.canManage && (
               <Button
                 icon={<PlusIcon size={20} />}
                 label={t("settings.core.profiles.add")}
                 intent="primary"
+                className="flex-1"
                 onClick={openNew}
               />
-            ) : undefined
-          }
-        />
-      ) : (
-        <div className="flex flex-col">
-          {profiles.map((profile) => (
-            <ProfileRow
-              key={profile.profileId}
-              profile={profile}
-              active={activeQuery.data?.profileId === profile.profileId}
-              onOpen={() =>
-                props.canManage
-                  ? openEdit(profile)
-                  : selectSwitchProfile(profile)
-              }
-            />
-          ))}
-        </div>
-      )}
-
-      {profiles.length > 0 && (
-        <div className="flex gap-2">
-          {props.canManage && (
-            <Button
-              icon={<PlusIcon size={20} />}
-              label={t("settings.core.profiles.add")}
-              intent="primary"
-              className="flex-1"
-              onClick={openNew}
-            />
-          )}
-          <Button
-            label={t("settings.core.profiles.switch")}
-            variant="outline"
-            className="flex-1"
-            onClick={() => selectSwitchProfile("shared")}
-          />
-        </div>
-      )}
-
-      {!props.canManage && profiles.length > 0 && (
-        <p className="text-muted-foreground text-sm">
-          {t("settings.core.profiles.adminRequired")}
-        </p>
-      )}
-
-      <SlideModal
-        isOpen={editor !== null}
-        close={() => setEditor(null)}
-        title={t(
-          editor?.action === "edit"
-            ? "settings.core.profiles.edit"
-            : "settings.core.profiles.new",
-        )}
-        footer={
-          editor && (
-            <ModalActionBar
-              secondaryAction={
-                editor.action === "edit" ? (
-                  <Button
-                    label={t("settings.core.profiles.delete")}
-                    icon={<Trash2Icon size={20} />}
-                    variant="outline"
-                    intent="destructive"
-                    className="border-error text-error"
-                    onClick={() => {
-                      setDeleteTarget(editor.profile);
-                      setEditor(null);
-                    }}
-                    disabled={
-                      saveMutation.isPending || deleteMutation.isPending
-                    }
-                    disabledAppearance="busy"
-                  />
-                ) : undefined
-              }
-              primaryAction={
-                <Button
-                  label={t("save")}
-                  intent="primary"
-                  onClick={() => editor && saveMutation.mutate(editor)}
-                  disabled={validationError !== null || saveMutation.isPending}
-                  disabledAppearance={
-                    saveMutation.isPending ? "busy" : "unavailable"
-                  }
-                />
-              }
-            />
-          )
-        }
-      >
-        {editor && (
-          <div className="flex flex-col gap-4 py-4">
-            <TextInput
-              label={t("settings.core.profiles.nameRequiredLabel")}
-              value={editor.name}
-              setValue={(value) => setEditorValue("name", value)}
-              maxLength={255}
-              required
-              error={
-                editor.name.length > 0 && !editor.name.trim()
-                  ? t("settings.core.profiles.nameRequired")
-                  : undefined
-              }
-            />
-            <Segmented
-              label={t("settings.core.profiles.roleLabel")}
-              options={[
-                {
-                  value: "admin",
-                  label: t("settings.core.profiles.role.admin"),
-                },
-                {
-                  value: "member",
-                  label: t("settings.core.profiles.role.member"),
-                },
-              ]}
-              value={editor.role}
-              onChange={(value) => {
-                setEditorValue("role", value);
-                if (value === "admin" && editor.pinMode === "remove") {
-                  setEditorValue("pinMode", "keep");
-                }
-              }}
-              disabled={(!hasAdmin && editor.action === "create") || soleAdmin}
-              help={
-                !hasAdmin && editor.action === "create"
-                  ? t("settings.core.profiles.firstAdminHelp")
-                  : soleAdmin
-                    ? t("settings.core.profiles.soleAdminHelp")
-                    : t("settings.core.profiles.roleHelp")
-              }
-            />
-            {editor.action === "edit" && editor.profile?.hasPin && (
-              <Segmented
-                label={t("settings.core.profiles.pinAction")}
-                options={[
-                  {
-                    value: "keep",
-                    label: t("settings.core.profiles.pinKeep"),
-                  },
-                  {
-                    value: "change",
-                    label: t("settings.core.profiles.pinChange"),
-                  },
-                  ...(editor.role === "member"
-                    ? [
-                        {
-                          value: "remove" as const,
-                          label: t("settings.core.profiles.pinRemove"),
-                        },
-                      ]
-                    : []),
-                ]}
-                value={editor.pinMode}
-                onChange={(value) => {
-                  setEditorValue("pinMode", value);
-                  setEditorValue("pin", "");
-                }}
-              />
             )}
-            {showPinInput && (
-              <TextInput
-                label={t(
-                  editorPinRequired
-                    ? "settings.core.profiles.pinRequiredLabel"
-                    : "settings.core.profiles.pinOptionalLabel",
-                )}
-                value={editor.pin}
-                setValue={(value) =>
-                  setEditorValue("pin", value.replace(/\D/g, "").slice(0, 8))
+            <Button
+              label={t("settings.core.profiles.switch")}
+              variant="outline"
+              className="flex-1"
+              onClick={() => selectSwitchProfile("shared")}
+            />
+          </div>
+        )}
+
+        {!props.canManage && profiles.length > 0 && (
+          <p className="text-muted-foreground text-sm">
+            {t("settings.core.profiles.adminRequired")}
+          </p>
+        )}
+
+        <SlideModal
+          isOpen={editor !== null}
+          close={() => setEditor(null)}
+          title={t(
+            editor?.action === "edit"
+              ? "settings.core.profiles.edit"
+              : "settings.core.profiles.new",
+          )}
+          footer={
+            editor && (
+              <ModalActionBar
+                secondaryAction={
+                  editor.action === "edit" ? (
+                    <Button
+                      label={t("settings.core.profiles.delete")}
+                      icon={<Trash2Icon size={20} />}
+                      variant="outline"
+                      intent="destructive"
+                      onClick={() => {
+                        setDeleteTarget(editor.profile);
+                        setEditor(null);
+                      }}
+                      disabled={
+                        saveMutation.isPending || deleteMutation.isPending
+                      }
+                      disabledAppearance="busy"
+                    />
+                  ) : undefined
                 }
-                type="password"
-                inputMode="numeric"
-                maxLength={8}
-                min={1000}
-                max={99999999}
-                required={editorPinRequired}
-                autoComplete="new-password"
+                primaryAction={
+                  <Button
+                    label={t("save")}
+                    intent="primary"
+                    onClick={() => editor && saveMutation.mutate(editor)}
+                    disabled={
+                      validationError !== null || saveMutation.isPending
+                    }
+                    disabledAppearance={
+                      saveMutation.isPending ? "busy" : "unavailable"
+                    }
+                  />
+                }
+              />
+            )
+          }
+        >
+          {editor && (
+            <div className="flex flex-col gap-4 py-4">
+              <TextInput
+                label={t("settings.core.profiles.nameRequiredLabel")}
+                value={editor.name}
+                setValue={(value) => setEditorValue("name", value)}
+                maxLength={255}
+                required
                 error={
-                  editor.pin.length > 0 && !PIN_PATTERN.test(editor.pin)
-                    ? t("settings.core.profiles.pinInvalid")
+                  editor.name.length > 0 && !editor.name.trim()
+                    ? t("settings.core.profiles.nameRequired")
                     : undefined
                 }
               />
-            )}
-            <Segmented
-              label={t("settings.core.profiles.limits")}
-              options={[
-                {
-                  value: "inherit",
-                  label: t("settings.core.profiles.limitsInherit"),
-                },
-                {
-                  value: "on",
-                  label: t("settings.core.profiles.limitsOn"),
-                },
-                {
-                  value: "off",
-                  label: t("settings.core.profiles.limitsOff"),
-                },
-              ]}
-              value={editor.limitsMode}
-              onChange={(value) => setEditorValue("limitsMode", value)}
-            />
-            {editor.limitsMode === "on" && (
-              <div className="flex flex-col gap-3">
-                <fieldset className="flex flex-col gap-2">
-                  <legend className="text-sm font-medium">
-                    {t("settings.core.profiles.dailyLimit")}
-                  </legend>
-                  <div className="flex gap-2">
-                    <TextInput
-                      label={t("settings.core.playtime.hours")}
-                      className="min-w-0 flex-1"
-                      value={editor.dailyHours}
-                      setValue={(value) => setEditorValue("dailyHours", value)}
-                      type="number"
-                      inputMode="numeric"
-                      min={0}
-                      step={1}
-                    />
-                    <TextInput
-                      label={t("settings.core.playtime.minutes")}
-                      className="min-w-0 flex-1"
-                      value={editor.dailyMinutes}
-                      setValue={(value) =>
-                        setEditorValue("dailyMinutes", value)
-                      }
-                      type="number"
-                      inputMode="numeric"
-                      min={0}
-                      max={59}
-                      step={1}
-                    />
-                  </div>
-                </fieldset>
-                <fieldset className="flex flex-col gap-2">
-                  <legend className="text-sm font-medium">
-                    {t("settings.core.profiles.sessionLimit")}
-                  </legend>
-                  <div className="flex gap-2">
-                    <TextInput
-                      label={t("settings.core.playtime.hours")}
-                      className="min-w-0 flex-1"
-                      value={editor.sessionHours}
-                      setValue={(value) =>
-                        setEditorValue("sessionHours", value)
-                      }
-                      type="number"
-                      inputMode="numeric"
-                      min={0}
-                      step={1}
-                    />
-                    <TextInput
-                      label={t("settings.core.playtime.minutes")}
-                      className="min-w-0 flex-1"
-                      value={editor.sessionMinutes}
-                      setValue={(value) =>
-                        setEditorValue("sessionMinutes", value)
-                      }
-                      type="number"
-                      inputMode="numeric"
-                      min={0}
-                      max={59}
-                      step={1}
-                    />
-                  </div>
-                </fieldset>
-                <p className="text-muted-foreground text-xs">
-                  {t("settings.core.profiles.unlimitedHelp")}
-                </p>
-              </div>
-            )}
-            {editor.action === "edit" && editor.profile?.switchId && (
-              <div className="border-bd-filled flex flex-col gap-4 border-t pt-4">
-                <div className="flex flex-col gap-2">
-                  <div>
-                    <h3 className="font-medium">
-                      {t("settings.core.profiles.writeCard")}
-                    </h3>
-                    <p className="text-muted-foreground text-sm">
-                      {t("settings.core.profiles.writeCardHelp")}
-                    </p>
-                  </div>
-                  <Button
-                    label={t("settings.core.profiles.writeCard")}
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => {
-                      setEditor(null);
-                      setWriteQueue(`**profile:${editor.profile!.switchId}`);
-                    }}
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <div>
-                    <h3 className="font-medium">
-                      {t("settings.core.profiles.resetCards")}
-                    </h3>
-                    <p className="text-muted-foreground text-sm">
-                      {t("settings.core.profiles.resetCardsHelp")}
-                    </p>
-                  </div>
-                  <Button
-                    label={t("settings.core.profiles.resetCards")}
-                    variant="outline"
-                    intent="destructive"
-                    className="border-error text-error w-full"
-                    onClick={() => {
-                      setResetCardTarget(editor.profile);
-                      setEditor(null);
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </SlideModal>
-
-      <SlideModal
-        isOpen={deleteTarget !== null}
-        close={() => setDeleteTarget(null)}
-        title={t("settings.core.profiles.deleteTitle")}
-        footer={
-          <div className="flex gap-2">
-            <Button
-              label={t("nav.cancel")}
-              variant="outline"
-              className="flex-1"
-              onClick={() => setDeleteTarget(null)}
-            />
-            <Button
-              label={t("settings.core.profiles.delete")}
-              variant="outline"
-              intent="destructive"
-              className="border-error text-error flex-1"
-              onClick={() =>
-                deleteTarget && deleteMutation.mutate(deleteTarget.profileId)
-              }
-              disabled={deleteMutation.isPending}
-              disabledAppearance="busy"
-            />
-          </div>
-        }
-      >
-        <div className="py-4">
-          <p className="text-center">
-            {t("settings.core.profiles.deleteConfirm", {
-              name: deleteTarget?.name,
-            })}
-          </p>
-        </div>
-      </SlideModal>
-
-      <SlideModal
-        isOpen={resetCardTarget !== null}
-        close={() => setResetCardTarget(null)}
-        title={t("settings.core.profiles.resetCardsTitle")}
-        footer={
-          <div className="flex gap-2">
-            <Button
-              label={t("nav.cancel")}
-              variant="outline"
-              className="flex-1"
-              onClick={() => setResetCardTarget(null)}
-            />
-            <Button
-              label={t("settings.core.profiles.resetCards")}
-              variant="outline"
-              intent="destructive"
-              className="border-error text-error flex-1"
-              onClick={() =>
-                resetCardTarget &&
-                resetCardMutation.mutate(resetCardTarget.profileId)
-              }
-              disabled={resetCardMutation.isPending}
-              disabledAppearance="busy"
-            />
-          </div>
-        }
-      >
-        <div className="py-4">
-          <p className="text-center">
-            {t("settings.core.profiles.resetCardsConfirm", {
-              name: resetCardTarget?.name,
-            })}
-          </p>
-        </div>
-      </SlideModal>
-
-      <SlideModal
-        isOpen={switchProfile !== null}
-        close={() => selectSwitchProfile(null)}
-        title={t("settings.core.profiles.switch")}
-        footer={
-          <Button
-            label={t("settings.core.profiles.switch")}
-            intent="primary"
-            className="w-full"
-            onClick={() => switchMutation.mutate()}
-            disabled={!canSubmitSwitch || switchMutation.isPending}
-            disabledAppearance={
-              switchMutation.isPending ? "busy" : "unavailable"
-            }
-          />
-        }
-      >
-        <div className="flex flex-col gap-3 py-4">
-          <div className="flex flex-col">
-            <button
-              type="button"
-              onClick={() => selectSwitchProfile("shared")}
-              aria-pressed={switchProfile === "shared"}
-              className={classNames(
-                "border-bd-outline focus-visible:ring-ring flex min-h-12 items-center justify-between border-b border-solid px-1 text-left last:border-b-0 focus-visible:ring-2 focus-visible:outline-none",
-                { "bg-foreground/10": switchProfile === "shared" },
+              <Segmented
+                label={t("settings.core.profiles.roleLabel")}
+                options={[
+                  {
+                    value: "admin",
+                    label: t("settings.core.profiles.role.admin"),
+                  },
+                  {
+                    value: "member",
+                    label: t("settings.core.profiles.role.member"),
+                  },
+                ]}
+                value={editor.role}
+                onChange={(value) => {
+                  setEditorValue("role", value);
+                  if (value === "admin" && editor.pinMode === "remove") {
+                    setEditorValue("pinMode", "keep");
+                  }
+                }}
+                disabled={
+                  (!hasAdmin && editor.action === "create") || soleAdmin
+                }
+                help={
+                  !hasAdmin && editor.action === "create"
+                    ? t("settings.core.profiles.firstAdminHelp")
+                    : soleAdmin
+                      ? t("settings.core.profiles.soleAdminHelp")
+                      : t("settings.core.profiles.roleHelp")
+                }
+              />
+              {editor.action === "edit" && editor.profile?.hasPin && (
+                <Segmented
+                  label={t("settings.core.profiles.pinAction")}
+                  options={[
+                    {
+                      value: "keep",
+                      label: t("settings.core.profiles.pinKeep"),
+                    },
+                    {
+                      value: "change",
+                      label: t("settings.core.profiles.pinChange"),
+                    },
+                    ...(editor.role === "member"
+                      ? [
+                          {
+                            value: "remove" as const,
+                            label: t("settings.core.profiles.pinRemove"),
+                          },
+                        ]
+                      : []),
+                  ]}
+                  value={editor.pinMode}
+                  onChange={(value) => {
+                    setEditorValue("pinMode", value);
+                    setEditorValue("pin", "");
+                  }}
+                />
               )}
-            >
-              <span>{t("settings.core.profiles.shared")}</span>
-              {activeQuery.data === null && (
-                <Badge variant="success">
-                  {t("settings.core.profiles.active")}
-                </Badge>
+              {showPinInput && (
+                <TextInput
+                  label={t(
+                    editorPinRequired
+                      ? "settings.core.profiles.pinRequiredLabel"
+                      : "settings.core.profiles.pinOptionalLabel",
+                  )}
+                  value={editor.pin}
+                  setValue={(value) =>
+                    setEditorValue("pin", value.replace(/\D/g, "").slice(0, 8))
+                  }
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={8}
+                  min={1000}
+                  max={99999999}
+                  required={editorPinRequired}
+                  autoComplete="new-password"
+                  error={
+                    editor.pin.length > 0 && !PIN_PATTERN.test(editor.pin)
+                      ? t("settings.core.profiles.pinInvalid")
+                      : undefined
+                  }
+                />
               )}
-            </button>
-            {profiles.map((profile) => (
+              <Segmented
+                label={t("settings.core.profiles.limits")}
+                options={[
+                  {
+                    value: "inherit",
+                    label: t("settings.core.profiles.limitsInherit"),
+                  },
+                  {
+                    value: "on",
+                    label: t("settings.core.profiles.limitsOn"),
+                  },
+                  {
+                    value: "off",
+                    label: t("settings.core.profiles.limitsOff"),
+                  },
+                ]}
+                value={editor.limitsMode}
+                onChange={(value) => setEditorValue("limitsMode", value)}
+              />
+              {editor.limitsMode === "on" && (
+                <div className="flex flex-col gap-3">
+                  <fieldset className="flex flex-col gap-2">
+                    <legend className="text-sm font-medium">
+                      {t("settings.core.profiles.dailyLimit")}
+                    </legend>
+                    <div className="flex gap-2">
+                      <TextInput
+                        label={t("settings.core.playtime.hours")}
+                        className="min-w-0 flex-1"
+                        value={editor.dailyHours}
+                        setValue={(value) =>
+                          setEditorValue("dailyHours", value)
+                        }
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        step={1}
+                      />
+                      <TextInput
+                        label={t("settings.core.playtime.minutes")}
+                        className="min-w-0 flex-1"
+                        value={editor.dailyMinutes}
+                        setValue={(value) =>
+                          setEditorValue("dailyMinutes", value)
+                        }
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        max={59}
+                        step={1}
+                      />
+                    </div>
+                  </fieldset>
+                  <fieldset className="flex flex-col gap-2">
+                    <legend className="text-sm font-medium">
+                      {t("settings.core.profiles.sessionLimit")}
+                    </legend>
+                    <div className="flex gap-2">
+                      <TextInput
+                        label={t("settings.core.playtime.hours")}
+                        className="min-w-0 flex-1"
+                        value={editor.sessionHours}
+                        setValue={(value) =>
+                          setEditorValue("sessionHours", value)
+                        }
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        step={1}
+                      />
+                      <TextInput
+                        label={t("settings.core.playtime.minutes")}
+                        className="min-w-0 flex-1"
+                        value={editor.sessionMinutes}
+                        setValue={(value) =>
+                          setEditorValue("sessionMinutes", value)
+                        }
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        max={59}
+                        step={1}
+                      />
+                    </div>
+                  </fieldset>
+                  <p className="text-muted-foreground text-xs">
+                    {t("settings.core.profiles.unlimitedHelp")}
+                  </p>
+                </div>
+              )}
+              {editor.action === "edit" && editor.profile?.switchId && (
+                <div className="border-border flex flex-col gap-4 border-t pt-4">
+                  <div className="flex flex-col gap-2">
+                    <div>
+                      <h3 className="font-medium">
+                        {t("settings.core.profiles.writeCard")}
+                      </h3>
+                      <p className="text-muted-foreground text-sm">
+                        {t("settings.core.profiles.writeCardHelp")}
+                      </p>
+                    </div>
+                    <Button
+                      label={t("settings.core.profiles.writeCard")}
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => {
+                        setEditor(null);
+                        setWriteQueue(`**profile:${editor.profile!.switchId}`);
+                      }}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <div>
+                      <h3 className="font-medium">
+                        {t("settings.core.profiles.resetCards")}
+                      </h3>
+                      <p className="text-muted-foreground text-sm">
+                        {t("settings.core.profiles.resetCardsHelp")}
+                      </p>
+                    </div>
+                    <Button
+                      label={t("settings.core.profiles.resetCards")}
+                      variant="outline"
+                      intent="destructive"
+                      className="w-full"
+                      onClick={() => {
+                        setResetCardTarget(editor.profile);
+                        setEditor(null);
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </SlideModal>
+
+        <SlideModal
+          isOpen={deleteTarget !== null}
+          close={() => setDeleteTarget(null)}
+          title={t("settings.core.profiles.deleteTitle")}
+          footer={
+            <ModalActionBar
+              secondaryAction={
+                <Button
+                  label={t("nav.cancel")}
+                  variant="secondary"
+                  onClick={() => setDeleteTarget(null)}
+                />
+              }
+              primaryAction={
+                <Button
+                  label={t("settings.core.profiles.delete")}
+                  variant="outline"
+                  intent="destructive"
+                  onClick={() =>
+                    deleteTarget &&
+                    deleteMutation.mutate(deleteTarget.profileId)
+                  }
+                  disabled={deleteMutation.isPending}
+                  disabledAppearance="busy"
+                />
+              }
+            />
+          }
+        >
+          <div className="py-4">
+            <p className="text-center">
+              {t("settings.core.profiles.deleteConfirm", {
+                name: deleteTarget?.name,
+              })}
+            </p>
+          </div>
+        </SlideModal>
+
+        <SlideModal
+          isOpen={resetCardTarget !== null}
+          close={() => setResetCardTarget(null)}
+          title={t("settings.core.profiles.resetCardsTitle")}
+          footer={
+            <ModalActionBar
+              secondaryAction={
+                <Button
+                  label={t("nav.cancel")}
+                  variant="secondary"
+                  onClick={() => setResetCardTarget(null)}
+                />
+              }
+              primaryAction={
+                <Button
+                  label={t("settings.core.profiles.resetCards")}
+                  variant="outline"
+                  intent="destructive"
+                  onClick={() =>
+                    resetCardTarget &&
+                    resetCardMutation.mutate(resetCardTarget.profileId)
+                  }
+                  disabled={resetCardMutation.isPending}
+                  disabledAppearance="busy"
+                />
+              }
+            />
+          }
+        >
+          <div className="py-4">
+            <p className="text-center">
+              {t("settings.core.profiles.resetCardsConfirm", {
+                name: resetCardTarget?.name,
+              })}
+            </p>
+          </div>
+        </SlideModal>
+
+        <SlideModal
+          isOpen={switchProfile !== null}
+          close={() => selectSwitchProfile(null)}
+          title={t("settings.core.profiles.switch")}
+          footer={
+            <Button
+              label={t("settings.core.profiles.switch")}
+              intent="primary"
+              className="w-full"
+              onClick={() => switchMutation.mutate()}
+              disabled={!canSubmitSwitch || switchMutation.isPending}
+              disabledAppearance={
+                switchMutation.isPending ? "busy" : "unavailable"
+              }
+            />
+          }
+        >
+          <div className="flex flex-col gap-3 py-4">
+            <div className="flex flex-col">
               <button
                 type="button"
-                key={profile.profileId}
-                onClick={() => selectSwitchProfile(profile)}
-                aria-pressed={selectedProfileId === profile.profileId}
+                onClick={() => selectSwitchProfile("shared")}
+                aria-pressed={switchProfile === "shared"}
                 className={classNames(
-                  "border-bd-outline focus-visible:ring-ring flex min-h-12 items-center justify-between border-b border-solid px-1 text-left last:border-b-0 focus-visible:ring-2 focus-visible:outline-none",
-                  {
-                    "bg-foreground/10": selectedProfileId === profile.profileId,
-                  },
+                  "border-border focus-visible:ring-ring flex min-h-12 items-center justify-between border-b border-solid px-1 text-left last:border-b-0 focus-visible:ring-2 focus-visible:outline-none",
+                  { "bg-foreground/10": switchProfile === "shared" },
                 )}
               >
-                <span>{profile.name}</span>
-                {activeQuery.data?.profileId === profile.profileId && (
+                <span>{t("settings.core.profiles.shared")}</span>
+                {activeQuery.data === null && (
                   <Badge variant="success">
                     {t("settings.core.profiles.active")}
                   </Badge>
                 )}
               </button>
-            ))}
+              {profiles.map((profile) => (
+                <button
+                  type="button"
+                  key={profile.profileId}
+                  onClick={() => selectSwitchProfile(profile)}
+                  aria-pressed={selectedProfileId === profile.profileId}
+                  className={classNames(
+                    "border-border focus-visible:ring-ring flex min-h-12 items-center justify-between border-b border-solid px-1 text-left last:border-b-0 focus-visible:ring-2 focus-visible:outline-none",
+                    {
+                      "bg-foreground/10":
+                        selectedProfileId === profile.profileId,
+                    },
+                  )}
+                >
+                  <span>{profile.name}</span>
+                  {activeQuery.data?.profileId === profile.profileId && (
+                    <Badge variant="success">
+                      {t("settings.core.profiles.active")}
+                    </Badge>
+                  )}
+                </button>
+              ))}
+            </div>
+            {selectedSwitchNeedsPin && (
+              <TextInput
+                label={t("settings.core.profiles.pin")}
+                value={switchPin}
+                setValue={(value) =>
+                  setSwitchPin(value.replace(/\D/g, "").slice(0, 8))
+                }
+                type="password"
+                inputMode="numeric"
+                maxLength={8}
+                autoComplete="current-password"
+              />
+            )}
           </div>
-          {selectedSwitchNeedsPin && (
-            <TextInput
-              label={t("settings.core.profiles.pin")}
-              value={switchPin}
-              setValue={(value) =>
-                setSwitchPin(value.replace(/\D/g, "").slice(0, 8))
-              }
-              type="password"
-              inputMode="numeric"
-              maxLength={8}
-              autoComplete="current-password"
-            />
-          )}
-        </div>
-      </SlideModal>
-    </section>
+        </SlideModal>
+      </section>
+    </Card>
   );
 }

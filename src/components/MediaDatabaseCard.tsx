@@ -17,6 +17,7 @@ import { isCoreFeatureAvailable } from "@/lib/featureGates";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { Card } from "./wui/Card";
 import { Button } from "./wui/Button";
+import { ModalActionBar } from "./wui/ModalActionBar";
 import { SystemSelector, SystemSelectorTrigger } from "./SystemSelector";
 import { LoadingSpinner } from "./ui/loading-spinner";
 import { SlideModal } from "./SlideModal";
@@ -324,10 +325,10 @@ export function MediaDatabaseCard({
             aria-valuemin={0}
             aria-valuemax={100}
             aria-label={t("settings.updateDb.status.optimizing")}
-            className="border-bd-filled bg-background h-[10px] w-full rounded-full border border-solid"
+            className="border-border bg-background h-[10px] w-full rounded-full border border-solid"
           >
             <div
-              className="border-background bg-button-pattern h-[8px] animate-pulse rounded-full border border-solid"
+              className="border-background bg-primary h-[8px] animate-pulse rounded-full border border-solid"
               style={{ width: "100%" }}
             />
           </div>
@@ -371,14 +372,14 @@ export function MediaDatabaseCard({
               aria-valuemin={0}
               aria-valuemax={100}
               aria-label={t("settings.updateDb.progressLabel")}
-              className="border-bd-filled bg-background h-[10px] w-full rounded-full border border-solid"
+              className="border-border bg-background h-[10px] w-full rounded-full border border-solid"
             >
               {/* Distinct nodes prevent iOS WebKit from retaining the solid system-progress layer when final-phase pulsing begins. */}
               {hasDetailedProgress &&
               currentStep === 0 ? null : isSystemStep ? (
                 <div
                   key="determinate"
-                  className="border-background bg-button-pattern h-[8px] rounded-full border border-solid"
+                  className="border-background bg-primary h-[8px] rounded-full border border-solid"
                   style={{
                     width: `${((currentStep / totalSteps) * 100).toFixed(2)}%`,
                   }}
@@ -387,7 +388,7 @@ export function MediaDatabaseCard({
                 <div
                   key="indeterminate"
                   className={classNames(
-                    "border-background bg-button-pattern h-[8px] w-full rounded-full border border-solid",
+                    "border-background bg-primary h-[8px] w-full rounded-full border border-solid",
                     {
                       "animate-pulse": isLiveConnected && !isPaused,
                     },
@@ -450,7 +451,7 @@ export function MediaDatabaseCard({
     if (!databaseExists && !gamesIndex.indexing && !isOptimizing) {
       return (
         <div className="text-muted-foreground mt-3 text-sm">
-          No database found
+          {t("settings.updateDb.status.noDatabase")}
         </div>
       );
     }
@@ -495,11 +496,11 @@ export function MediaDatabaseCard({
           aria-valuemin={0}
           aria-valuemax={100}
           aria-label={t("settings.scrapeMedia.overallProgressLabel")}
-          className="border-bd-filled bg-background h-[10px] w-full rounded-full border border-solid"
+          className="border-border bg-background h-[10px] w-full rounded-full border border-solid"
         >
           <div
             className={classNames(
-              "border-background bg-button-pattern h-[8px] rounded-full border border-solid",
+              "border-background bg-primary h-[8px] rounded-full border border-solid",
               {
                 hidden: hasScrapeProgress && scrapeCurrentStep === 0,
                 "animate-pulse": !hasScrapeProgress,
@@ -682,25 +683,27 @@ export function MediaDatabaseCard({
           close={() => setCleanConfirmOpen(false)}
           title={t("settings.updateDb.cleanOrphansConfirmTitle")}
           footer={
-            <div className="flex gap-2">
-              <Button
-                label={t("nav.cancel")}
-                variant="outline"
-                className="flex-1"
-                disabled={isCleaning}
-                disabledAppearance="busy"
-                onClick={() => setCleanConfirmOpen(false)}
-              />
-              <Button
-                label={t("settings.updateDb.cleanOrphansConfirmAction")}
-                variant="outline"
-                intent="destructive"
-                className="border-error text-error flex-1"
-                disabled={isCleaning}
-                disabledAppearance="busy"
-                onClick={handleCleanConfirm}
-              />
-            </div>
+            <ModalActionBar
+              secondaryAction={
+                <Button
+                  label={t("nav.cancel")}
+                  variant="secondary"
+                  disabled={isCleaning}
+                  disabledAppearance="busy"
+                  onClick={() => setCleanConfirmOpen(false)}
+                />
+              }
+              primaryAction={
+                <Button
+                  label={t("settings.updateDb.cleanOrphansConfirmAction")}
+                  variant="outline"
+                  intent="destructive"
+                  disabled={isCleaning}
+                  disabledAppearance="busy"
+                  onClick={handleCleanConfirm}
+                />
+              }
+            />
           }
         >
           <div className="py-4">

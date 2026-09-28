@@ -84,14 +84,13 @@ export function SimpleSystemSelect({
       aria-label={ariaLabel}
       aria-labelledby={ariaLabelledBy}
       className={classNames(
-        "wui-input border-input text-foreground focus-visible:ring-ring min-h-12 w-full rounded-md border px-3 py-2 transition-colors focus-visible:ring-2 focus-visible:outline-none",
+        "wui-input border-input text-foreground min-h-12 w-full rounded-md border px-3 py-2 transition-colors",
         {
           "hover:bg-foreground/10": !disabled && !isLoading,
           "cursor-not-allowed opacity-50": disabled || isLoading,
         },
         className,
       )}
-      style={{ backgroundColor: "var(--surface-inset)" }}
     >
       {placeholder && <option value="">{placeholder}</option>}
 

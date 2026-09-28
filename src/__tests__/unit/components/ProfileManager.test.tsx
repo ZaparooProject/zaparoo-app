@@ -281,7 +281,7 @@ describe("ProfileManager", () => {
 
     renderManager();
 
-    await user.click(await screen.findByRole("button", { name: "retry" }));
+    await user.click(await screen.findByRole("button", { name: "scan.retry" }));
 
     expect(
       await screen.findByRole("button", {

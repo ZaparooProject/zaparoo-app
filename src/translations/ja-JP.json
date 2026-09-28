@@ -786,6 +786,7 @@
       "termsOfService": "利用規約",
       "privacyPolicy": "プライバシーポリシー",
       "and": "および",
+      "or": "または",
       "warp": {
         "title": "Zaparoo Warp",
         "description": "クラウドバックアップで対応するデバイスデータを保護し、Warpが有効な間はZaparoo Proを利用できます。",
@@ -881,6 +882,7 @@
       "updateDb.cancel": "キャンセル",
       "updateDb.resume": "再開",
       "updateDb.status.ready": "データベースの準備完了",
+      "updateDb.status.noDatabase": "データベースが見つかりません",
       "updateDb.status.optimizing": "データベースを最適化中（使用可能）",
       "updateDb.status.paused": "一時停止中",
       "updateDb.status.throttled": "低速で実行中",
@@ -1222,6 +1224,13 @@
         "levelFilters": "ログレベル",
         "totalEntries": "合計エントリ数",
         "filteredEntries": "表示中",
+        "entriesShowing": "{{total}}件中{{shown}}件を表示",
+        "entryCount_one": "{{count}}件のエントリ",
+        "entryCount_other": "{{count}}件のエントリ",
+        "levelDebug": "デバッグ",
+        "levelInfo": "情報",
+        "levelWarn": "警告",
+        "levelError": "エラー",
         "noEntriesFound": "フィルターに一致するログエントリがありません",
         "fetchError": "ログの取得に失敗しました",
         "notConnected": "ログにアクセスするにはZaparooデバイスに接続してください",
@@ -1259,6 +1268,7 @@
       }
     },
     "systemSelector": {
+      "loadError": "システムを読み込めませんでした",
       "allCategoriesLabel": "すべてのカテゴリ",
       "selectionCount": "{{count}}件選択中",
       "clear": "クリア",
@@ -1282,6 +1292,9 @@
       "apply": "適用"
     },
     "tagSelector": {
+      "expandAll": "すべて展開",
+      "collapseAll": "すべて折りたたむ",
+      "unavailable": "タグを利用できません",
       "title": "タグを選択",
       "searchPlaceholder": "タグを絞り込む...",
       "searchTags": "タグを絞り込む",

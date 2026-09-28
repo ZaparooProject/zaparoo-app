@@ -29,12 +29,12 @@ export function ConfirmClearModal(props: {
               props.onConfirm();
               props.close();
             }}
-            className="border-error text-error flex-1"
+            className="flex-1"
           />
         </div>
       }
     >
-      <div className="py-2" />
+      {null}
     </SlideModal>
   );
 }

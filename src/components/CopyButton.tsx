@@ -43,6 +43,8 @@ export const CopyButton = (props: {
       type="button"
       className={classNames(
         "relative inline-flex -translate-y-0.5 align-middle",
+        // Compact glyph, 48px hit area.
+        "before:absolute before:-inset-[15px] before:content-['']",
         "rounded p-0.5",
         "text-muted-foreground hover:text-foreground",
         "transition-colors duration-150",

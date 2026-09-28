@@ -295,7 +295,7 @@ describe("Settings Logs Integration", () => {
 
       render(<Logs />);
 
-      expect(screen.getByText(/3 entries/)).toBeInTheDocument();
+      expect(screen.getByText("settings.logs.entryCount")).toBeInTheDocument();
     });
 
     it("should show copy action in the header overflow when data is available", async () => {
@@ -419,7 +419,9 @@ describe("Settings Logs Integration", () => {
       await user.type(searchInput, "Message");
 
       await waitFor(() => {
-        expect(screen.getByText(/Showing 2 of 3 entries/i)).toBeInTheDocument();
+        expect(
+          screen.getByText("settings.logs.entriesShowing"),
+        ).toBeInTheDocument();
       });
     });
   });
@@ -518,7 +520,7 @@ describe("Settings Logs Integration", () => {
       render(<Logs />);
 
       // Initially shows 4 entries
-      expect(screen.getByText(/4 entries/)).toBeInTheDocument();
+      expect(screen.getByText("settings.logs.entryCount")).toBeInTheDocument();
 
       // Toggle off debug
       const debugButton = screen.getByRole("button", { name: /debug/i });
@@ -526,7 +528,9 @@ describe("Settings Logs Integration", () => {
 
       // Should show filtered count
       await waitFor(() => {
-        expect(screen.getByText(/Showing 2 of 4 entries/i)).toBeInTheDocument();
+        expect(
+          screen.getByText("settings.logs.entriesShowing"),
+        ).toBeInTheDocument();
       });
     });
   });
@@ -689,6 +693,18 @@ describe("Settings Logs Integration", () => {
       render(<Logs />);
 
       expect(screen.getByText(/settings.logs.fetchError/i)).toBeInTheDocument();
+    });
+
+    it("should offer a retry that refetches the logs", async () => {
+      const user = userEvent.setup();
+      mockState.isError = true;
+      mockState.queryData = null;
+
+      render(<Logs />);
+
+      await user.click(screen.getByRole("button", { name: "scan.retry" }));
+
+      expect(mockState.refetch).toHaveBeenCalled();
     });
 
     it("should handle malformed log data gracefully", () => {

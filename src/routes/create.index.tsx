@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import classNames from "classnames";
 import { BookMarkedIcon, ListPlusIcon, NfcIcon } from "lucide-react";
 import { useAppUi } from "@/hooks/useAppUi";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
@@ -32,13 +31,7 @@ function CreateActionIcon(props: { icon: ReactNode; disabled?: boolean }) {
   return (
     <span
       aria-hidden="true"
-      className={classNames(
-        "border-border bg-surface-inset flex size-11 shrink-0 items-center justify-center rounded-lg border shadow-inner",
-        {
-          "text-muted-foreground": !props.disabled,
-          "text-foreground-disabled": props.disabled,
-        },
-      )}
+      className="border-border bg-surface-inset text-muted-foreground flex size-11 shrink-0 items-center justify-center rounded-lg border shadow-inner"
     >
       {props.icon}
     </span>
@@ -151,7 +144,10 @@ export function Create() {
                     {t("create.searchGameSub")}
                   </span>
                 </div>
-                <span aria-hidden="true">
+                <span
+                  aria-hidden="true"
+                  className="text-muted-foreground shrink-0"
+                >
                   <NextIcon size="20" />
                 </span>
               </div>
@@ -193,11 +189,16 @@ export function Create() {
                     disabled={!connected}
                     icon={<BookMarkedIcon size="20" />}
                   />
-                  <div className="flex grow flex-col">
+                  <div className="flex min-w-0 grow flex-col gap-1">
                     <span className="font-semibold">{t("decks.new")}</span>
-                    <span className="text-sm">{t("decks.createSubtitle")}</span>
+                    <span className="text-muted-foreground text-sm leading-relaxed">
+                      {t("decks.createSubtitle")}
+                    </span>
                   </div>
-                  <span aria-hidden="true">
+                  <span
+                    aria-hidden="true"
+                    className="text-muted-foreground shrink-0"
+                  >
                     <NextIcon size="20" />
                   </span>
                 </div>
@@ -224,7 +225,10 @@ export function Create() {
                     {t("create.mappingsSub")}
                   </span>
                 </div>
-                <span aria-hidden="true">
+                <span
+                  aria-hidden="true"
+                  className="text-muted-foreground shrink-0"
+                >
                   <NextIcon size="20" />
                 </span>
               </div>
@@ -243,7 +247,10 @@ export function Create() {
                     {t("create.customSub")}
                   </span>
                 </div>
-                <span aria-hidden="true">
+                <span
+                  aria-hidden="true"
+                  className="text-muted-foreground shrink-0"
+                >
                   <NextIcon size="20" />
                 </span>
               </div>
@@ -269,7 +276,10 @@ export function Create() {
                     {t("create.nfcSub")}
                   </span>
                 </div>
-                <span aria-hidden="true">
+                <span
+                  aria-hidden="true"
+                  className="text-muted-foreground shrink-0"
+                >
                   <NextIcon size="20" />
                 </span>
               </div>

@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Link } from "@tanstack/react-router";
+import { useRouter } from "@tanstack/react-router";
 import { ArrowLeftRightIcon, KeyRoundIcon, SearchIcon } from "lucide-react";
 import { useAppUi } from "@/hooks/useAppUi";
 import { useActiveDeviceSummary } from "@/hooks/useDevicePresentation";
@@ -32,6 +32,7 @@ export function DeviceConnectionCard({
   onScanClick,
 }: DeviceConnectionCardProps) {
   const { t } = useTranslation();
+  const router = useRouter();
   const { isConnected, openPairingModal } = useConnection();
   const appUi = useAppUi();
 
@@ -76,27 +77,28 @@ export function DeviceConnectionCard({
             action={
               <div className="flex items-center gap-1">
                 <Button
-                  icon={<KeyRoundIcon size="24" />}
-                  variant="text"
+                  icon={<KeyRoundIcon size="20" />}
+                  variant="ghost"
                   onClick={openPairingModal}
                   aria-label={t("pairing.openPairing")}
                 />
                 {/* Network scan button - only on native platforms */}
                 {appUi.enabled && onScanClick && (
                   <Button
-                    icon={<SearchIcon size="24" />}
-                    variant="text"
+                    icon={<SearchIcon size="20" />}
+                    variant="ghost"
                     onClick={onScanClick}
                     aria-label={t("settings.networkScan.title")}
                   />
                 )}
-                <Link
-                  to="/settings/devices"
+                <Button
+                  icon={<ArrowLeftRightIcon size="20" />}
+                  variant="ghost"
+                  onClick={() =>
+                    void router.navigate({ to: "/settings/devices" })
+                  }
                   aria-label={t("settings.deviceHistory")}
-                  className="focus-visible:ring-background text-foreground focus-visible:ring-ring flex h-10 w-10 min-w-10 items-center justify-center rounded-full px-1.5 transition-all duration-100 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-95"
-                >
-                  <ArrowLeftRightIcon size="24" />
-                </Link>
+                />
               </div>
             }
           />

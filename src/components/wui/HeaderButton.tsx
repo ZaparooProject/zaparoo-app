@@ -23,7 +23,9 @@ export const HeaderButton = memo(function HeaderButton(
     <button
       type="button"
       data-pressed={isPressed}
-      aria-pressed={props.active}
+      aria-pressed={
+        props["aria-expanded"] === undefined ? props.active : undefined
+      }
       aria-expanded={props["aria-expanded"]}
       className={classNames(
         "wui-header-button flex cursor-pointer touch-manipulation items-center justify-center transition-colors duration-100",

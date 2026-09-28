@@ -786,6 +786,7 @@
       "termsOfService": "Terms of Service",
       "privacyPolicy": "Privacy Policy",
       "and": "and",
+      "or": "or",
       "warp": {
         "title": "Zaparoo Warp",
         "description": "Protect supported device data with cloud backups and use Zaparoo Pro while Warp is active.",
@@ -881,6 +882,7 @@
       "updateDb.cancel": "Cancel",
       "updateDb.resume": "Resume",
       "updateDb.status.ready": "Database is ready",
+      "updateDb.status.noDatabase": "No database found",
       "updateDb.status.optimizing": "Optimising database (ready to use)",
       "updateDb.status.paused": "Paused",
       "updateDb.status.throttled": "Running at reduced speed",
@@ -1222,6 +1224,13 @@
         "levelFilters": "Log Levels",
         "totalEntries": "Total entries",
         "filteredEntries": "Showing",
+        "entriesShowing": "Showing {{shown}} of {{total}} entries",
+        "entryCount_one": "{{count}} entry",
+        "entryCount_other": "{{count}} entries",
+        "levelDebug": "Debug",
+        "levelInfo": "Info",
+        "levelWarn": "Warn",
+        "levelError": "Error",
         "noEntriesFound": "No log entries match your filters",
         "fetchError": "Failed to fetch logs",
         "notConnected": "Connect to a Zaparoo device to access logs",
@@ -1259,6 +1268,7 @@
       }
     },
     "systemSelector": {
+      "loadError": "Could not load systems",
       "allCategoriesLabel": "All categories",
       "selectionCount": "{{count}} selected",
       "clear": "Clear",
@@ -1282,6 +1292,9 @@
       "apply": "Apply"
     },
     "tagSelector": {
+      "expandAll": "Expand all",
+      "collapseAll": "Collapse all",
+      "unavailable": "Tags unavailable",
       "title": "Select Tags",
       "searchPlaceholder": "Filter tags...",
       "searchTags": "Filter tags",

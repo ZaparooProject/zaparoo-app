@@ -65,7 +65,7 @@ export function MappingRow({ mapping, onTap, isLast }: MappingRowProps) {
         {
           "focus-visible:ring-ring cursor-pointer focus-visible:ring-2 focus-visible:outline-none":
             isInteractive,
-          "border-bd-outline border-b border-solid": !isLast,
+          "border-border border-b border-solid": !isLast,
         },
       )}
     >

@@ -2,7 +2,6 @@ import { useState } from "react";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import classNames from "classnames";
 import { Capacitor } from "@capacitor/core";
 import { Card } from "@/components/wui/Card";
 import { PurchaseSupportActions } from "@/components/ProPurchase";
@@ -20,6 +19,7 @@ import { useClientCapability } from "@/hooks/useClientCapability";
 import { SlideModal } from "@/components/SlideModal";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 import { Button } from "@/components/wui/Button";
+import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { ClientCapability } from "@/lib/models";
 import { isNativePluginAvailable } from "@/lib/capacitorBridge";
 import {
@@ -203,14 +203,14 @@ export function AdvancedSettings() {
             {appPreviewEnabled && (
               <div className="flex flex-col">
                 <label
-                  className="text-foreground"
+                  className="mb-2 block text-sm font-medium"
                   htmlFor="app-preview-nfc-result"
                 >
                   {t("settings.advanced.appPreviewNfcResult")}
                 </label>
                 <select
                   id="app-preview-nfc-result"
-                  className="wui-input border-bd-input bg-surface-inset text-foreground min-h-12 rounded-md border border-solid p-3"
+                  className="wui-input border-input bg-surface-inset text-foreground min-h-12 rounded-md border border-solid p-3"
                   value={appPreviewNfcResult}
                   onChange={(event) =>
                     setAppPreviewNfcResult(
@@ -241,12 +241,15 @@ export function AdvancedSettings() {
 
         {isPurchasePreviewEnabled() && (
           <div className="flex flex-col">
-            <label className="text-foreground" htmlFor="purchase-preview-state">
+            <label
+              className="mb-2 block text-sm font-medium"
+              htmlFor="purchase-preview-state"
+            >
               {t("settings.advanced.purchasePreview")}
             </label>
             <select
               id="purchase-preview-state"
-              className="wui-input border-bd-input bg-surface-inset text-foreground min-h-12 rounded-md border border-solid p-3"
+              className="wui-input border-input bg-surface-inset text-foreground min-h-12 rounded-md border border-solid p-3"
               value={purchasePreviewState}
               onChange={(event) =>
                 setPurchasePreviewState(
@@ -280,21 +283,21 @@ export function AdvancedSettings() {
         )}
 
         {connected ? (
-          <Link to="/settings/logs">
-            <div className="flex flex-row items-center justify-between">
-              <p>{t("settings.advanced.viewLogs")}</p>
+          <Link to="/settings/logs" className="settings-nav-row">
+            <span>{t("settings.advanced.viewLogs")}</span>
+            <span aria-hidden="true">
               <NextIcon size="20" />
-            </div>
+            </span>
           </Link>
         ) : (
           <div
-            className={classNames(
-              "flex flex-row items-center justify-between",
-              "text-foreground-disabled",
-            )}
+            className="settings-nav-row text-muted-foreground cursor-not-allowed hover:bg-transparent"
+            aria-disabled="true"
           >
-            <p>{t("settings.advanced.viewLogs")}</p>
-            <NextIcon size="20" />
+            <span>{t("settings.advanced.viewLogs")}</span>
+            <span aria-hidden="true">
+              <NextIcon size="20" />
+            </span>
           </div>
         )}
 
@@ -306,19 +309,23 @@ export function AdvancedSettings() {
         close={() => setShowErrorReportingModal(false)}
         title={t("settings.advanced.errorReportingConfirmTitle")}
         footer={
-          <div className="flex flex-row justify-center gap-4">
-            <Button
-              label={t("nav.cancel")}
-              variant="secondary"
-              onClick={() => setShowErrorReportingModal(false)}
-            />
-            <Button
-              label={t("yes")}
-              intent="primary"
-              onClick={confirmEnableErrorReporting}
-              disabled={!canWriteCoreSettings}
-            />
-          </div>
+          <ModalActionBar
+            secondaryAction={
+              <Button
+                label={t("nav.cancel")}
+                variant="secondary"
+                onClick={() => setShowErrorReportingModal(false)}
+              />
+            }
+            primaryAction={
+              <Button
+                label={t("yes")}
+                intent="primary"
+                onClick={confirmEnableErrorReporting}
+                disabled={!canWriteCoreSettings}
+              />
+            }
+          />
         }
       >
         <div className="p-4">

@@ -70,9 +70,7 @@ export function ReaderActivityControl({
     }
   }, [activeLabel, announce, announceStateChanges, errorMessage, state]);
 
-  const readerIcon = (
-    <NfcIcon className="wui-reader-signal" size={readerIconSize} />
-  );
+  const readerIcon = <NfcIcon size={readerIconSize} />;
   const active = state === "waiting" || state === "attention";
   const statusText =
     state === "error"
@@ -132,8 +130,9 @@ export function ReaderActivityControl({
       <span
         className={classNames(
           "min-h-5 text-center text-xs leading-5",
-          statusText ? "text-muted-foreground" : "invisible",
-          state === "error" && "text-error",
+          !statusText && "invisible",
+          statusText &&
+            (state === "error" ? "text-error" : "text-muted-foreground"),
         )}
         aria-hidden="true"
       >

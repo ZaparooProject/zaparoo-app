@@ -523,11 +523,7 @@ export function Search() {
           onRetry: () => void nfcWriter.retry(),
         }}
       />
-      <BackToTop
-        scrollContainerRef={scrollContainerRef}
-        threshold={200}
-        bottomOffset="calc(var(--bottom-nav-base-height) + 1rem)"
-      />
+      <BackToTop scrollContainerRef={scrollContainerRef} threshold={200} />
       <SystemSelector
         isOpen={systemSelectorOpen}
         onClose={() => setSystemSelectorOpen(false)}

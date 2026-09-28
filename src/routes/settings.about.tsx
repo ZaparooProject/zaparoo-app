@@ -132,10 +132,7 @@ export function About() {
           />
         </div>
 
-        <Link
-          to="/settings/licenses"
-          className="flex min-h-[48px] flex-row items-center justify-between"
-        >
+        <Link to="/settings/licenses" className="settings-nav-row">
           <span>{t("settings.licenses.title")}</span>
           <span aria-hidden="true">
             <NextIcon size="20" />

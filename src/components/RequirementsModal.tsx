@@ -379,13 +379,13 @@ export function RequirementsModal() {
                   disabledAppearance="busy"
                   className="w-full"
                 />
-                <button
-                  type="button"
+                <Button
+                  label={t("requirements.resendEmail")}
+                  variant="text"
+                  size="sm"
                   onClick={handleSendVerificationEmail}
-                  className="text-muted-foreground hover:text-foreground focus-visible:ring-ring rounded-sm text-center text-sm underline focus-visible:ring-2 focus-visible:outline-none"
-                >
-                  {t("requirements.resendEmail")}
-                </button>
+                  className="w-full"
+                />
               </>
             )}
           </div>

@@ -259,15 +259,18 @@ export function Settings() {
           {showNativePurchaseUI && displayedOnlinePremiumAccess === false && (
             <div className="flex flex-col gap-5">
               {displayedProAccess ? (
-                <Button
-                  label={t("settings.app.proActive")}
-                  icon={<Check size={20} />}
-                  disabled
-                />
+                <p
+                  role="status"
+                  className="text-success flex min-h-12 items-center gap-2 text-sm font-medium"
+                >
+                  <Check size={20} aria-hidden="true" />
+                  {t("settings.app.proActive")}
+                </p>
               ) : (
                 <Button
                   label={t("scan.purchaseProAction")}
                   intent="pro"
+                  className="w-full"
                   onClick={
                     purchasePreviewEnabled
                       ? () => undefined

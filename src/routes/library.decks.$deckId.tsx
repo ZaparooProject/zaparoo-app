@@ -78,6 +78,9 @@ import { ReaderActivityControl } from "@/components/ReaderActivityControl";
 import { TextInput } from "@/components/wui/TextInput";
 import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
+import { ModalActionBar } from "@/components/wui/ModalActionBar";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { DelayedLoading } from "@/components/DelayedLoading";
 import { BackIcon, CreateIcon } from "@/lib/images";
 
 export const Route = createFileRoute("/library/decks/$deckId")({
@@ -341,7 +344,7 @@ export function DeckDetails() {
           <div className="flex min-w-0 items-center gap-2">
             <h1
               ref={headingRef}
-              className="text-foreground min-w-0 truncate text-xl"
+              className="text-foreground min-w-0 text-xl break-words"
             >
               {deck?.name ?? t("decks.title")}
             </h1>
@@ -359,7 +362,7 @@ export function DeckDetails() {
         headerRight={
           editable ? (
             <HeaderButton
-              icon={editing ? <XIcon size={20} /> : <PencilIcon size={20} />}
+              icon={editing ? <XIcon size={24} /> : <PencilIcon size={24} />}
               aria-label={t(editing ? "nav.cancel" : "decks.edit")}
               disabled={busy}
               onClick={() => {
@@ -386,9 +389,15 @@ export function DeckDetails() {
             })}
           />
         ) : deckQuery.isLoading ? (
-          <p role="status" className="text-muted-foreground">
-            {t("decks.loading")}
-          </p>
+          <DelayedLoading>
+            <div
+              className="text-muted-foreground flex items-center justify-center gap-2 py-6"
+              role="status"
+            >
+              <LoadingSpinner size={16} className="text-primary" decorative />
+              <span>{t("decks.loading")}</span>
+            </div>
+          </DelayedLoading>
         ) : deckQuery.isError || !deck ? (
           <EmptyState
             title={t("decks.loadError")}
@@ -591,7 +600,7 @@ export function DeckDetails() {
               />
             )}
             {!editing && (
-              <p className="text-muted-foreground text-center text-sm font-semibold">
+              <p className="text-muted-foreground text-sm">
                 {t("decks.items", { count: items.length })}
               </p>
             )}
@@ -684,74 +693,78 @@ export function DeckDetails() {
           isOpen
           close={() => setRemoveItem(null)}
           title={t("decks.remove")}
+          footer={
+            <ModalActionBar
+              secondaryAction={
+                <Button
+                  label={t("nav.cancel")}
+                  variant="secondary"
+                  onClick={() => setRemoveItem(null)}
+                />
+              }
+              primaryAction={
+                <Button
+                  label={t("decks.remove")}
+                  variant="outline"
+                  intent="destructive"
+                  disabled={busy}
+                  disabledAppearance="busy"
+                  onClick={() => {
+                    if (editing) {
+                      setPendingOrder({
+                        deckId,
+                        items: items.filter(({ id }) => id !== removeItem.id),
+                      });
+                      setRemoveItem(null);
+                      return;
+                    }
+                    void update({ removeItemIds: [removeItem.id] }).then(
+                      (success) => {
+                        if (success) setRemoveItem(null);
+                      },
+                    );
+                  }}
+                />
+              }
+            />
+          }
         >
-          <div className="flex flex-col gap-4 py-4">
-            <p className="text-muted-foreground">
-              {t("decks.confirmRemove", {
-                name: removeItem.name || removeItem.cardId,
-              })}
-            </p>
-            <div className="flex gap-2">
-              <Button
-                label={t("nav.cancel")}
-                variant="secondary"
-                className="flex-1"
-                onClick={() => setRemoveItem(null)}
-              />
-              <Button
-                label={t("decks.remove")}
-                variant="outline"
-                intent="destructive"
-                className="flex-1"
-                disabled={busy}
-                disabledAppearance="busy"
-                onClick={() => {
-                  if (editing) {
-                    setPendingOrder({
-                      deckId,
-                      items: items.filter(({ id }) => id !== removeItem.id),
-                    });
-                    setRemoveItem(null);
-                    return;
-                  }
-                  void update({ removeItemIds: [removeItem.id] }).then(
-                    (success) => {
-                      if (success) setRemoveItem(null);
-                    },
-                  );
-                }}
-              />
-            </div>
-          </div>
+          <p className="text-muted-foreground py-4">
+            {t("decks.confirmRemove", {
+              name: removeItem.name || removeItem.cardId,
+            })}
+          </p>
         </SlideModal>
       )}
       <SlideModal
         isOpen={confirmDelete}
         close={() => setConfirmDelete(false)}
         title={t("decks.delete")}
+        footer={
+          <ModalActionBar
+            secondaryAction={
+              <Button
+                label={t("nav.cancel")}
+                variant="secondary"
+                onClick={() => setConfirmDelete(false)}
+              />
+            }
+            primaryAction={
+              <Button
+                label={t("decks.delete")}
+                variant="outline"
+                intent="destructive"
+                disabled={busy}
+                disabledAppearance="busy"
+                onClick={() => void removeDeck()}
+              />
+            }
+          />
+        }
       >
-        <div className="flex flex-col gap-4 py-4">
-          <p className="text-muted-foreground">
-            {t("decks.confirmDelete", { name: deck?.name })}
-          </p>
-          <div className="flex gap-2">
-            <Button
-              label={t("nav.cancel")}
-              variant="secondary"
-              className="flex-1"
-              onClick={() => setConfirmDelete(false)}
-            />
-            <Button
-              label={t("decks.delete")}
-              variant="outline"
-              intent="destructive"
-              className="flex-1"
-              disabled={busy}
-              disabledAppearance="busy"
-              onClick={() => void removeDeck()}
-            />
-          </div>
-        </div>
+        <p className="text-muted-foreground py-4">
+          {t("decks.confirmDelete", { name: deck?.name })}
+        </p>
       </SlideModal>
     </>
   );

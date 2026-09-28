@@ -4,7 +4,7 @@ import Markdown from "react-markdown";
 // below it.
 export function DeckMarkdown({ children }: { children: string }) {
   return (
-    <div className="text-muted-foreground [&_a]:text-primary [&_blockquote]:border-foreground/25 space-y-2 text-sm break-words [&_a]:underline [&_blockquote]:border-l [&_blockquote]:pl-3 [&_h2]:font-semibold [&_h3]:font-semibold [&_h4]:font-semibold [&_h5]:font-semibold [&_h6]:font-semibold [&_li]:ml-5 [&_ol]:list-decimal [&_ul]:list-disc">
+    <div className="text-muted-foreground [&_a]:text-primary [&_blockquote]:border-border space-y-2 text-sm break-words [&_a]:underline [&_blockquote]:border-l [&_blockquote]:pl-3 [&_h2]:font-semibold [&_h3]:font-semibold [&_h4]:font-semibold [&_h5]:font-semibold [&_h6]:font-semibold [&_li]:ml-5 [&_ol]:list-decimal [&_ul]:list-disc">
       <Markdown
         skipHtml
         components={{

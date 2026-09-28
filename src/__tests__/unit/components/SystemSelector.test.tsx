@@ -235,7 +235,7 @@ describe("SystemSelector", () => {
       ).toBeInTheDocument();
     });
 
-    it("should render loading state", () => {
+    it("should render loading state", async () => {
       // Arrange
       mockIsLoading = true;
 
@@ -243,7 +243,29 @@ describe("SystemSelector", () => {
       render(<SystemSelector {...defaultProps} />);
 
       // Assert
-      expect(screen.getByText("loading")).toBeInTheDocument();
+      expect(await screen.findByText("loading")).toBeInTheDocument();
+    });
+
+    it("should render an error state with a retry action", async () => {
+      // Arrange
+      const user = userEvent.setup();
+      const refetch = vi.fn();
+      vi.mocked(useQuery).mockReturnValueOnce({
+        data: undefined,
+        isLoading: false,
+        isError: true,
+        refetch,
+      } as unknown as ReturnType<typeof useQuery>);
+
+      // Act
+      render(<SystemSelector {...defaultProps} />);
+      await user.click(
+        screen.getByRole("button", { name: "library.tryAgain" }),
+      );
+
+      // Assert
+      expect(screen.getByText("systemSelector.loadError")).toBeInTheDocument();
+      expect(refetch).toHaveBeenCalledTimes(1);
     });
 
     it("should not render when closed", () => {
@@ -442,7 +464,7 @@ describe("SystemSelector", () => {
 
       // Act - click clear button
       const clearButton = screen.getByRole("button", {
-        name: "systemSelector.clearSearch",
+        name: "clearSearch",
       });
       await user.click(clearButton);
 

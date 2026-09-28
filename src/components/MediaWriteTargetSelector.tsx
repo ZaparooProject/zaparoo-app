@@ -131,7 +131,7 @@ export function MediaWriteTargetSelector(props: {
                   aria-label={`${tag.type} ${displayTag}`}
                   aria-pressed={selected}
                   className={classNames(
-                    "focus-visible:ring-ring rounded-full transition-opacity focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed",
+                    "focus-visible:ring-ring relative rounded-full transition-opacity after:absolute after:inset-x-0 after:-inset-y-3 after:content-[''] focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed",
                     {
                       "wui-disabled-inset": tagsDisabled,
                       "opacity-40": !tagsDisabled && !selected,

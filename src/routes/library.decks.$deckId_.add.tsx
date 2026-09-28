@@ -17,6 +17,8 @@ import { EmptyState } from "@/components/wui/EmptyState";
 import { TextInput } from "@/components/wui/TextInput";
 import { Segmented } from "@/components/wui/Segmented";
 import { Button } from "@/components/wui/Button";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { DelayedLoading } from "@/components/DelayedLoading";
 import { ZapScriptInput } from "@/components/ZapScriptInput";
 import { BackIcon } from "@/lib/images";
 
@@ -119,9 +121,15 @@ export function AddDeckItem() {
           })}
         />
       ) : deckQuery.isLoading ? (
-        <p role="status" className="text-muted-foreground">
-          {t("decks.loading")}
-        </p>
+        <DelayedLoading>
+          <div
+            className="text-muted-foreground flex items-center justify-center gap-2 py-6"
+            role="status"
+          >
+            <LoadingSpinner size={16} className="text-primary" decorative />
+            <span>{t("decks.loading")}</span>
+          </div>
+        </DelayedLoading>
       ) : deckQuery.isError || !deck ? (
         <EmptyState
           title={t("decks.loadError")}

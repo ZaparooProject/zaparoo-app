@@ -143,7 +143,7 @@ function QueueProcessors() {
   return (
     <>
       {writeOpen && (
-        <div className="bg-surface-raised border-edge-subtle fixed inset-x-0 [bottom:calc(var(--bottom-nav-base-height)+env(safe-area-inset-bottom))] z-40 border-t px-4 py-3 shadow-lg">
+        <div className="bg-surface-raised border-border fixed inset-x-0 bottom-[var(--app-footer-overlay-clearance,92px)] z-40 border-t px-4 py-3 shadow-[0_-4px_12px_var(--material-shadow)]">
           <div className="mx-auto max-w-md">
             <ReaderActivityControl
               state={
@@ -205,7 +205,7 @@ function NowPlayingToast() {
         (to) => (
           <button
             type="button"
-            className="flex grow flex-col text-left focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+            className="focus-visible:ring-ring flex grow flex-col text-left focus-visible:ring-2 focus-visible:outline-none"
             onClick={() => toast.dismiss(to.id)}
           >
             <span className="font-bold">{t("toast.nowPlayingHeading")}</span>
@@ -587,7 +587,7 @@ export default function App() {
             background: "var(--surface-raised)",
             mixBlendMode: "normal",
             border: "1px solid var(--edge-subtle)",
-            boxShadow: "0px 4px 9px rgba(0, 0, 0, 0.25)",
+            boxShadow: "0 4px 9px var(--material-shadow)",
             borderRadius: "8px",
             width: "calc(100% - 2rem)",
             color: "var(--color-foreground)",

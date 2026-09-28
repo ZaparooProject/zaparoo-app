@@ -4,58 +4,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@layer base {
-  * {
-    border-color: var(--border);
-  }
-
-  body {
-    font-family: "Outfit", system-ui, sans-serif;
-    overflow: hidden;
-    background-color: var(--color-background);
-    color: var(--color-foreground);
-  }
-
-  /* Prevent iOS WebView from auto-zooming when form controls are focused */
-  input,
-  textarea,
-  select {
-    font-size: 16px;
-  }
-
-  /* Native controls follow the resolved app appearance. */
-  select {
-    color-scheme: inherit;
-  }
-}
-
-@layer components {
-  @keyframes attention {
-    0%,
-    40%,
-    100% {
-      opacity: 0;
-      transform: scale(1);
-    }
-    50% {
-      opacity: 0.8;
-      transform: scale(1.1);
-    }
-    55% {
-      opacity: 0;
-      transform: scale(1);
-    }
-    65% {
-      opacity: 0.8;
-      transform: scale(1.1);
-    }
-    70% {
-      opacity: 0;
-      transform: scale(1);
-    }
-  }
-}
-
 @layer utilities {
   /* Custom utility classes */
   .bg-transparent {
@@ -64,81 +12,6 @@
 
   [type="search"] {
     outline-offset: 0;
-  }
-
-  /* Colors */
-  .text-success {
-    color: var(--color-success);
-  }
-  .text-error {
-    color: var(--color-error);
-  }
-  .text-warning {
-    color: var(--color-warning);
-  }
-  .text-primary {
-    color: var(--color-primary);
-  }
-  .text-foreground-disabled {
-    color: var(--color-foreground-disabled);
-  }
-
-  /* Borders */
-  .border-bd-filled {
-    border-color: var(--color-border-filled);
-  }
-  .border-bd-outline {
-    border-color: var(--color-border-outline);
-  }
-  .border-bd-input {
-    border-color: var(--color-border-input);
-  }
-  .border-error {
-    border-color: var(--color-error);
-  }
-
-  /* Backgrounds */
-  .bg-bd-outline {
-    background-color: var(--color-border-outline);
-  }
-
-  /* wui Gradients */
-  .bg-button-pattern {
-    text-shadow:
-      0 -1px 0 #005599,
-      0 1px 0 #005599,
-      -1px 0 0 #005599,
-      1px 0 0 #005599;
-    background-image: linear-gradient(
-      180deg,
-      #3cb0ff 0%,
-      #0090fe 50%,
-      #0070cc 100%
-    );
-  }
-  .bg-card-pattern {
-    background-image: linear-gradient(
-      180deg,
-      var(--surface-elevated),
-      var(--surface-raised)
-    );
-  }
-
-  /* New shadcn-compatible gradients */
-  .bg-wui-button {
-    background-image: linear-gradient(
-      180deg,
-      #3cb0ff 0%,
-      #0090fe 50%,
-      #0070cc 100%
-    );
-  }
-  .bg-wui-card {
-    background: linear-gradient(
-      180deg,
-      var(--surface-elevated),
-      var(--surface-raised)
-    );
   }
 }
 
@@ -169,33 +42,29 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
-
-  /* wui-specific radius values for rounded corners */
-  --radius-wui-sm: 4px; /* wui small button rounded */
-  --radius-wui-md: 4px; /* wui default button rounded */
-  --radius-wui-lg: 4px; /* wui large button rounded */
-  --radius-wui-card: 8px; /* wui card rounded-xl */
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
+    font-family: "Outfit", system-ui, sans-serif;
+    overflow: hidden;
+  }
+
+  /* Prevent iOS WebView from auto-zooming when form controls are focused */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  /* Native controls follow the resolved app appearance. */
+  select {
+    color-scheme: inherit;
   }
 
   /* Shepherd.js Tour Custom Styling - Complete custom theme without default CSS */

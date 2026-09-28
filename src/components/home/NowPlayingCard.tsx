@@ -158,7 +158,7 @@ export function NowPlayingCard({
               {hasDetails ? (
                 <button
                   type="button"
-                  className="focus-visible:ring-ring inline-flex max-w-full items-center gap-1 self-start rounded-md text-left focus-visible:ring-2 focus-visible:outline-none"
+                  className="focus-visible:ring-ring -my-3 inline-flex max-w-full items-center gap-1 self-start rounded-md py-3 text-left focus-visible:ring-2 focus-visible:outline-none"
                   aria-label={`${t("library.details")}: ${displayName}`}
                   onPointerUp={handleHapticPress}
                   onClick={() => setDetailsOpen(true)}

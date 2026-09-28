@@ -91,7 +91,7 @@ export function TextInput(props: {
               "disabled:border-foreground-disabled",
               "[&::-webkit-search-cancel-button]:appearance-none",
               {
-                "border-bd-input": !props.disabled && !props.error,
+                "border-input": !props.disabled && !props.error,
                 "border-error": props.error,
                 "border-foreground-disabled": props.disabled,
                 "text-foreground-disabled": props.disabled,
@@ -104,7 +104,6 @@ export function TextInput(props: {
                 "rounded-md": true,
               },
             )}
-            style={{ backgroundColor: "var(--surface-inset)" }}
             disabled={props.disabled}
             readOnly={props.readOnly}
             aria-label={props["aria-label"]}

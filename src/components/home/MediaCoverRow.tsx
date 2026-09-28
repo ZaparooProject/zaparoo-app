@@ -26,7 +26,7 @@ function MediaCoverTile({ entry, deviceKey, onSelect }: MediaCoverTileProps) {
       type="button"
       data-pressable="true"
       data-pressed={tactilePress.pressed || undefined}
-      className="wui-card border-border bg-card-pattern focus-visible:ring-ring flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-lg border border-solid p-0 text-left focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+      className="wui-card border-border bg-card focus-visible:ring-ring focus-visible:ring-offset-background flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-lg border border-solid p-0 text-left focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
       onClick={() => {
         if (tactilePress.shouldFireClick()) onSelect(entry);
       }}

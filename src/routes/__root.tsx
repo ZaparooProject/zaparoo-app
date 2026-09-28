@@ -121,6 +121,24 @@ export function RootLayout() {
     return () => observer.disconnect();
   }, []);
 
+  // Fixed elements rendered outside the router (such as the global write
+  // strip) read the same measured clearance from the document root.
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty(
+      "--app-footer-overlay-height",
+      `${footerMetrics.height}px`,
+    );
+    root.style.setProperty(
+      "--app-footer-overlay-clearance",
+      `${footerMetrics.clearance}px`,
+    );
+    return () => {
+      root.style.removeProperty("--app-footer-overlay-height");
+      root.style.removeProperty("--app-footer-overlay-clearance");
+    };
+  }, [footerMetrics]);
+
   return (
     <div
       className="flex h-screen w-screen flex-col"

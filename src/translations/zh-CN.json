@@ -786,6 +786,7 @@
       "termsOfService": "服务条款",
       "privacyPolicy": "隐私政策",
       "and": "和",
+      "or": "或",
       "warp": {
         "title": "Zaparoo Warp",
         "description": "使用云备份保护支持的设备数据，并在 Warp 有效期间使用 Zaparoo Pro。",
@@ -881,6 +882,7 @@
       "updateDb.cancel": "取消",
       "updateDb.resume": "继续",
       "updateDb.status.ready": "数据库已就绪",
+      "updateDb.status.noDatabase": "未找到数据库",
       "updateDb.status.optimizing": "正在优化数据库（可正常使用）",
       "updateDb.status.paused": "已暂停",
       "updateDb.status.throttled": "正在降速运行",
@@ -1222,6 +1224,13 @@
         "levelFilters": "日志级别",
         "totalEntries": "条目总数",
         "filteredEntries": "正在显示",
+        "entriesShowing": "显示 {{total}} 条中的 {{shown}} 条",
+        "entryCount_one": "{{count}} 条记录",
+        "entryCount_other": "{{count}} 条记录",
+        "levelDebug": "调试",
+        "levelInfo": "信息",
+        "levelWarn": "警告",
+        "levelError": "错误",
         "noEntriesFound": "没有符合筛选条件的日志条目",
         "fetchError": "日志获取失败",
         "notConnected": "连接到 Zaparoo 设备以访问日志",
@@ -1259,6 +1268,7 @@
       }
     },
     "systemSelector": {
+      "loadError": "无法加载系统",
       "allCategoriesLabel": "所有类别",
       "selectionCount": "已选择 {{count}} 项",
       "clear": "清除",
@@ -1282,6 +1292,9 @@
       "apply": "应用"
     },
     "tagSelector": {
+      "expandAll": "全部展开",
+      "collapseAll": "全部折叠",
+      "unavailable": "标签不可用",
       "title": "选择标签",
       "searchPlaceholder": "筛选标签...",
       "searchTags": "筛选标签",

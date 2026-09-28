@@ -59,29 +59,7 @@
   --ring: var(--interaction);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-foreground-disabled: var(--text-muted);
-  --color-primary: var(--primary);
   --color-success: var(--status-green);
-  --color-error: var(--status-red);
-  --color-warning: var(--status-yellow);
-  --color-border-filled: var(--edge-default);
-  --color-border-outline: var(--edge-default);
-  --color-border-input: var(--edge-default);
-  --color-button-start: #3cb0ff;
-  --color-button-end: #0070cc;
-  --chart-1: var(--interaction);
-  --chart-2: var(--status-green);
-  --chart-3: var(--status-red);
-  --chart-4: var(--text-muted);
-  --chart-5: var(--status-yellow);
-  --sidebar: var(--surface-raised);
-  --sidebar-foreground: var(--text-primary);
-  --sidebar-primary: var(--interaction);
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: var(--surface-highlight);
-  --sidebar-accent-foreground: var(--text-primary);
-  --sidebar-border: var(--edge-subtle);
-  --sidebar-ring: var(--interaction);
 }
 
 .dark {
@@ -118,6 +96,7 @@
   --color-surface-inset: var(--surface-inset);
   --color-surface-highlight: var(--surface-highlight);
   --color-bd-outline: var(--text-secondary);
+  --color-foreground-disabled: var(--text-muted);
   --color-success: var(--status-green);
   --color-error: var(--status-red);
   --color-warning: var(--status-yellow);

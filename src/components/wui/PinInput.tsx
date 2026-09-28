@@ -65,7 +65,6 @@ function Slot({
   return (
     <div
       data-active={isActive ? "true" : undefined}
-      style={{ backgroundColor: "var(--surface-inset)" }}
       className={classNames(
         "wui-input relative flex h-12 w-12 min-w-0 items-center justify-center",
         "border border-solid",
@@ -73,7 +72,7 @@ function Slot({
         "transition-[border-color,box-shadow] duration-150",
         {
           "border-foreground-disabled text-foreground-disabled": disabled,
-          "border-bd-input": !disabled && !isActive,
+          "border-input": !disabled && !isActive,
           "border-primary ring-primary/30 ring-2": !disabled && isActive,
           "text-foreground": !disabled,
         },

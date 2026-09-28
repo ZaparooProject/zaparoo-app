@@ -37,8 +37,7 @@ export function DeviceRow({
         {isActive && (
           <span
             aria-label={t("settings.activeDevice")}
-            style={{ backgroundColor: "var(--color-success)" }}
-            className="h-2 w-2 shrink-0 rounded-full"
+            className="bg-success h-2 w-2 shrink-0 rounded-full"
           />
         )}
         <div className="flex min-w-0 flex-1 flex-col gap-1">

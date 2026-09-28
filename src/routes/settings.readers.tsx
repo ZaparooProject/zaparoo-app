@@ -148,17 +148,14 @@ export function ReadersSettings() {
         {/* Readers List */}
         <GatedFeature featureId="readers">
           <Card>
-            <span className="text-foreground">
+            <h2 className="text-foreground text-lg font-semibold">
               {t("settings.readers.connectedReaders")}
-            </span>
+            </h2>
             <div className="mt-2 flex flex-col gap-2">
               {isReadersLoading ? (
                 <span className="text-muted-foreground">{t("loading")}</span>
               ) : !connected ? (
-                <EmptyState
-                  size="compact"
-                  title={t("settings.readers.noReadersDetected")}
-                />
+                <EmptyState size="compact" title={t("settings.notConnected")} />
               ) : readersData?.readers && readersData.readers.length > 0 ? (
                 readersData.readers.map((reader) => (
                   <ReaderStatusRow

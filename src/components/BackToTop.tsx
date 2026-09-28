@@ -8,13 +8,14 @@ import { CircleButton } from "@/components/wui/CircleButton";
 interface BackToTopProps {
   scrollContainerRef: RefObject<HTMLElement | null>;
   threshold?: number;
+  /** Distance above the app footer. Defaults to the measured footer clearance plus 1rem. */
   bottomOffset?: string;
 }
 
 export function BackToTop({
   scrollContainerRef,
   threshold = 300,
-  bottomOffset = "1rem",
+  bottomOffset = "calc(var(--app-footer-overlay-clearance, 92px) + 1rem)",
 }: BackToTopProps) {
   const [isVisible, setIsVisible] = useState(false);
   const { t } = useTranslation();

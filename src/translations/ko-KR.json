@@ -786,6 +786,7 @@
       "termsOfService": "서비스 약관",
       "privacyPolicy": "개인정보 처리방침",
       "and": "및",
+      "or": "또는",
       "warp": {
         "title": "Zaparoo Warp",
         "description": "클라우드 백업으로 지원되는 기기 데이터를 보호하고, Warp가 활성화된 동안 Zaparoo Pro를 사용하세요.",
@@ -881,6 +882,7 @@
       "updateDb.cancel": "취소",
       "updateDb.resume": "재개",
       "updateDb.status.ready": "데이터베이스 준비 완료",
+      "updateDb.status.noDatabase": "데이터베이스를 찾을 수 없습니다",
       "updateDb.status.optimizing": "데이터베이스 최적화 중(사용 가능)",
       "updateDb.status.paused": "일시 정지됨",
       "updateDb.status.throttled": "속도를 낮춰 실행 중",
@@ -1222,6 +1224,13 @@
         "levelFilters": "로그 수준",
         "totalEntries": "전체 항목",
         "filteredEntries": "표시 중",
+        "entriesShowing": "전체 {{total}}개 중 {{shown}}개 표시",
+        "entryCount_one": "항목 {{count}}개",
+        "entryCount_other": "항목 {{count}}개",
+        "levelDebug": "디버그",
+        "levelInfo": "정보",
+        "levelWarn": "경고",
+        "levelError": "오류",
         "noEntriesFound": "필터와 일치하는 로그 항목이 없습니다",
         "fetchError": "로그를 가져오지 못했습니다",
         "notConnected": "로그를 보려면 Zaparoo 기기에 연결하세요",
@@ -1259,6 +1268,7 @@
       }
     },
     "systemSelector": {
+      "loadError": "시스템을 불러오지 못했습니다",
       "allCategoriesLabel": "모든 카테고리",
       "selectionCount": "{{count}}개 선택됨",
       "clear": "지우기",
@@ -1282,6 +1292,9 @@
       "apply": "적용"
     },
     "tagSelector": {
+      "expandAll": "모두 펼치기",
+      "collapseAll": "모두 접기",
+      "unavailable": "태그를 사용할 수 없습니다",
       "title": "태그 선택",
       "searchPlaceholder": "태그 필터링...",
       "searchTags": "태그 필터링",

@@ -18,6 +18,7 @@ import { SlideModal } from "@/components/SlideModal";
 import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { Card } from "@/components/wui/Card";
+import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { useHapticPress } from "@/hooks/useHapticPress";
 
 function severityIcon(severity: InboxSeverity) {
@@ -188,28 +189,30 @@ export function InboxModal() {
         {confirmingClear ? (
           <>
             <p className="text-center text-sm">{t("inbox.confirmClear")}</p>
-            <div className="flex flex-row gap-2">
-              <Button
-                label={t("inbox.confirmClearNo")}
-                variant="outline"
-                className="flex-1"
-                onClick={() => setConfirmingClear(false)}
-              />
-              <Button
-                label={t("inbox.confirmClearYes")}
-                variant="outline"
-                intent="destructive"
-                className="border-error text-error flex-1"
-                onClick={handleClearAll}
-              />
-            </div>
+            <ModalActionBar
+              secondaryAction={
+                <Button
+                  label={t("inbox.confirmClearNo")}
+                  variant="secondary"
+                  onClick={() => setConfirmingClear(false)}
+                />
+              }
+              primaryAction={
+                <Button
+                  label={t("inbox.confirmClearYes")}
+                  variant="outline"
+                  intent="destructive"
+                  onClick={handleClearAll}
+                />
+              }
+            />
           </>
         ) : (
           <Button
             label={t("inbox.clearAll")}
             variant="outline"
             intent="destructive"
-            className="border-error text-error"
+            className="w-full"
             onClick={() => setConfirmingClear(true)}
           />
         )}

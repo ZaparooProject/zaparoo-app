@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { Heart } from "lucide-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Link } from "@tanstack/react-router";
+import classNames from "classnames";
 import { SearchResultGame } from "@/lib/models.ts";
 import { useStatusStore } from "@/lib/store.ts";
 import { usePreferencesStore } from "@/lib/preferencesStore.ts";
@@ -201,7 +202,7 @@ export function VirtualSearchResults({
               focus: "database",
             }}
             aria-label={t("create.search.gamesDbSettings")}
-            className="focus-visible:ring-offset-background text-foreground focus-visible:ring-ring flex h-10 w-10 min-w-10 items-center justify-center rounded-full px-1.5 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            className="focus-visible:ring-offset-background text-foreground focus-visible:ring-ring flex size-12 min-w-12 items-center justify-center rounded-full focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
             <SettingsIcon size="24" aria-hidden="true" />
           </Link>
@@ -239,16 +240,17 @@ export function VirtualSearchResults({
 
   if (isError) {
     return (
-      <div className="mt-6 flex flex-col items-center">
-        <p className="text-foreground mb-3" role="alert">
-          {t("create.search.searchError")}
-        </p>
-        <Button
-          label={t("create.search.tryAgain")}
-          onClick={() => refetch()}
-          variant="outline"
-        />
-      </div>
+      <EmptyState
+        className="mt-6"
+        title={t("create.search.searchError")}
+        action={
+          <Button
+            label={t("create.search.tryAgain")}
+            onClick={() => refetch()}
+            variant="outline"
+          />
+        }
+      />
     );
   }
 
@@ -467,10 +469,10 @@ const SearchResultItem = React.memo(function SearchResultItem({
   return (
     <button
       type="button"
-      className="focus-visible:ring-ring flex w-full cursor-pointer flex-row items-center justify-between gap-1 px-1 pt-3 pb-5 text-left focus-visible:ring-2 focus-visible:outline-none"
-      style={{
-        borderBottom: isLast ? "" : "1px solid var(--edge-default)",
-      }}
+      className={classNames(
+        "focus-visible:ring-ring flex w-full cursor-pointer flex-row items-center justify-between gap-1 px-1 pt-3 pb-5 text-left focus-visible:ring-2 focus-visible:outline-none",
+        { "border-border border-b": !isLast },
+      )}
       data-testid={`result-${index}`}
       onPointerUp={handleHapticPress}
       onClick={(e) => {
@@ -489,7 +491,7 @@ const SearchResultItem = React.memo(function SearchResultItem({
             <Heart size={18} fill="currentColor" aria-hidden="true" />
           </span>
         )}
-        <span aria-hidden="true">
+        <span aria-hidden="true" className="text-muted-foreground shrink-0">
           <NextIcon size="20" />
         </span>
       </div>

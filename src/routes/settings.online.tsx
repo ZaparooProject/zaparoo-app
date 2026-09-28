@@ -15,6 +15,8 @@ import {
 import type { AxiosError } from "axios";
 import { TextInput } from "@/components/wui/TextInput.tsx";
 import { Button } from "@/components/wui/Button.tsx";
+import { Card } from "@/components/wui/Card";
+import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { WarpSubscription } from "@/components/WarpSubscription";
 import { OnlineDeviceSetup } from "@/components/OnlineDeviceSetup";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -618,98 +620,101 @@ export function OnlinePage() {
             )}
 
             {/* Account actions */}
-            <section
-              className="flex w-full flex-col gap-3"
-              aria-labelledby="online-account-actions-title"
-            >
-              <h2
-                id="online-account-actions-title"
-                className="text-foreground text-lg font-medium"
+            <Card>
+              <section
+                className="flex w-full flex-col gap-3"
+                aria-labelledby="online-account-actions-title"
               >
-                {t("online.account")}
-              </h2>
+                <h2
+                  id="online-account-actions-title"
+                  className="text-foreground text-lg font-semibold"
+                >
+                  {t("online.account")}
+                </h2>
 
-              {/* Dashboard button */}
-              <Button
-                label={t("online.dashboard")}
-                variant="outline"
-                icon={<ExternalLinkIcon size="20" />}
-                onClick={() =>
-                  Browser.open({ url: "https://online.zaparoo.com" })
-                }
-                className="w-full"
-              />
-
-              {/* Change password - only for email/password users */}
-              {hasPasswordProvider(loggedInUser.providerData) && (
+                {/* Dashboard button */}
                 <Button
-                  label={t("online.changePassword")}
+                  label={t("online.dashboard")}
                   variant="outline"
-                  onClick={() => {
-                    if (loggedInUser.email) {
-                      FirebaseAuthentication.sendPasswordResetEmail({
-                        email: loggedInUser.email,
-                      })
-                        .then(() => {
-                          toast.success(t("online.resetEmailSent"));
-                        })
-                        .catch((e: Error) => {
-                          logger.error("Firebase password reset failed:", e, {
-                            category: "api",
-                            action: "sendPasswordResetEmail",
-                            severity: "warning",
-                          });
-                          toast.error(t("online.resetEmailFailed"));
-                        });
-                    }
-                  }}
+                  icon={<ExternalLinkIcon size="20" />}
+                  onClick={() =>
+                    Browser.open({ url: "https://online.zaparoo.com" })
+                  }
                   className="w-full"
                 />
-              )}
 
-              {/* Log out button */}
-              <Button
-                label={t("online.logout")}
-                variant="outline"
-                icon={<LogOutIcon size="20" />}
-                onClick={handleSignOut}
-                className="w-full"
-              />
-
-              {/* Delete account section */}
-              {scheduledDeletion ? (
-                <div className="border-error/30 bg-error/10 mt-2 rounded-lg border p-3">
-                  <p className="text-error text-sm font-medium">
-                    {t("online.deletionScheduledTitle")}
-                  </p>
-                  <p className="text-muted-foreground mt-1 text-xs">
-                    {t("online.deletionScheduledMessage", {
-                      date: new Date(scheduledDeletion).toLocaleDateString(),
-                    })}
-                  </p>
+                {/* Change password - only for email/password users */}
+                {hasPasswordProvider(loggedInUser.providerData) && (
                   <Button
-                    label={
-                      isCancelling
-                        ? t("spinner.cancelling")
-                        : t("online.cancelDeletion")
-                    }
+                    label={t("online.changePassword")}
                     variant="outline"
-                    onClick={handleCancelDeletion}
-                    disabled={isCancelling}
-                    disabledAppearance="busy"
-                    className="mt-3 w-full"
+                    onClick={() => {
+                      if (loggedInUser.email) {
+                        FirebaseAuthentication.sendPasswordResetEmail({
+                          email: loggedInUser.email,
+                        })
+                          .then(() => {
+                            toast.success(t("online.resetEmailSent"));
+                          })
+                          .catch((e: Error) => {
+                            logger.error("Firebase password reset failed:", e, {
+                              category: "api",
+                              action: "sendPasswordResetEmail",
+                              severity: "warning",
+                            });
+                            toast.error(t("online.resetEmailFailed"));
+                          });
+                      }
+                    }}
+                    className="w-full"
                   />
-                </div>
-              ) : (
+                )}
+
+                {/* Log out button */}
                 <Button
-                  label={t("online.deleteAccount")}
+                  label={t("online.logout")}
                   variant="outline"
-                  icon={<Trash2Icon size="20" />}
-                  onClick={() => setDeleteModalOpen(true)}
-                  className="border-error text-error mt-2 w-full"
+                  icon={<LogOutIcon size="20" />}
+                  onClick={handleSignOut}
+                  className="w-full"
                 />
-              )}
-            </section>
+
+                {/* Delete account section */}
+                {scheduledDeletion ? (
+                  <div className="border-error/30 bg-error-wash mt-2 rounded-lg border p-3">
+                    <p className="text-error text-sm font-medium">
+                      {t("online.deletionScheduledTitle")}
+                    </p>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      {t("online.deletionScheduledMessage", {
+                        date: new Date(scheduledDeletion).toLocaleDateString(),
+                      })}
+                    </p>
+                    <Button
+                      label={
+                        isCancelling
+                          ? t("spinner.cancelling")
+                          : t("online.cancelDeletion")
+                      }
+                      variant="outline"
+                      onClick={handleCancelDeletion}
+                      disabled={isCancelling}
+                      disabledAppearance="busy"
+                      className="mt-3 w-full"
+                    />
+                  </div>
+                ) : (
+                  <Button
+                    label={t("online.deleteAccount")}
+                    variant="outline"
+                    intent="destructive"
+                    icon={<Trash2Icon size="20" />}
+                    onClick={() => setDeleteModalOpen(true)}
+                    className="mt-2 w-full"
+                  />
+                )}
+              </section>
+            </Card>
           </div>
         ) : purchasePreview !== "live" ? (
           <div className="flex flex-col gap-6 py-4">
@@ -801,14 +806,14 @@ export function OnlinePage() {
                   intent="primary"
                 />
 
-                <button
-                  type="button"
+                <Button
+                  label={t("online.mfaBack")}
+                  variant="text"
+                  size="sm"
                   onClick={handleCancelMfa}
                   disabled={isMfaVerifying}
-                  className="text-muted-foreground hover:text-foreground text-sm underline transition-colors disabled:opacity-50"
-                >
-                  {t("online.mfaBack")}
-                </button>
+                  className="w-full"
+                />
               </div>
             ) : (
               <div className="flex flex-col gap-4">
@@ -840,13 +845,12 @@ export function OnlinePage() {
                   {/* Forgot password - right aligned, only in log in mode */}
                   {!isSignUpMode && (
                     <div className="flex justify-end">
-                      <button
-                        type="button"
+                      <Button
+                        label={t("online.forgotPassword")}
+                        variant="text"
+                        size="sm"
                         onClick={handleForgotPassword}
-                        className="text-muted-foreground hover:text-foreground text-sm transition-colors"
-                      >
-                        {t("online.forgotPassword")}
-                      </button>
+                      />
                     </div>
                   )}
                 </div>
@@ -891,31 +895,36 @@ export function OnlinePage() {
                 />
 
                 {/* Toggle between Log in and Sign up */}
-                <p className="text-muted-foreground text-center text-sm">
-                  {isSignUpMode
-                    ? t("online.switchToLogInPrefix")
-                    : t("online.switchToSignUpPrefix")}
-                  <button
-                    type="button"
+                <div className="text-muted-foreground flex flex-wrap items-center justify-center text-sm">
+                  <span>
+                    {isSignUpMode
+                      ? t("online.switchToLogInPrefix")
+                      : t("online.switchToSignUpPrefix")}
+                  </span>
+                  <Button
+                    label={
+                      isSignUpMode
+                        ? t("online.switchToLogInLink")
+                        : t("online.switchToSignUpLink")
+                    }
+                    variant="text"
+                    size="sm"
                     onClick={() => {
                       setIsSignUpMode(!isSignUpMode);
                       setAgeConfirmed(false);
                       setFormError(null);
                     }}
-                    className="text-foreground hover:text-foreground/80 underline transition-colors"
-                  >
-                    {isSignUpMode
-                      ? t("online.switchToLogInLink")
-                      : t("online.switchToSignUpLink")}
-                  </button>
-                </p>
+                  />
+                </div>
 
                 {/* OAuth section - only show on native or zaparoo.app */}
                 {oauthAvailable && (
                   <>
                     <div className="my-1 flex items-center gap-3">
                       <div className="bg-border h-px flex-1" />
-                      <span className="text-muted-foreground text-sm">or</span>
+                      <span className="text-muted-foreground text-sm">
+                        {t("online.or")}
+                      </span>
                       <div className="bg-border h-px flex-1" />
                     </div>
 
@@ -1003,27 +1012,29 @@ export function OnlinePage() {
         dismissible={!isDeleting}
         title={t("online.deleteAccountConfirmTitle")}
         footer={
-          <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              label={t("nav.cancel")}
-              onClick={closeDeleteModal}
-              className="flex-1"
-              disabled={isDeleting}
-              disabledAppearance="busy"
-            />
-            <Button
-              variant="outline"
-              intent="destructive"
-              label={
-                isDeleting ? t("spinner.deleting") : t("online.deleteAccount")
-              }
-              onClick={handleDeleteAccount}
-              className="border-error text-error flex-1"
-              disabled={isDeleting || confirmText !== "DELETE MY ACCOUNT"}
-              disabledAppearance={isDeleting ? "busy" : "unavailable"}
-            />
-          </div>
+          <ModalActionBar
+            secondaryAction={
+              <Button
+                variant="secondary"
+                label={t("nav.cancel")}
+                onClick={closeDeleteModal}
+                disabled={isDeleting}
+                disabledAppearance="busy"
+              />
+            }
+            primaryAction={
+              <Button
+                variant="outline"
+                intent="destructive"
+                label={
+                  isDeleting ? t("spinner.deleting") : t("online.deleteAccount")
+                }
+                onClick={handleDeleteAccount}
+                disabled={isDeleting || confirmText !== "DELETE MY ACCOUNT"}
+                disabledAppearance={isDeleting ? "busy" : "unavailable"}
+              />
+            }
+          />
         }
       >
         <div className="flex flex-col gap-4 py-2">
@@ -1033,22 +1044,12 @@ export function OnlinePage() {
           <p className="text-muted-foreground text-sm">
             {t("online.deleteAccountGracePeriod")}
           </p>
-          <div>
-            <label
-              htmlFor="delete-account-confirmation"
-              className="text-foreground text-sm"
-            >
-              {t("online.deleteConfirmLabel")}
-            </label>
-            <input
-              id="delete-account-confirmation"
-              type="text"
-              value={confirmText}
-              onChange={(e) => setConfirmText(e.target.value)}
-              placeholder="DELETE MY ACCOUNT"
-              className="wui-input border-bd-input bg-surface-inset text-foreground mt-1 min-h-12 w-full rounded-md border p-3"
-            />
-          </div>
+          <TextInput
+            label={t("online.deleteConfirmLabel")}
+            value={confirmText}
+            setValue={setConfirmText}
+            placeholder="DELETE MY ACCOUNT"
+          />
         </div>
       </SlideModal>
     </PageFrame>

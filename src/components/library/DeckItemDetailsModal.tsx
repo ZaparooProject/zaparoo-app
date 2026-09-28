@@ -9,6 +9,7 @@ import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { SlideModal } from "@/components/SlideModal";
 import { Button } from "@/components/wui/Button";
 import { ModalActionRail } from "@/components/wui/ModalActionRail";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { CreateIcon } from "@/lib/images";
 import { DeckArtwork } from "@/components/library/DeckArtwork";
 
@@ -118,9 +119,15 @@ export function DeckItemDetailsModal({
           primaryAction={
             <Button
               label={t("decks.play")}
-              icon={<PlayIcon size={20} />}
+              aria-label={launching ? t("library.launching") : t("decks.play")}
+              icon={
+                launching ? (
+                  <LoadingSpinner size={20} decorative />
+                ) : (
+                  <PlayIcon size={20} />
+                )
+              }
               intent="primary"
-              className="!min-h-0"
               disabled={!playText || !liveConnected || launching}
               disabledAppearance={launching ? "busy" : "unavailable"}
               onClick={() => void launch()}

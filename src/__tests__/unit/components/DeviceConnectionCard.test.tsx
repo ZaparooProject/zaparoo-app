@@ -44,23 +44,11 @@ vi.mock("@capacitor/core", () => ({
   },
 }));
 
-// Mock TanStack Router Link
+const mockNavigate = vi.hoisted(() => vi.fn());
+
+// Mock TanStack Router navigation
 vi.mock("@tanstack/react-router", () => ({
-  Link: ({
-    children,
-    to,
-    "aria-label": ariaLabel,
-    className,
-  }: {
-    children: React.ReactNode;
-    to: string;
-    "aria-label"?: string;
-    className?: string;
-  }) => (
-    <a href={to} aria-label={ariaLabel} className={className}>
-      {children}
-    </a>
-  ),
+  useRouter: () => ({ navigate: mockNavigate }),
 }));
 
 describe("DeviceConnectionCard", () => {
@@ -198,14 +186,15 @@ describe("DeviceConnectionCard", () => {
     expect(screen.getByText("Connection failed")).toBeInTheDocument();
   });
 
-  it("renders a link to the device history page", () => {
+  it("opens the device history page from its button", async () => {
+    const user = userEvent.setup();
     render(<DeviceConnectionCard {...defaultProps} />);
 
-    const historyLink = screen.getByRole("link", {
-      name: /settings.deviceHistory/i,
-    });
-    expect(historyLink).toBeInTheDocument();
-    expect(historyLink).toHaveAttribute("href", "/settings/devices");
+    await user.click(
+      screen.getByRole("button", { name: /settings.deviceHistory/i }),
+    );
+
+    expect(mockNavigate).toHaveBeenCalledWith({ to: "/settings/devices" });
   });
 
   it("should always allow manual pairing", async () => {

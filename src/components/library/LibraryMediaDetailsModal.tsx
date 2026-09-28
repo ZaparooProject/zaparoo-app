@@ -48,7 +48,7 @@ import { EmptyState } from "@/components/wui/EmptyState";
 import { ModalActionRail } from "@/components/wui/ModalActionRail";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { DelayedLoading } from "@/components/DelayedLoading";
-import { CreateIcon } from "@/lib/images";
+import { CreateIcon, NextIcon } from "@/lib/images";
 import { LibraryArtwork } from "@/components/library/LibraryArtwork";
 import { MediaPreferenceActions } from "@/components/library/MediaPreferenceActions";
 import { MediaWriteTargetModal } from "@/components/MediaWriteTargetModal";
@@ -691,7 +691,7 @@ export function LibraryMediaDetailsModal(props: {
             </section>
           )}
 
-          <details className="group border-foreground/15 border-t pt-2">
+          <details className="group border-border border-t pt-2">
             <summary className="focus-visible:ring-ring flex min-h-12 cursor-pointer list-none items-center justify-between rounded-md px-1 focus-visible:ring-2 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
               <span className="font-medium">
                 {t("library.technicalDetails")}
@@ -756,9 +756,15 @@ export function LibraryMediaDetailsModal(props: {
             clearable
           />
           {deckList.isLoading ? (
-            <p role="status" className="text-muted-foreground">
-              {t("decks.loading")}
-            </p>
+            <DelayedLoading>
+              <div
+                className="text-muted-foreground flex items-center justify-center gap-2 py-6"
+                role="status"
+              >
+                <LoadingSpinner size={16} className="text-primary" decorative />
+                <span>{t("decks.loading")}</span>
+              </div>
+            </DelayedLoading>
           ) : deckList.isError ? (
             <EmptyState
               size="compact"
@@ -781,7 +787,7 @@ export function LibraryMediaDetailsModal(props: {
                 <button
                   key={deck.deckId}
                   type="button"
-                  className="border-foreground/25 focus-visible:ring-ring flex min-h-14 w-full items-center justify-between gap-3 border-b px-1 py-3 text-left last:border-b-0 focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                  className="border-border focus-visible:ring-ring flex min-h-14 w-full items-center justify-between gap-3 border-b px-1 py-3 text-left last:border-b-0 focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={
                     deckSaving ||
                     !liveConnected ||
@@ -796,11 +802,12 @@ export function LibraryMediaDetailsModal(props: {
                       {t("library.itemCount", { count: deck.itemCount })}
                     </span>
                   </span>
-                  <ChevronRightIcon
-                    size={20}
+                  <span
                     aria-hidden="true"
-                    className="shrink-0"
-                  />
+                    className="text-muted-foreground shrink-0"
+                  >
+                    <NextIcon size="20" />
+                  </span>
                 </button>
               ))}
             </div>

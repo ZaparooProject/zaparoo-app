@@ -198,7 +198,7 @@ export function ThirdPartyLicenses() {
                   <AccordionItem
                     key={`${packageInfo.name}@${packageInfo.version}`}
                     value={`${packageInfo.name}@${packageInfo.version}`}
-                    className="border-bd-outline last:border-b-0"
+                    className="border-border last:border-b-0"
                   >
                     <AccordionTrigger className="gap-3 no-underline hover:no-underline">
                       <span className="flex min-w-0 flex-col">
@@ -262,11 +262,7 @@ export function ThirdPartyLicenses() {
           )}
         </div>
       </PageFrame>
-      <BackToTop
-        scrollContainerRef={scrollContainerRef}
-        threshold={200}
-        bottomOffset="calc(var(--bottom-nav-base-height) + 1rem)"
-      />
+      <BackToTop scrollContainerRef={scrollContainerRef} threshold={200} />
     </>
   );
 }

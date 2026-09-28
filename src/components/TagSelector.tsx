@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Search, Check, X, ChevronUp, ChevronDown, Trash2 } from "lucide-react";
+import { Check, ChevronUp, ChevronDown, Trash2 } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi";
@@ -10,6 +10,10 @@ import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { compareStrings } from "@/lib/utils";
 import { TagInfo } from "@/lib/models";
 import { EmptyState } from "@/components/wui/EmptyState";
+import { Badge } from "@/components/wui/Badge";
+import { TextInput } from "@/components/wui/TextInput";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { DelayedLoading } from "@/components/DelayedLoading";
 import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { useAccessibleLists } from "@/hooks/useAccessibleLists";
 import { useHapticPress } from "@/hooks/useHapticPress";
@@ -59,7 +63,7 @@ function TagSearchOption(props: {
     <button
       className={classNames(
         "flex min-h-16 w-full items-center justify-between px-4 py-3 text-left transition-colors",
-        "focus-visible:ring-ring rounded-lg focus:outline-none focus-visible:ring-2",
+        "focus-visible:ring-ring rounded-md focus:outline-none focus-visible:ring-2",
         "hover:bg-foreground/10 focus:bg-foreground/10",
         {
           "h-full": props.fillHeight,
@@ -119,6 +123,7 @@ export function TagSelector({
     data: tagsData,
     isLoading,
     isError,
+    refetch,
   } = useQuery({
     queryKey: ["tags", deviceKey, systems],
     queryFn: () => CoreAPI.mediaTags(systems.length > 0 ? systems : undefined),
@@ -299,72 +304,63 @@ export function TagSelector({
         {/* Header with search */}
         <div className="pb-2">
           {/* Search bar */}
-          <div className="relative mb-3">
-            <Search
-              className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
-              aria-hidden="true"
-            />
-            <input
-              type="search"
-              aria-label={t("tagSelector.searchTags")}
-              placeholder={t("tagSelector.searchPlaceholder")}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="border-input bg-surface-inset text-foreground focus:ring-ring w-full rounded-md border px-10 py-2 focus-visible:ring-2 focus-visible:outline-none"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="text-muted-foreground hover:text-foreground focus-visible:ring-ring absolute top-1/2 right-1 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded focus-visible:ring-2 focus-visible:outline-none"
-                type="button"
-                aria-label={t("tagSelector.clearSearch")}
-              >
-                <X className="h-4 w-4" aria-hidden="true" />
-              </button>
-            )}
-          </div>
+          <TextInput
+            type="search"
+            inputMode="search"
+            className="mb-3"
+            aria-label={t("tagSelector.searchTags")}
+            placeholder={t("tagSelector.searchPlaceholder")}
+            value={searchQuery}
+            setValue={setSearchQuery}
+            clearable
+          />
 
           {/* Expand/Collapse all button */}
           {types.length > 0 && !debouncedSearchQuery && (
-            <button
+            <Button
               onClick={handleExpandCollapseAll}
-              className="text-muted-foreground hover:text-foreground flex items-center gap-2 px-3 py-1 text-sm transition-colors"
-              type="button"
-            >
-              {allExpanded ? (
-                <>
-                  <ChevronUp className="h-4 w-4" />
-                  {t("tagSelector.collapseAll", {
-                    defaultValue: "Collapse all",
-                  })}
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="h-4 w-4" />
-                  {t("tagSelector.expandAll", { defaultValue: "Expand all" })}
-                </>
-              )}
-            </button>
+              variant="text"
+              size="sm"
+              icon={
+                allExpanded ? (
+                  <ChevronUp size={20} />
+                ) : (
+                  <ChevronDown size={20} />
+                )
+              }
+              label={
+                allExpanded
+                  ? t("tagSelector.collapseAll")
+                  : t("tagSelector.expandAll")
+              }
+            />
           )}
         </div>
 
         {/* Content area */}
         <div className="min-h-0 flex-1 overflow-hidden" tabIndex={-1}>
           {isLoading ? (
-            <div
-              className="flex h-32 items-center justify-center"
-              role="status"
-            >
-              <span className="text-muted-foreground">{t("loading")}</span>
-            </div>
+            <DelayedLoading>
+              <div
+                className="text-muted-foreground flex h-32 items-center justify-center gap-2"
+                role="status"
+              >
+                <LoadingSpinner size={16} className="text-primary" decorative />
+                <span>{t("loading")}</span>
+              </div>
+            </DelayedLoading>
           ) : isError ? (
-            <div className="flex h-32 items-center justify-center">
-              <span className="text-muted-foreground" role="alert">
-                {t("tagSelector.unavailable", {
-                  defaultValue: "Tags unavailable",
-                })}
-              </span>
-            </div>
+            <EmptyState
+              className="h-32"
+              title={t("tagSelector.unavailable")}
+              action={
+                <Button
+                  label={t("library.tryAgain")}
+                  variant="outline"
+                  onClick={() => void refetch()}
+                />
+              }
+            />
           ) : allTags.length === 0 ? (
             debouncedSearchQuery ? (
               <EmptyState
@@ -464,9 +460,9 @@ export function TagSelector({
                     <AccordionItem
                       key={type}
                       value={type}
-                      className="border-foreground/20 overflow-hidden rounded-lg border"
+                      className="border-border overflow-hidden rounded-lg border"
                     >
-                      <AccordionTrigger className="bg-wui-card hover:bg-foreground/5 px-4 py-3 hover:no-underline">
+                      <AccordionTrigger className="bg-surface-inset hover:bg-surface-highlight px-4 py-3 hover:no-underline">
                         <div className="flex w-full items-center justify-between">
                           <span>
                             {t(`tagSelector.type.${type}`, {
@@ -475,9 +471,9 @@ export function TagSelector({
                             ({tagsInType.length})
                           </span>
                           {selectedInType > 0 && (
-                            <span className="bg-primary text-primary-foreground mr-2 rounded-full px-2 py-0.5 text-xs font-medium">
+                            <Badge variant="info" className="mr-2">
                               {selectedInType}
-                            </span>
+                            </Badge>
                           )}
                         </div>
                       </AccordionTrigger>
@@ -593,7 +589,7 @@ export function TagSelectorTrigger({
     <button
       onClick={handleClick}
       className={classNames(
-        "wui-input border-input text-foreground focus-visible:ring-ring flex min-h-12 w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none",
+        "wui-input border-input text-foreground flex min-h-12 w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors",
         {
           "hover:border-foreground-hint": !disabled,
           "cursor-not-allowed opacity-50": disabled,

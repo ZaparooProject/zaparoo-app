@@ -9,9 +9,11 @@ import { CoreAPI } from "@/lib/coreApi";
 import { LIBRARY_QUERY_KEYS } from "@/lib/libraryMedia";
 import { useStatusStore } from "@/lib/store";
 import { Button } from "@/components/wui/Button";
-import { Button as LinkButton } from "@/components/ui/button";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { DelayedLoading } from "@/components/DelayedLoading";
 import { useTabSessionStore } from "@/lib/tabSessionStore";
 import { NextIcon } from "@/lib/images";
+import { LibraryLinkButton } from "@/components/library/LibraryLinkButton";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { TextInput } from "@/components/wui/TextInput";
 
@@ -74,35 +76,21 @@ export function LibraryCollectionList({
           className="grid grid-cols-2 gap-2"
         >
           {visible.map(({ to, label, Icon, scope }) => (
-            <LinkButton
+            <LibraryLinkButton
               key={scope}
-              asChild
-              variant="wui-outline"
-              className="px-3 text-base whitespace-normal"
-            >
-              <Link
-                to={to}
-                onClick={() => forgetScroll(`library:${scope}:list`)}
-              >
-                <Icon size={20} aria-hidden="true" />
-                {t(label)}
-              </Link>
-            </LinkButton>
+              to={to}
+              variant="secondary"
+              label={t(label)}
+              icon={<Icon size={20} />}
+              className="px-3 text-sm whitespace-normal"
+              onClick={() => forgetScroll(`library:${scope}:list`)}
+            />
           ))}
         </nav>
       )}
       {decksFeature.available && (
         <section aria-label={t("decks.title")} className="flex flex-col gap-2">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold">{t("decks.title")}</h2>
-            <Link
-              to="/library/decks/new"
-              aria-label={t("decks.new")}
-              className="focus-visible:ring-ring flex h-12 w-12 items-center justify-end rounded-full focus-visible:ring-2 focus-visible:outline-none"
-            >
-              <PlusIcon size={24} aria-hidden="true" />
-            </Link>
-          </div>
+          <h2 className="text-lg font-semibold">{t("decks.title")}</h2>
           <TextInput
             type="search"
             aria-label={t("decks.search")}
@@ -110,6 +98,13 @@ export function LibraryCollectionList({
             value={query}
             setValue={setQuery}
             clearable
+          />
+          <LibraryLinkButton
+            to="/library/decks/new"
+            variant="fill"
+            icon={<PlusIcon size={20} />}
+            label={t("decks.new")}
+            className="w-full"
           />
           {decksQuery.isError ? (
             <EmptyState
@@ -124,9 +119,15 @@ export function LibraryCollectionList({
               }
             />
           ) : decksQuery.isLoading ? (
-            <p role="status" className="text-muted-foreground text-sm">
-              {t("decks.loading")}
-            </p>
+            <DelayedLoading>
+              <div
+                className="text-muted-foreground flex items-center justify-center gap-2 py-6"
+                role="status"
+              >
+                <LoadingSpinner size={16} className="text-primary" decorative />
+                <span>{t("decks.loading")}</span>
+              </div>
+            </DelayedLoading>
           ) : visibleDecks.length > 0 ? (
             <nav aria-label={t("decks.title")}>
               {visibleDecks.map((deck) => (
@@ -134,7 +135,7 @@ export function LibraryCollectionList({
                   key={deck.deckId}
                   to="/library/decks/$deckId"
                   params={{ deckId: deck.deckId }}
-                  className="border-foreground/25 focus-visible:ring-ring flex min-h-14 items-center justify-between gap-3 border-b px-1 py-3 last:border-b-0 focus-visible:ring-2 focus-visible:outline-none"
+                  className="border-border focus-visible:ring-ring flex min-h-14 items-center justify-between gap-3 border-b px-1 py-3 last:border-b-0 focus-visible:ring-2 focus-visible:outline-none"
                 >
                   <span className="flex min-w-0 flex-col">
                     <span className="font-medium">{deck.name}</span>
@@ -142,7 +143,10 @@ export function LibraryCollectionList({
                       {t("library.itemCount", { count: deck.itemCount })}
                     </span>
                   </span>
-                  <span aria-hidden="true">
+                  <span
+                    aria-hidden="true"
+                    className="text-muted-foreground shrink-0"
+                  >
                     <NextIcon size="20" />
                   </span>
                 </Link>

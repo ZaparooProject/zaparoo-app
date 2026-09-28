@@ -20,6 +20,7 @@ import {
   BarcodePermissionDeniedError,
   BarcodeScanCancelledError,
 } from "@/lib/errors";
+import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -424,7 +425,10 @@ export function MappingEditor({ id }: MappingEditorProps) {
             </div>
 
             <div className="flex flex-col">
-              <span id="mapping-override-label" className="mb-1 block">
+              <span
+                id="mapping-override-label"
+                className="mb-2 block text-sm font-medium"
+              >
                 {t("create.mappings.editor.override")}
               </span>
               <ZapScriptInput
@@ -450,6 +454,7 @@ export function MappingEditor({ id }: MappingEditorProps) {
               disabled={!canSave}
               disabledAppearance={saving ? "busy" : "unavailable"}
               intent="primary"
+              className="w-full"
               onClick={onSave}
             />
 
@@ -462,7 +467,7 @@ export function MappingEditor({ id }: MappingEditorProps) {
                 disabled={!connected || saving || deleting}
                 disabledAppearance={saving || deleting ? "busy" : "unavailable"}
                 onClick={() => setConfirmOpen(true)}
-                className="border-error text-error"
+                className="w-full"
               />
             )}
           </div>
@@ -474,32 +479,32 @@ export function MappingEditor({ id }: MappingEditorProps) {
         close={() => setConfirmOpen(false)}
         title={t("create.mappings.editor.deleteConfirmTitle")}
         footer={
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              label={t("create.mappings.editor.deleteCancel")}
-              onClick={() => setConfirmOpen(false)}
-              disabled={deleting}
-              disabledAppearance="busy"
-              className="flex-1"
-            />
-            <Button
-              variant="outline"
-              intent="destructive"
-              label={t("create.mappings.editor.deleteConfirmAction")}
-              onClick={onDelete}
-              disabled={deleting}
-              disabledAppearance="busy"
-              className="border-error text-error flex-1"
-            />
-          </div>
+          <ModalActionBar
+            secondaryAction={
+              <Button
+                variant="secondary"
+                label={t("create.mappings.editor.deleteCancel")}
+                onClick={() => setConfirmOpen(false)}
+                disabled={deleting}
+                disabledAppearance="busy"
+              />
+            }
+            primaryAction={
+              <Button
+                variant="outline"
+                intent="destructive"
+                label={t("create.mappings.editor.deleteConfirmAction")}
+                onClick={onDelete}
+                disabled={deleting}
+                disabledAppearance="busy"
+              />
+            }
+          />
         }
       >
-        <div className="py-4">
-          <p className="text-center">
-            {t("create.mappings.editor.deleteConfirmBody")}
-          </p>
-        </div>
+        <p className="text-muted-foreground py-4">
+          {t("create.mappings.editor.deleteConfirmBody")}
+        </p>
       </SlideModal>
     </>
   );

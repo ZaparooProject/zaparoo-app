@@ -617,9 +617,10 @@ describe("Settings Index Route", () => {
 
       renderComponent();
 
+      expect(screen.getByText("settings.app.proActive")).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: "settings.app.proActive" }),
-      ).toBeDisabled();
+        screen.queryByRole("button", { name: "settings.app.proActive" }),
+      ).not.toBeInTheDocument();
       const onlineLink = screen.getByRole("link", { name: /online\.title/ });
       expect(onlineLink).toHaveTextContent("online.settingsStatusFree");
     });

@@ -162,6 +162,25 @@ describe("Settings Devices Route", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("should let the user retry a failed registry read", async () => {
+    const user = userEvent.setup();
+    vi.mocked(Preferences.get).mockRejectedValueOnce(
+      new Error("storage unavailable"),
+    );
+    await deviceRegistry.hydrate();
+    renderRoute();
+    await screen.findByText("settings.deviceHistoryError");
+    const readsBeforeRetry = vi.mocked(Preferences.get).mock.calls.length;
+
+    await user.click(screen.getByRole("button", { name: "scan.retry" }));
+
+    await waitFor(() => {
+      expect(vi.mocked(Preferences.get).mock.calls.length).toBeGreaterThan(
+        readsBeforeRetry,
+      );
+    });
+  });
+
   it("should distinguish a failed registry read from having no devices", async () => {
     // Telling a user whose registry failed to load that they have never saved a
     // device invites them to re-pair devices they already own.
@@ -268,16 +287,22 @@ describe("Settings Devices Route", () => {
     expect(mockNavigate).toHaveBeenCalledWith({ to: "/settings" });
   });
 
-  it("should link each row to its record's detail page", async () => {
+  it("should open each row's record detail page from its edit button", async () => {
+    const user = userEvent.setup();
     const [record] = await seedRecords([
       { address: "192.168.1.30", name: "With Info" },
     ]);
 
     renderRoute();
 
-    expect(
-      await screen.findByLabelText("settings.deviceDetails"),
-    ).toHaveAttribute("href", `/settings/devices/${record!.recordId}`);
+    await user.click(
+      await screen.findByRole("button", { name: "settings.deviceDetails" }),
+    );
+
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/settings/devices/$recordId",
+      params: { recordId: record!.recordId },
+    });
   });
 
   it("should combine two manually selected records after confirmation", async () => {

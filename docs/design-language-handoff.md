@@ -12,7 +12,7 @@ Canonical visual reference: `../zaparoo.com/docs/DESIGN_LANGUAGE.md`; media/comp
 - Inline playlist queue with plain position metadata, selectable items, and stable transport positions. Live-device iteration remains parked while the MiSTer is busy.
 - Search/selectors, modal gutters, compact accessible tabs, Recent Searches, Create, Commands, Mappings, and NFC Utilities refinements.
 - Shared `ReaderActivityControl` replaces `ScanSpinner` and `WriteModal`. All NFC scan/read/write surfaces, including Zap's Tap a tag, share waiting, re-tap, error, cancellation, and reserved status-space behavior. Queue/deep-link writes have a global fallback strip.
-- Waiting: latched face, solid expanding blue edge pulse, static NFC icon. Re-tap: amber double pulse. Error: static red with Retry/Cancel. Reduced motion: static edge. Cancellation copy: “Press again to cancel.”
+- Waiting: latched face, solid expanding blue edge pulse, static NFC icon. Re-tap: amber double pulse. Error: static red halo around a latched Retry, with Cancel (the code latches Retry; the doc now says so). Reduced motion: static edge. Cancellation copy: “Press again to cancel.”
 - Settings' Unlock Zaparoo Pro now uses `intent="pro"`. Gold action styling means premium upgrade or paid support, like Patreon—not ordinary emphasis.
 
 ## Latest validation
@@ -36,7 +36,8 @@ Latest Zap reader screenshot used a browser-only simulated DOM waiting state, no
 3. Verify NFC read/write, blank-tag re-tap, Retry/Cancel, queued/deep-link writes, and camera flows on Android/iOS hardware before shipping.
 4. Resume live playlist checks only when the test device is available; do not interrupt active use.
 5. Rerun full checks and relevant builds before PR/release. Preserve `/app/` behavior and legacy browser targets.
-6. Reconcile older design-document prose during the next documentation pass: Home still mentions retired `ActionSlab`; reader motion prose says not to animate box-shadow, while the approved solid edge pulse currently does. Source and latest approved interaction take precedence over those stale descriptions.
+6. `docs/design-language.md` was reconciled with source (tokens instead of `bd-*`/`*-pattern`, 20px page titles, 64px bottom dock, Home `ScanActions`, `TabBar`, reader error latch, approved edge-pulse animation). Keep it in step with source; where they differ, source and the latest approved interaction win.
+7. Remaining legacy utilities (`bg-button-pattern`, `bg-card-pattern`, `bg-wui-card`, `border-bd-*`) are still defined in `src/index.css` only until their last call sites migrate; remove them then.
 
 ## Local-only evidence
 
