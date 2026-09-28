@@ -28,8 +28,6 @@ import {
 import { seedActiveDevice } from "@/test-utils/deviceRegistry";
 import { KeepAwake } from "@capacitor-community/keep-awake";
 
-<<<<<<< HEAD
-=======
 function expectIdleNowPlaying() {
   const region = screen.getByRole("region", {
     name: "scan.nowPlayingHeading",
@@ -37,7 +35,6 @@ function expectIdleNowPlaying() {
   expect(within(region).getByText("scan.nowPlayingIdle")).toBeVisible();
 }
 
->>>>>>> 06d00d0 (WIP: refine app design language and Zap page)
 // Mock state that can be modified per-test
 const mockScanOperationsState = {
   scanSession: false,
@@ -359,6 +356,8 @@ describe("Index Route Integration", () => {
     mockScanOperationsProps.current = null;
     mockCoverRowsState.recents = [];
     mockCoverRowsState.favourites = [];
+    vi.mocked(CoreAPI.mediaMeta).mockReset();
+    vi.mocked(CoreAPI.mediaTagsUpdate).mockReset();
 
     // Reset stores to connected state
     useStatusStore.setState({
@@ -631,86 +630,8 @@ describe("Index Route Integration", () => {
       expect(
         await screen.findByRole("dialog", { name: "scan.deviceSheetTitle" }),
       ).toBeInTheDocument();
-<<<<<<< HEAD
-    });
-  });
-
-  describe("Connection Status", () => {
-    it("should show connected status", () => {
-      render(
-        <TestWrapper>
-          <Index />
-        </TestWrapper>,
-      );
-
-      expect(screen.getByText("scan.connectedHeading")).toBeInTheDocument();
-    });
-
-    it("should show device address when connected", () => {
-      render(
-        <TestWrapper>
-          <Index />
-        </TestWrapper>,
-      );
-
-      // The address is passed via translation interpolation - look for the key
-      // which contains the IP (scan.connectedSub with ip param)
-      expect(screen.getByText(/scan.connectedSub/)).toBeInTheDocument();
-    });
-
-    it("should show disconnected status when not connected", () => {
-      useStatusStore.setState({
-        connected: false,
-        connectionState: ConnectionState.DISCONNECTED,
-      });
-
-      const disconnectedContext: ConnectionContextValue = {
-        activeConnection: null,
-        isConnected: false,
-        hasData: false,
-        showConnecting: false,
-        showReconnecting: false,
-        openPairingModal: () => {},
-      };
-
-      render(
-        <TestWrapper connectionValue={disconnectedContext}>
-          <Index />
-        </TestWrapper>,
-      );
-
-      expect(screen.getByText("settings.notConnected")).toBeInTheDocument();
-    });
-  });
-
-  it("keeps recent scans in history without showing a Last Scanned section", () => {
-    useStatusStore.setState({
-      lastToken: {
-        type: "ntag215",
-        uid: "abc123def456ab",
-        text: "Super Mario Bros",
-        data: "",
-        scanTime: new Date().toISOString(),
-      },
-    });
-
-    render(
-      <TestWrapper>
-        <Index />
-      </TestWrapper>,
-    );
-
-    expect(
-      screen.queryByText("scan.lastScannedHeading"),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByText(/abc123def456ab/)).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "scan.historyTitle" }),
-    ).toBeInTheDocument();
-=======
       expect(trigger).toHaveAttribute("aria-expanded", "true");
     });
->>>>>>> 06d00d0 (WIP: refine app design language and Zap page)
   });
 
   describe("Now Playing Info", () => {
@@ -1677,11 +1598,7 @@ describe("Index Route Integration", () => {
       );
 
       // Initially no media playing
-<<<<<<< HEAD
-      expect(screen.getByText("scan.nothingPlaying")).toBeVisible();
-=======
       expectIdleNowPlaying();
->>>>>>> 06d00d0 (WIP: refine app design language and Zap page)
 
       // Update store
       act(() => {

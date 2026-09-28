@@ -629,28 +629,6 @@ describe("LibraryMediaDetailsModal", () => {
     ).toBeInTheDocument();
   });
 
-<<<<<<< HEAD
-  it("keeps the launch caption stable while its icon shows progress", async () => {
-    let finish!: () => void;
-    vi.spyOn(CoreAPI, "run").mockImplementation(
-      () =>
-        new Promise<void>((resolve) => {
-          finish = resolve;
-        }),
-    );
-    renderModal();
-    await userEvent
-      .setup()
-      .click(await screen.findByRole("button", { name: "library.launch" }));
-    const pending = screen.getByRole("button", { name: "library.launching" });
-    expect(pending).toHaveTextContent("library.launch");
-    expect(pending).toBeDisabled();
-    await waitFor(() => expect(finish).toBeTypeOf("function"));
-    await act(async () => finish());
-    expect(
-      screen.getByRole("button", { name: "library.launch" }),
-    ).toBeEnabled();
-=======
   it("should show transient disabled styling while launch is in flight", async () => {
     const user = userEvent.setup();
     let resolveRun: (() => void) | undefined;
@@ -673,7 +651,6 @@ describe("LibraryMediaDetailsModal", () => {
     expect(launching).toHaveAttribute("data-disabled-appearance", "busy");
 
     await act(async () => resolveRun?.());
->>>>>>> 06d00d0 (WIP: refine app design language and Zap page)
   });
 
   it("should not launch while Core is reconnecting", async () => {

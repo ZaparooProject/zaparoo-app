@@ -1,4 +1,3 @@
-import classNames from "classnames";
 import { Bookmark, Heart, ThumbsDown, ThumbsUp } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
@@ -85,18 +84,14 @@ export function MediaPreferenceActions(props: {
           )}
           aria-pressed={active}
           icon={<Icon size={20} fill={active ? "currentColor" : "none"} />}
-          variant="text"
+          variant={props.context === "nowPlaying" ? "ghost" : "text"}
           layout={props.context === "modal" ? "responsive" : "inline"}
           size={props.context === "nowPlaying" ? "lg" : "default"}
           className={
-            props.context === "modal"
-              ? classNames(
-                  "w-full whitespace-nowrap",
-                  busy && "disabled:!text-white",
-                )
-              : "shrink-0"
+            props.context === "modal" ? "w-full whitespace-nowrap" : "shrink-0"
           }
           disabled={!connected || !canUpdate || props.ready === false || busy}
+          disabledAppearance={busy ? "busy" : "unavailable"}
           onClick={() => toggle(id)}
         />
       );

@@ -75,7 +75,7 @@ export function SortableDeckItemRow({
   );
 
   return (
-    <li className="border-b border-white/25 last:border-b-0">
+    <li className="border-foreground/25 border-b last:border-b-0">
       <div
         ref={setNodeRef}
         style={{
@@ -83,7 +83,7 @@ export function SortableDeckItemRow({
           transition,
           zIndex: isDragging ? 1 : undefined,
         }}
-        className={`relative flex min-h-14 items-center gap-1 px-1 py-3 sm:gap-2 ${isDragging ? "bg-background opacity-30" : ""}`}
+        className={`relative flex min-h-14 items-center gap-1 px-1 py-3 sm:gap-2 ${isDragging ? "bg-surface-raised opacity-30" : ""}`}
       >
         {editable && !accessibleLists && (
           <button
@@ -93,7 +93,7 @@ export function SortableDeckItemRow({
             {...listeners}
             aria-label={t("decks.reorderItem", { name })}
             aria-roledescription={t("decks.reorderRole")}
-            className="text-muted-foreground flex h-12 w-10 shrink-0 touch-none items-center justify-center rounded-md focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none sm:hidden"
+            className="text-muted-foreground focus-visible:ring-ring flex h-12 w-10 shrink-0 touch-none items-center justify-center rounded-md focus-visible:ring-2 focus-visible:outline-none sm:hidden"
             disabled={busy || count < 2}
           >
             <GripVerticalIcon size={20} aria-hidden="true" />
@@ -106,7 +106,7 @@ export function SortableDeckItemRow({
         ) : (
           <button
             type="button"
-            className="flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+            className="focus-visible:ring-ring flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-visible:ring-2 focus-visible:outline-none"
             onPointerUp={handleHapticPress}
             onClick={() => onSelect(item)}
           >
@@ -127,22 +127,24 @@ export function SortableDeckItemRow({
             }
           >
             <Button
-              icon={<ArrowUpIcon size={18} />}
-              variant="text"
+              icon={<ArrowUpIcon size={20} />}
+              variant="ghost"
               aria-label={t("decks.moveUp", { name })}
               ref={upRef}
               disabled={busy || index === 0}
+              disabledAppearance={busy ? "busy" : "unavailable"}
               onClick={() => {
                 movedRef.current = "up";
                 onMove(index, index - 1);
               }}
             />
             <Button
-              icon={<ArrowDownIcon size={18} />}
-              variant="text"
+              icon={<ArrowDownIcon size={20} />}
+              variant="ghost"
               aria-label={t("decks.moveDown", { name })}
               ref={downRef}
               disabled={busy || index === count - 1}
+              disabledAppearance={busy ? "busy" : "unavailable"}
               onClick={() => {
                 movedRef.current = "down";
                 onMove(index, index + 1);

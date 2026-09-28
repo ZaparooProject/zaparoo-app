@@ -13,7 +13,6 @@ import {
   Trash2Icon,
 } from "lucide-react";
 import type { AxiosError } from "axios";
-import { Card } from "@/components/wui/Card";
 import { TextInput } from "@/components/wui/TextInput.tsx";
 import { Button } from "@/components/wui/Button.tsx";
 import { WarpSubscription } from "@/components/WarpSubscription";
@@ -873,9 +872,7 @@ export function OnlinePage() {
                 )}
 
                 {/* Inline form error */}
-                {formError && (
-                  <p className="text-error text-sm">{formError}</p>
-                )}
+                {formError && <p className="text-error text-sm">{formError}</p>}
 
                 {/* Log in / Sign up Button */}
                 <Button

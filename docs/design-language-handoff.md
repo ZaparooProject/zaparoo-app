@@ -2,7 +2,7 @@
 
 ## Parked state
 
-Work is parked on `wip/design-language-overhaul`, not ready for release. Earlier checkpoints: `4555664` and `06d00d0`. This document accompanies the next preservation commit. Resume page-by-page refinement; do not start the deferred customizable Zap Hub without a new request.
+Work lives on `wip/design-language-overhaul`, rebased onto `main` at v1.15.0 (`cf5875c`), not ready for release. Main's media preferences, Collections/decks, signed-out Online settings and pairing rate-limit UI are ported to the new design language: Now Playing preferences and details live in `NowPlayingCard`, and deck/collection surfaces use the shared tokens, `disabledAppearance`, and `ModalActionBar`. Earlier checkpoints: `4555664` and `06d00d0`. This document accompanies the next preservation commit. Resume page-by-page refinement; do not start the deferred customizable Zap Hub without a new request.
 
 Canonical visual reference: `../zaparoo.com/docs/DESIGN_LANGUAGE.md`; media/component references: `../zaparoo-online`. App contracts live in `docs/design-language.md` and `docs/capacitor.md`.
 
@@ -17,14 +17,15 @@ Canonical visual reference: `../zaparoo.com/docs/DESIGN_LANGUAGE.md`; media/comp
 
 ## Latest validation
 
-After the Settings premium-button change:
+After rebasing onto v1.15.0 and porting main's UI:
 
 - `npm run typecheck`: passed.
 - `npm run lint`: passed.
 - `npm run format:check`: passed.
-- `npm run test -- --run`: 237 files, 4,016 tests passed.
+- `npm run test -- --run`: 247 files, 4,172 tests passed.
+- `npm run build:web` and `npm run build:core`: passed.
 
-Web/Core builds passed at earlier theme checkpoints, but were not rerun for the latest refinements. Native NFC, camera, re-tap, cancellation, and system UI were not verified on hardware. No release, native sync, or deployment performed.
+Native NFC, camera, re-tap, cancellation, and system UI were not verified on hardware. No release, native sync, or deployment performed.
 
 Latest Zap reader screenshot used a browser-only simulated DOM waiting state, not a real NFC session. It verifies appearance only. Settings' final gold-button change has automated checks but no fresh browser inspection.
 

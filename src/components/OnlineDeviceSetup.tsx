@@ -369,7 +369,8 @@ export function OnlineDeviceSetup({
                 intent="destructive"
                 onClick={() => setUnlinkOpen(true)}
                 disabled={unlink.isPending}
-                className="border-error text-error mt-2 w-full"
+                disabledAppearance="busy"
+                className="mt-2 w-full"
               />
             )}
           </div>
@@ -561,7 +562,7 @@ export function OnlineDeviceSetup({
                       </label>
                       <select
                         id="online-backup-schedule"
-                        className="wui-input border-bd-input bg-surface-inset text-foreground focus-visible:ring-ring min-h-12 w-full rounded-md border border-solid p-3 focus-visible:ring-2 focus-visible:outline-none"
+                        className="wui-input border-input bg-surface-inset text-foreground focus-visible:ring-ring min-h-12 w-full rounded-md border border-solid p-3 focus-visible:ring-2 focus-visible:outline-none"
                         value={
                           settingsQuery.data?.backupRemoteSchedule ?? "daily"
                         }
@@ -601,7 +602,7 @@ export function OnlineDeviceSetup({
             <div className="flex flex-col gap-4">
               {remoteControlFeature.available && (
                 <div className="flex flex-col gap-1">
-                  <p className="font-medium text-white">
+                  <p className="text-foreground font-medium">
                     {t("online.features.remoteControl")}
                   </p>
                   <p className="text-muted-foreground text-sm">
@@ -619,7 +620,7 @@ export function OnlineDeviceSetup({
               </div>
               {librarySyncFeature.available && (
                 <div className="flex flex-col gap-1">
-                  <p className="font-medium text-white">
+                  <p className="text-foreground font-medium">
                     {t("online.features.librarySync")}
                   </p>
                   <p className="text-muted-foreground text-sm">
@@ -654,19 +655,21 @@ export function OnlineDeviceSetup({
         footer={
           <div className="flex gap-2">
             <Button
-              variant="outline"
+              variant="secondary"
               label={t("nav.cancel")}
               onClick={() => setUnlinkOpen(false)}
               className="flex-1"
               disabled={unlink.isPending}
+              disabledAppearance="busy"
             />
             <Button
               variant="outline"
               intent="destructive"
               label={t("online.deviceLink.unlink")}
               onClick={() => unlink.mutate()}
-              className="border-error text-error flex-1"
+              className="flex-1"
               disabled={unlink.isPending}
+              disabledAppearance="busy"
             />
           </div>
         }

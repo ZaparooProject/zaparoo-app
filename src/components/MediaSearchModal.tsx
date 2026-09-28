@@ -174,7 +174,10 @@ export function MediaSearchModal(props: MediaSearchModalProps) {
 
             {mediaTagsAvailable && (
               <div className="flex flex-col">
-                <span id="media-search-tags-label" className="mb-1 text-white">
+                <span
+                  id="media-search-tags-label"
+                  className="text-foreground mb-1"
+                >
                   {t("create.search.tagsInput")}
                 </span>
                 <TagSelectorTrigger

@@ -522,7 +522,7 @@ describe("deck routes", () => {
         if (
           (this.style.position === "fixed" && this.style.zIndex === "40") ||
           (this.getAttribute("aria-hidden") === "true" &&
-            this.classList.contains("bg-background"))
+            this.classList.contains("bg-surface-raised"))
         ) {
           return new DOMRect(0, 0, 320, 64);
         }
@@ -908,7 +908,7 @@ describe("deck routes", () => {
       await within(picker).findByRole("checkbox", { name: /Platformer/ }),
     );
     await user.click(
-      within(picker).getByRole("button", { name: "tagSelector.apply" }),
+      within(picker).getByRole("button", { name: "tagSelector.applyCount" }),
     );
     await user.type(
       screen.getByRole("searchbox", { name: "create.search.gameInput" }),

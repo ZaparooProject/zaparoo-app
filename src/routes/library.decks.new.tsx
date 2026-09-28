@@ -111,6 +111,7 @@ export function NewDeck({
             intent="primary"
             className="w-full"
             disabled={!name.trim() || saving}
+            disabledAppearance={saving ? "busy" : "unavailable"}
           />
         </form>
       )}

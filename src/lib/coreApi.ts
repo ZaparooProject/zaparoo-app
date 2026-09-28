@@ -38,8 +38,6 @@ import {
   MediaCleanOrphansResponse,
   MediaImageParams,
   MediaImageResponse,
-  MediaLookupParams,
-  MediaLookupResponse,
   MediaMetaParams,
   MediaMetaResponse,
   MediaScrapeCancelResponse,
@@ -1741,23 +1739,6 @@ class CoreApi {
         "mediaHistory",
         error,
       );
-      throw error;
-    }
-  }
-
-  async mediaLookup(
-    params: MediaLookupParams,
-    signal?: AbortSignal,
-  ): Promise<MediaLookupResponse> {
-    try {
-      const result = await this.call(Method.MediaLookup, params, signal);
-      if (isCancelled(result)) {
-        throw new RequestCancelledError("Media lookup request was cancelled");
-      }
-      return result as MediaLookupResponse;
-    } catch (error) {
-      if (isRequestCancelledError(error)) throw error;
-      logMediaApiFailure("Media lookup API call failed", "mediaLookup", error);
       throw error;
     }
   }

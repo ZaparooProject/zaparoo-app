@@ -281,7 +281,7 @@ describe("MediaSearchModal", () => {
       await within(picker).findByRole("checkbox", { name: /Platformer/ }),
     );
     await user.click(
-      within(picker).getByRole("button", { name: "tagSelector.apply" }),
+      within(picker).getByRole("button", { name: "tagSelector.applyCount" }),
     );
     await user.click(
       screen.getByRole("button", { name: "create.search.searchButton" }),

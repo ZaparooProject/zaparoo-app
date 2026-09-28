@@ -48,7 +48,7 @@ import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 import { useStatusStore } from "@/lib/store";
 import {
   useNfcWriter,
-  isWriteModalOpen,
+  isReaderActivityOpen,
   WriteAction,
   WriteMethod,
 } from "@/lib/writeNfcHook";
@@ -64,7 +64,6 @@ import { useNfcWriteAvailable } from "@/hooks/useNfcWriteAvailable";
 import { useAccessibleLists } from "@/hooks/useAccessibleLists";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { PageFrame } from "@/components/PageFrame";
-import { WriteModal } from "@/components/WriteModal";
 import { SlideModal } from "@/components/SlideModal";
 import { MediaSearchModal } from "@/components/MediaSearchModal";
 import { DeckMarkdown } from "@/components/library/DeckMarkdown";
@@ -75,6 +74,7 @@ import { SortableDeckItemRow } from "@/components/library/SortableDeckItemRow";
 import { DeckArtwork } from "@/components/library/DeckArtwork";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { ModalActionRail } from "@/components/wui/ModalActionRail";
+import { ReaderActivityControl } from "@/components/ReaderActivityControl";
 import { TextInput } from "@/components/wui/TextInput";
 import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
@@ -105,7 +105,11 @@ export function DeckDetails() {
   );
   const writer = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
   const [writeIntent, setWriteIntent] = useState(false);
-  const writeOpen = isWriteModalOpen(writeIntent, writer);
+  const writeOpen = isReaderActivityOpen(writeIntent, writer);
+  const cancelReaderActivity = async () => {
+    setWriteIntent(false);
+    await writer.end();
+  };
   const feature = useCoreFeature("decks", { requireKnownSupport: true });
   const deckQuery = useQuery({
     queryKey: [LIBRARY_QUERY_KEYS.decks, deviceKey, deckId],
@@ -416,6 +420,34 @@ export function DeckDetails() {
             ) : deck.description ? (
               <DeckMarkdown>{deck.description}</DeckMarkdown>
             ) : null}
+            {writeOpen && (
+              <ReaderActivityControl
+                state={
+                  writer.verifyError
+                    ? "error"
+                    : writer.retapRequired
+                      ? "attention"
+                      : "waiting"
+                }
+                idleLabel={t("library.writeAction")}
+                activeLabel={
+                  writer.retapRequired
+                    ? t("spinner.retapTag")
+                    : t("spinner.holdTagReader")
+                }
+                errorMessage={
+                  writer.verifyError
+                    ? t("spinner.verifyFailedRetry")
+                    : undefined
+                }
+                icon={<CreateIcon size="20" />}
+                className="w-full"
+                buttonClassName="w-full"
+                onStart={() => undefined}
+                onCancel={() => void cancelReaderActivity()}
+                onRetry={() => void writer.retry()}
+              />
+            )}
             {!editing && (
               <ModalActionRail
                 aria-label={t("decks.actions")}
@@ -429,6 +461,9 @@ export function DeckDetails() {
                       layout="responsive"
                       className="whitespace-nowrap"
                       disabled={opening || playing || items.length === 0}
+                      disabledAppearance={
+                        opening || playing ? "busy" : "unavailable"
+                      }
                       onClick={() => void openDeck()}
                     />
                     <Button
@@ -439,6 +474,9 @@ export function DeckDetails() {
                       intent="primary"
                       className="whitespace-nowrap"
                       disabled={opening || playing || items.length === 0}
+                      disabledAppearance={
+                        opening || playing ? "busy" : "unavailable"
+                      }
                       onClick={() => void playDeck()}
                     />
                     <Button
@@ -448,6 +486,9 @@ export function DeckDetails() {
                       layout="responsive"
                       className="whitespace-nowrap"
                       disabled={!writeAvailable || opening || playing}
+                      disabledAppearance={
+                        opening || playing ? "busy" : "unavailable"
+                      }
                       onClick={writeDeck}
                     />
                     <Button
@@ -520,7 +561,7 @@ export function DeckDetails() {
                   {activeDragItem ? (
                     <div
                       aria-hidden="true"
-                      className="bg-background flex min-h-14 items-center gap-1 px-1 py-3 sm:gap-2"
+                      className="bg-surface-raised flex min-h-14 items-center gap-1 px-1 py-3 sm:gap-2"
                     >
                       <span className="text-muted-foreground flex h-12 w-10 shrink-0 items-center justify-center">
                         <GripVerticalIcon size={20} />
@@ -545,6 +586,7 @@ export function DeckDetails() {
                 intent="primary"
                 className="w-full"
                 disabled={busy}
+                disabledAppearance="busy"
                 onClick={() => setMediaSearchOpen(true)}
               />
             )}
@@ -561,6 +603,7 @@ export function DeckDetails() {
                   intent="primary"
                   className="w-full"
                   disabled={!name.trim() || busy}
+                  disabledAppearance={busy ? "busy" : "unavailable"}
                   onClick={() =>
                     void update({
                       name: name.trim(),
@@ -575,9 +618,10 @@ export function DeckDetails() {
                   <Button
                     label={t("nav.cancel")}
                     icon={<XIcon size={20} />}
-                    variant="outline"
+                    variant="secondary"
                     className="flex-1"
                     disabled={busy}
+                    disabledAppearance="busy"
                     onClick={cancelEdit}
                   />
                   <Button
@@ -585,8 +629,9 @@ export function DeckDetails() {
                     icon={<Trash2Icon size={20} />}
                     variant="outline"
                     intent="destructive"
-                    className="border-error text-error flex-1"
+                    className="flex-1"
                     disabled={busy}
+                    disabledAppearance="busy"
                     onClick={() => setConfirmDelete(true)}
                   />
                 </div>
@@ -598,7 +643,7 @@ export function DeckDetails() {
                   label={t("decks.delete")}
                   variant="outline"
                   intent="destructive"
-                  className="border-error text-error w-full"
+                  className="w-full"
                   onClick={() => setConfirmDelete(true)}
                 />
               </div>
@@ -649,7 +694,7 @@ export function DeckDetails() {
             <div className="flex gap-2">
               <Button
                 label={t("nav.cancel")}
-                variant="outline"
+                variant="secondary"
                 className="flex-1"
                 onClick={() => setRemoveItem(null)}
               />
@@ -657,8 +702,9 @@ export function DeckDetails() {
                 label={t("decks.remove")}
                 variant="outline"
                 intent="destructive"
-                className="border-error text-error flex-1"
+                className="flex-1"
                 disabled={busy}
+                disabledAppearance="busy"
                 onClick={() => {
                   if (editing) {
                     setPendingOrder({
@@ -691,7 +737,7 @@ export function DeckDetails() {
           <div className="flex gap-2">
             <Button
               label={t("nav.cancel")}
-              variant="outline"
+              variant="secondary"
               className="flex-1"
               onClick={() => setConfirmDelete(false)}
             />
@@ -699,23 +745,14 @@ export function DeckDetails() {
               label={t("decks.delete")}
               variant="outline"
               intent="destructive"
-              className="border-error text-error flex-1"
+              className="flex-1"
               disabled={busy}
+              disabledAppearance="busy"
               onClick={() => void removeDeck()}
             />
           </div>
         </div>
       </SlideModal>
-      <WriteModal
-        isOpen={writeOpen}
-        close={() => {
-          setWriteIntent(false);
-          void writer.end();
-        }}
-        verifyError={writer.verifyError !== null}
-        retry={() => void writer.retry()}
-        retapRequired={writer.retapRequired}
-      />
     </>
   );
 }

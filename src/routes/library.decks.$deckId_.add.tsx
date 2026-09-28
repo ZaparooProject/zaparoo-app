@@ -175,7 +175,7 @@ export function AddDeckItem() {
           <div className="flex gap-2">
             <Button
               label={t("nav.cancel")}
-              variant="outline"
+              variant="secondary"
               className="flex-1"
               onClick={goBack}
             />
@@ -189,6 +189,7 @@ export function AddDeckItem() {
                   ? !name.trim() || !script.trim()
                   : !cardId.trim())
               }
+              disabledAppearance={saving ? "busy" : "unavailable"}
               onClick={() => void save()}
             />
           </div>

@@ -1,19 +1,43 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { act, render, screen, waitFor, within } from "@/test-utils";
-import { NowPlayingInfo } from "@/components/home/NowPlayingInfo";
+import { NowPlayingCard } from "@/components/home/NowPlayingCard";
 import { CoreAPI } from "@/lib/coreApi";
 import type { MediaMetaResponse } from "@/lib/models";
 import { useStatusStore } from "@/lib/store";
 
+vi.mock("@/hooks/useActiveDeviceKey", () => ({
+  useActiveDeviceKey: () => "device-a",
+}));
+
 const primary = {
-  deviceKey: "device-a",
   mediaName: "Game",
   mediaPath: "/roms/SNES/game.sfc",
   systemId: "SNES",
   systemName: "SNES",
-  onStop: vi.fn(),
 };
+
+function NowPlaying(props: {
+  mediaName: string;
+  mediaPath: string;
+  systemId: string;
+  systemName: string;
+  headingLabel?: string;
+}) {
+  const { headingLabel, ...media } = props;
+  return (
+    <NowPlayingCard
+      media={media}
+      playlist={null}
+      connected
+      headingLabel={headingLabel}
+      onStop={vi.fn()}
+      onPlaylistPrevious={vi.fn()}
+      onPlaylistToggle={vi.fn()}
+      onPlaylistNext={vi.fn()}
+    />
+  );
+}
 
 function meta(
   path: string,
@@ -69,8 +93,8 @@ describe("Now Playing preferences", () => {
     });
     render(
       <>
-        <NowPlayingInfo {...primary} />
-        <NowPlayingInfo
+        <NowPlaying {...primary} />
+        <NowPlaying
           {...primary}
           mediaName="Background"
           mediaPath="/roms/SNES/background.sfc"
@@ -148,7 +172,7 @@ describe("Now Playing preferences", () => {
       data: "aGVsbG8=",
       typeTag: "property:image-cover",
     });
-    const { container } = render(<NowPlayingInfo {...primary} />);
+    const { container } = render(<NowPlaying {...primary} />);
 
     await waitFor(() =>
       expect(container.querySelector("img")).toHaveAttribute(
@@ -192,7 +216,7 @@ describe("Now Playing preferences", () => {
     ).toBeInTheDocument();
     expect(lookup).toHaveBeenCalledTimes(1);
     expect(image).toHaveBeenCalledWith(
-      { system: "SNES", path: primary.mediaPath, maxSize: 192 },
+      { system: "SNES", path: primary.mediaPath, maxSize: 256 },
       undefined,
     );
   });
@@ -208,7 +232,7 @@ describe("Now Playing preferences", () => {
       data: "aGVsbG8=",
       typeTag: "property:image-cover",
     });
-    render(<NowPlayingInfo {...primary} />);
+    render(<NowPlaying {...primary} />);
 
     const cover = await screen.findByRole("button", {
       name: "library.details: library.imageAlt",
@@ -232,7 +256,7 @@ describe("Now Playing preferences", () => {
       data: "",
       typeTag: "",
     });
-    const { container } = render(<NowPlayingInfo {...primary} />);
+    const { container } = render(<NowPlaying {...primary} />);
 
     await waitFor(() => expect(image).toHaveBeenCalledOnce());
     expect(screen.queryByText("Puzzle")).not.toBeInTheDocument();
@@ -256,12 +280,12 @@ describe("Now Playing preferences", () => {
   it("does not offer actions for empty or playlist-only media, missing index, or unsupported Core", () => {
     const lookup = vi.spyOn(CoreAPI, "mediaMeta");
     const { rerender } = render(
-      <NowPlayingInfo {...primary} mediaName="" mediaPath="" />,
+      <NowPlaying {...primary} mediaName="" mediaPath="" />,
     );
     expect(
       screen.queryByRole("group", { name: "scan.mediaPreferences" }),
     ).not.toBeInTheDocument();
-    rerender(<NowPlayingInfo {...primary} mediaPath="" />);
+    rerender(<NowPlaying {...primary} mediaPath="" />);
     expect(
       screen.queryByRole("group", { name: "scan.mediaPreferences" }),
     ).not.toBeInTheDocument();
@@ -270,7 +294,7 @@ describe("Now Playing preferences", () => {
         gamesIndex: { exists: false, indexing: false },
       }),
     );
-    rerender(<NowPlayingInfo {...primary} />);
+    rerender(<NowPlaying {...primary} />);
     expect(
       screen.queryByRole("group", { name: "scan.mediaPreferences" }),
     ).not.toBeInTheDocument();
@@ -280,7 +304,7 @@ describe("Now Playing preferences", () => {
         coreVersion: "2.14.9",
       }),
     );
-    rerender(<NowPlayingInfo {...primary} />);
+    rerender(<NowPlaying {...primary} />);
     expect(
       screen.queryByRole("group", { name: "scan.mediaPreferences" }),
     ).not.toBeInTheDocument();
@@ -291,7 +315,7 @@ describe("Now Playing preferences", () => {
     const lookup = vi
       .spyOn(CoreAPI, "mediaMeta")
       .mockResolvedValue(meta(primary.mediaPath!));
-    render(<NowPlayingInfo {...primary} mediaName="" />);
+    render(<NowPlaying {...primary} mediaName="" />);
     await waitFor(() =>
       expect(
         screen.getByRole("button", { name: "library.addLike" }),
@@ -308,7 +332,7 @@ describe("Now Playing preferences", () => {
     vi.spyOn(CoreAPI, "mediaMeta").mockRejectedValue(
       new Error("media not found"),
     );
-    render(<NowPlayingInfo {...primary} />);
+    render(<NowPlaying {...primary} />);
     expect(
       await screen.findByRole("button", { name: "library.addFavorite" }),
     ).toBeDisabled();
@@ -331,9 +355,9 @@ describe("Now Playing preferences", () => {
             ]),
           ),
     );
-    const { rerender } = render(<NowPlayingInfo {...primary} />);
+    const { rerender } = render(<NowPlaying {...primary} />);
     await waitFor(() => expect(finish).toBeTypeOf("function"));
-    rerender(<NowPlayingInfo {...primary} mediaPath="/roms/SNES/second.sfc" />);
+    rerender(<NowPlaying {...primary} mediaPath="/roms/SNES/second.sfc" />);
     expect(
       await screen.findByRole("button", { name: "library.removeLike" }),
     ).toHaveAttribute("aria-pressed", "true");

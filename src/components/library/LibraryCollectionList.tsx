@@ -78,7 +78,7 @@ export function LibraryCollectionList({
               key={scope}
               asChild
               variant="wui-outline"
-              className="h-auto min-h-10 px-3 text-base whitespace-normal"
+              className="px-3 text-base whitespace-normal"
             >
               <Link
                 to={to}
@@ -98,7 +98,7 @@ export function LibraryCollectionList({
             <Link
               to="/library/decks/new"
               aria-label={t("decks.new")}
-              className="flex h-12 w-12 items-center justify-end rounded-full focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+              className="focus-visible:ring-ring flex h-12 w-12 items-center justify-end rounded-full focus-visible:ring-2 focus-visible:outline-none"
             >
               <PlusIcon size={24} aria-hidden="true" />
             </Link>
@@ -134,7 +134,7 @@ export function LibraryCollectionList({
                   key={deck.deckId}
                   to="/library/decks/$deckId"
                   params={{ deckId: deck.deckId }}
-                  className="flex min-h-14 items-center justify-between gap-3 border-b border-white/25 px-1 py-3 last:border-b-0 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+                  className="border-foreground/25 focus-visible:ring-ring flex min-h-14 items-center justify-between gap-3 border-b px-1 py-3 last:border-b-0 focus-visible:ring-2 focus-visible:outline-none"
                 >
                   <span className="flex min-w-0 flex-col">
                     <span className="font-medium">{deck.name}</span>

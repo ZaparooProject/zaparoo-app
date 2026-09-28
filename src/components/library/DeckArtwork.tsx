@@ -158,7 +158,11 @@ function ArtworkImage({
   const [failed, setFailed] = useState(false);
   return (
     <span
-      className="text-foreground-hint flex h-full w-full items-center justify-center overflow-hidden bg-white/5"
+      className={
+        detail
+          ? "text-foreground-hint bg-foreground/5 flex h-full w-full items-center justify-center overflow-hidden"
+          : "text-foreground-hint bg-surface-highlight flex h-full w-full items-center justify-center overflow-hidden rounded-md p-1"
+      }
       onErrorCapture={() => setFailed(true)}
     >
       {!failed && url ? (
@@ -166,7 +170,7 @@ function ArtworkImage({
           src={url}
           alt={alt}
           loading="lazy"
-          className="h-full w-full object-contain"
+          className="h-full w-full rounded-sm object-contain"
         />
       ) : !failed && entry ? (
         <LibraryArtwork
@@ -177,7 +181,7 @@ function ArtworkImage({
           priority={detail ? "detail" : "thumbnail"}
           alt={alt}
           enabled={enabled}
-          className="h-full w-full object-contain"
+          className="h-full w-full rounded-sm object-contain"
         />
       ) : (
         <FileIcon size={24} />

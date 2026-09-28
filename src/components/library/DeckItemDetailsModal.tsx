@@ -89,8 +89,9 @@ export function DeckItemDetailsModal({
                   variant="text"
                   layout="responsive"
                   intent="destructive"
-                  className="enabled:!text-error whitespace-nowrap"
+                  className="whitespace-nowrap"
                   disabled={!item || launching}
+                  disabledAppearance={launching ? "busy" : "unavailable"}
                   onClick={() => {
                     if (!item) return;
                     close();
@@ -105,6 +106,7 @@ export function DeckItemDetailsModal({
                 layout="responsive"
                 className="whitespace-nowrap"
                 disabled={!launchText || !writeAvailable || launching}
+                disabledAppearance={launching ? "busy" : "unavailable"}
                 onClick={() => {
                   if (!launchText) return;
                   close();
@@ -120,6 +122,7 @@ export function DeckItemDetailsModal({
               intent="primary"
               className="!min-h-0"
               disabled={!playText || !liveConnected || launching}
+              disabledAppearance={launching ? "busy" : "unavailable"}
               onClick={() => void launch()}
             />
           }

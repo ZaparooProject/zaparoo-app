@@ -19,7 +19,6 @@ export enum Method {
   MediaActiveUpdate = "media.active.update",
   MediaControl = "media.control",
   MediaHistory = "media.history",
-  MediaLookup = "media.lookup",
   MediaTags = "media.tags",
   MediaTagsUpdate = "media.tags.update",
   Decks = "decks",
@@ -786,27 +785,6 @@ export interface MediaHistoryEntry {
 export interface MediaHistoryResponse {
   entries: MediaHistoryEntry[];
   pagination?: Pagination;
-}
-
-export interface MediaLookupParams {
-  system: string;
-  name: string;
-  fuzzySystem?: boolean;
-}
-
-export interface MediaLookupMatch {
-  mediaId?: number;
-  system: string;
-  name: string;
-  path: string;
-  relativePath?: string;
-  zapScript?: string;
-  tags?: TagInfo[];
-  confidence: number;
-}
-
-export interface MediaLookupResponse {
-  match: MediaLookupMatch | null;
 }
 
 export interface MediaActiveUpdateRequest {

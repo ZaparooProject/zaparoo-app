@@ -105,31 +105,9 @@ describe("Home Page Integration", () => {
         />,
       );
 
-<<<<<<< HEAD
-      // Heading is always visible
-      expect(screen.getByText("scan.nowPlayingHeading")).toBeInTheDocument();
-      expect(screen.getByText("scan.nothingPlaying")).toBeVisible();
-    });
-
-    it("should show media info when playing", () => {
-      render(
-        <NowPlayingInfo
-          mediaName="Super Mario Bros"
-          mediaPath="/path/to/game.rom"
-          systemName="Nintendo Entertainment System"
-          onStop={() => {}}
-          connected={true}
-        />,
-      );
-
-      expect(screen.getByText("scan.nowPlayingHeading")).toBeInTheDocument();
-      // Use regex for substring match as text is mixed with translation keys
-      expect(screen.getByText(/Super Mario Bros/)).toBeInTheDocument();
-=======
       const region = screen.getByRole("region", {
         name: "scan.nowPlayingHeading",
       });
->>>>>>> 06d00d0 (WIP: refine app design language and Zap page)
       expect(
         within(region).getByText("scan.nowPlayingIdle"),
       ).toBeInTheDocument();
@@ -559,11 +537,7 @@ describe("Home Page Integration", () => {
         />,
       );
 
-<<<<<<< HEAD
-      expect(screen.getByText("scan.nothingPlaying")).toBeVisible();
-=======
       expect(screen.getByText("scan.nowPlayingIdle")).toBeInTheDocument();
->>>>>>> 06d00d0 (WIP: refine app design language and Zap page)
 
       act(() => {
         useStatusStore.getState().setPlaying({

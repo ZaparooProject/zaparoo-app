@@ -1,4 +1,3 @@
-import classNames from "classnames";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -10,6 +9,7 @@ import {
   PlayIcon,
   PlusIcon,
 } from "lucide-react";
+import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { CoreAPI, logRunFailure } from "@/lib/coreApi";
 import { logger } from "@/lib/logger";
 import {
@@ -548,11 +548,7 @@ export function LibraryMediaDetailsModal(props: {
             }
             layout="responsive"
             variant="text"
-            className={classNames(
-              "whitespace-nowrap",
-              (preparingWrite || (launching && writeAvailable)) &&
-                "disabled:!text-white",
-            )}
+            className="whitespace-nowrap"
             disabled={!writeAvailable || preparingWrite || launching}
             disabledAppearance={
               preparingWrite || launching ? "busy" : "unavailable"
@@ -745,6 +741,7 @@ export function LibraryMediaDetailsModal(props: {
             variant="outline"
             className="w-full"
             disabled={deckSaving || !liveConnected}
+            disabledAppearance={deckSaving ? "busy" : "unavailable"}
             onClick={() => setCreatingDeck(true)}
           />
         }
@@ -784,7 +781,7 @@ export function LibraryMediaDetailsModal(props: {
                 <button
                   key={deck.deckId}
                   type="button"
-                  className="flex min-h-14 w-full items-center justify-between gap-3 border-b border-white/25 px-1 py-3 text-left last:border-b-0 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                  className="border-foreground/25 focus-visible:ring-ring flex min-h-14 w-full items-center justify-between gap-3 border-b px-1 py-3 text-left last:border-b-0 focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={
                     deckSaving ||
                     !liveConnected ||
@@ -821,23 +818,27 @@ export function LibraryMediaDetailsModal(props: {
         dismissible={!deckSaving}
         title={t("decks.new")}
         footer={
-          <div className="flex flex-col gap-2">
-            <Button
-              label={t("decks.createAndAdd")}
-              icon={<PlusIcon size={20} />}
-              intent="primary"
-              className="w-full"
-              disabled={!newDeckName.trim() || deckSaving || !liveConnected}
-              onClick={() => void addToDeck()}
-            />
-            <Button
-              label={t("nav.cancel")}
-              variant="outline"
-              className="w-full"
-              disabled={deckSaving}
-              onClick={() => setCreatingDeck(false)}
-            />
-          </div>
+          <ModalActionBar
+            secondaryAction={
+              <Button
+                label={t("nav.cancel")}
+                variant="secondary"
+                disabled={deckSaving}
+                disabledAppearance="busy"
+                onClick={() => setCreatingDeck(false)}
+              />
+            }
+            primaryAction={
+              <Button
+                label={t("decks.createAndAdd")}
+                icon={<PlusIcon size={20} />}
+                intent="primary"
+                disabled={!newDeckName.trim() || deckSaving || !liveConnected}
+                disabledAppearance={deckSaving ? "busy" : "unavailable"}
+                onClick={() => void addToDeck()}
+              />
+            }
+          />
         }
       >
         <div className="py-2">

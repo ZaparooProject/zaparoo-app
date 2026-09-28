@@ -22,7 +22,7 @@ export function DeckDescriptionInput({
         maxLength={1000}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="border-bd-input bg-background text-foreground w-full rounded-md border border-solid p-3 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+        className="wui-input border-input bg-surface-inset text-foreground focus-visible:ring-ring min-h-12 w-full rounded-md border border-solid p-3 focus-visible:ring-2 focus-visible:outline-none"
       />
     </div>
   );
