@@ -9,10 +9,6 @@
   .bg-transparent {
     background: transparent !important;
   }
-
-  [type="search"] {
-    outline-offset: 0;
-  }
 }
 
 @theme inline {

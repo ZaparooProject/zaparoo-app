@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Clipboard } from "@capacitor/clipboard";
 import { Capacitor } from "@capacitor/core";
-import { Copy, Check } from "lucide-react";
+import { CopyIcon, Check } from "lucide-react";
 import classNames from "classnames";
 import { useHaptics } from "@/hooks/useHaptics";
 
@@ -55,7 +55,7 @@ export const CopyButton = (props: {
       aria-label={copied ? "Copied" : "Copy to clipboard"}
       style={{ width: size + 4, height: size + 4 }}
     >
-      <Copy
+      <CopyIcon
         size={size}
         className={classNames(
           "absolute inset-0 m-auto transition-all duration-200",

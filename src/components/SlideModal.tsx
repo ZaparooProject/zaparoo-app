@@ -7,7 +7,7 @@ import {
   useRef,
 } from "react";
 import classNames from "classnames";
-import { X } from "lucide-react";
+import { XIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useStatusStore } from "@/lib/store.ts";
 import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
@@ -437,7 +437,7 @@ export function SlideModal(props: {
                 className="hover:before:bg-foreground/10 focus-visible:outline-ring absolute top-[-7px] right-0 hidden h-12 w-12 items-center justify-center rounded-full opacity-70 transition-opacity before:absolute before:inset-0.5 before:rounded-full before:content-[''] hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-1 sm:flex"
                 aria-label={t("nav.close")}
               >
-                <X className="relative h-5 w-5" aria-hidden="true" />
+                <XIcon className="relative h-5 w-5" aria-hidden="true" />
               </button>
             )}
           </div>
@@ -449,7 +449,10 @@ export function SlideModal(props: {
         <div
           ref={props.scrollRef}
           className={classNames(
-            "min-h-0 flex-1 overflow-y-auto",
+            // The 4px inset (cancelled by the negative side and top margins)
+            // keeps focus outlines from being clipped by this scroll container.
+            // No bottom margin: it would pull the footer over the content.
+            "-mx-1 -mt-1 min-h-0 flex-1 overflow-y-auto p-1",
             props.scrollClassName,
           )}
         >

@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { useTranslation } from "react-i18next";
-import { Copy } from "lucide-react";
+import { CopyIcon } from "lucide-react";
 import { useSystemNameResolver } from "@/hooks/useSystemName";
 import { useMediaWriteTarget } from "@/hooks/useMediaWriteTarget";
 import { CreateIcon, DeviceIcon, PlayIcon } from "@/lib/images";
@@ -108,7 +108,7 @@ export function MediaDetailsModal({
               {onCopy && (
                 <Button
                   label={t("create.search.copyLabel")}
-                  icon={<Copy size="20" />}
+                  icon={<CopyIcon size="20" />}
                   layout="responsive"
                   variant="text"
                   className="whitespace-nowrap"

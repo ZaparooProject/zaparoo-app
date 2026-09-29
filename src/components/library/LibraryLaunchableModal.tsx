@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronRightIcon, PlayIcon } from "lucide-react";
+import { ChevronRightIcon } from "lucide-react";
 import { CoreAPI, logRunFailure } from "@/lib/coreApi";
 import type { System } from "@/lib/models";
 import { ConnectionState, useStatusStore } from "@/lib/store";
@@ -10,7 +10,7 @@ import { SlideModal } from "@/components/SlideModal";
 import { Button } from "@/components/wui/Button";
 import { ModalActionRail } from "@/components/wui/ModalActionRail";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { CreateIcon } from "@/lib/images";
+import { CreateIcon, PlayIcon } from "@/lib/images";
 import { DetailRow } from "@/components/library/LibraryMediaDetailsModal";
 
 /**
@@ -79,7 +79,7 @@ export function LibraryLaunchableModal(props: {
             launching ? (
               <LoadingSpinner size={20} decorative />
             ) : (
-              <PlayIcon size={20} />
+              <PlayIcon size="20" />
             )
           }
           intent="primary"

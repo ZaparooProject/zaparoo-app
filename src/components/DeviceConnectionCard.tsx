@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useRouter } from "@tanstack/react-router";
-import { ArrowLeftRightIcon, KeyRoundIcon, SearchIcon } from "lucide-react";
+import { ArrowLeftRightIcon, KeyRoundIcon } from "lucide-react";
 import { useAppUi } from "@/hooks/useAppUi";
 import { useActiveDeviceSummary } from "@/hooks/useDevicePresentation";
 import { useConnection } from "@/hooks/useConnection";
@@ -9,6 +9,7 @@ import {
   useDeviceRegistry,
 } from "@/lib/devices/deviceRegistry";
 import { useStatusStore } from "@/lib/store";
+import { SearchIcon } from "@/lib/images";
 import { Card } from "./wui/Card";
 import { Button } from "./wui/Button";
 import { TextInput } from "./wui/TextInput";

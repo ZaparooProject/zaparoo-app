@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { PlayIcon, Trash2Icon } from "lucide-react";
+import { Trash2Icon } from "lucide-react";
 import { CoreAPI, logRunFailure } from "@/lib/coreApi";
 import { deckItemLaunchText } from "@/lib/decks";
 import type { DeckItem } from "@/lib/models";
@@ -10,7 +10,7 @@ import { SlideModal } from "@/components/SlideModal";
 import { Button } from "@/components/wui/Button";
 import { ModalActionRail } from "@/components/wui/ModalActionRail";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { CreateIcon } from "@/lib/images";
+import { CreateIcon, PlayIcon } from "@/lib/images";
 import { DeckArtwork } from "@/components/library/DeckArtwork";
 
 function cardRenderedUrl(item: DeckItem | null): string | null {
@@ -124,7 +124,7 @@ export function DeckItemDetailsModal({
                 launching ? (
                   <LoadingSpinner size={20} decorative />
                 ) : (
-                  <PlayIcon size={20} />
+                  <PlayIcon size="20" />
                 )
               }
               intent="primary"

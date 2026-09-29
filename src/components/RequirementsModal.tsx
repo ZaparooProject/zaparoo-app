@@ -263,7 +263,7 @@ export function RequirementsModal() {
               secondaryAction={
                 <Button
                   label={isLoggingOut ? t("loading") : t("requirements.logout")}
-                  icon={<LogOutIcon size={18} />}
+                  icon={<LogOutIcon size={20} />}
                   variant="outline"
                   onClick={handleLogout}
                   disabled={isLoggingOut}
@@ -283,7 +283,7 @@ export function RequirementsModal() {
           ) : (
             <Button
               label={isLoggingOut ? t("loading") : t("requirements.logout")}
-              icon={<LogOutIcon size={18} />}
+              icon={<LogOutIcon size={20} />}
               variant="outline"
               onClick={handleLogout}
               disabled={isLoggingOut}
@@ -357,7 +357,7 @@ export function RequirementsModal() {
             {!emailSent ? (
               <Button
                 label={t("requirements.sendVerificationEmail")}
-                icon={<MailIcon size={18} />}
+                icon={<MailIcon size={20} />}
                 variant="outline"
                 onClick={handleSendVerificationEmail}
                 className="w-full"

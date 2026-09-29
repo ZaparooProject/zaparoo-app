@@ -8,11 +8,9 @@ import {
   XIcon,
   LockIcon,
   ListIcon,
-  PlayIcon,
   PlusIcon,
   ShareIcon,
   GripVerticalIcon,
-  SaveIcon,
   Trash2Icon,
 } from "lucide-react";
 import {
@@ -81,7 +79,7 @@ import { EmptyState } from "@/components/wui/EmptyState";
 import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { DelayedLoading } from "@/components/DelayedLoading";
-import { BackIcon, CreateIcon } from "@/lib/images";
+import { BackIcon, CreateIcon, PlayIcon } from "@/lib/images";
 
 export const Route = createFileRoute("/library/decks/$deckId")({
   component: DeckDetails,
@@ -477,7 +475,7 @@ export function DeckDetails() {
                     />
                     <Button
                       label={t("decks.play")}
-                      icon={<PlayIcon size={20} />}
+                      icon={<PlayIcon size="20" />}
                       variant="text"
                       layout="responsive"
                       intent="primary"
@@ -608,7 +606,6 @@ export function DeckDetails() {
               <div className="flex flex-col gap-2">
                 <Button
                   label={t("save")}
-                  icon={<SaveIcon size={20} />}
                   intent="primary"
                   className="w-full"
                   disabled={!name.trim() || busy}
@@ -626,7 +623,6 @@ export function DeckDetails() {
                 <div className="flex gap-2">
                   <Button
                     label={t("nav.cancel")}
-                    icon={<XIcon size={20} />}
                     variant="secondary"
                     className="flex-1"
                     disabled={busy}

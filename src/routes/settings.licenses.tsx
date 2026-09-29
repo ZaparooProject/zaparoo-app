@@ -216,7 +216,7 @@ export function ThirdPartyLicenses() {
                           label={t("settings.licenses.projectWebsite")}
                           variant="outline"
                           size="sm"
-                          icon={<ExternalIcon size="16" />}
+                          icon={<ExternalIcon size="20" />}
                           className="self-start"
                           onClick={() =>
                             Browser.open({ url: packageInfo.repository })

@@ -1,7 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CameraIcon, NfcIcon, SaveIcon, Trash2Icon } from "lucide-react";
+import { CameraIcon, NfcIcon, Trash2Icon } from "lucide-react";
 import { BarcodeScanner } from "@capacitor-mlkit/barcode-scanning";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
@@ -449,7 +449,6 @@ export function MappingEditor({ id }: MappingEditorProps) {
             />
 
             <Button
-              icon={<SaveIcon size="20" />}
               label={t("create.mappings.editor.save")}
               disabled={!canSave}
               disabledAppearance={saving ? "busy" : "unavailable"}

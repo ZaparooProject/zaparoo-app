@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { XIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { SystemReleasePeriod, SystemSort } from "@/lib/systemFilters";
 import { Button } from "@/components/wui/Button";
@@ -51,7 +51,7 @@ export function LibraryRefinementSummary(props: {
         {props.labels.join(" · ")}
       </span>
       <Button
-        icon={<X size={16} />}
+        icon={<XIcon size={20} />}
         size="sm"
         variant="text"
         aria-label={t("library.clearOptions")}

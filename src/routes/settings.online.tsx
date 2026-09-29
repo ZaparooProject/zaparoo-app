@@ -6,12 +6,7 @@ import { Purchases } from "@revenuecat/purchases-capacitor";
 import { Browser } from "@capacitor/browser";
 import toast from "react-hot-toast";
 import { Capacitor } from "@capacitor/core";
-import {
-  LogOutIcon,
-  UserPlusIcon,
-  ExternalLinkIcon,
-  Trash2Icon,
-} from "lucide-react";
+import { LogOutIcon, Trash2Icon } from "lucide-react";
 import type { AxiosError } from "axios";
 import { TextInput } from "@/components/wui/TextInput.tsx";
 import { Button } from "@/components/wui/Button.tsx";
@@ -24,7 +19,7 @@ import { Label } from "@/components/ui/label";
 import { useStatusStore } from "@/lib/store.ts";
 import { PageFrame } from "@/components/PageFrame.tsx";
 import { HeaderButton } from "@/components/wui/HeaderButton";
-import { BackIcon, GoogleIcon, AppleIcon } from "@/lib/images";
+import { BackIcon, ExternalIcon, GoogleIcon, AppleIcon } from "@/lib/images";
 import { logger } from "@/lib/logger";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
@@ -636,7 +631,7 @@ export function OnlinePage() {
                 <Button
                   label={t("online.dashboard")}
                   variant="outline"
-                  icon={<ExternalLinkIcon size="20" />}
+                  icon={<ExternalIcon size="20" />}
                   onClick={() =>
                     Browser.open({ url: "https://online.zaparoo.com" })
                   }
@@ -738,7 +733,6 @@ export function OnlinePage() {
                 />
                 <Button
                   label={t("online.signUp")}
-                  icon={<UserPlusIcon size="20" />}
                   variant="outline"
                   onClick={() => openAuthSheet(true)}
                   className="flex-1"
@@ -881,7 +875,6 @@ export function OnlinePage() {
                 {/* Log in / Sign up Button */}
                 <Button
                   label={isSignUpMode ? t("online.signUp") : t("online.login")}
-                  icon={isSignUpMode ? <UserPlusIcon size="20" /> : undefined}
                   onClick={handleEmailAuth}
                   disabled={
                     !onlineEmail ||

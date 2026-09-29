@@ -23,7 +23,7 @@ export function HeaderOverflowMenu(props: { actions: HeaderOverflowAction[] }) {
   return (
     <>
       <HeaderButton
-        icon={<Ellipsis size={22} />}
+        icon={<Ellipsis size={24} />}
         active={isOpen}
         onClick={() => setIsOpen(true)}
         title={t("nav.moreActions")}

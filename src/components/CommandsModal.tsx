@@ -110,11 +110,7 @@ export function CommandsModal(props: {
           </div>
         ))}
       </div>
-      <BackToTop
-        scrollContainerRef={scrollContainerRef}
-        threshold={200}
-        bottomOffset="1rem"
-      />
+      <BackToTop scrollContainerRef={scrollContainerRef} threshold={200} />
     </SlideModal>
   );
 }

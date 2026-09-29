@@ -15,7 +15,7 @@ import {
   Loader2,
   Share2,
   Undo2,
-  X,
+  XIcon,
 } from "lucide-react";
 import Keyboard from "react-simple-keyboard/build/index.modern.esm.js";
 import "react-simple-keyboard/build/css/index.css";
@@ -483,7 +483,7 @@ export function RemoteKeyboardModal(props: {
                       setScreenshot(null);
                     }}
                   >
-                    <X size={20} aria-hidden="true" />
+                    <XIcon size={20} aria-hidden="true" />
                     {t("remoteKeyboard.screenshotClear")}
                   </button>
                 </div>

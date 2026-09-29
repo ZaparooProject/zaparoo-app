@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Preferences } from "@capacitor/preferences";
 import { PlusIcon } from "lucide-react";
 import { useStatusStore } from "@/lib/store.ts";
@@ -27,24 +27,6 @@ type MediaSearchModalProps = {
 
 export function MediaSearchModal(props: MediaSearchModalProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const customActionRef = useRef<HTMLDivElement>(null);
-  const [footerHeight, setFooterHeight] = useState(0);
-  const hasCustomAction = Boolean(props.onAddCustom);
-
-  useEffect(() => {
-    const footer = customActionRef.current?.parentElement;
-    if (!hasCustomAction || !footer) {
-      setFooterHeight(0);
-      return;
-    }
-    const measure = () =>
-      setFooterHeight(footer.getBoundingClientRect().height);
-    measure();
-    if (typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(measure);
-    observer.observe(footer);
-    return () => observer.disconnect();
-  }, [hasCustomAction, props.isOpen]);
 
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
@@ -126,14 +108,12 @@ export function MediaSearchModal(props: MediaSearchModalProps) {
         fixedHeight="90vh"
         footer={
           props.onAddCustom ? (
-            <div ref={customActionRef}>
-              <Button
-                label={t("decks.addCustomScript")}
-                variant="outline"
-                className="w-full"
-                onClick={props.onAddCustom}
-              />
-            </div>
+            <Button
+              label={t("decks.addCustomScript")}
+              variant="outline"
+              className="w-full"
+              onClick={props.onAddCustom}
+            />
           ) : undefined
         }
       >
@@ -222,11 +202,7 @@ export function MediaSearchModal(props: MediaSearchModalProps) {
           </div>
         </div>
 
-        <BackToTop
-          scrollContainerRef={scrollContainerRef}
-          threshold={200}
-          bottomOffset={`calc(1rem + ${footerHeight}px)`}
-        />
+        <BackToTop scrollContainerRef={scrollContainerRef} threshold={200} />
       </SlideModal>
       {mediaTagsAvailable && (
         <TagSelector

@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback, useLayoutEffect } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { Check } from "lucide-react";
@@ -57,25 +57,6 @@ export function SystemSelector({
   const { t } = useTranslation();
   const { announce } = useAnnouncer();
   const slideModalScrollRef = useRef<HTMLDivElement>(null);
-  const footerRef = useRef<HTMLDivElement>(null);
-
-  useLayoutEffect(() => {
-    const footer = footerRef.current?.parentElement;
-    const dialog = footer?.closest<HTMLElement>('[role="dialog"]');
-    if (!footer || !dialog) return;
-
-    // Wrapped actions must not end up underneath the floating scroll control.
-    const measure = () =>
-      dialog.style.setProperty(
-        "--system-selector-footer-height",
-        `${footer.getBoundingClientRect().height}px`,
-      );
-    measure();
-    if (typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(measure);
-    observer.observe(footer);
-    return () => observer.disconnect();
-  }, [isOpen, mode]);
 
   const handleHapticPress = useHapticPress();
 
@@ -225,28 +206,26 @@ export function SystemSelector({
 
   const footer =
     mode === "multi" ? (
-      <div ref={footerRef}>
-        <ModalActionBar
-          secondaryAction={
-            <Button
-              label={t("systemSelector.clear")}
-              aria-label={t("systemSelector.clearAll")}
-              variant="text"
-              size="sm"
-              onClick={handleClearAll}
-              disabled={selectedSystems.length === 0}
-            />
-          }
-          primaryAction={
-            <Button
-              label={t("systemSelector.done")}
-              size="sm"
-              onClick={onClose}
-              disabled={selectedSystems.length === 0 && !includeAllOption}
-            />
-          }
-        />
-      </div>
+      <ModalActionBar
+        secondaryAction={
+          <Button
+            label={t("systemSelector.clear")}
+            aria-label={t("systemSelector.clearAll")}
+            variant="text"
+            size="sm"
+            onClick={handleClearAll}
+            disabled={selectedSystems.length === 0}
+          />
+        }
+        primaryAction={
+          <Button
+            label={t("systemSelector.done")}
+            size="sm"
+            onClick={onClose}
+            disabled={selectedSystems.length === 0 && !includeAllOption}
+          />
+        }
+      />
     ) : undefined;
 
   return (
@@ -335,15 +314,7 @@ export function SystemSelector({
           })}
         </div>
       )}
-      <BackToTop
-        scrollContainerRef={slideModalScrollRef}
-        threshold={200}
-        bottomOffset={
-          mode === "multi"
-            ? "calc(2rem + var(--system-selector-footer-height, 100px))"
-            : "2rem"
-        }
-      />
+      <BackToTop scrollContainerRef={slideModalScrollRef} threshold={200} />
     </SlideModal>
   );
 }

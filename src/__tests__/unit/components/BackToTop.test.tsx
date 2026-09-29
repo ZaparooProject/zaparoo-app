@@ -247,4 +247,48 @@ describe("BackToTop", () => {
     fireEvent.click(button);
     expect(button).toBeInTheDocument();
   });
+
+  it("keeps an equal margin above the end of a dialog's scroll area", () => {
+    function DialogWrapper() {
+      const ref = useRef<HTMLDivElement>(null);
+      return (
+        <div role="dialog" aria-label="Dialog">
+          <div ref={ref} data-testid="dialog-scroll">
+            Content
+          </div>
+          <BackToTop scrollContainerRef={ref} />
+        </div>
+      );
+    }
+    const rect = (bottom: number) =>
+      ({
+        bottom,
+        top: 0,
+        left: 0,
+        right: 0,
+        width: 0,
+        height: bottom,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    vi.stubGlobal("innerHeight", 800);
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+      function (this: HTMLElement) {
+        return this.dataset.testid === "dialog-scroll" ? rect(700) : rect(0);
+      },
+    );
+
+    render(<DialogWrapper />);
+
+    const button = screen.getByRole("button", {
+      name: "backToTop",
+      hidden: true,
+    });
+    const wrapper = button.parentElement as HTMLElement;
+    expect(wrapper.style.right).toBe("1rem");
+    expect(wrapper.style.bottom).toBe("calc(100px + 1rem)");
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
 });

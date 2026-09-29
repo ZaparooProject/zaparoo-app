@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { ListChecks, Pencil, X } from "lucide-react";
+import { ListChecks, PencilIcon, XIcon } from "lucide-react";
 import { useConnection } from "@/hooks/useConnection";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useSelectDevice } from "@/hooks/useSelectDevice";
@@ -264,7 +264,7 @@ export function Devices() {
                 setIsEditing(true);
               }
             }}
-            icon={isEditing ? <X size={20} /> : <ListChecks size={20} />}
+            icon={isEditing ? <XIcon size={24} /> : <ListChecks size={24} />}
             aria-label={t(
               isEditing
                 ? "settings.deviceCombine.cancelEdit"
@@ -333,7 +333,7 @@ export function Devices() {
                   />
                 ) : (
                   <Button
-                    icon={<Pencil size={20} />}
+                    icon={<PencilIcon size={20} />}
                     variant="ghost"
                     aria-label={t("settings.deviceDetails")}
                     onClick={() =>

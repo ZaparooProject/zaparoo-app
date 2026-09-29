@@ -2,7 +2,7 @@ import { useRouter } from "@tanstack/react-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useState, useMemo, useRef } from "react";
-import { Download, Copy, RefreshCw, Upload } from "lucide-react";
+import { Download, CopyIcon, RefreshCwIcon, Upload } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { Clipboard } from "@capacitor/clipboard";
 import toast from "react-hot-toast";
@@ -265,7 +265,7 @@ export function Logs() {
             <HeaderButton
               onClick={() => logsQuery.refetch()}
               disabled={!connected || logsQuery.isLoading}
-              icon={<RefreshCw size="20" />}
+              icon={<RefreshCwIcon size="20" />}
               aria-label={
                 logsQuery.isLoading ? t("loading") : t("settings.logs.refresh")
               }
@@ -276,7 +276,7 @@ export function Logs() {
                   {
                     id: "copy",
                     label: t("settings.logs.copy"),
-                    icon: <Copy size={20} />,
+                    icon: <CopyIcon size={20} />,
                     onClick: copyToClipboard,
                   },
                   ...(!isNative
@@ -333,7 +333,7 @@ export function Logs() {
                     <Button
                       variant="outline"
                       size="lg"
-                      icon={<Copy size="20" />}
+                      icon={<CopyIcon size="20" />}
                       aria-label={t("settings.logs.copyUploadLink")}
                       onClick={copyUploadUrl}
                     />

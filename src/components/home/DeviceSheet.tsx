@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "@tanstack/react-router";
-import { KeyRoundIcon, RefreshCw } from "lucide-react";
+import { KeyRoundIcon, RefreshCwIcon } from "lucide-react";
 import { ConnectionStatusDisplay } from "@/components/ConnectionStatusDisplay";
 import { DeviceRow } from "@/components/DeviceRow";
 import { SlideModal } from "@/components/SlideModal";
@@ -222,7 +222,7 @@ export function DeviceSheet({ isOpen, close }: DeviceSheetProps) {
                     isScanning ? (
                       <LoadingSpinner size={20} decorative />
                     ) : (
-                      <RefreshCw size={20} />
+                      <RefreshCwIcon size={20} />
                     )
                   }
                   variant="ghost"

@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Check, ChevronUp, ChevronDown, Trash2 } from "lucide-react";
+import { Check, ChevronUp, ChevronDown } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi";
@@ -269,7 +269,6 @@ export function TagSelector({
         secondaryAction={
           <Button
             label={t("tagSelector.clearAll")}
-            icon={<Trash2 size={20} />}
             variant="outline"
             onClick={handleClearAll}
             disabled={selectedTags.length === 0}
@@ -534,11 +533,7 @@ export function TagSelector({
         </div>
 
         {/* Scroll to top button */}
-        <BackToTop
-          scrollContainerRef={slideModalScrollRef}
-          threshold={200}
-          bottomOffset="calc(1rem + 100px)"
-        />
+        <BackToTop scrollContainerRef={slideModalScrollRef} threshold={200} />
       </div>
     </SlideModal>
   );

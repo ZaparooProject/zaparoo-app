@@ -857,6 +857,15 @@ Rules:
 - decorative Button icons in cards should use `decorative`
 - do not add icons to settings section headings or field labels unless existing sibling headings/labels do
 
+Button icon usage:
+
+- icons mark actions with a universal glyph (add, search, play, share, copy, edit, delete, refresh, external link); confirm and dismiss words (Cancel, Apply, Done, Save, Create, Try again, Yes/No, Log in, Sign up) are text-only
+- the trash can means deleting stored data. Clearing a selection or filter is text-only (an X only for a dismissible chip)
+- buttons in the same footer, pair or rail either all have icons or none do; a trigger may have an icon while its confirmation dialog does not
+- buttons that leave the app use the custom `ExternalIcon`
+- use one glyph per concept: where `src/lib/images.tsx` defines it (Play, Search, Save, Create, Camera, Nfc, External, History, Back, Next), use that instead of the lucide equivalent, except the Pause/Play/Skip transport set. Import lucide icons with their `Icon` suffix (`XIcon`, `Trash2Icon`)
+- busy buttons show `LoadingSpinner size={20} decorative`, never a raw `Loader2`
+
 ## Accessibility and interaction
 
 Keep existing accessibility behavior:

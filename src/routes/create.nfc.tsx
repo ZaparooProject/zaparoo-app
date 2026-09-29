@@ -126,7 +126,7 @@ export function NfcUtils() {
       errorMessage={
         nfcWriter.verifyError ? t("spinner.verifyFailedRetry") : undefined
       }
-      icon={<NfcIcon size={18} />}
+      icon={<NfcIcon size={20} />}
       buttonClassName="w-full"
       onStart={onStart}
       onCancel={() => void cancelReaderActivity()}

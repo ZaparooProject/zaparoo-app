@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/wui/Button";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { PageFrame } from "@/components/PageFrame";
-import { BackIcon } from "@/lib/images";
+import { BackIcon, ExternalIcon } from "@/lib/images";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 
@@ -40,6 +40,7 @@ export function Help() {
       <div className="flex flex-col gap-4">
         <Button
           label={t("settings.help.main")}
+          icon={<ExternalIcon size="20" />}
           className="w-full"
           variant="outline"
           onClick={() =>
@@ -54,6 +55,7 @@ export function Help() {
           </h2>
           <Button
             label={t("settings.help.taptoWiki")}
+            icon={<ExternalIcon size="20" />}
             className="w-full"
             variant="outline"
             onClick={() =>
@@ -64,6 +66,7 @@ export function Help() {
           />
           <Button
             label={t("settings.help.gettingStarted")}
+            icon={<ExternalIcon size="20" />}
             className="w-full"
             variant="outline"
             onClick={() =>
@@ -74,6 +77,7 @@ export function Help() {
           />
           <Button
             label={t("settings.help.commandReference")}
+            icon={<ExternalIcon size="20" />}
             className="w-full"
             variant="outline"
             onClick={() =>
@@ -90,6 +94,7 @@ export function Help() {
           </h2>
           <Button
             label={t("settings.help.discord")}
+            icon={<ExternalIcon size="20" />}
             className="w-full"
             variant="outline"
             onClick={() =>
@@ -100,6 +105,7 @@ export function Help() {
           />
           <Button
             label={t("settings.help.reddit")}
+            icon={<ExternalIcon size="20" />}
             className="w-full"
             variant="outline"
             onClick={() =>
@@ -116,6 +122,7 @@ export function Help() {
           </h2>
           <Button
             label={t("settings.help.reportIssue")}
+            icon={<ExternalIcon size="20" />}
             className="w-full"
             variant="outline"
             onClick={() =>

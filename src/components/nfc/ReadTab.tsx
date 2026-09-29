@@ -52,7 +52,7 @@ export function ReadTab({ result, onScan, scanControl }: ReadTabProps) {
       {scanControl ?? (
         <Button
           onClick={onScan}
-          icon={<NfcIcon size={16} />}
+          icon={<NfcIcon size={20} />}
           label={t("create.nfc.readTab.scanTag")}
           className="w-full"
         />
@@ -66,7 +66,7 @@ export function ReadTab({ result, onScan, scanControl }: ReadTabProps) {
           </h3>
           {tag && (
             <Button
-              icon={<ShareIcon size={16} />}
+              icon={<ShareIcon size={20} />}
               onClick={shareTagData}
               size="sm"
               variant="outline"
@@ -218,7 +218,7 @@ export function ReadTab({ result, onScan, scanControl }: ReadTabProps) {
               </div>
               <Button
                 icon={
-                  showRawData ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />
+                  showRawData ? <EyeOffIcon size={20} /> : <EyeIcon size={20} />
                 }
                 label={
                   showRawData

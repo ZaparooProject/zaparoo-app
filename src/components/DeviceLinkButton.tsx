@@ -1,7 +1,7 @@
 import { useEffect } from "react";
-import { Loader2 } from "lucide-react";
 import { useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Button } from "@/components/wui/Button";
 import {
   useDeviceLinking,
@@ -55,7 +55,7 @@ export function DeviceLinkButton({
             ? "online.deviceLink.checking"
             : "online.deviceLink.linking",
         )}
-        icon={<Loader2 size={20} className="animate-spin" aria-hidden="true" />}
+        icon={<LoadingSpinner size={20} decorative />}
         disabled
         className="w-full"
       />

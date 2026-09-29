@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Trash2 } from "lucide-react";
+import { Trash2Icon } from "lucide-react";
 import { RecentSearch } from "@/hooks/useRecentSearches";
 import { SearchIcon } from "@/lib/images";
 import { EmptyState } from "@/components/wui/EmptyState";
@@ -69,7 +69,7 @@ export function RecentSearchesModal({
           <div className="px-3 pt-2">
             <Button
               label={t("create.search.clearHistory")}
-              icon={<Trash2 size="18" />}
+              icon={<Trash2Icon size="20" />}
               variant="text"
               size="sm"
               intent="destructive"

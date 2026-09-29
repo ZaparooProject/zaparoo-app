@@ -1,5 +1,5 @@
 import { useId } from "react";
-import { Check, RotateCcw } from "lucide-react";
+import { Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
 import type { SystemReleasePeriod, SystemSort } from "@/lib/systemFilters";
@@ -57,7 +57,6 @@ export function LibrarySystemFiltersModal(props: {
       secondaryAction={
         <Button
           label={t("library.resetOptions")}
-          icon={<RotateCcw size={20} />}
           variant="outline"
           disabled={!hasDraftOptions}
           onClick={props.onReset}

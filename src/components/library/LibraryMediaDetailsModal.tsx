@@ -6,7 +6,6 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ListPlusIcon,
-  PlayIcon,
   PlusIcon,
 } from "lucide-react";
 import { ModalActionBar } from "@/components/wui/ModalActionBar";
@@ -48,7 +47,7 @@ import { EmptyState } from "@/components/wui/EmptyState";
 import { ModalActionRail } from "@/components/wui/ModalActionRail";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { DelayedLoading } from "@/components/DelayedLoading";
-import { CreateIcon, NextIcon } from "@/lib/images";
+import { CreateIcon, NextIcon, PlayIcon } from "@/lib/images";
 import { LibraryArtwork } from "@/components/library/LibraryArtwork";
 import { MediaPreferenceActions } from "@/components/library/MediaPreferenceActions";
 import { MediaWriteTargetModal } from "@/components/MediaWriteTargetModal";
@@ -568,7 +567,7 @@ export function LibraryMediaDetailsModal(props: {
               launching ? (
                 <LoadingSpinner size={20} decorative />
               ) : (
-                <PlayIcon size={20} />
+                <PlayIcon size="20" />
               )
             }
             intent="primary"
@@ -838,7 +837,6 @@ export function LibraryMediaDetailsModal(props: {
             primaryAction={
               <Button
                 label={t("decks.createAndAdd")}
-                icon={<PlusIcon size={20} />}
                 intent="primary"
                 disabled={!newDeckName.trim() || deckSaving || !liveConnected}
                 disabledAppearance={deckSaving ? "busy" : "unavailable"}

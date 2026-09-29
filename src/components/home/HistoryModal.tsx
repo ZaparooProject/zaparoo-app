@@ -1,7 +1,6 @@
 import { memo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { PlayIcon } from "lucide-react";
 import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { TabBar } from "@/components/wui/TabBar";
@@ -18,6 +17,7 @@ import {
 import type { HistoryResponse, HistoryResponseEntry } from "@/lib/models";
 import { useStatusStore } from "@/lib/store";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
+import { PlayIcon } from "@/lib/images";
 import { CopyButton } from "../CopyButton";
 import { HistoryListRow } from "../HistoryListRow";
 import { SlideModal } from "../SlideModal";
@@ -89,7 +89,7 @@ function ScanHistoryRow({
       }
       action={
         <Button
-          icon={<PlayIcon size={20} />}
+          icon={<PlayIcon size="20" />}
           variant="ghost"
           size="sm"
           aria-label={t("scan.historyReplay")}

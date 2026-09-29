@@ -6,7 +6,7 @@ import {
   ChevronDown,
   Info,
   OctagonAlert,
-  Trash2,
+  Trash2Icon,
   TriangleAlert,
 } from "lucide-react";
 import { useStatusStore } from "@/lib/store";
@@ -122,7 +122,7 @@ function InboxRow(props: { message: InboxMessage; onDelete: () => void }) {
         </div>
       )}
       <Button
-        icon={<Trash2 size={18} aria-hidden="true" />}
+        icon={<Trash2Icon size={20} aria-hidden="true" />}
         variant="text"
         size="sm"
         intent="destructive"

@@ -4,7 +4,7 @@ import { Browser } from "@capacitor/browser";
 import { PageFrame } from "@/components/PageFrame";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { Button } from "@/components/wui/Button.tsx";
-import { BackIcon, NextIcon } from "@/lib/images";
+import { BackIcon, ExternalIcon, NextIcon } from "@/lib/images";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 import { getReleaseDisplayVersion } from "@/lib/whatsNew";
@@ -122,6 +122,7 @@ export function About() {
 
           <Button
             label={t("settings.about.joinPatreon")}
+            icon={<ExternalIcon size="20" />}
             className="w-full"
             intent="pro"
             onClick={() =>
