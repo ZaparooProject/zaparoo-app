@@ -24,10 +24,11 @@ import { useProPurchase } from "@/components/ProPurchase";
 import { ProBadge } from "@/components/ProBadge";
 import { ZapScriptInput } from "@/components/ZapScriptInput";
 import { CoreAPI } from "@/lib/coreApi";
+import { sortReaders } from "@/lib/readers";
 import { ClientCapability, UpdateSettingsRequest } from "@/lib/models.ts";
 import { useAppUi } from "@/hooks/useAppUi";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
-import { TabBar } from "@/components/wui/TabBar";
+import { RadioGroup } from "@/components/wui/RadioGroup";
 import { Card } from "@/components/wui/Card";
 import { useClientCapability } from "@/hooks/useClientCapability";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
@@ -157,9 +158,9 @@ export function ReadersSettings() {
               ) : !connected ? (
                 <EmptyState size="compact" title={t("settings.notConnected")} />
               ) : readersData?.readers && readersData.readers.length > 0 ? (
-                readersData.readers.map((reader) => (
+                sortReaders(readersData.readers).map((reader) => (
                   <ReaderStatusRow
-                    key={reader.id}
+                    key={reader.readerId ?? reader.id}
                     name={reader.info || reader.id}
                     connected={reader.connected}
                   />
@@ -190,8 +191,10 @@ export function ReadersSettings() {
                 <Skeleton className="h-12 w-full rounded-md" />
               </div>
             ) : (
-              <TabBar
+              <RadioGroup
                 label={t("settings.readers.scanMode")}
+                labelHidden
+                layout="inline"
                 value={connected ? (coreSettings?.readersScanMode ?? "") : ""}
                 options={[
                   { value: "tap", label: t("settings.tapMode") },
@@ -208,14 +211,12 @@ export function ReadersSettings() {
 
           {/* Continuous Scan - from App (always shown) */}
           <ToggleSwitch
-            label={
-              <span className="flex items-center">
-                {t("settings.readers.continuousScan")}
-                <SettingHelp
-                  title={t("settings.readers.continuousScan")}
-                  description={t("settings.readers.continuousScanHelp")}
-                />
-              </span>
+            label={t("settings.readers.continuousScan")}
+            help={
+              <SettingHelp
+                title={t("settings.readers.continuousScan")}
+                description={t("settings.readers.continuousScanHelp")}
+              />
             }
             value={restartScan}
             setValue={setRestartScan}
@@ -224,14 +225,12 @@ export function ReadersSettings() {
           {/* Keep Screen On - from App (native only) */}
           {appUi.enabled && (
             <ToggleSwitch
-              label={
-                <span className="flex items-center">
-                  {t("settings.readers.keepScreenAwake")}
-                  <SettingHelp
-                    title={t("settings.readers.keepScreenAwake")}
-                    description={t("settings.readers.keepScreenAwakeHelp")}
-                  />
-                </span>
+              label={t("settings.readers.keepScreenAwake")}
+              help={
+                <SettingHelp
+                  title={t("settings.readers.keepScreenAwake")}
+                  description={t("settings.readers.keepScreenAwakeHelp")}
+                />
               }
               value={keepScreenAwake}
               setValue={setKeepScreenAwake}
@@ -241,14 +240,12 @@ export function ReadersSettings() {
           {/* Launch On Scan - from App (native only, Pro feature) */}
           {appUi.enabled && connected && (
             <ToggleSwitch
-              label={
-                <span className="flex items-center">
-                  {t("settings.readers.launchOnScan")}
-                  <SettingHelp
-                    title={t("settings.readers.launchOnScan")}
-                    description={t("settings.readers.launchOnScanHelp")}
-                  />
-                </span>
+              label={t("settings.readers.launchOnScan")}
+              help={
+                <SettingHelp
+                  title={t("settings.readers.launchOnScan")}
+                  description={t("settings.readers.launchOnScanHelp")}
+                />
               }
               suffix={
                 <ProBadge
@@ -264,14 +261,12 @@ export function ReadersSettings() {
           {/* Prefer External Reader - from App (native + NFC) */}
           {appUi.nfc && (
             <ToggleSwitch
-              label={
-                <span className="flex items-center">
-                  {t("settings.readers.preferExternalReader")}
-                  <SettingHelp
-                    title={t("settings.readers.preferExternalReader")}
-                    description={t("settings.readers.preferExternalReaderHelp")}
-                  />
-                </span>
+              label={t("settings.readers.preferExternalReader")}
+              help={
+                <SettingHelp
+                  title={t("settings.readers.preferExternalReader")}
+                  description={t("settings.readers.preferExternalReaderHelp")}
+                />
               }
               value={preferRemoteWriter}
               setValue={setPreferRemoteWriter}
@@ -281,14 +276,12 @@ export function ReadersSettings() {
           {/* Shake to Launch - from App (native + accelerometer, Pro feature) */}
           {appUi.accelerometer && (
             <ToggleSwitch
-              label={
-                <span className="flex items-center">
-                  {t("settings.readers.shakeToLaunch")}
-                  <SettingHelp
-                    title={t("settings.readers.shakeToLaunch")}
-                    description={t("settings.readers.shakeToLaunchHelp")}
-                  />
-                </span>
+              label={t("settings.readers.shakeToLaunch")}
+              help={
+                <SettingHelp
+                  title={t("settings.readers.shakeToLaunch")}
+                  description={t("settings.readers.shakeToLaunchHelp")}
+                />
               }
               suffix={
                 <ProBadge
@@ -305,8 +298,9 @@ export function ReadersSettings() {
 
           {appUi.accelerometer && shakeEnabled && (
             <>
-              <TabBar
+              <RadioGroup
                 label={t("settings.app.shakeModeLabel")}
+                labelHidden
                 value={connected ? shakeMode : ""}
                 options={[
                   {
@@ -360,14 +354,12 @@ export function ReadersSettings() {
 
           {/* Audio Feedback - from Core */}
           <ToggleSwitch
-            label={
-              <span className="flex items-center">
-                {t("settings.readers.audioFeedback")}
-                <SettingHelp
-                  title={t("settings.readers.audioFeedback")}
-                  description={t("settings.readers.audioFeedbackHelp")}
-                />
-              </span>
+            label={t("settings.readers.audioFeedback")}
+            help={
+              <SettingHelp
+                title={t("settings.readers.audioFeedback")}
+                description={t("settings.readers.audioFeedbackHelp")}
+              />
             }
             value={coreSettings?.audioScanFeedback ?? false}
             setValue={(v) => updateCoreSetting.mutate({ audioScanFeedback: v })}
@@ -377,14 +369,12 @@ export function ReadersSettings() {
 
           {/* Auto Detect Readers - from Core */}
           <ToggleSwitch
-            label={
-              <span className="flex items-center">
-                {t("settings.readers.autoDetectReaders")}
-                <SettingHelp
-                  title={t("settings.readers.autoDetectReaders")}
-                  description={t("settings.readers.autoDetectReadersHelp")}
-                />
-              </span>
+            label={t("settings.readers.autoDetectReaders")}
+            help={
+              <SettingHelp
+                title={t("settings.readers.autoDetectReaders")}
+                description={t("settings.readers.autoDetectReadersHelp")}
+              />
             }
             value={coreSettings?.readersAutoDetect ?? false}
             setValue={(v) => updateCoreSetting.mutate({ readersAutoDetect: v })}

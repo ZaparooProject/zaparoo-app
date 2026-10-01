@@ -6,11 +6,16 @@ import type { System } from "@/lib/models";
 import { ConnectionState, useStatusStore } from "@/lib/store";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { useNfcWriteAvailable } from "@/hooks/useNfcWriteAvailable";
+import { useContextualNfcWrite } from "@/hooks/useContextualNfcWrite";
+import {
+  ReaderActivityAction,
+  ReaderActivityStatus,
+} from "@/components/ReaderActivityAction";
 import { SlideModal } from "@/components/SlideModal";
 import { Button } from "@/components/wui/Button";
 import { ModalActionRail } from "@/components/wui/ModalActionRail";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { CreateIcon, PlayIcon } from "@/lib/images";
+import { PlayIcon } from "@/lib/images";
 import { DetailRow } from "@/components/library/LibraryMediaDetailsModal";
 
 /**
@@ -29,13 +34,17 @@ export function LibraryLaunchableModal(props: {
   const liveConnected = useStatusStore(
     (state) => state.connectionState === ConnectionState.CONNECTED,
   );
-  const setWriteQueue = useStatusStore((state) => state.setWriteQueue);
   const writeAvailable = useNfcWriteAvailable(props.deviceKey, props.isOpen);
+  const writeActivity = useContextualNfcWrite(
+    JSON.stringify([props.deviceKey, props.system?.id]),
+    props.isOpen,
+  );
   const [launching, setLaunching] = useState(false);
   const zapScript = props.system?.zapScript?.trim() ?? "";
 
   const launch = async () => {
-    if (!zapScript || launching || !liveConnected) return;
+    if (!zapScript || launching || writeActivity.active || !liveConnected)
+      return;
     setLaunching(true);
     try {
       await CoreAPI.run({ text: zapScript });
@@ -51,24 +60,37 @@ export function LibraryLaunchableModal(props: {
 
   const write = () => {
     if (!zapScript || launching || !writeAvailable) return;
-    props.close();
-    setWriteQueue(zapScript);
+    void writeActivity.start(zapScript);
   };
 
   const footer = props.system ? (
     <ModalActionRail
       aria-label={t("library.mediaActions")}
+      readerAction
+      status={
+        writeActivity.state === "attention" ||
+        writeActivity.state === "error" ? (
+          <ReaderActivityStatus
+            state={writeActivity.state}
+            onCancel={() => void writeActivity.cancel()}
+          />
+        ) : undefined
+      }
       actions={
-        <Button
+        <ReaderActivityAction
+          state={writeActivity.state}
           label={t("library.writeAction")}
-          aria-label={t("library.write")}
-          icon={<CreateIcon size="20" />}
-          layout="responsive"
-          variant="text"
-          className="whitespace-nowrap"
-          disabled={!zapScript || !writeAvailable || launching}
-          disabledAppearance={launching ? "busy" : "unavailable"}
-          onClick={write}
+          idleAriaLabel={t("library.write")}
+          busy={launching}
+          disabled={
+            !zapScript ||
+            !writeAvailable ||
+            launching ||
+            writeActivity.externalWriteActive
+          }
+          onStart={write}
+          onCancel={() => void writeActivity.cancel()}
+          onRetry={() => void writeActivity.retry()}
         />
       }
       primaryAction={
@@ -83,8 +105,12 @@ export function LibraryLaunchableModal(props: {
             )
           }
           intent="primary"
-          disabled={!zapScript || !liveConnected || launching}
-          disabledAppearance={launching ? "busy" : "unavailable"}
+          disabled={
+            !zapScript || !liveConnected || launching || writeActivity.active
+          }
+          disabledAppearance={
+            launching || writeActivity.active ? "busy" : "unavailable"
+          }
           onClick={() => void launch()}
         />
       }
@@ -94,7 +120,10 @@ export function LibraryLaunchableModal(props: {
   return (
     <SlideModal
       isOpen={props.isOpen}
-      close={props.close}
+      close={() => {
+        void writeActivity.cancel();
+        props.close();
+      }}
       title={props.system?.name ?? ""}
       footer={footer}
     >

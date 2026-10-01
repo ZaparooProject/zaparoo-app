@@ -8,6 +8,7 @@ import { SlideModal } from "@/components/SlideModal";
 import { Button } from "@/components/wui/Button";
 import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { useHapticPress } from "@/hooks/useHapticPress";
+import { Select } from "@/components/wui/Select";
 
 const SORT_OPTIONS: Array<{ value: SystemSort; labelKey: string }> = [
   { value: "name-asc", labelKey: "library.sortNameAsc" },
@@ -119,14 +120,13 @@ export function LibrarySystemFiltersModal(props: {
           <label htmlFor={manufacturerId} className="font-semibold">
             {t("library.manufacturer")}
           </label>
-          <select
+          <Select
             id={manufacturerId}
             value={props.selectedManufacturer}
             onChange={(event) =>
               props.onSelectedManufacturerChange(event.target.value)
             }
             disabled={props.manufacturers.length === 0}
-            className="wui-input border-input bg-surface-inset text-foreground min-h-12 w-full rounded-md border px-3 py-2 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <option value="">{t("library.anyManufacturer")}</option>
             {props.manufacturers.map((manufacturer) => (
@@ -134,14 +134,14 @@ export function LibrarySystemFiltersModal(props: {
                 {manufacturer}
               </option>
             ))}
-          </select>
+          </Select>
         </section>
 
         <section className="flex flex-col gap-2">
           <label htmlFor={releasePeriodId} className="font-semibold">
             {t("library.releasePeriod")}
           </label>
-          <select
+          <Select
             id={releasePeriodId}
             value={props.releasePeriod}
             onChange={(event) =>
@@ -149,14 +149,13 @@ export function LibrarySystemFiltersModal(props: {
                 event.target.value as SystemReleasePeriod,
               )
             }
-            className="wui-input border-input bg-surface-inset text-foreground min-h-12 w-full rounded-md border px-3 py-2"
           >
             {RELEASE_PERIODS.map((option) => (
               <option key={option.value} value={option.value}>
                 {t(option.labelKey)}
               </option>
             ))}
-          </select>
+          </Select>
         </section>
       </div>
     </SlideModal>

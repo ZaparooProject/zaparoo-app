@@ -30,6 +30,11 @@ import { usePreferencesStore } from "@/lib/preferencesStore";
 import { ConnectionState, useStatusStore } from "@/lib/store";
 import { useSystemNameResolver } from "@/hooks/useSystemName";
 import { useNfcWriteAvailable } from "@/hooks/useNfcWriteAvailable";
+import { useContextualNfcWrite } from "@/hooks/useContextualNfcWrite";
+import {
+  ReaderActivityAction,
+  ReaderActivityStatus,
+} from "@/components/ReaderActivityAction";
 import { useHapticPress } from "@/hooks/useHapticPress";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
 import {
@@ -47,7 +52,7 @@ import { EmptyState } from "@/components/wui/EmptyState";
 import { ModalActionRail } from "@/components/wui/ModalActionRail";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { DelayedLoading } from "@/components/DelayedLoading";
-import { CreateIcon, NextIcon, PlayIcon } from "@/lib/images";
+import { NextIcon, PlayIcon } from "@/lib/images";
 import { LibraryArtwork } from "@/components/library/LibraryArtwork";
 import { MediaPreferenceActions } from "@/components/library/MediaPreferenceActions";
 import { MediaWriteTargetModal } from "@/components/MediaWriteTargetModal";
@@ -152,7 +157,6 @@ export function LibraryMediaDetailsModal(props: {
   const liveConnected = useStatusStore(
     (state) => state.connectionState === ConnectionState.CONNECTED,
   );
-  const setWriteQueue = useStatusStore((state) => state.setWriteQueue);
   const [imageIndex, setImageIndex] = useState(0);
   // The artwork reports its cover from an effect, which runs before this
   // component's effects. A cached cover is reported on the first render for a
@@ -188,6 +192,7 @@ export function LibraryMediaDetailsModal(props: {
   const mediaKey = entry
     ? JSON.stringify([props.deviceKey, ...mediaRefKey(entry, systemId)])
     : null;
+  const writeActivity = useContextualNfcWrite(mediaKey, props.isOpen);
   const resolvedDefaultType =
     defaultImageReport?.mediaKey === mediaKey ? defaultImageReport.type : null;
   const imageAvailable =
@@ -373,11 +378,19 @@ export function LibraryMediaDetailsModal(props: {
     writeControllerRef.current = null;
     setLaunching(false);
     setPreparingWrite(false);
+    void writeActivity.cancel();
     props.close();
   };
 
   const launch = async () => {
-    if (!entry || launching || preparingWrite || !liveConnected) return;
+    if (
+      !entry ||
+      launching ||
+      preparingWrite ||
+      writeActivity.active ||
+      !liveConnected
+    )
+      return;
     const controller = new AbortController();
     launchControllerRef.current?.abort();
     launchControllerRef.current = controller;
@@ -405,7 +418,15 @@ export function LibraryMediaDetailsModal(props: {
   };
 
   const write = async () => {
-    if (!entry || preparingWrite || launching || !writeAvailable) return;
+    if (
+      !entry ||
+      preparingWrite ||
+      launching ||
+      writeActivity.active ||
+      writeActivity.externalWriteActive ||
+      !writeAvailable
+    )
+      return;
     const selectionAvailable =
       writeSource && shouldSelectMediaWriteTarget(writeSource);
     if (selectionAvailable && getMediaWritePath(writeSource)) {
@@ -438,8 +459,7 @@ export function LibraryMediaDetailsModal(props: {
           : await resolveLibraryWriteText(entry, systemId, controller.signal);
       if (controller.signal.aborted) return;
       if (!text) throw new Error("Write target could not be resolved");
-      closeModal();
-      setWriteQueue(text);
+      void writeActivity.start(text);
     } catch (error) {
       if (controller.signal.aborted) return;
       logger.error("Failed to prepare Library media for NFC writing", error, {
@@ -510,6 +530,16 @@ export function LibraryMediaDetailsModal(props: {
   const footer = entry ? (
     <ModalActionRail
       aria-label={t("library.mediaActions")}
+      readerAction
+      status={
+        writeActivity.state === "attention" ||
+        writeActivity.state === "error" ? (
+          <ReaderActivityStatus
+            state={writeActivity.state}
+            onCancel={() => void writeActivity.cancel()}
+          />
+        ) : undefined
+      }
       actions={
         <>
           <MediaPreferenceActions
@@ -529,30 +559,23 @@ export function LibraryMediaDetailsModal(props: {
                 variant="text"
                 layout="responsive"
                 className="whitespace-nowrap"
-                disabled={!liveConnected || deckSaving}
+                disabled={!liveConnected || deckSaving || writeActivity.active}
                 onClick={() => setDeckPickerOpen(true)}
               />
             )}
-          <Button
+          <ReaderActivityAction
+            state={writeActivity.state}
             label={t("library.writeAction")}
-            aria-label={
-              preparingWrite ? t("library.preparingWrite") : t("library.write")
+            idleAriaLabel={t("library.write")}
+            preparing={preparingWrite}
+            preparingLabel={t("library.preparingWrite")}
+            busy={launching}
+            disabled={
+              !writeAvailable || launching || writeActivity.externalWriteActive
             }
-            icon={
-              preparingWrite ? (
-                <LoadingSpinner size={20} decorative />
-              ) : (
-                <CreateIcon size="20" />
-              )
-            }
-            layout="responsive"
-            variant="text"
-            className="whitespace-nowrap"
-            disabled={!writeAvailable || preparingWrite || launching}
-            disabledAppearance={
-              preparingWrite || launching ? "busy" : "unavailable"
-            }
-            onClick={() => void write()}
+            onStart={() => void write()}
+            onCancel={() => void writeActivity.cancel()}
+            onRetry={() => void writeActivity.retry()}
           />
         </>
       }
@@ -571,9 +594,16 @@ export function LibraryMediaDetailsModal(props: {
               )
             }
             intent="primary"
-            disabled={!liveConnected || launching || preparingWrite}
+            disabled={
+              !liveConnected ||
+              launching ||
+              preparingWrite ||
+              writeActivity.active
+            }
             disabledAppearance={
-              launching || preparingWrite ? "busy" : "unavailable"
+              launching || preparingWrite || writeActivity.active
+                ? "busy"
+                : "unavailable"
             }
             onClick={() => void launch()}
           />
@@ -867,8 +897,7 @@ export function LibraryMediaDetailsModal(props: {
           media={writeSource}
           onWrite={(text) => {
             setWriteOptionsOpen(false);
-            closeModal();
-            setWriteQueue(text);
+            void writeActivity.start(text);
           }}
         />
       )}

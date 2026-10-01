@@ -153,9 +153,7 @@ export function Settings() {
               ? t("online.settingsStatusSignedOut")
               : displayedOnlinePremiumAccess === true
                 ? t("online.settingsStatusWarpActive")
-                : displayedOnlinePremiumAccess === false
-                  ? t("online.settingsStatusFree")
-                  : t("online.settingsStatusSignedIn"),
+                : t("online.settingsStatusSignedIn"),
         },
       ],
     },

@@ -31,7 +31,7 @@ export function ReaderStatusRow({
         )}
         aria-hidden="true"
       />
-      <span className="text-foreground min-w-0 truncate">{name}</span>
+      <span className="text-foreground min-w-0 flex-1 truncate">{name}</span>
       <span className="text-muted-foreground shrink-0 text-sm">
         {holdingMedia
           ? t("scan.readerHolding")

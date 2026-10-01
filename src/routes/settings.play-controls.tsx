@@ -348,14 +348,12 @@ export function PlayControlsSettings() {
               </h2>
 
               <ToggleSwitch
-                label={
-                  <span className="flex items-center">
-                    {t("settings.core.playtime.enabled")}
-                    <SettingHelp
-                      title={t("settings.core.playtime.enabled")}
-                      description={t("settings.core.playtime.enabledHelp")}
-                    />
-                  </span>
+                label={t("settings.core.playtime.enabled")}
+                help={
+                  <SettingHelp
+                    title={t("settings.core.playtime.enabled")}
+                    description={t("settings.core.playtime.enabledHelp")}
+                  />
                 }
                 value={limitsConfig?.enabled ?? false}
                 setValue={handleEnabledToggle}
@@ -566,14 +564,12 @@ export function PlayControlsSettings() {
             </h2>
 
             <ToggleSwitch
-              label={
-                <span className="flex items-center">
-                  {t("settings.core.launchGuard.enabled")}
-                  <SettingHelp
-                    title={t("settings.core.launchGuard.enabled")}
-                    description={t("settings.core.launchGuard.enabledHelp")}
-                  />
-                </span>
+              label={t("settings.core.launchGuard.enabled")}
+              help={
+                <SettingHelp
+                  title={t("settings.core.launchGuard.enabled")}
+                  description={t("settings.core.launchGuard.enabledHelp")}
+                />
               }
               value={launchGuardEnabled}
               setValue={(launchGuardEnabled) => {
@@ -584,16 +580,14 @@ export function PlayControlsSettings() {
             />
 
             <ToggleSwitch
-              label={
-                <span className="flex items-center">
-                  {t("settings.core.launchGuard.requireConfirm")}
-                  <SettingHelp
-                    title={t("settings.core.launchGuard.requireConfirm")}
-                    description={t(
-                      "settings.core.launchGuard.requireConfirmHelp",
-                    )}
-                  />
-                </span>
+              label={t("settings.core.launchGuard.requireConfirm")}
+              help={
+                <SettingHelp
+                  title={t("settings.core.launchGuard.requireConfirm")}
+                  description={t(
+                    "settings.core.launchGuard.requireConfirmHelp",
+                  )}
+                />
               }
               value={coreSettings?.launchGuardRequireConfirm ?? false}
               setValue={(launchGuardRequireConfirm) => {

@@ -537,7 +537,7 @@ describe("Settings Index Route", () => {
       renderComponent();
 
       const onlineLink = screen.getByRole("link", { name: /online\.title/ });
-      expect(onlineLink).toHaveTextContent("online.settingsStatusFree");
+      expect(onlineLink).toHaveTextContent("online.settingsStatusSignedIn");
       expect(screen.queryByText("test@example.com")).not.toBeInTheDocument();
     });
 
@@ -622,7 +622,7 @@ describe("Settings Index Route", () => {
         screen.queryByRole("button", { name: "settings.app.proActive" }),
       ).not.toBeInTheDocument();
       const onlineLink = screen.getByRole("link", { name: /online\.title/ });
-      expect(onlineLink).toHaveTextContent("online.settingsStatusFree");
+      expect(onlineLink).toHaveTextContent("online.settingsStatusSignedIn");
     });
 
     it("should show active Warp and suppress Pro upsell", async () => {

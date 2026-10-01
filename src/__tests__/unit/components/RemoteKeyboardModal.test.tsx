@@ -87,8 +87,14 @@ describe("RemoteKeyboardModal", () => {
     const { baseElement } = render(
       <RemoteKeyboardModal isOpen close={vi.fn()} />,
     );
-    await user.click(
-      screen.getByRole("radio", { name: "remoteKeyboard.keyboardMode" }),
+    const keyboardTab = screen.getByRole("tab", {
+      name: "remoteKeyboard.keyboardMode",
+    });
+    await user.click(keyboardTab);
+    expect(keyboardTab).toHaveAttribute("aria-selected", "true");
+    expect(keyboardTab).toHaveAttribute(
+      "aria-controls",
+      screen.getByRole("tabpanel", { name: "remoteKeyboard.keyboardMode" }).id,
     );
 
     expect(screen.getByRole("button", { name: "q" })).toBeInTheDocument();
@@ -511,7 +517,7 @@ describe("RemoteKeyboardModal", () => {
     render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
 
     await user.click(
-      screen.getByRole("radio", { name: "remoteKeyboard.keyboardMode" }),
+      screen.getByRole("tab", { name: "remoteKeyboard.keyboardMode" }),
     );
     await user.click(screen.getByRole("button", { name: "q" }));
 
@@ -527,7 +533,7 @@ describe("RemoteKeyboardModal", () => {
     render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
 
     await user.click(
-      screen.getByRole("radio", { name: "remoteKeyboard.keyboardMode" }),
+      screen.getByRole("tab", { name: "remoteKeyboard.keyboardMode" }),
     );
     await user.click(screen.getByRole("button", { name: "q" }));
 
@@ -546,7 +552,7 @@ describe("RemoteKeyboardModal", () => {
     render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
 
     await user.click(
-      screen.getByRole("radio", { name: "remoteKeyboard.keyboardMode" }),
+      screen.getByRole("tab", { name: "remoteKeyboard.keyboardMode" }),
     );
     await user.click(screen.getByRole("button", { name: "Enter" }));
 
@@ -561,7 +567,7 @@ describe("RemoteKeyboardModal", () => {
     render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
 
     await user.click(
-      screen.getByRole("radio", { name: "remoteKeyboard.keyboardMode" }),
+      screen.getByRole("tab", { name: "remoteKeyboard.keyboardMode" }),
     );
     await user.click(screen.getByRole("button", { name: "Fn" }));
     await user.click(screen.getByRole("button", { name: "F12" }));
@@ -577,7 +583,7 @@ describe("RemoteKeyboardModal", () => {
     render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
 
     await user.click(
-      screen.getByRole("radio", { name: "remoteKeyboard.keyboardMode" }),
+      screen.getByRole("tab", { name: "remoteKeyboard.keyboardMode" }),
     );
     await user.click(screen.getByRole("button", { name: "#+=" }));
     await user.click(screen.getByRole("button", { name: "{" }));

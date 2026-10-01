@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactElement } from "react";
+import { useId, useRef, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { Capacitor } from "@capacitor/core";
@@ -20,7 +20,8 @@ import {
 import Keyboard from "react-simple-keyboard/build/index.modern.esm.js";
 import "react-simple-keyboard/build/css/index.css";
 import { SlideModal } from "@/components/SlideModal";
-import { Segmented } from "@/components/wui/Segmented";
+import { TabBar } from "@/components/wui/TabBar";
+import { getTabBarPanelId, getTabBarTabId } from "@/components/wui/tabBarIds";
 import { CoreAPI, getScreenshotFailureKind } from "@/lib/coreApi";
 import { useHaptics } from "@/hooks/useHaptics";
 import { logger } from "@/lib/logger";
@@ -219,6 +220,7 @@ export function RemoteKeyboardModal(props: {
   const corePlatform = useStatusStore((state) => state.corePlatform);
   const [layoutName, setLayoutName] = useState<KeyboardLayoutName>("default");
   const [mode, setMode] = useState<RemoteKeyboardMode>("remote");
+  const tabPrefix = useId();
   const [error, setError] = useState<string | null>(null);
   const [screenshot, setScreenshot] = useState<ScreenshotResult | null>(null);
   const [capturingScreenshot, setCapturingScreenshot] = useState(false);
@@ -226,10 +228,24 @@ export function RemoteKeyboardModal(props: {
 
   const isNative = Capacitor.isNativePlatform();
   const remoteActions = getRemoteActions(corePlatform);
-  const modeOptions: { value: RemoteKeyboardMode; label: string }[] = [
-    { value: "remote", label: t("remoteKeyboard.remoteMode") },
-    { value: "keyboard", label: t("remoteKeyboard.keyboardMode") },
+  const modeOptions = [
+    {
+      value: "remote" as const,
+      label: t("remoteKeyboard.remoteMode"),
+      id: getTabBarTabId("remote", tabPrefix),
+    },
+    {
+      value: "keyboard" as const,
+      label: t("remoteKeyboard.keyboardMode"),
+      id: getTabBarTabId("keyboard", tabPrefix),
+    },
   ];
+  const activeTabId = getTabBarTabId(mode, tabPrefix);
+  const activePanelProps = {
+    role: "tabpanel",
+    id: getTabBarPanelId(activeTabId),
+    "aria-labelledby": activeTabId,
+  };
 
   const triggerControlHaptic = () => {
     impact("light");
@@ -364,9 +380,8 @@ export function RemoteKeyboardModal(props: {
             {error}
           </p>
         )}
-        <Segmented
+        <TabBar
           label={t("remoteKeyboard.mode")}
-          labelHidden
           options={modeOptions}
           value={mode}
           onChange={(next) => {
@@ -375,7 +390,7 @@ export function RemoteKeyboardModal(props: {
           }}
         />
         {mode === "remote" ? (
-          <div className="remote-keyboard-pad">
+          <div className="remote-keyboard-pad" {...activePanelProps}>
             <div className="remote-keyboard-dpad">
               <button
                 type="button"
@@ -491,7 +506,7 @@ export function RemoteKeyboardModal(props: {
             )}
           </div>
         ) : (
-          <div className="remote-keyboard-wrapper">
+          <div className="remote-keyboard-wrapper" {...activePanelProps}>
             <Keyboard
               layout={layout}
               layoutName={layoutName}

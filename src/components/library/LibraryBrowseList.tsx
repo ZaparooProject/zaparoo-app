@@ -134,6 +134,7 @@ function LibraryBrowseRow(props: {
   minHeight: number;
   hasDivider: boolean;
   showSystemName: boolean;
+  detail?: string;
   onSelect: (entry: MediaBrowseEntry) => void;
 }) {
   const { t } = useTranslation();
@@ -231,6 +232,15 @@ function LibraryBrowseRow(props: {
                 )}
               </span>
             )}
+            {props.detail && (
+              <span
+                className={classNames("text-muted-foreground text-sm", {
+                  truncate: !props.textZoomed,
+                })}
+              >
+                {props.detail}
+              </span>
+            )}
             <TagList
               tags={libraryEntryTags(entry)}
               preserveOrder
@@ -275,6 +285,8 @@ export const LibraryBrowseList = forwardRef<
     isLoadingIndex?: boolean;
     failedRanges?: readonly LibraryBrowseRange[];
     showSystemName?: boolean;
+    /** Extra muted line under the system name; takes the tag line's space. */
+    entryDetail?: (entry: MediaBrowseEntry) => string | undefined;
     ariaLabel?: string;
   }
 >(function LibraryBrowseList(props, ref) {
@@ -285,7 +297,7 @@ export const LibraryBrowseList = forwardRef<
     usePreferencesStore((state) => state.textZoomLevel) ?? 1;
   const accessibleLists = useAccessibleLists();
   const corePlatform = useStatusStore((state) => state.corePlatform);
-  const baseRowHeight = props.showSystemName ? 104 : ROW_HEIGHT;
+  const baseRowHeight = props.showSystemName ? 96 : ROW_HEIGHT;
   const textZoomed = textZoomLevel > 1;
   const rowHeight = Math.ceil(baseRowHeight * Math.max(1, textZoomLevel));
   const rowRefs = useRef(new Map<number, HTMLDivElement>());
@@ -456,6 +468,7 @@ export const LibraryBrowseList = forwardRef<
       textZoomed={textZoomed}
       minHeight={rowHeight}
       showSystemName={props.showSystemName ?? false}
+      detail={props.entryDetail?.(entry)}
       hasDivider={props.hasNextPage || index < props.entries.length - 1}
       onSelect={props.onSelect}
     />

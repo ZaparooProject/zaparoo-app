@@ -7,6 +7,7 @@ import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { systemHasIndexedMedia } from "@/lib/systemFilters";
 import { compareStrings } from "@/lib/utils";
 import { useSystemsWithDisplayNames } from "@/hooks/useSystemName";
+import { Select } from "@/components/wui/Select";
 
 interface SimpleSystemSelectProps {
   value: string; // The currently selected system ID (or "all")
@@ -77,18 +78,14 @@ export function SimpleSystemSelect({
   };
 
   return (
-    <select
+    <Select
       value={value}
       onChange={handleChange}
       disabled={disabled || isLoading}
       aria-label={ariaLabel}
       aria-labelledby={ariaLabelledBy}
       className={classNames(
-        "wui-input border-input text-foreground min-h-12 w-full rounded-md border px-3 py-2 transition-colors",
-        {
-          "hover:bg-foreground/10": !disabled && !isLoading,
-          "cursor-not-allowed opacity-50": disabled || isLoading,
-        },
+        { "hover:bg-foreground/10": !disabled && !isLoading },
         className,
       )}
     >
@@ -111,6 +108,6 @@ export function SimpleSystemSelect({
           </optgroup>
         ))
       )}
-    </select>
+    </Select>
   );
 }

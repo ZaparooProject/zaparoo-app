@@ -44,12 +44,7 @@ import {
 import { logger } from "@/lib/logger";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 import { useStatusStore } from "@/lib/store";
-import {
-  useNfcWriter,
-  isReaderActivityOpen,
-  WriteAction,
-  WriteMethod,
-} from "@/lib/writeNfcHook";
+import { useContextualNfcWrite } from "@/hooks/useContextualNfcWrite";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import type {
   DeckItem,
@@ -72,14 +67,17 @@ import { SortableDeckItemRow } from "@/components/library/SortableDeckItemRow";
 import { DeckArtwork } from "@/components/library/DeckArtwork";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { ModalActionRail } from "@/components/wui/ModalActionRail";
-import { ReaderActivityControl } from "@/components/ReaderActivityControl";
+import {
+  ReaderActivityAction,
+  ReaderActivityStatus,
+} from "@/components/ReaderActivityAction";
 import { TextInput } from "@/components/wui/TextInput";
 import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { DelayedLoading } from "@/components/DelayedLoading";
-import { BackIcon, CreateIcon, PlayIcon } from "@/lib/images";
+import { BackIcon, PlayIcon } from "@/lib/images";
 
 export const Route = createFileRoute("/library/decks/$deckId")({
   component: DeckDetails,
@@ -101,16 +99,6 @@ export function DeckDetails() {
   const connected = useStatusStore((state) => state.connected);
   const showFilenames = usePreferencesStore((state) => state.showFilenames);
   const writeAvailable = useNfcWriteAvailable(deviceKey, connected);
-  const preferRemoteWriter = usePreferencesStore(
-    (state) => state.preferRemoteWriter,
-  );
-  const writer = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
-  const [writeIntent, setWriteIntent] = useState(false);
-  const writeOpen = isReaderActivityOpen(writeIntent, writer);
-  const cancelReaderActivity = async () => {
-    setWriteIntent(false);
-    await writer.end();
-  };
   const feature = useCoreFeature("decks", { requireKnownSupport: true });
   const deckQuery = useQuery({
     queryKey: [LIBRARY_QUERY_KEYS.decks, deviceKey, deckId],
@@ -149,6 +137,10 @@ export function DeckDetails() {
   const [busy, setBusy] = useState(false);
   const [opening, setOpening] = useState(false);
   const [playing, setPlaying] = useState(false);
+  const writeActivity = useContextualNfcWrite(
+    JSON.stringify([deviceKey, deckId]),
+    !editing && !itemDetailsOpen && !shareOpen,
+  );
   useEffect(() => {
     if (editing) editNameRef.current?.focus();
   }, [editing]);
@@ -266,23 +258,7 @@ export function DeckDetails() {
   };
   const writeDeck = () => {
     if (!deck || !connected || !writeAvailable) return;
-    setWriteIntent(true);
-    void writer.write(WriteAction.Write, playScript).catch((error) => {
-      logger.error("Failed to write deck", error, {
-        category: "nfc",
-        action: "writeDeck",
-      });
-    });
-  };
-  const writeItem = (text: string) => {
-    if (!deck || !connected || !writeAvailable) return;
-    setWriteIntent(true);
-    void writer.write(WriteAction.Write, text).catch((error) => {
-      logger.error("Failed to write deck item", error, {
-        category: "nfc",
-        action: "writeDeckItem",
-      });
-    });
+    void writeActivity.start(playScript);
   };
   const items =
     pendingOrder?.deckId === deckId ? pendingOrder.items : (deck?.items ?? []);
@@ -427,38 +403,19 @@ export function DeckDetails() {
             ) : deck.description ? (
               <DeckMarkdown>{deck.description}</DeckMarkdown>
             ) : null}
-            {writeOpen && (
-              <ReaderActivityControl
-                state={
-                  writer.verifyError
-                    ? "error"
-                    : writer.retapRequired
-                      ? "attention"
-                      : "waiting"
-                }
-                idleLabel={t("library.writeAction")}
-                activeLabel={
-                  writer.retapRequired
-                    ? t("spinner.retapTag")
-                    : t("spinner.holdTagReader")
-                }
-                errorMessage={
-                  writer.verifyError
-                    ? t("spinner.verifyFailedRetry")
-                    : undefined
-                }
-                icon={<CreateIcon size="20" />}
-                className="w-full"
-                buttonClassName="w-full"
-                onStart={() => undefined}
-                onCancel={() => void cancelReaderActivity()}
-                onRetry={() => void writer.retry()}
-              />
-            )}
             {!editing && (
               <ModalActionRail
                 aria-label={t("decks.actions")}
-                itemWidth="content"
+                readerAction
+                status={
+                  writeActivity.state === "attention" ||
+                  writeActivity.state === "error" ? (
+                    <ReaderActivityStatus
+                      state={writeActivity.state}
+                      onCancel={() => void writeActivity.cancel()}
+                    />
+                  ) : undefined
+                }
                 actions={
                   <>
                     <Button
@@ -486,17 +443,19 @@ export function DeckDetails() {
                       }
                       onClick={() => void playDeck()}
                     />
-                    <Button
+                    <ReaderActivityAction
+                      state={writeActivity.state}
                       label={t("library.writeAction")}
-                      icon={<CreateIcon size="20" />}
-                      variant="text"
-                      layout="responsive"
-                      className="whitespace-nowrap"
-                      disabled={!writeAvailable || opening || playing}
-                      disabledAppearance={
-                        opening || playing ? "busy" : "unavailable"
+                      busy={opening || playing}
+                      disabled={
+                        !writeAvailable ||
+                        opening ||
+                        playing ||
+                        writeActivity.externalWriteActive
                       }
-                      onClick={writeDeck}
+                      onStart={writeDeck}
+                      onCancel={() => void writeActivity.cancel()}
+                      onRetry={() => void writeActivity.retry()}
                     />
                     <Button
                       label={t("decks.share")}
@@ -682,7 +641,6 @@ export function DeckDetails() {
         canRemove={editable}
         onRemove={setRemoveItem}
         writeAvailable={Boolean(connected && writeAvailable)}
-        onWrite={writeItem}
       />
       {removeItem && (
         <SlideModal

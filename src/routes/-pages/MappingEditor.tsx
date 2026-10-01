@@ -8,7 +8,7 @@ import toast from "react-hot-toast";
 import { TextInput } from "@/components/wui/TextInput.tsx";
 import { ZapScriptInput } from "@/components/ZapScriptInput.tsx";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch.tsx";
-import { Segmented } from "@/components/wui/Segmented.tsx";
+import { RadioGroup } from "@/components/wui/RadioGroup.tsx";
 import { BackIcon } from "@/lib/images.tsx";
 import { HeaderButton } from "@/components/wui/HeaderButton.tsx";
 import { CoreAPI } from "@/lib/coreApi";
@@ -344,7 +344,7 @@ export function MappingEditor({ id }: MappingEditorProps) {
               maxLength={255}
             />
 
-            <Segmented
+            <RadioGroup
               label={t("create.mappings.editor.type")}
               help={typeHelp ? t(typeHelp) : undefined}
               options={TYPE_OPTIONS.map((o) => ({
@@ -355,7 +355,7 @@ export function MappingEditor({ id }: MappingEditorProps) {
               onChange={setType}
             />
 
-            <Segmented
+            <RadioGroup
               label={t("create.mappings.editor.match")}
               help={matchHelp ? t(matchHelp) : undefined}
               options={MATCH_OPTIONS.map((o) => ({

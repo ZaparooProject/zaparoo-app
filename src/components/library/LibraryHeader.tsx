@@ -14,7 +14,7 @@ export function LibraryHeaderActions(props: {
   const { t } = useTranslation();
 
   return (
-    <div className="flex shrink-0 gap-[4px]">
+    <div className="flex shrink-0">
       <HeaderButton
         onClick={props.onSearch}
         icon={<SearchIcon size="24" />}

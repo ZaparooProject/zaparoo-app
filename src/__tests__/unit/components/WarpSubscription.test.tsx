@@ -237,7 +237,7 @@ describe("WarpSubscription", () => {
         subscription: {
           is_premium: true,
           sources: ["revenuecat"],
-          revenuecat: { active: true, will_renew: true },
+          revenuecat: { active: true, store: "APP_STORE", will_renew: true },
         },
         packages: null,
       }),
@@ -474,7 +474,7 @@ describe("WarpSubscription", () => {
           subscription: {
             is_premium: true,
             sources: ["revenuecat"],
-            revenuecat: { active: true, will_renew: true },
+            revenuecat: { active: true, store: "APP_STORE", will_renew: true },
           },
           packages: null,
         }),
@@ -497,7 +497,7 @@ describe("WarpSubscription", () => {
         subscription: {
           is_premium: true,
           sources: ["revenuecat"],
-          revenuecat: { active: true, will_renew: true },
+          revenuecat: { active: true, store: "APP_STORE", will_renew: true },
         },
         packages: null,
       }),

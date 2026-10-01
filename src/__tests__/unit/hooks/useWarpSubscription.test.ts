@@ -112,6 +112,9 @@ vi.mock("@/lib/onlineApi", () => ({
 }));
 
 vi.mock("@/lib/purchasesSetup", async (importOriginal) => ({
+  hasNonPromotionalWarp: (
+    await importOriginal<typeof import("@/lib/purchasesSetup")>()
+  ).hasNonPromotionalWarp,
   claimOfferingsReport: (
     await importOriginal<typeof import("@/lib/purchasesSetup")>()
   ).claimOfferingsReport,
@@ -200,6 +203,45 @@ describe("useWarpSubscription", () => {
       customerInfo: customerInfo(),
     });
     mockBrowserOpen.mockResolvedValue(undefined);
+  });
+
+  it("should offer native checkout during API and SDK promotional access", async () => {
+    const trial: SubscriptionResponse = {
+      ...subscription(true),
+      can_subscribe: true,
+      paid_subscription: { active: false, will_renew: false },
+      trial: {
+        status: "active",
+        starts_at: "2026-10-15T00:00:00Z",
+        expires_at: "2099-10-29T00:00:00Z",
+      },
+    };
+    const promo = {
+      entitlements: {
+        active: {
+          warp: { store: "PROMOTIONAL", productIdentifier: "rc_promo_warp" },
+        },
+      },
+    } as unknown as CustomerInfo;
+    mockEnsurePurchasesUser.mockResolvedValue(promo);
+    mockGetSubscriptionStatus.mockResolvedValue(trial);
+    const { result } = renderHook(() => useWarpSubscription("user-123"));
+    await waitFor(() => expect(result.current.packages).not.toBeNull());
+    expect(result.current.revenueCatWarpActive).toBe(false);
+    mockGetSubscriptionStatus.mockResolvedValueOnce(trial).mockResolvedValue({
+      ...trial,
+      paid_subscription: {
+        active: true,
+        store: "APP_STORE",
+        will_renew: true,
+      },
+    });
+    let outcome: string | undefined;
+    await act(async () => {
+      outcome = await result.current.purchase();
+    });
+    expect(outcome).toBe("active");
+    expect(mockPurchasePackage).toHaveBeenCalledOnce();
   });
 
   it("should preserve checkout diagnostics during a successful account load", async () => {

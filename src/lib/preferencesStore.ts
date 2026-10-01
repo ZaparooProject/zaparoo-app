@@ -222,6 +222,8 @@ export interface PreferencesState {
   lifetimeProAccess: boolean | null;
   storeVerifiedProAccess: boolean;
   onlinePremiumAccess: boolean | null;
+  onlineTrialExpiresAt: string | null;
+  onlineTrialUserID: string | null;
   preferRemoteWriter: boolean;
   keepScreenAwake: boolean;
 
@@ -314,7 +316,10 @@ export interface PreferencesActions {
   setLifetimeProAccess: (value: boolean) => void;
   setStoreVerifiedProAccess: (value: boolean) => void;
   beginOnlinePremiumAccessCheck: () => void;
-  setOnlinePremiumAccess: (value: boolean) => void;
+  setOnlinePremiumAccess: (
+    value: boolean,
+    trial?: { userID: string; expiresAt: string },
+  ) => void;
   clearOnlinePremiumAccess: () => void;
   setPreferRemoteWriter: (value: boolean) => void;
   setKeepScreenAwake: (value: boolean) => void;
@@ -372,6 +377,8 @@ const DEFAULT_PREFERENCES: Omit<
   lifetimeProAccess: null,
   storeVerifiedProAccess: false,
   onlinePremiumAccess: null,
+  onlineTrialExpiresAt: null,
+  onlineTrialUserID: null,
   preferRemoteWriter: false,
   keepScreenAwake: true,
   shakeEnabled: false,
@@ -403,7 +410,11 @@ function persistedPreferences(state: PreferencesStore) {
   return {
     restartScan: state.restartScan,
     launchOnScan: state.launchOnScan,
-    launcherAccess: state.launcherAccess,
+    // Cloud trial access is session-bound; never hydrate it as lifetime Pro.
+    launcherAccess:
+      state.onlineTrialExpiresAt !== null
+        ? state.lifetimeProAccess === true || state.storeVerifiedProAccess
+        : state.launcherAccess,
     storeVerifiedProAccess: state.storeVerifiedProAccess,
     preferRemoteWriter: state.preferRemoteWriter,
     keepScreenAwake: state.keepScreenAwake,
@@ -506,24 +517,36 @@ export const usePreferencesStore = create<PreferencesStore>()(
       beginOnlinePremiumAccessCheck: () =>
         set((state) => ({
           onlinePremiumAccess: null,
+          onlineTrialExpiresAt: null,
+          onlineTrialUserID: null,
           launcherAccess:
             state.lifetimeProAccess === true ||
-            (state.lifetimeProAccess === null && state.launcherAccess),
+            (state.onlinePremiumAccess !== true &&
+              state.lifetimeProAccess === null &&
+              state.launcherAccess),
         })),
-      setOnlinePremiumAccess: (value) =>
+      setOnlinePremiumAccess: (value, trial) =>
         set((state) => ({
           onlinePremiumAccess: value,
+          onlineTrialExpiresAt: value && trial ? trial.expiresAt : null,
+          onlineTrialUserID: value && trial ? trial.userID : null,
           launcherAccess:
             value ||
             state.lifetimeProAccess === true ||
-            (state.lifetimeProAccess === null && state.launcherAccess),
+            (state.onlinePremiumAccess !== true &&
+              state.lifetimeProAccess === null &&
+              state.launcherAccess),
         })),
       clearOnlinePremiumAccess: () =>
         set((state) => ({
           onlinePremiumAccess: false,
+          onlineTrialExpiresAt: null,
+          onlineTrialUserID: null,
           launcherAccess:
             state.lifetimeProAccess === true ||
-            (state.lifetimeProAccess === null && state.launcherAccess),
+            (state.onlinePremiumAccess !== true &&
+              state.lifetimeProAccess === null &&
+              state.launcherAccess),
         })),
       setPreferRemoteWriter: (value) => set({ preferRemoteWriter: value }),
       setKeepScreenAwake: (value) => set({ keepScreenAwake: value }),
@@ -751,6 +774,8 @@ export const usePreferencesStore = create<PreferencesStore>()(
             currentState.onlinePremiumAccess === true ||
             (accessCheckPending && cachedLauncherAccess),
           onlinePremiumAccess: currentState.onlinePremiumAccess,
+          onlineTrialExpiresAt: currentState.onlineTrialExpiresAt,
+          onlineTrialUserID: currentState.onlineTrialUserID,
           nfcAvailable: currentState.nfcAvailable,
           _nfcAvailabilityHydrated: currentState._nfcAvailabilityHydrated,
           cameraAvailable: currentState.cameraAvailable,

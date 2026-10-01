@@ -261,7 +261,7 @@ export function Logs() {
           </h1>
         }
         headerRight={
-          <div className="flex gap-2">
+          <div className="flex">
             <HeaderButton
               onClick={() => logsQuery.refetch()}
               disabled={!connected || logsQuery.isLoading}

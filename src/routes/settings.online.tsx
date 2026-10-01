@@ -576,6 +576,7 @@ export function OnlinePage() {
 
   return (
     <PageFrame
+      className="online-settings-page"
       onSwipeBack={goBack}
       headerLeft={
         <HeaderButton
@@ -593,18 +594,7 @@ export function OnlinePage() {
       <div className="flex flex-col gap-4">
         {loggedInUser !== null ? (
           // Logged in state
-          <div className="flex flex-col gap-6 py-4">
-            <div className="flex flex-col items-center gap-1">
-              {loggedInUser.displayName && (
-                <span className="text-foreground text-lg font-medium">
-                  {loggedInUser.displayName}
-                </span>
-              )}
-              <span className="text-muted-foreground text-sm">
-                {loggedInUser.email}
-              </span>
-            </div>
-
+          <div className="flex flex-col gap-6">
             <OnlineDeviceSetup
               connected={connected}
               warpActive={displayedWarpActive}
@@ -626,6 +616,16 @@ export function OnlinePage() {
                 >
                   {t("online.account")}
                 </h2>
+                <div className="flex flex-col gap-1">
+                  {loggedInUser.displayName && (
+                    <span className="text-foreground font-medium">
+                      {loggedInUser.displayName}
+                    </span>
+                  )}
+                  <span className="text-muted-foreground text-sm break-all">
+                    {loggedInUser.email}
+                  </span>
+                </div>
 
                 {/* Dashboard button */}
                 <Button
@@ -712,11 +712,11 @@ export function OnlinePage() {
             </Card>
           </div>
         ) : purchasePreview !== "live" ? (
-          <div className="flex flex-col gap-6 py-4">
+          <div className="flex flex-col gap-6">
             <WarpSubscription appUserID="purchase-preview" />
           </div>
         ) : (
-          <div className="flex flex-col gap-6 py-4">
+          <div className="flex flex-col gap-6">
             <section
               className="flex flex-col gap-3"
               aria-label={t("online.account")}
@@ -733,7 +733,7 @@ export function OnlinePage() {
                 />
                 <Button
                   label={t("online.signUp")}
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => openAuthSheet(true)}
                   className="flex-1"
                 />

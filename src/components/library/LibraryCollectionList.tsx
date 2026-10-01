@@ -2,7 +2,15 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Bookmark, Heart, PlusIcon, ThumbsDown, ThumbsUp } from "lucide-react";
+import {
+  Bookmark,
+  Heart,
+  History,
+  PlusIcon,
+  ThumbsDown,
+  ThumbsUp,
+  Trophy,
+} from "lucide-react";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { CoreAPI } from "@/lib/coreApi";
@@ -23,6 +31,18 @@ const collections = [
     label: "library.favorites",
     Icon: Heart,
     scope: "favorites",
+  },
+  {
+    to: "/library/recent",
+    label: "library.recentlyPlayedShort",
+    Icon: History,
+    scope: "recent",
+  },
+  {
+    to: "/library/top",
+    label: "library.topPlayed",
+    Icon: Trophy,
+    scope: "top",
   },
   {
     to: "/library/liked",
@@ -61,9 +81,13 @@ export function LibraryCollectionList({
     enabled: connected && Boolean(deviceKey) && decksFeature.available,
     refetchOnMount: "always",
   });
-  const visible = collections.filter(
-    ({ scope }) => scope === "favorites" || preferencesAvailable,
-  );
+  const historyFeature = useCoreFeature("mediaRecents", {
+    requireKnownSupport: true,
+  });
+  const visible = collections.filter(({ scope }) => {
+    if (scope === "recent" || scope === "top") return historyFeature.available;
+    return scope === "favorites" || preferencesAvailable;
+  });
   const visibleDecks = (decksQuery.data?.decks ?? []).filter((deck) =>
     deck.name.toLowerCase().includes(query.trim().toLowerCase()),
   );
@@ -79,7 +103,7 @@ export function LibraryCollectionList({
             <LibraryLinkButton
               key={scope}
               to={to}
-              variant="secondary"
+              variant="outline"
               label={t(label)}
               icon={<Icon size={20} />}
               className="px-3 text-sm whitespace-normal"

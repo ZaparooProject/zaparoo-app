@@ -15,7 +15,7 @@ import { PageFrame } from "@/components/PageFrame";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { TextInput } from "@/components/wui/TextInput";
-import { Segmented } from "@/components/wui/Segmented";
+import { RadioGroup } from "@/components/wui/RadioGroup";
 import { Button } from "@/components/wui/Button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { DelayedLoading } from "@/components/DelayedLoading";
@@ -149,7 +149,7 @@ export function AddDeckItem() {
         <EmptyState title={t("decks.full")} />
       ) : (
         <div className="flex flex-col gap-4">
-          <Segmented
+          <RadioGroup
             label={t("decks.itemType")}
             options={[
               { value: "script", label: t("decks.script") },

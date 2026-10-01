@@ -64,11 +64,9 @@ export function DeviceLinkButton({
 
   if (state === "linked") {
     return (
-      <Button
-        label={t("online.deviceLink.linked")}
-        disabled
-        className="w-full"
-      />
+      <p className="text-muted-foreground text-sm" role="status">
+        {t("online.deviceLink.linked")}
+      </p>
     );
   }
 

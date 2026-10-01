@@ -1,19 +1,21 @@
-import classNames from "classnames";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
 interface ModalActionRailProps {
   actions: ReactNode;
   primaryAction?: ReactNode;
-  /** "content" sizes each action to its caption so short rails fit narrow phones. */
-  itemWidth?: "uniform" | "content";
+  /** Contextual status remains outside the horizontally scrolling captions. */
+  status?: ReactNode;
+  /** Reserve paint clearance for an in-place reader action in every state. */
+  readerAction?: boolean;
   "aria-label": string;
 }
 
 export function ModalActionRail({
   actions,
   primaryAction,
-  itemWidth = "uniform",
+  status,
+  readerAction = false,
   "aria-label": ariaLabel,
 }: ModalActionRailProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -80,17 +82,25 @@ export function ModalActionRail({
                 2,
             });
           }}
-          className="overflow-x-auto overscroll-x-contain py-1"
+          className={
+            readerAction
+              ? "scroll-px-2 overflow-x-auto overscroll-x-contain"
+              : "overflow-x-auto overscroll-x-contain py-1"
+          }
           style={{ maskImage, WebkitMaskImage: maskImage }}
         >
           <div
             ref={contentRef}
-            className={classNames(
-              "grid min-w-full grid-flow-col gap-1 sm:min-w-0 [&>*]:min-h-14 [&>*]:w-full [&>*]:max-w-none [&>*]:min-w-0 sm:[&>*]:min-h-12",
-              itemWidth === "content"
-                ? "auto-cols-[minmax(max-content,1fr)]"
-                : "auto-cols-[minmax(5.5rem,1fr)]",
-            )}
+            // Captions are single-line sentence case. Each action is as wide as
+            // its caption plus padding, shares spare width evenly, and the
+            // rail scrolls when they don't all fit.
+            className={`grid min-w-full grid-flow-col gap-1 [&>*]:min-h-14 [&>*]:w-full [&>*]:max-w-none [&>*]:px-3 [&>*]:text-[13px] [&>*]:font-semibold [&>*]:tracking-normal [&>*]:whitespace-nowrap [&>*]:normal-case sm:[&>*]:min-h-12 ${
+              // Intrinsic content width includes both gutters in the scroll range;
+              // the bottom gutter also clears the latched face's 2px travel.
+              readerAction
+                ? "w-max auto-cols-auto p-2 pb-2.5"
+                : "auto-cols-[minmax(max-content,1fr)] sm:min-w-0"
+            }`}
           >
             {actions}
           </div>
@@ -117,6 +127,7 @@ export function ModalActionRail({
           {primaryAction}
         </div>
       )}
+      {status && <div className="sm:col-span-2">{status}</div>}
     </div>
   );
 }

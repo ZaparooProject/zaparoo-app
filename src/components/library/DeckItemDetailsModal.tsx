@@ -10,7 +10,13 @@ import { SlideModal } from "@/components/SlideModal";
 import { Button } from "@/components/wui/Button";
 import { ModalActionRail } from "@/components/wui/ModalActionRail";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { CreateIcon, PlayIcon } from "@/lib/images";
+import { PlayIcon } from "@/lib/images";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
+import { useContextualNfcWrite } from "@/hooks/useContextualNfcWrite";
+import {
+  ReaderActivityAction,
+  ReaderActivityStatus,
+} from "@/components/ReaderActivityAction";
 import { DeckArtwork } from "@/components/library/DeckArtwork";
 
 function cardRenderedUrl(item: DeckItem | null): string | null {
@@ -33,7 +39,6 @@ export function DeckItemDetailsModal({
   canRemove,
   onRemove,
   writeAvailable,
-  onWrite,
 }: {
   item: DeckItem | null;
   deckId: string;
@@ -42,7 +47,6 @@ export function DeckItemDetailsModal({
   canRemove: boolean;
   onRemove: (item: DeckItem) => void;
   writeAvailable: boolean;
-  onWrite: (text: string) => void;
 }) {
   const { t } = useTranslation();
   const [launching, setLaunching] = useState(false);
@@ -57,9 +61,19 @@ export function DeckItemDetailsModal({
       : launchText;
   const displayText = launchText ?? playText;
   const imageUrl = cardRenderedUrl(item);
+  const deviceKey = useActiveDeviceKey();
+  const writeActivity = useContextualNfcWrite(
+    JSON.stringify([deviceKey, deckId, item?.id, launchText]),
+    isOpen,
+  );
+  const closeDetails = () => {
+    void writeActivity.cancel();
+    close();
+  };
 
   const launch = async () => {
-    if (!playText || !liveConnected || launching) return;
+    if (!playText || !liveConnected || launching || writeActivity.active)
+      return;
     setLaunching(true);
     try {
       await CoreAPI.run({ text: playText });
@@ -76,11 +90,21 @@ export function DeckItemDetailsModal({
   return (
     <SlideModal
       isOpen={isOpen}
-      close={close}
+      close={closeDetails}
       title={title}
       footer={
         <ModalActionRail
           aria-label={t("decks.itemActions")}
+          readerAction
+          status={
+            writeActivity.state === "attention" ||
+            writeActivity.state === "error" ? (
+              <ReaderActivityStatus
+                state={writeActivity.state}
+                onCancel={() => void writeActivity.cancel()}
+              />
+            ) : undefined
+          }
           actions={
             <>
               {canRemove && (
@@ -91,28 +115,32 @@ export function DeckItemDetailsModal({
                   layout="responsive"
                   intent="destructive"
                   className="whitespace-nowrap"
-                  disabled={!item || launching}
-                  disabledAppearance={launching ? "busy" : "unavailable"}
+                  disabled={!item || launching || writeActivity.active}
+                  disabledAppearance={
+                    launching || writeActivity.active ? "busy" : "unavailable"
+                  }
                   onClick={() => {
                     if (!item) return;
-                    close();
+                    closeDetails();
                     onRemove(item);
                   }}
                 />
               )}
-              <Button
+              <ReaderActivityAction
+                state={writeActivity.state}
                 label={t("library.writeAction")}
-                icon={<CreateIcon size="20" />}
-                variant="text"
-                layout="responsive"
-                className="whitespace-nowrap"
-                disabled={!launchText || !writeAvailable || launching}
-                disabledAppearance={launching ? "busy" : "unavailable"}
-                onClick={() => {
-                  if (!launchText) return;
-                  close();
-                  onWrite(launchText);
+                busy={launching}
+                disabled={
+                  !launchText ||
+                  !writeAvailable ||
+                  launching ||
+                  writeActivity.externalWriteActive
+                }
+                onStart={() => {
+                  if (launchText) void writeActivity.start(launchText);
                 }}
+                onCancel={() => void writeActivity.cancel()}
+                onRetry={() => void writeActivity.retry()}
               />
             </>
           }
@@ -128,8 +156,12 @@ export function DeckItemDetailsModal({
                 )
               }
               intent="primary"
-              disabled={!playText || !liveConnected || launching}
-              disabledAppearance={launching ? "busy" : "unavailable"}
+              disabled={
+                !playText || !liveConnected || launching || writeActivity.active
+              }
+              disabledAppearance={
+                launching || writeActivity.active ? "busy" : "unavailable"
+              }
               onClick={() => void launch()}
             />
           }

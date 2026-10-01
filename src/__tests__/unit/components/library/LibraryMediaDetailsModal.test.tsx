@@ -12,8 +12,10 @@ import {
   within,
 } from "@/test-utils";
 import { CoreAPI } from "@/lib/coreApi";
+import { NfcVerificationError } from "@/lib/errors";
 import type { MediaBrowseEntry, MediaMetaResponse } from "@/lib/models";
 import { usePreferencesStore } from "@/lib/preferencesStore";
+import { useAppPreviewStore } from "@/lib/appPreviewStore";
 import { ConnectionState, useStatusStore } from "@/lib/store";
 import { LibraryMediaDetailsModal } from "@/components/library/LibraryMediaDetailsModal";
 
@@ -100,6 +102,17 @@ function renderModal(
   return { ...render(<LibraryMediaDetailsModal {...props} />), props };
 }
 
+async function expectContextualWrite(text: string) {
+  await waitFor(() =>
+    expect(CoreAPI.write).toHaveBeenCalledWith(
+      { text },
+      expect.any(AbortSignal),
+    ),
+  );
+  expect(useStatusStore.getState().writeQueue).toBe("");
+  expect(useStatusStore.getState().writeOpen).toBe(false);
+}
+
 describe("LibraryMediaDetailsModal", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -110,11 +123,14 @@ describe("LibraryMediaDetailsModal", () => {
     });
     vi.spyOn(CoreAPI, "mediaMeta").mockResolvedValue(META_RESPONSE);
     vi.spyOn(CoreAPI, "hasWriteCapableReader").mockResolvedValue(false);
+    vi.spyOn(CoreAPI, "write").mockResolvedValue();
+    vi.spyOn(CoreAPI, "readersWriteCancel").mockResolvedValue();
     useStatusStore.setState({
       connected: true,
       connectionState: ConnectionState.CONNECTED,
       coreVersion: "2.15.0",
       coreVersionPending: false,
+      writeOpen: false,
     });
     usePreferencesStore.setState({
       showFilenames: false,
@@ -669,6 +685,238 @@ describe("LibraryMediaDetailsModal", () => {
     expect(runSpy).not.toHaveBeenCalled();
   });
 
+  it("should keep the selected game and original rail button through writing and success", async () => {
+    usePreferencesStore.setState({ nfcAvailable: true });
+    let finish!: () => void;
+    vi.mocked(CoreAPI.write).mockImplementation(
+      (_params, signal) =>
+        new Promise((resolve) => {
+          finish = () => resolve();
+          signal?.addEventListener(
+            "abort",
+            () => resolve({ cancelled: true }),
+            { once: true },
+          );
+        }),
+    );
+    const user = userEvent.setup();
+    const { props } = renderModal();
+    const dialog = await screen.findByRole("dialog", { name: "Super Game" });
+    await user.click(
+      within(dialog).getByText("library.technicalDetails", {
+        selector: "span",
+      }),
+    );
+    const write = within(dialog).getByRole("button", { name: "library.write" });
+    await user.click(write);
+    await expectContextualWrite(ENTRY.path);
+
+    const cancel = await within(dialog).findByRole("button", {
+      name: "reader.cancelAction",
+    });
+    expect(cancel).toBe(write);
+    expect(cancel).toHaveFocus();
+    expect(within(cancel).getByText("nav.cancel")).toBeVisible();
+    expect(within(cancel).getByText("library.writeAction")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    expect(
+      within(dialog).getByRole("group", { name: "library.mediaActions" }),
+    ).toContainElement(cancel);
+    expect(within(dialog).getByText(ENTRY.path)).toBeVisible();
+    expect(
+      within(dialog).queryByText("reader.pressAgainToCancel"),
+    ).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByText("spinner.holdTagReader"),
+    ).not.toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("button", { name: "library.launch" }),
+    ).toBeDisabled();
+    expect(props.close).not.toHaveBeenCalled();
+
+    await act(async () => finish());
+    expect(
+      await within(dialog).findByRole("button", { name: "library.write" }),
+    ).toBe(write);
+    expect(dialog).toBeVisible();
+    expect(
+      within(dialog).getByRole("button", { name: "library.launch" }),
+    ).toBeEnabled();
+    expect(props.close).not.toHaveBeenCalled();
+  });
+
+  it("should cancel from the same rail without dismissing game details", async () => {
+    usePreferencesStore.setState({ nfcAvailable: true });
+    let signal: AbortSignal | undefined;
+    vi.mocked(CoreAPI.write).mockImplementation(
+      (_params, currentSignal) =>
+        new Promise((resolve) => {
+          signal = currentSignal;
+          signal?.addEventListener(
+            "abort",
+            () => resolve({ cancelled: true }),
+            { once: true },
+          );
+        }),
+    );
+    const user = userEvent.setup();
+    const { props } = renderModal();
+    await user.click(
+      await screen.findByRole("button", { name: "library.write" }),
+    );
+    await expectContextualWrite(ENTRY.path);
+    await user.click(
+      await screen.findByRole("button", { name: "reader.cancelAction" }),
+    );
+    await waitFor(() => expect(signal?.aborted).toBe(true));
+    expect(
+      await screen.findByRole("button", { name: "library.write" }),
+    ).toBeEnabled();
+    expect(screen.getByRole("dialog", { name: "Super Game" })).toBeVisible();
+    expect(props.close).not.toHaveBeenCalled();
+  });
+
+  it.each(["pointer", "Enter", "Space"])(
+    "should cancel and restart preview writing using %s without losing focus or details",
+    async (input) => {
+      usePreferencesStore.setState({ nfcAvailable: true });
+      useAppPreviewStore.setState({ enabled: true, nfcResult: "hold" });
+      const user = userEvent.setup();
+      const { props } = renderModal();
+      const dialog = await screen.findByRole("dialog", { name: "Super Game" });
+      const write = within(dialog).getByRole("button", {
+        name: "library.write",
+      });
+
+      for (let attempt = 0; attempt < 2; attempt++) {
+        await user.click(write);
+        const cancel = await within(dialog).findByRole("button", {
+          name: "reader.cancelAction",
+        });
+        expect(cancel).toBe(write);
+        expect(within(cancel).getByText("nav.cancel")).toBeVisible();
+        expect(cancel).toHaveFocus();
+
+        if (input === "pointer") await user.click(cancel);
+        else await user.keyboard(input === "Enter" ? "{Enter}" : " ");
+
+        expect(
+          await within(dialog).findByRole("button", { name: "library.write" }),
+        ).toBe(write);
+        expect(write).toHaveFocus();
+        expect(within(write).getByText("library.writeAction")).toBeVisible();
+        expect(dialog).toBeVisible();
+      }
+      expect(props.close).not.toHaveBeenCalled();
+      expect(CoreAPI.write).not.toHaveBeenCalled();
+      expect(useStatusStore.getState().writeQueue).toBe("");
+      expect(useStatusStore.getState().writeOpen).toBe(false);
+    },
+  );
+
+  it("should retry a verification failure in the same game footer", async () => {
+    usePreferencesStore.setState({ nfcAvailable: true });
+    vi.mocked(CoreAPI.write).mockRejectedValueOnce(
+      new NfcVerificationError(undefined, "mismatch"),
+    );
+    const user = userEvent.setup();
+    const { props } = renderModal();
+    const dialog = await screen.findByRole("dialog", { name: "Super Game" });
+    await user.click(
+      within(dialog).getByRole("button", { name: "library.write" }),
+    );
+    const retry = await within(dialog).findByRole("button", {
+      name: "scan.retry",
+    });
+    expect(
+      within(dialog).getByRole("group", { name: "library.mediaActions" }),
+    ).toContainElement(retry);
+    expect(within(dialog).getByText("spinner.verifyFailedRetry")).toBeVisible();
+    expect(
+      within(dialog).getByRole("button", { name: "nav.cancel" }),
+    ).toBeVisible();
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    await user.click(retry);
+    await waitFor(() => expect(CoreAPI.write).toHaveBeenCalledTimes(2));
+    expect(
+      await within(dialog).findByRole("button", { name: "library.write" }),
+    ).toBeEnabled();
+    expect(dialog).toBeVisible();
+    expect(props.close).not.toHaveBeenCalled();
+    expect(useStatusStore.getState().writeOpen).toBe(false);
+  });
+
+  it("should cancel its write when details are dismissed", async () => {
+    usePreferencesStore.setState({ nfcAvailable: true });
+    let signal: AbortSignal | undefined;
+    vi.mocked(CoreAPI.write).mockImplementation(
+      (_params, currentSignal) =>
+        new Promise((resolve) => {
+          signal = currentSignal;
+          signal?.addEventListener(
+            "abort",
+            () => resolve({ cancelled: true }),
+            { once: true },
+          );
+        }),
+    );
+    const user = userEvent.setup();
+    const { props } = renderModal();
+    await user.click(
+      await screen.findByRole("button", { name: "library.write" }),
+    );
+    await expectContextualWrite(ENTRY.path);
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(signal?.aborted).toBe(true));
+    expect(props.close).toHaveBeenCalledOnce();
+  });
+
+  it("should cancel an old selection without starting another write", async () => {
+    usePreferencesStore.setState({ nfcAvailable: true });
+    let signal: AbortSignal | undefined;
+    vi.mocked(CoreAPI.write).mockImplementation(
+      (_params, currentSignal) =>
+        new Promise((resolve) => {
+          signal = currentSignal;
+          signal?.addEventListener(
+            "abort",
+            () => resolve({ cancelled: true }),
+            { once: true },
+          );
+        }),
+    );
+    const user = userEvent.setup();
+    const view = renderModal();
+    await user.click(
+      await screen.findByRole("button", { name: "library.write" }),
+    );
+    await expectContextualWrite(ENTRY.path);
+    view.rerender(
+      <LibraryMediaDetailsModal
+        {...view.props}
+        entry={{ ...ENTRY, mediaId: 99, path: "/roms/SNES/Other.sfc" }}
+      />,
+    );
+    await waitFor(() => expect(signal?.aborted).toBe(true));
+    expect(
+      await screen.findByRole("button", { name: "library.write" }),
+    ).toBeEnabled();
+    expect(CoreAPI.write).toHaveBeenCalledTimes(1);
+    expect(useStatusStore.getState().writeQueue).toBe("");
+  });
+
+  it("should not take over a write already owned by the global queue", async () => {
+    usePreferencesStore.setState({ nfcAvailable: true });
+    useStatusStore.setState({ writeOpen: true });
+    renderModal();
+    expect(
+      await screen.findByRole("button", { name: "library.write" }),
+    ).toBeDisabled();
+    expect(CoreAPI.write).not.toHaveBeenCalled();
+  });
+
   it("should offer ZapScript and relative path before NFC writing", async () => {
     usePreferencesStore.setState({ nfcAvailable: true });
     const user = userEvent.setup();
@@ -705,8 +953,11 @@ describe("LibraryMediaDetailsModal", () => {
       }),
     );
 
-    expect(useStatusStore.getState().writeQueue).toBe("@SNES/Super Game");
-    expect(props.close).toHaveBeenCalled();
+    await expectContextualWrite("@SNES/Super Game");
+    expect(props.close).not.toHaveBeenCalled();
+    expect(
+      await screen.findByRole("dialog", { name: "Super Game" }),
+    ).toBeVisible();
   });
 
   it("should restore details when write-target selection is dismissed", async () => {
@@ -853,7 +1104,8 @@ describe("LibraryMediaDetailsModal", () => {
       }),
     );
 
-    expect(useStatusStore.getState().writeQueue).toBe("SNES/Super Game.sfc");
+    await expectContextualWrite("SNES/Super Game.sfc");
+    expect(screen.getByRole("dialog", { name: "Super Game" })).toBeVisible();
   });
 
   it("should resolve a path while customizing Library directory ZapScript", async () => {
@@ -909,7 +1161,7 @@ describe("LibraryMediaDetailsModal", () => {
       }),
     );
 
-    expect(useStatusStore.getState().writeQueue).toBe("@PSX/Multi Disc Game");
+    await expectContextualWrite("@PSX/Multi Disc Game");
   });
 
   it("should write directly when Library has only one target", async () => {
@@ -926,9 +1178,7 @@ describe("LibraryMediaDetailsModal", () => {
       await screen.findByRole("button", { name: "library.write" }),
     );
 
-    await waitFor(() => {
-      expect(useStatusStore.getState().writeQueue).toBe("SNES/Super Game.sfc");
-    });
+    await expectContextualWrite("SNES/Super Game.sfc");
     expect(
       screen.queryByRole("dialog", { name: "create.search.writeLabel" }),
     ).not.toBeInTheDocument();
@@ -960,7 +1210,8 @@ describe("LibraryMediaDetailsModal", () => {
       }),
     );
 
-    expect(useStatusStore.getState().writeQueue).toBe("@SNES/Super Game");
+    await expectContextualWrite("@SNES/Super Game");
+    expect(screen.getByRole("dialog", { name: "Super Game" })).toBeVisible();
   });
 
   it("should keep writing disabled when no writer is available", async () => {

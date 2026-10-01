@@ -258,6 +258,8 @@ describe("Library index route", () => {
         .map((link) => link.textContent),
     ).toEqual([
       "library.favorites",
+      "library.recentlyPlayedShort",
+      "library.topPlayed",
       "library.liked",
       "library.playLater",
       "library.disliked",
@@ -471,8 +473,9 @@ describe("Library index route", () => {
     ).toBeEnabled();
   });
 
-  it("should write a virtual system's ZapScript to a token", async () => {
+  it("should write a virtual system's ZapScript without dismissing its details", async () => {
     const user = userEvent.setup();
+    const writeSpy = vi.spyOn(CoreAPI, "write").mockResolvedValue();
     usePreferencesStore.setState({ nfcAvailable: true });
     vi.spyOn(CoreAPI, "systems").mockResolvedValue({ systems: [WINAMP] });
 
@@ -483,7 +486,15 @@ describe("Library index route", () => {
       within(dialog).getByRole("button", { name: "library.write" }),
     );
 
-    expect(useStatusStore.getState().writeQueue).toBe(WINAMP.zapScript);
+    await waitFor(() =>
+      expect(writeSpy).toHaveBeenCalledWith(
+        { text: WINAMP.zapScript },
+        expect.any(AbortSignal),
+      ),
+    );
+    expect(useStatusStore.getState().writeQueue).toBe("");
+    expect(useStatusStore.getState().writeOpen).toBe(false);
+    expect(dialog).toBeVisible();
   });
 
   it("should disable writing a virtual system without a writer", async () => {

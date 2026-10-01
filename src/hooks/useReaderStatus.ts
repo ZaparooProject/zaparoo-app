@@ -3,6 +3,7 @@ import { CoreAPI } from "@/lib/coreApi";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { useStatusStore } from "@/lib/store";
 import type { ReaderInfo } from "@/lib/models";
+import { sortReaders } from "@/lib/readers";
 
 export interface ReaderStatus {
   readers: ReaderInfo[];
@@ -29,7 +30,7 @@ export function useReaderStatus(): ReaderStatus {
   });
 
   return {
-    readers: query.data?.readers ?? [],
+    readers: sortReaders(query.data?.readers ?? []),
     holdOwnerReaderId: query.data?.holdOwnerReaderId,
     isPending: query.isPending,
     available: readersFeature.available,

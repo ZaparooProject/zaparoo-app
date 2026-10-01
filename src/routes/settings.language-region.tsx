@@ -9,6 +9,7 @@ import { BackIcon } from "@/lib/images";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import type { SystemNameRegionPreference } from "@/lib/systemNames";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
+import { Select } from "@/components/wui/Select";
 
 export const Route = createFileRoute("/settings/language-region")({
   component: LanguageRegionSettings,
@@ -91,9 +92,8 @@ export function LanguageRegionSettings() {
           >
             {t("settings.languageRegion.appLanguage")}
           </label>
-          <select
+          <Select
             id="settings-language"
-            className="wui-input border-input bg-surface-inset text-foreground min-h-12 w-full rounded-md border border-solid p-3"
             value={selectedLanguage}
             onChange={(event) => i18n.changeLanguage(event.target.value)}
           >
@@ -102,7 +102,7 @@ export function LanguageRegionSettings() {
                 {label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div>
@@ -112,9 +112,8 @@ export function LanguageRegionSettings() {
           >
             {t("settings.systemNames.label")}
           </label>
-          <select
+          <Select
             id="settings-system-names"
-            className="wui-input border-input bg-surface-inset text-foreground min-h-12 w-full rounded-md border border-solid p-3"
             value={systemNameRegion}
             onChange={(event) =>
               setSystemNameRegion(
@@ -127,7 +126,7 @@ export function LanguageRegionSettings() {
                 {t(labelKey)}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       </Card>
     </PageFrame>

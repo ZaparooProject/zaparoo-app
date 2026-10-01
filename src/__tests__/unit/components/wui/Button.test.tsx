@@ -42,6 +42,47 @@ describe("Button", () => {
       ).toBeInTheDocument();
     });
 
+    it("keeps reader status inside the face without changing its accessible name", () => {
+      render(
+        <Button
+          label="Hold tag to reader"
+          aria-label="Cancel"
+          readerState="waiting"
+          readerStatus="Press again to cancel"
+        />,
+      );
+
+      const button = screen.getByRole("button", { name: "Cancel" });
+      expect(button).toContainElement(
+        screen.getByText("Press again to cancel"),
+      );
+      expect(button).toHaveTextContent("Hold tag to reader");
+    });
+
+    it("should expose only the current caption when reserving space for state changes", () => {
+      const { rerender } = render(
+        <Button
+          label="Write"
+          labelAlternatives={["Write", "Cancel", "Retry"]}
+        />,
+      );
+      const button = screen.getByRole("button", { name: "Write" });
+      expect(screen.getByText("Write")).toBeVisible();
+      expect(screen.getByText("Cancel")).toHaveAttribute("aria-hidden", "true");
+      expect(screen.getByText("Retry")).toHaveAttribute("aria-hidden", "true");
+
+      rerender(
+        <Button
+          label="Cancel"
+          labelAlternatives={["Write", "Cancel", "Retry"]}
+        />,
+      );
+      expect(screen.getByRole("button", { name: "Cancel" })).toBe(button);
+      expect(screen.getByText("Cancel")).toBeVisible();
+      expect(screen.getByText("Write")).toHaveAttribute("aria-hidden", "true");
+      expect(screen.getByText("Retry")).toHaveAttribute("aria-hidden", "true");
+    });
+
     it("should render icon-only button", () => {
       render(
         <Button

@@ -33,6 +33,8 @@ import {
   MediaHistoryEntry,
   MediaHistoryParams,
   MediaHistoryResponse,
+  MediaHistoryTopParams,
+  MediaHistoryTopResponse,
   MediaLookupParams,
   MediaLookupResponse,
   MediaCleanOrphansResponse,
@@ -375,6 +377,39 @@ function isMediaHistoryEntry(value: unknown): boolean {
     hasOptionalType(value, "endedAt", "string") &&
     typeof value.playTime === "number"
   );
+}
+
+function isMediaHistoryTopEntry(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    typeof value.systemId === "string" &&
+    typeof value.systemName === "string" &&
+    typeof value.mediaName === "string" &&
+    typeof value.mediaPath === "string" &&
+    hasOptionalType(value, "mediaId", "number") &&
+    hasOptionalType(value, "relativePath", "string") &&
+    typeof value.lastPlayedAt === "string" &&
+    typeof value.totalPlayTime === "number" &&
+    typeof value.sessionCount === "number"
+  );
+}
+
+function normalizeMediaHistoryTopResponse(
+  result: unknown,
+): MediaHistoryTopResponse {
+  if (!isRecord(result)) {
+    throw new Error("Invalid media history top response: expected an object");
+  }
+  const withEntries =
+    result.entries === null || result.entries === undefined
+      ? { ...result, entries: [] }
+      : result;
+  return requireArrayPropertyResponse<Record<string, unknown>>(
+    withEntries,
+    "entries",
+    "media history top",
+    isMediaHistoryTopEntry,
+  ) as unknown as MediaHistoryTopResponse;
 }
 
 function normalizeMediaHistoryResponse(result: unknown): MediaHistoryResponse {
@@ -1737,6 +1772,29 @@ class CoreApi {
       logMediaApiFailure(
         "Media history API call failed",
         "mediaHistory",
+        error,
+      );
+      throw error;
+    }
+  }
+
+  async mediaHistoryTop(
+    params: MediaHistoryTopParams = {},
+    signal?: AbortSignal,
+  ): Promise<MediaHistoryTopResponse> {
+    try {
+      const result = await this.call(Method.MediaHistoryTop, params, signal);
+      if (isCancelled(result)) {
+        throw new RequestCancelledError(
+          "Media history top request was cancelled",
+        );
+      }
+      return normalizeMediaHistoryTopResponse(result);
+    } catch (error) {
+      if (isRequestCancelledError(error)) throw error;
+      logMediaApiFailure(
+        "Media history top API call failed",
+        "mediaHistoryTop",
         error,
       );
       throw error;

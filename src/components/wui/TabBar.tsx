@@ -8,8 +8,6 @@ import {
 } from "react";
 import { getTabBarPanelId, getTabBarTabId } from "./tabBarIds";
 
-type TabBarRole = "radio" | "tab";
-
 export interface TabBarOption<T extends string> {
   value: T;
   label: ReactNode;
@@ -22,7 +20,7 @@ interface TabBarProps<T extends string> {
   value: T;
   onChange: (next: T) => void;
   disabled?: boolean;
-  role?: TabBarRole;
+  role?: "tab";
   layout?: "grid" | "scroll";
   containerProps?: HTMLAttributes<HTMLDivElement> & {
     ref?: Ref<HTMLDivElement>;
@@ -35,7 +33,7 @@ export function TabBar<T extends string>({
   value,
   onChange,
   disabled = false,
-  role = "radio",
+  role = "tab",
   layout = "grid",
   containerProps,
 }: TabBarProps<T>) {
@@ -83,7 +81,7 @@ export function TabBar<T extends string>({
 
   return (
     <div
-      role={role === "tab" ? "tablist" : "radiogroup"}
+      role="tablist"
       aria-label={label}
       className={classNames(
         "border-border bg-surface-inset gap-1 rounded-lg border border-solid p-0.5 shadow-inner",
@@ -108,16 +106,15 @@ export function TabBar<T extends string>({
         return (
           <button
             key={option.value}
-            id={role === "tab" ? tabId : undefined}
+            id={tabId}
             ref={(el) => {
               buttonRefs.current[index] = el;
             }}
             type="button"
             role={role}
             disabled={disabled}
-            aria-checked={role === "radio" ? active : undefined}
-            aria-selected={role === "tab" ? active : undefined}
-            aria-controls={role === "tab" ? panelId : undefined}
+            aria-selected={active}
+            aria-controls={panelId}
             tabIndex={
               !disabled && (active || (selectedIndex === -1 && index === 0))
                 ? 0
@@ -126,10 +123,10 @@ export function TabBar<T extends string>({
             onClick={() => onChange(option.value)}
             onKeyDown={(event) => onKeyDown(event, index)}
             className={classNames(
-              "group min-h-12 min-w-0 cursor-pointer rounded-md px-0.5 py-1 text-center text-sm leading-snug font-semibold break-words",
+              "group min-h-12 min-w-0 cursor-pointer rounded-md p-1 text-center text-sm leading-snug font-semibold break-words",
               "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",
               layout === "scroll" && "shrink-0 whitespace-nowrap",
-              role === "tab" && "uppercase",
+              "uppercase",
               {
                 "cursor-not-allowed opacity-60": disabled,
               },

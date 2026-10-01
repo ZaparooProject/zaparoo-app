@@ -9,6 +9,8 @@ export function ToggleSwitch(props: {
   setValue: (value: boolean) => void;
   disabled?: boolean;
   onDisabledClick?: () => void;
+  /** Help control rendered outside the checkbox label. */
+  help?: React.ReactNode;
   /** Content rendered after the label, outside the clickable label area */
   suffix?: React.ReactNode;
   /** When true, shows a skeleton placeholder instead of the toggle */
@@ -49,6 +51,7 @@ export function ToggleSwitch(props: {
         >
           {props.label}
         </label>
+        {props.help}
         {props.suffix}
       </span>
       {props.loading ? (

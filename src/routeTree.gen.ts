@@ -22,7 +22,9 @@ import { Route as LibraryDislikedRouteImport } from "./routes/library.disliked";
 import { Route as LibraryFavoritesRouteImport } from "./routes/library.favorites";
 import { Route as LibraryLikedRouteImport } from "./routes/library.liked";
 import { Route as LibraryPlayLaterRouteImport } from "./routes/library.play-later";
+import { Route as LibraryRecentRouteImport } from "./routes/library.recent";
 import { Route as LibrarySearchRouteImport } from "./routes/library.search";
+import { Route as LibraryTopRouteImport } from "./routes/library.top";
 import { Route as SettingsIndexRouteImport } from "./routes/settings.index";
 import { Route as SettingsAboutRouteImport } from "./routes/settings.about";
 import { Route as SettingsAccessibilityRouteImport } from "./routes/settings.accessibility";
@@ -109,9 +111,19 @@ const LibraryPlayLaterRoute = LibraryPlayLaterRouteImport.update({
   path: "/library/play-later",
   getParentRoute: () => rootRouteImport,
 } as any);
+const LibraryRecentRoute = LibraryRecentRouteImport.update({
+  id: "/library/recent",
+  path: "/library/recent",
+  getParentRoute: () => rootRouteImport,
+} as any);
 const LibrarySearchRoute = LibrarySearchRouteImport.update({
   id: "/library/search",
   path: "/library/search",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const LibraryTopRoute = LibraryTopRouteImport.update({
+  id: "/library/top",
+  path: "/library/top",
   getParentRoute: () => rootRouteImport,
 } as any);
 const SettingsIndexRoute = SettingsIndexRouteImport.update({
@@ -227,7 +239,9 @@ export interface FileRoutesByFullPath {
   "/library/favorites": typeof LibraryFavoritesRoute;
   "/library/liked": typeof LibraryLikedRoute;
   "/library/play-later": typeof LibraryPlayLaterRoute;
+  "/library/recent": typeof LibraryRecentRoute;
   "/library/search": typeof LibrarySearchRoute;
+  "/library/top": typeof LibraryTopRoute;
   "/settings/about": typeof SettingsAboutRoute;
   "/settings/accessibility": typeof SettingsAccessibilityRoute;
   "/settings/advanced": typeof SettingsAdvancedRoute;
@@ -263,7 +277,9 @@ export interface FileRoutesByTo {
   "/library/favorites": typeof LibraryFavoritesRoute;
   "/library/liked": typeof LibraryLikedRoute;
   "/library/play-later": typeof LibraryPlayLaterRoute;
+  "/library/recent": typeof LibraryRecentRoute;
   "/library/search": typeof LibrarySearchRoute;
+  "/library/top": typeof LibraryTopRoute;
   "/settings/about": typeof SettingsAboutRoute;
   "/settings/accessibility": typeof SettingsAccessibilityRoute;
   "/settings/advanced": typeof SettingsAdvancedRoute;
@@ -300,7 +316,9 @@ export interface FileRoutesById {
   "/library/favorites": typeof LibraryFavoritesRoute;
   "/library/liked": typeof LibraryLikedRoute;
   "/library/play-later": typeof LibraryPlayLaterRoute;
+  "/library/recent": typeof LibraryRecentRoute;
   "/library/search": typeof LibrarySearchRoute;
+  "/library/top": typeof LibraryTopRoute;
   "/settings/about": typeof SettingsAboutRoute;
   "/settings/accessibility": typeof SettingsAccessibilityRoute;
   "/settings/advanced": typeof SettingsAdvancedRoute;
@@ -338,7 +356,9 @@ export interface FileRouteTypes {
     | "/library/favorites"
     | "/library/liked"
     | "/library/play-later"
+    | "/library/recent"
     | "/library/search"
+    | "/library/top"
     | "/settings/about"
     | "/settings/accessibility"
     | "/settings/advanced"
@@ -374,7 +394,9 @@ export interface FileRouteTypes {
     | "/library/favorites"
     | "/library/liked"
     | "/library/play-later"
+    | "/library/recent"
     | "/library/search"
+    | "/library/top"
     | "/settings/about"
     | "/settings/accessibility"
     | "/settings/advanced"
@@ -410,7 +432,9 @@ export interface FileRouteTypes {
     | "/library/favorites"
     | "/library/liked"
     | "/library/play-later"
+    | "/library/recent"
     | "/library/search"
+    | "/library/top"
     | "/settings/about"
     | "/settings/accessibility"
     | "/settings/advanced"
@@ -447,7 +471,9 @@ export interface RootRouteChildren {
   LibraryFavoritesRoute: typeof LibraryFavoritesRoute;
   LibraryLikedRoute: typeof LibraryLikedRoute;
   LibraryPlayLaterRoute: typeof LibraryPlayLaterRoute;
+  LibraryRecentRoute: typeof LibraryRecentRoute;
   LibrarySearchRoute: typeof LibrarySearchRoute;
+  LibraryTopRoute: typeof LibraryTopRoute;
   SettingsAboutRoute: typeof SettingsAboutRoute;
   SettingsAccessibilityRoute: typeof SettingsAccessibilityRoute;
   SettingsAdvancedRoute: typeof SettingsAdvancedRoute;
@@ -565,11 +591,25 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof LibraryPlayLaterRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    "/library/recent": {
+      id: "/library/recent";
+      path: "/library/recent";
+      fullPath: "/library/recent";
+      preLoaderRoute: typeof LibraryRecentRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     "/library/search": {
       id: "/library/search";
       path: "/library/search";
       fullPath: "/library/search";
       preLoaderRoute: typeof LibrarySearchRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/library/top": {
+      id: "/library/top";
+      path: "/library/top";
+      fullPath: "/library/top";
+      preLoaderRoute: typeof LibraryTopRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     "/settings/": {
@@ -727,7 +767,9 @@ const rootRouteChildren: RootRouteChildren = {
   LibraryFavoritesRoute: LibraryFavoritesRoute,
   LibraryLikedRoute: LibraryLikedRoute,
   LibraryPlayLaterRoute: LibraryPlayLaterRoute,
+  LibraryRecentRoute: LibraryRecentRoute,
   LibrarySearchRoute: LibrarySearchRoute,
+  LibraryTopRoute: LibraryTopRoute,
   SettingsAboutRoute: SettingsAboutRoute,
   SettingsAccessibilityRoute: SettingsAccessibilityRoute,
   SettingsAdvancedRoute: SettingsAdvancedRoute,

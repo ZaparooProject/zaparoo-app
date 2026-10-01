@@ -1,5 +1,6 @@
 import { Bookmark, Heart, ThumbsDown, ThumbsUp } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import classNames from "classnames";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { useStatusStore } from "@/lib/store";
 import type { MediaBrowseEntry, TagInfo } from "@/lib/models";
@@ -87,9 +88,10 @@ export function MediaPreferenceActions(props: {
           variant={props.context === "nowPlaying" ? "ghost" : "text"}
           layout={props.context === "modal" ? "responsive" : "inline"}
           size={props.context === "nowPlaying" ? "lg" : "default"}
-          className={
-            props.context === "modal" ? "w-full whitespace-nowrap" : "shrink-0"
-          }
+          className={classNames(
+            "aria-pressed:text-primary transition-colors duration-150 aria-pressed:bg-transparent",
+            props.context === "modal" ? "w-full whitespace-nowrap" : "shrink-0",
+          )}
           disabled={!connected || !canUpdate || props.ready === false || busy}
           disabledAppearance={busy ? "busy" : "unavailable"}
           onClick={() => toggle(id)}

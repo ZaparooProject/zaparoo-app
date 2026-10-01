@@ -37,7 +37,6 @@ describe("DeckItemDetailsModal launching", () => {
         canRemove={false}
         onRemove={vi.fn()}
         writeAvailable={false}
-        onWrite={vi.fn()}
       />,
     );
 

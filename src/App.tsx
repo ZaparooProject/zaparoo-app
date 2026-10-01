@@ -7,6 +7,8 @@ import { usePrevious } from "@uidotdev/usehooks";
 import { useTranslation } from "react-i18next";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { NfcIcon } from "lucide-react";
+import { getTrialAccessContext } from "@/lib/warpSubscription";
+import { useTrialAccessExpiry } from "@/hooks/useTrialAccessExpiry";
 import { useTheme } from "@/components/theme-provider";
 import { ErrorComponent } from "@/components/ErrorComponent.tsx";
 import { AppBadgeManager } from "@/components/AppBadgeManager";
@@ -268,6 +270,7 @@ declare module "@tanstack/react-router" {
 }
 
 export default function App() {
+  useTrialAccessExpiry();
   useDeepLinks();
 
   // Wait for preferences to hydrate before rendering to prevent layout shifts
@@ -444,11 +447,13 @@ export default function App() {
         useStatusStore.getState().loggedInUser?.uid === appUserID;
 
       try {
-        const { is_premium } = await getSubscriptionStatusWithRetry(
+        const subscription = await getSubscriptionStatusWithRetry(
           controller.signal,
         );
         if (!isCurrentCheck()) return;
-        setOnlinePremiumAccess(is_premium);
+        const trial = getTrialAccessContext(subscription, appUserID);
+        if (trial) setOnlinePremiumAccess(subscription.is_premium, trial);
+        else setOnlinePremiumAccess(subscription.is_premium);
       } catch (e) {
         if (!isCurrentCheck()) return;
         setOnlinePremiumAccess(false);

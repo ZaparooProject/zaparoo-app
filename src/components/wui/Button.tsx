@@ -9,6 +9,8 @@ export type ButtonReaderState = "waiting" | "attention" | "error";
 export interface ButtonProps {
   onClick?: () => void;
   label?: string;
+  /** Reserve caption width for other states without exposing hidden labels. */
+  labelAlternatives?: string[];
   variant?: "fill" | "secondary" | "outline" | "ghost" | "text";
   /** Square icon controls align with fields; standalone controls stay round. */
   shape?: "round" | "square";
@@ -25,6 +27,8 @@ export interface ButtonProps {
   disabledAppearance?: ButtonDisabledAppearance;
   /** Illuminated latched state for an active physical reader interaction. */
   readerState?: ButtonReaderState;
+  /** Visual reader status; the reader control owns accessible announcements. */
+  readerStatus?: string;
   className?: string;
   /** Accessible label for screen readers (required for icon-only buttons) */
   "aria-label"?: string;
@@ -52,6 +56,37 @@ export const Button = memo(
       hasOnClick: props.onClick !== undefined,
     });
 
+    const content = (
+      <>
+        {props.icon && (
+          <span
+            className="wui-button-icon flex shrink-0 items-center"
+            aria-hidden="true"
+          >
+            {props.icon}
+          </span>
+        )}
+        {props.labelAlternatives ? (
+          <span className="inline-grid">
+            <span className="col-start-1 row-start-1">{props.label}</span>
+            {props.labelAlternatives
+              .filter((label) => label !== props.label)
+              .map((label) => (
+                <span
+                  key={label}
+                  aria-hidden="true"
+                  className="invisible col-start-1 row-start-1"
+                >
+                  {label}
+                </span>
+              ))}
+          </span>
+        ) : (
+          props.label
+        )}
+      </>
+    );
+
     return (
       <button
         ref={ref}
@@ -76,9 +111,10 @@ export const Button = memo(
           "wui-button flex min-h-12 min-w-12 shrink-0 touch-manipulation items-center justify-center border border-solid border-transparent text-sm font-bold tracking-wider uppercase",
           "disabled:cursor-not-allowed",
           {
-            "flex-row gap-2": layout === "inline",
-            "flex-col gap-1": layout === "stacked",
-            "flex-col gap-1 sm:flex-row sm:gap-2": layout === "responsive",
+            "flex-row gap-2": !props.readerStatus && layout === "inline",
+            "flex-col gap-1": !!props.readerStatus || layout === "stacked",
+            "flex-col gap-1 sm:flex-row sm:gap-2":
+              !props.readerStatus && layout === "responsive",
             "cursor-pointer": !props.disabled && !props.decorative,
             "px-4 py-2": props.label && size === "sm" && layout === "inline",
             "px-5 py-3":
@@ -99,15 +135,31 @@ export const Button = memo(
         }}
         {...handlers}
       >
-        {props.icon && (
-          <span
-            className="wui-button-icon flex shrink-0 items-center"
-            aria-hidden="true"
-          >
-            {props.icon}
-          </span>
+        {props.readerStatus ? (
+          <>
+            <span
+              className={classNames(
+                "flex max-w-full min-w-0 items-center justify-center",
+                {
+                  "flex-row gap-2": layout === "inline",
+                  "flex-col gap-1": layout === "stacked",
+                  "flex-col gap-1 sm:flex-row sm:gap-2":
+                    layout === "responsive",
+                },
+              )}
+            >
+              {content}
+            </span>
+            <span
+              className="max-w-full text-xs leading-5 font-normal tracking-normal normal-case"
+              aria-hidden="true"
+            >
+              {props.readerStatus}
+            </span>
+          </>
+        ) : (
+          content
         )}
-        {props.label}
       </button>
     );
   }),

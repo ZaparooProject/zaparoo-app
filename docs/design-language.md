@@ -13,7 +13,7 @@ Do not add decorative icons, new card styles, helper text, descriptions, badges,
 Use these before creating or changing UI:
 
 - App shell: `src/components/PageFrame.tsx`, `src/components/ResponsiveContainer.tsx`, `src/components/BottomNav.tsx`, `BackToTop.tsx`, `ConnectionStatusBar.tsx`
-- WUI primitives: `src/components/wui/Button.tsx`, `ModalActionBar.tsx`, `ModalActionRail.tsx`, `HeaderButton.tsx`, `CircleButton.tsx`, `StatusPill.tsx`, `TabBar.tsx`, `Card.tsx`, `ToggleSwitch.tsx`, `TextInput.tsx`, `PinInput.tsx`, `Badge.tsx`, `EmptyState.tsx`, `Segmented.tsx`, `ToggleChip.tsx`, `SettingHelp.tsx`; `src/components/HeaderOverflowMenu.tsx`
+- WUI primitives: `src/components/wui/Button.tsx`, `ModalActionBar.tsx`, `ModalActionRail.tsx`, `HeaderButton.tsx`, `CircleButton.tsx`, `StatusPill.tsx`, `TabBar.tsx`, `Card.tsx`, `ToggleSwitch.tsx`, `TextInput.tsx`, `PinInput.tsx`, `Badge.tsx`, `EmptyState.tsx`, `RadioGroup.tsx`, `ToggleChip.tsx`, `SettingHelp.tsx`; `src/components/HeaderOverflowMenu.tsx`
 - Modals: `src/components/SlideModal.tsx`, `ConfirmClearModal.tsx`, `PairingModal.tsx`, `RequirementsModal.tsx`, `ProPurchase.tsx`, `home/StopConfirmModal.tsx`, `home/StagedTokenModal.tsx`
 - Settings screens: `src/routes/settings.index.tsx`, `settings.readers.tsx`, `settings.advanced.tsx`, `settings.accessibility.tsx`, `settings.media.tsx`, `settings.play-controls.tsx`, `settings.about.tsx`, `settings.help.tsx`, `settings.online.tsx`, `src/routes/-pages/Devices.tsx`, `DeviceDetail.tsx`, `Logs.tsx`
 - Create/search flows: `src/routes/create.index.tsx`, `create.custom.tsx`, `create.nfc.tsx`, `create.mappings.tsx`, `src/routes/-pages/Search.tsx`, `MappingEditor.tsx`, `ZapScriptInput.tsx`
@@ -114,7 +114,7 @@ Subpages use:
 
 - `HeaderButton` with `BackIcon size="24"` on left
 - left-aligned `<h1>` title, styled consistently by `PageHeader`
-- optional right `HeaderButton` or small group of `HeaderButton`s for page actions
+- optional right `HeaderButton` or small group of `HeaderButton`s for page actions; grouped header controls have no wrapper gap, leaving 8px between their inset visible faces
 - header controls move face and content together when pressed; modal triggers expose `aria-expanded` and retain the active inset face while their modal is open
 - `useSmartSwipe({ onSwipeRight: goBack })` when nearby routes use swipe-back
 
@@ -219,7 +219,7 @@ Do not use `HeaderButton` inside page body.
 
 ### TabBar
 
-`TabBar` is the inset tray of options behind `Segmented` and the tabbed screens (NFC Read/Tools, History Scans/Played). Pass `role="tab"` with panel ids from `tabBarIds` for real tabs, and the default `radio` role for a choice among options.
+`TabBar` is the inset tray for switching content panels: NFC Read/Tools, History Scans/Played, Library Systems/Collections, system categories, and Remote Keyboard Remote/Keyboard. It always uses tab semantics with panel ids from `tabBarIds`. Never use its tab faces for a setting or form value; use `RadioGroup` instead.
 
 ### PinInput
 
@@ -259,7 +259,7 @@ Pattern:
 
 - row: label left, switch right
 - grouped rows live on a raised settings panel; no individual card wrapper
-- 48px hit region around a 44×24 track and a proportionate physical thumb; geometry scales with text zoom
+- 48px hit region around a 44×24 track and a 20px physical thumb; the raised cap lifts above the track while its lower 3D edge stays inside, with equal end clearance in either state. A semantic thumb border supplies contrast in light mode only; geometry scales with text zoom
 - label can include `SettingHelp`
 - `loading` shows skeleton switch
 - disabled state belongs on switch, not custom opacity wrapper
@@ -316,19 +316,17 @@ Patterns:
 
 Real use: readers with no detected readers, mappings empty/search empty, search initial/no results, selectors empty/error.
 
-### Segmented/radio controls
+### Radio choices and tabs
 
-Use existing segmented/radio patterns when choosing one option among a small set.
+Use `RadioGroup` for one setting/form value among mutually exclusive choices. Its circular recessed indicators and selected dots must not look like navigation tabs. No shared tray, raised option faces, or blue CTA buttons.
 
-Real patterns:
+- Default to stacked 48px rows. Use this for three or more options, long labels, and choices that reveal related form fields: appearance, text size, shake mode, profile role/PIN/limits, mapping type/match, and deck item type.
+- `layout="inline"` is only for two short choices without conditional form fields, currently reader Tap/Hold and Warp Annual/Monthly. Options share a line only while their content fits; translated labels and text zoom can push them onto separate rows. Do not squeeze, truncate, or horizontally scroll radio choices.
+- Long labels wrap, with the indicator aligned to the first text line. Existing group help remains associated with the group.
+- Arrow/Home/End selection and roving focus remain; an unselected group still has a keyboard entry point. Disabled groups cannot activate or receive keyboard focus.
+- Existing Library sort lists and write-target value rows are specialized radio patterns, not tab bars; keep their established layouts.
 
-- Appearance, text size, reader scan mode, shake mode, and editor choices use `TabBar` (through `Segmented` where a label is needed).
-- Compact inset tray with 48px interactive targets and a 40px visible option face; semibold labels (uppercase only for navigation tabs). Selected option rises from the tray with neutral text, edge and highlight. Not a row of blue CTA buttons.
-- Grid choices reflow as text grows instead of squeezing labels; scrolling layouts retain single-line options.
-- Arrow/Home/End selection and roving focus remain; an unselected group still has a keyboard entry point.
-- `TabBar` with `role="tab"` provides tab semantics and panel wiring for tabbed screens; there are no Radix Tabs in the app.
-
-Do not invent a new segmented style. If a generic pattern fits, prefer `Segmented`.
+Reserve `TabBar` for content panels with tab/panel wiring. Its compact inset tray has 48px interactive targets and 40px visible faces, with equal 4px padding around each face. Selected tabs rise from the tray, with neutral text, edge and highlight. Scrolling tab lists retain single-line options. There are no Radix Tabs in the app.
 
 ### ToggleChip
 
@@ -348,7 +346,7 @@ Use `SettingHelp` for settings explanations already expressed as help icons.
 
 Real behavior:
 
-- inline circular help button with `HelpCircleIcon size={18}`
+- inline circular help button with `HelpCircleIcon size={18}`; wrapper and button use flex centering so inline baseline space cannot lift the icon above neighboring labels or Pro badges
 - hint color `text-foreground-hint`, hover/focus muted
 - opens a content-sized `SlideModal`
 - supports `**bold**` and paragraph breaks in description text
@@ -401,16 +399,12 @@ If help is needed:
 
 ```tsx
 <ToggleSwitch
-  label={
-    <span className="flex items-center">
-      {t("...")}
-      <SettingHelp title={t("...")} description={t("...")} />
-    </span>
-  }
+  label={t("...")}
+  help={<SettingHelp title={t("...")} description={t("...")} />}
 />
 ```
 
-Do not add a visible helper paragraph below one toggle if sibling toggles use `SettingHelp`.
+Keep help buttons and their modals outside the checkbox label so opening or closing help cannot change the setting. Do not add a visible helper paragraph below one toggle if sibling toggles use `SettingHelp`.
 
 ### Settings fields
 
@@ -506,7 +500,7 @@ Persistent footer behavior:
 - on narrow screens, the rail spans the footer above a full-width primary action; rail items use an icon above a short caption
 - from the `sm` breakpoint, the rail sits left of the primary action and its items switch to inline icon-and-caption layout
 - rail items share available width while they fit, never wrap onto another row, and scroll horizontally once their minimum widths exceed the available space; adding actions must not shrink the primary action or grow the footer vertically
-- use short, stable visual captions such as `Favorite`, `Write`, `Copy`, and `Preview`; communicate toggle or loading state through icon treatment, `aria-pressed`, disabled state, and a state-specific accessible name rather than changing caption width
+- use short, stable visual captions such as `Favorite`, `Write`, `Copy`, and `Preview`; communicate toggle or loading state through icon treatment, `aria-pressed`, disabled state, and a state-specific accessible name rather than changing caption width. The contextual reader action explicitly changes `Write` to `Cancel` while waiting; `Button.labelAlternatives` reserves space for all translated captions so its footprint stays stable
 - rail icons never shrink, captions remain on one line, action order stays stable, every item remains directly reachable, and secondary actions precede the primary action in DOM and focus order
 - reserve icon-only buttons for established constrained controls and always provide an accessible `aria-label`
 - modal action targets stay at least 48px high; keep actions mounted and disable them during temporary unavailable, empty, disconnected, or loading states so the rail does not reflow
@@ -520,17 +514,26 @@ Do not implement one-off bottom-sheet shells.
 
 ### Reader activity
 
-Physical NFC waits stay in context instead of opening an app-owned modal. `ReaderActivityControl` is the shared control for every NFC scan, read, and write action, including Zap’s Tap a tag action; do not reproduce its latched state, pulse, or reserved status slot with a raw `Button`:
+Physical NFC waits stay in context instead of opening an app-owned modal. `ReaderActivityControl` is the shared full-size control for NFC scan, read, and write actions, including Zap’s Tap a tag action; compact action rails use `ReaderActivityAction` below. Do not reproduce their latched state or pulse with a one-off `Button`:
 
 - waiting latches the physical button down and adds a broad, slow blue halo outside its edge; do not draw an illuminated line inside the button face
 - a required re-tap uses an external amber double pulse
-- verification failure swaps to an explicit Retry/Cancel pair: Retry stays latched (pressed face) inside a static red halo, and Cancel is an outline button; nothing pulses
-- the component always reserves one compact status line below its action, including while idle, so state text never shifts surrounding layout
+- verification failure swaps to an explicit Retry/Cancel pair: Retry stays latched (pressed face) inside a static red halo with the failure text inside its face, and Cancel is an outline button; nothing pulses. Actions share equal-width columns while they fit and stack at narrow or enlarged-text widths rather than squeezing their labels
+- match ordinary full-width buttons: fill the mobile column, cap at 20rem only from the desktop breakpoint, and use normal stack gaps; the halo paints outside the face without adding layout padding
+- status sits inside the button beneath its main label, in smaller sentence-case text that inherits the face's contrasting text color. Compact reader buttons have a 72px minimum height for both idle and active states; Zap keeps its larger face. Content can grow for translated labels and text zoom rather than clipping. Do not reserve an empty status row below the button
 - pressing the latched waiting control again cancels the session; visible status copy says “Press again to cancel” so it cannot be mistaken for another NFC-card tap
 - labels describe the physical action; do not imply finite progress
 - state changes receive one live announcement without moving focus
-- the waiting halo is a solid ring whose `box-shadow` spread animates outward; the re-tap glow animates opacity. The halo colour derives from `--interaction`
+- the waiting halo is a solid ring whose `box-shadow` spread animates outward up to 8px, within ordinary control gutters; the re-tap glow animates opacity. The halo colour derives from `--interaction`
 - reduced motion keeps a static illuminated state
+
+Game-detail and deck action rails use `ReaderActivityAction`, not the full-size control:
+
+- keep the selected game and original Write control mounted; its icon becomes NFC, face latches down, and visible caption changes `Write` → `Cancel` → `Write`. Pressing Cancel ends the owned write without closing details
+- reserve caption width for Write, Cancel, and Retry, including translations; ordinary waiting must not resize the rail, footer, or sheet
+- do not append “Hold tag to reader” or “Press again to cancel” paragraphs. Announce waiting once; the visible Cancel caption already explains the action. Only re-tap and verification recovery need additional instructions
+- reader rails include halo gutters in the intrinsic scrolling content width, not padding around overflowing grid tracks. Keep clearance at both scroll ends and below the depressed face; preserve normal scrolling boundaries and focus targets
+- contextual writes never enqueue a detached global write; cancel owned work when its details close or selection/device changes
 
 Queue or deep-link writes without a visible source control use the compact reader activity strip above the measured footer clearance (`--app-footer-overlay-clearance`). Native iOS NFC system UI may still appear because it is OS-owned. Do not add spinner, orbit, fake percentage, or app-owned full-screen reader overlays.
 
@@ -606,7 +609,7 @@ Patterns:
   hidden when empty. Tapping a cover opens the shared media-details sheet so
   launch, favourite, and write actions stay consistent with Library and search.
 - The reader strip uses the shared `ReaderStatusRow`, the same row as reader
-  settings.
+  settings. Both lists sort by displayed name (natural numeric order), with reader identity breaking ties; connection changes never reorder rows. Names fill remaining width so state and optional detail sit on the right.
 - The History sheet uses the neutral title “History” with semantic Scans and
   Played tabs. Both tabs use `HistoryListRow`: primary value or media title,
   muted timestamp metadata, optional low-priority details, and a right-aligned
@@ -677,7 +680,7 @@ Search/Create media details prioritize the value being written:
 Mapping editor uses a plain `flex flex-col gap-4` form stack:
 
 - `TextInput` for label/pattern
-- `Segmented` for type/match
+- stacked `RadioGroup` for type/match
 - `ZapScriptInput` for override text
 - `ToggleSwitch` for enabled
 - save button primary, delete button `intent="destructive"`
@@ -747,10 +750,14 @@ Do not copy About credits styling into normal settings pages.
 
 Online settings has auth/account-specific layout:
 
-- logged-in state preserves the existing name/email and linked-device/account sections
+- signed-in order is Connected device → Online features → Warp → Account; name/email live in Account
+- mobile Online content starts 16px below the header and ends 16px above the measured footer overlay, matching horizontal gutters; do not add page-wrapper vertical padding. Feature rows rely on their 48px hit heights rather than extra row gaps
+- linked state is plain “Linked to Zaparoo Online” text, never a disabled action or a claim that the device belongs to the signed-in account
+- Online features use a tri-state master checkbox (none, some, all) above individual switches; pressing the mixed state enables all available features. Cloud backups only join the master selection when Warp is confirmed
+- remote connection state sits beneath Remote control; backup result sits beneath backup controls. Only cloud backups carry a Warp requirement; do not label ordinary features “Free”
 - account actions are full-width outline buttons in `gap-3`
 - delete/scheduled-deletion states use error border/text/background treatments
-- logged-out auth form is one raised Card containing recessed `TextInput`s, primary sign-in action, and quieter alternatives
+- signed-out view starts with primary Log in and secondary Sign up; authentication opens a `SlideModal` containing recessed `TextInput`s and the primary submit action
 
 Do not use Online account avatar/card/error panel patterns for unrelated settings.
 
@@ -760,7 +767,7 @@ Do not use Online account avatar/card/error panel patterns for unrelated setting
 
 Logs screen is a dense utility page, not a card/list page:
 
-- header can have multiple `HeaderButton`s in a `flex gap-2` right slot
+- header can have multiple `HeaderButton`s in a `flex` right slot with no wrapper gap
 - control area uses `flex flex-col gap-3`
 - search uses `TextInput` with empty label
 - level filters use compact `ToggleChip`s in a wrapping row `gap-1.5`

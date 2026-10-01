@@ -11,7 +11,7 @@ import { useTextZoom } from "@/hooks/useTextZoom";
 import { useHaptics } from "@/hooks/useHaptics";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 import { useTheme } from "@/components/theme-provider";
-import { Segmented } from "@/components/wui/Segmented";
+import { RadioGroup } from "@/components/wui/RadioGroup";
 import { Card } from "@/components/wui/Card";
 
 export const Route = createFileRoute("/settings/accessibility")({
@@ -77,7 +77,7 @@ export function AccessibilitySettings() {
       }
     >
       <Card className="flex flex-col gap-5">
-        <Segmented
+        <RadioGroup
           label={t("settings.accessibility.appearance")}
           value={theme}
           options={(["system", "light", "dark"] as const).map((value) => ({
@@ -93,7 +93,7 @@ export function AccessibilitySettings() {
         />
         {/* Text Size - native only */}
         {appUi.enabled && (textZoomAvailable || appUi.preview) && (
-          <Segmented
+          <RadioGroup
             label={t("settings.accessibility.textSize")}
             value={currentPreset.key}
             options={TEXT_ZOOM_PRESETS.map((preset) => ({
@@ -109,20 +109,22 @@ export function AccessibilitySettings() {
           />
         )}
 
-        <ToggleSwitch
-          label={t("settings.accessibility.accessibleLists")}
-          value={accessibleLists}
-          setValue={setAccessibleLists}
-        />
-
-        {/* Haptic Feedback - native only */}
-        {appUi.enabled && (
+        <div className="flex flex-col">
           <ToggleSwitch
-            label={t("settings.accessibility.haptics")}
-            value={hapticsEnabled}
-            setValue={setHapticsEnabled}
+            label={t("settings.accessibility.accessibleLists")}
+            value={accessibleLists}
+            setValue={setAccessibleLists}
           />
-        )}
+
+          {/* Haptic Feedback - native only */}
+          {appUi.enabled && (
+            <ToggleSwitch
+              label={t("settings.accessibility.haptics")}
+              value={hapticsEnabled}
+              setValue={setHapticsEnabled}
+            />
+          )}
+        </div>
       </Card>
     </PageFrame>
   );

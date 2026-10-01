@@ -33,6 +33,7 @@ import {
   type AppPreviewNfcResult,
 } from "@/lib/appPreviewStore";
 import { useAppUi } from "@/hooks/useAppUi";
+import { Select } from "@/components/wui/Select";
 
 export const Route = createFileRoute("/settings/advanced")({
   component: AdvancedSettings,
@@ -122,14 +123,12 @@ export function AdvancedSettings() {
     >
       <Card className="flex flex-col gap-4">
         <ToggleSwitch
-          label={
-            <span className="flex items-center">
-              {t("settings.advanced.errorReporting")}
-              <SettingHelp
-                title={t("settings.advanced.errorReporting")}
-                description={t("settings.advanced.errorReportingHelp")}
-              />
-            </span>
+          label={t("settings.advanced.errorReporting")}
+          help={
+            <SettingHelp
+              title={t("settings.advanced.errorReporting")}
+              description={t("settings.advanced.errorReportingHelp")}
+            />
           }
           value={data?.errorReporting ?? false}
           setValue={handleErrorReportingToggle}
@@ -138,14 +137,12 @@ export function AdvancedSettings() {
         />
 
         <ToggleSwitch
-          label={
-            <span className="flex items-center">
-              {t("settings.advanced.debugLogging")}
-              <SettingHelp
-                title={t("settings.advanced.debugLogging")}
-                description={t("settings.advanced.debugLoggingHelp")}
-              />
-            </span>
+          label={t("settings.advanced.debugLogging")}
+          help={
+            <SettingHelp
+              title={t("settings.advanced.debugLogging")}
+              description={t("settings.advanced.debugLoggingHelp")}
+            />
           }
           value={data?.debugLogging ?? false}
           setValue={(v) => update.mutate({ debugLogging: v })}
@@ -154,14 +151,12 @@ export function AdvancedSettings() {
         />
 
         <ToggleSwitch
-          label={
-            <span className="flex items-center">
-              {t("settings.advanced.showFilenames")}
-              <SettingHelp
-                title={t("settings.advanced.showFilenames")}
-                description={t("settings.advanced.showFilenamesHelp")}
-              />
-            </span>
+          label={t("settings.advanced.showFilenames")}
+          help={
+            <SettingHelp
+              title={t("settings.advanced.showFilenames")}
+              description={t("settings.advanced.showFilenamesHelp")}
+            />
           }
           value={showFilenames}
           setValue={setShowFilenames}
@@ -170,14 +165,12 @@ export function AdvancedSettings() {
         {Capacitor.getPlatform() === "ios" &&
           isNativePluginAvailable("Badge") && (
             <ToggleSwitch
-              label={
-                <span className="flex items-center">
-                  {t("settings.advanced.appIconBadges")}
-                  <SettingHelp
-                    title={t("settings.advanced.appIconBadges")}
-                    description={t("settings.advanced.appIconBadgesHelp")}
-                  />
-                </span>
+              label={t("settings.advanced.appIconBadges")}
+              help={
+                <SettingHelp
+                  title={t("settings.advanced.appIconBadges")}
+                  description={t("settings.advanced.appIconBadgesHelp")}
+                />
               }
               value={appBadgeEnabled}
               setValue={setAppBadgeEnabled}
@@ -187,14 +180,12 @@ export function AdvancedSettings() {
         {isAppPreviewAvailable() && (
           <>
             <ToggleSwitch
-              label={
-                <span className="flex items-center">
-                  {t("settings.advanced.appPreview")}
-                  <SettingHelp
-                    title={t("settings.advanced.appPreview")}
-                    description={t("settings.advanced.appPreviewHelp")}
-                  />
-                </span>
+              label={t("settings.advanced.appPreview")}
+              help={
+                <SettingHelp
+                  title={t("settings.advanced.appPreview")}
+                  description={t("settings.advanced.appPreviewHelp")}
+                />
               }
               value={appPreviewEnabled}
               setValue={setAppPreviewEnabled}
@@ -208,9 +199,8 @@ export function AdvancedSettings() {
                 >
                   {t("settings.advanced.appPreviewNfcResult")}
                 </label>
-                <select
+                <Select
                   id="app-preview-nfc-result"
-                  className="wui-input border-input bg-surface-inset text-foreground min-h-12 rounded-md border border-solid p-3"
                   value={appPreviewNfcResult}
                   onChange={(event) =>
                     setAppPreviewNfcResult(
@@ -233,7 +223,7 @@ export function AdvancedSettings() {
                   <option value="error">
                     {t("settings.advanced.appPreviewNfcError")}
                   </option>
-                </select>
+                </Select>
               </div>
             )}
           </>
@@ -247,9 +237,8 @@ export function AdvancedSettings() {
             >
               {t("settings.advanced.purchasePreview")}
             </label>
-            <select
+            <Select
               id="purchase-preview-state"
-              className="wui-input border-input bg-surface-inset text-foreground min-h-12 rounded-md border border-solid p-3"
               value={purchasePreviewState}
               onChange={(event) =>
                 setPurchasePreviewState(
@@ -278,7 +267,7 @@ export function AdvancedSettings() {
               <option value="error">
                 {t("settings.advanced.purchasePreviewError")}
               </option>
-            </select>
+            </Select>
           </div>
         )}
 

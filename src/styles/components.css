@@ -164,36 +164,39 @@
   .wui-reader-button-shell {
     position: relative;
     width: 100%;
-    max-width: 20rem;
-    margin-inline: auto;
     isolation: isolate;
   }
-  .wui-reader-button-shell::before {
+  /* Follow the pressed face, independent of the wrapper's collapsed margins. */
+  .wui-reader-button-shell > .wui-button::before,
+  .wui-reader-action::before {
     position: absolute;
     z-index: -1;
-    inset: 5px 1px 1px;
+    inset: 0;
     border-radius: 3px;
     box-shadow: none;
     content: "";
     pointer-events: none;
     opacity: 0;
   }
-  .wui-reader-button-shell[data-reader-state="waiting"]::before {
+  .wui-reader-button-shell > .wui-button[data-reader-state="waiting"]::before,
+  .wui-reader-action[data-reader-state="waiting"]::before {
     box-shadow: 0 0 0 3px
       color-mix(in srgb, var(--interaction) 72%, transparent);
     opacity: 1;
     animation: reader-button-pulse 1.8s ease-out infinite;
   }
-  .wui-reader-button-shell[data-reader-state="attention"]::before {
+  .wui-reader-button-shell > .wui-button[data-reader-state="attention"]::before,
+  .wui-reader-action[data-reader-state="attention"]::before {
     box-shadow:
-      0 0 8px 3px rgb(255 217 128 / 90%),
-      0 0 19px 7px rgb(245 180 24 / 55%);
+      0 0 6px 2px rgb(255 217 128 / 90%),
+      0 0 10px 3px rgb(245 180 24 / 55%);
     animation: reader-button-attention 1.65s ease-out infinite;
   }
-  .wui-reader-button-shell[data-reader-state="error"]::before {
+  .wui-reader-button-shell > .wui-button[data-reader-state="error"]::before,
+  .wui-reader-action[data-reader-state="error"]::before {
     box-shadow:
-      0 0 7px 3px rgb(218 56 56 / 75%),
-      0 0 16px 6px rgb(198 40 40 / 38%);
+      0 0 6px 2px rgb(218 56 56 / 75%),
+      0 0 10px 3px rgb(198 40 40 / 38%);
     opacity: 0.82;
   }
   .wui-reader-button-shell > .wui-button {
@@ -209,13 +212,34 @@
       0 2px 4px var(--material-shadow),
       inset 0 1px 0 rgb(255 255 255 / 10%);
   }
+  .wui-reader-action {
+    position: relative;
+    isolation: isolate;
+    z-index: 0;
+  }
+  .wui-button.wui-reader-action[data-reader-state]:not(:disabled) {
+    transform: translateY(2px);
+    background: var(--surface-inset);
+    box-shadow: inset 0 2px 4px var(--material-shadow);
+    color: var(--interaction);
+  }
+  .wui-button.wui-reader-action[data-reader-state="attention"]:not(:disabled) {
+    color: var(--status-yellow);
+  }
+  .wui-button.wui-reader-action[data-reader-state="error"]:not(:disabled) {
+    color: var(--status-red);
+  }
   @keyframes reader-button-pulse {
     0% {
       box-shadow: 0 0 0 0
-        color-mix(in srgb, var(--interaction) 78%, transparent);
+        color-mix(in srgb, var(--interaction) 90%, transparent);
+    }
+    45% {
+      box-shadow: 0 0 0 5px
+        color-mix(in srgb, var(--interaction) 60%, transparent);
     }
     100% {
-      box-shadow: 0 0 0 14px
+      box-shadow: 0 0 0 8px
         color-mix(in srgb, var(--interaction) 0%, transparent);
     }
   }
@@ -314,7 +338,9 @@
      than any single action needs, so cap and center instead of stretching. */
   @media (min-width: 48rem) {
     .wui-button.w-full,
-    .site-button.w-full {
+    .site-button.w-full,
+    .wui-reader-button-shell,
+    .wui-reader-actions {
       max-width: 20rem;
       margin-inline: auto;
     }
@@ -516,12 +542,19 @@
   .peer:checked ~ .wui-toggle-track {
     background: var(--interaction);
   }
+  .wui-radio-indicator {
+    background: var(--surface-inset);
+    box-shadow:
+      inset 0 1px 3px var(--material-shadow),
+      0 1px 0 var(--material-highlight);
+  }
   .wui-toggle-thumb {
     position: absolute;
     width: 1.25rem;
     height: 1.25rem;
     top: 0.6875rem;
-    left: 0.1875rem;
+    left: 0.25rem;
+    border: 1px solid transparent;
     border-radius: 50%;
     background: linear-gradient(180deg, #ffffff 0%, #f0f0f0 50%, #d8d8d8 100%);
     box-shadow:
@@ -529,6 +562,9 @@
       0 3px 5px var(--material-shadow),
       inset 0 1px 0 rgb(255 255 255 / 80%);
     transition: transform 100ms;
+  }
+  :root:not(.dark) .wui-toggle-thumb {
+    border-color: var(--edge-default);
   }
   .peer:checked ~ .wui-toggle-thumb {
     transform: translateX(1.25rem);
@@ -538,8 +574,10 @@
   }
   .page-header-shell {
     padding-top: var(--page-header-safe-top, 0px);
-    padding-right: calc(4px + var(--page-header-safe-right, 0px));
-    padding-left: calc(4px + var(--page-header-safe-left, 0px));
+    /* Header buttons draw their face 4px inside a 48px hit box, so 12px here
+       puts their visible edge, and the title, on the 16px content margin. */
+    padding-right: calc(12px + var(--page-header-safe-right, 0px));
+    padding-left: calc(12px + var(--page-header-safe-left, 0px));
     background: var(--surface-raised);
     border-bottom: 1px solid var(--edge-default);
     box-shadow: inset 0 1px 0 var(--material-highlight);
@@ -640,6 +678,12 @@
   }
   .page-frame-scroll-with-header {
     padding-top: calc(var(--page-header-overlay-height, 57px) + 1.25rem);
+  }
+  @media (max-width: 767px) {
+    .online-settings-page > .page-frame-scroll-with-header {
+      padding-top: calc(var(--page-header-overlay-height, 57px) + 1rem);
+      padding-bottom: calc(var(--app-footer-overlay-height, 64px) + 1rem);
+    }
   }
   .bottom-nav-surface {
     height: 100%;
@@ -772,7 +816,8 @@
     .zaparoo-tour-step .shepherd-button {
       transition: none;
     }
-    .wui-reader-button-shell[data-reader-state]::before {
+    .wui-reader-button-shell > .wui-button[data-reader-state]::before,
+    .wui-reader-action[data-reader-state]::before {
       animation: none;
       opacity: 0.72;
     }

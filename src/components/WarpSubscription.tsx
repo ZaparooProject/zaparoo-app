@@ -1,9 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
+import {
+  canSubscribeToWarp,
+  getPaidWarpSubscription,
+  getWarpTrialView,
+  isPaidWarpActive,
+} from "@/lib/warpSubscription";
 import { Button } from "@/components/wui/Button";
 import { Card } from "@/components/wui/Card";
-import { Segmented } from "@/components/wui/Segmented";
+import { RadioGroup } from "@/components/wui/RadioGroup";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SlideModal } from "@/components/SlideModal";
@@ -54,6 +60,7 @@ interface WarpPurchaseModalProps {
   onPurchase: () => void;
   purchaseEnabled: boolean;
   lifetimeProOwned: boolean;
+  trialActive?: boolean;
 }
 
 function WarpPurchaseModal({
@@ -66,6 +73,7 @@ function WarpPurchaseModal({
   onPurchase,
   purchaseEnabled,
   lifetimeProOwned,
+  trialActive = false,
 }: WarpPurchaseModalProps) {
   const { t } = useTranslation();
 
@@ -99,6 +107,11 @@ function WarpPurchaseModal({
         <p className="text-muted-foreground text-sm">
           {t("online.warp.purchaseDescription")}
         </p>
+        {trialActive && (
+          <p className="text-muted-foreground text-sm">
+            {t("online.warp.trialImmediateBilling")}
+          </p>
+        )}
 
         <ul className="text-muted-foreground list-inside list-disc space-y-1 text-sm">
           <li>{t("online.warp.benefitBackup")}</li>
@@ -110,8 +123,9 @@ function WarpPurchaseModal({
           <li>{t("online.warp.benefitDevelopment")}</li>
         </ul>
 
-        <Segmented
+        <RadioGroup
           label={t("online.warp.choosePlan")}
+          layout="inline"
           options={[
             { value: "annual", label: t("online.warp.annual") },
             { value: "monthly", label: t("online.warp.monthly") },
@@ -309,7 +323,13 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
   } = useWarpSubscription(appUserID);
 
   const isPremium = subscription?.is_premium === true;
-  const revenueCatSubscription = subscription?.revenuecat;
+  const revenueCatSubscription = getPaidWarpSubscription(subscription);
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const trial = getWarpTrialView(subscription, now);
   const subscriptionDate = formatSubscriptionDate(
     revenueCatSubscription?.expires_at,
   );
@@ -350,7 +370,7 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
     loadFailed ||
     packagesUnavailable ||
     purchasesNotAllowed ||
-    isPremium ||
+    !canSubscribeToWarp(subscription) ||
     revenueCatWarpActive ||
     activationPending;
 
@@ -421,10 +441,19 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
           ) : isPremium ? (
             <div className="flex flex-col gap-1">
               <p className="text-foreground font-medium">
-                {planLabel
-                  ? t("online.warp.planSummary", { plan: planLabel })
-                  : t("online.warp.active")}
+                {trial?.status === "active"
+                  ? t("online.warp.trialActive")
+                  : planLabel
+                    ? t("online.warp.planSummary", { plan: planLabel })
+                    : t("online.warp.active")}
               </p>
+              {trial?.status === "active" && trial.expiresAt && (
+                <p className="text-muted-foreground text-sm">
+                  {t("online.warp.trialEnds", {
+                    date: formatSubscriptionDate(trial.expiresAt),
+                  })}
+                </p>
+              )}
               {renewalSummary && (
                 <p className="text-muted-foreground text-sm">
                   {renewalSummary}
@@ -442,11 +471,15 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
             </div>
           ) : (
             <p className="text-muted-foreground text-sm">
-              {activationPending || revenueCatWarpActive
-                ? t("online.warp.activationPending")
-                : loadFailed
-                  ? t("online.warp.statusUnavailable")
-                  : t("online.warp.description")}
+              {trial?.status === "pending"
+                ? t("online.warp.trialPending")
+                : trial?.status === "expired"
+                  ? t("online.warp.trialExpired")
+                  : activationPending || revenueCatWarpActive
+                    ? t("online.warp.activationPending")
+                    : loadFailed
+                      ? t("online.warp.statusUnavailable")
+                      : t("online.warp.description")}
             </p>
           )}
         </div>
@@ -464,6 +497,15 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
           </>
         )}
 
+        {trial?.notice && (
+          <p className="text-muted-foreground text-sm">
+            {t(
+              trial.notice === "last-day"
+                ? "online.warp.trialLastDay"
+                : "online.warp.trialEnding",
+            )}
+          </p>
+        )}
         {!checkoutSuppressed && packages && (
           <Button
             label={t("online.warp.get")}
@@ -520,7 +562,7 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
           />
         )}
 
-        {isPremium && revenueCatSubscription?.active && (
+        {isPaidWarpActive(subscription) && (
           <Button
             label={
               action === "manage"
@@ -562,6 +604,7 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
           onPurchase={handlePurchase}
           purchaseEnabled={Boolean(selectedPackage)}
           lifetimeProOwned={lifetimeProAccess === true}
+          trialActive={trial?.status === "active"}
         />
       </section>
     </Card>

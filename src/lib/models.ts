@@ -19,6 +19,7 @@ export enum Method {
   MediaActiveUpdate = "media.active.update",
   MediaControl = "media.control",
   MediaHistory = "media.history",
+  MediaHistoryTop = "media.history.top",
   MediaTags = "media.tags",
   MediaTagsUpdate = "media.tags.update",
   Decks = "decks",
@@ -787,6 +788,32 @@ export interface MediaHistoryResponse {
   pagination?: Pagination;
 }
 
+export interface MediaHistoryTopParams {
+  limit?: number;
+  systems?: string[];
+  fuzzySystem?: boolean;
+  /** RFC 3339 lower bound for when the media was played. */
+  since?: string;
+}
+
+/** One row per media, ranked by total play time. */
+export interface MediaHistoryTopEntry {
+  mediaId?: number;
+  systemId: string;
+  systemName: string;
+  mediaName: string;
+  mediaPath: string;
+  relativePath?: string;
+  lastPlayedAt: string;
+  totalPlayTime: number;
+  sessionCount: number;
+  tags?: TagInfo[];
+}
+
+export interface MediaHistoryTopResponse {
+  entries: MediaHistoryTopEntry[];
+}
+
 export interface MediaActiveUpdateRequest {
   systemId: string;
   mediaPath: string;
@@ -925,6 +952,10 @@ export interface SubscriptionResponse {
   sources: string[];
   patreon?: PatreonSubscriptionInfo | null;
   revenuecat?: RevenueCatSubscriptionInfo | null;
+  grant?: { active: boolean; expires_at?: string } | null;
+  can_subscribe?: boolean;
+  paid_subscription?: RevenueCatSubscriptionInfo | null;
+  trial?: { status: string; starts_at?: string; expires_at?: string } | null;
 }
 
 /**

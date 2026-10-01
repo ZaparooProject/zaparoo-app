@@ -69,6 +69,45 @@ describe("ProfileManager", () => {
     ).toBeGreaterThan(0);
   });
 
+  it("keeps profile requirement help separate from its setting", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <ProfileManager
+        connected
+        canManage
+        canWriteSettings
+        requireForLaunch={false}
+        settingsLoading={false}
+        onRequireForLaunchChange={onChange}
+        available
+      />,
+    );
+    const checkbox = await screen.findByRole("checkbox", {
+      name: "settings.core.profiles.requireForLaunch",
+    });
+    await user.click(
+      screen.getByRole("button", {
+        name: "Help for settings.core.profiles.requireForLaunch",
+      }),
+    );
+    const dialog = screen.getByRole("dialog", {
+      name: "settings.core.profiles.requireForLaunch",
+    });
+    await user.click(
+      within(dialog).getAllByRole("button", { name: "nav.close" })[0]!,
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", {
+          name: "settings.core.profiles.requireForLaunch",
+        }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(checkbox).not.toBeChecked();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it("should create first profile as admin with PIN", async () => {
     const user = userEvent.setup();
     vi.mocked(CoreAPI.profiles).mockResolvedValue({ profiles: [] });

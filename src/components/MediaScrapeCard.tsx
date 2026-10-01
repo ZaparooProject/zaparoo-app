@@ -9,6 +9,7 @@ import { logger } from "@/lib/logger";
 import { useTabSessionStore } from "@/lib/tabSessionStore";
 import { isCoreFeatureAvailable } from "@/lib/featureGates";
 import { useSystemNameResolver } from "@/hooks/useSystemName";
+import { Select } from "@/components/wui/Select";
 import { Button } from "./wui/Button";
 import { SystemSelector, SystemSelectorTrigger } from "./SystemSelector";
 import { LoadingSpinner } from "./ui/loading-spinner";
@@ -604,7 +605,7 @@ export function MediaScrapeCard() {
               >
                 {t("settings.scrapeMedia.scraperPlaceholder")}
               </label>
-              <select
+              <Select
                 id="scraper-select"
                 value={selectedScraper}
                 onChange={(e) => {
@@ -615,13 +616,6 @@ export function MediaScrapeCard() {
                   setStartError(null);
                 }}
                 disabled={controlsDisabled || scrapersLoading}
-                className={classNames(
-                  "wui-input border-input bg-surface-inset text-foreground min-h-12 rounded-md border border-solid p-3",
-                  {
-                    "cursor-not-allowed opacity-50":
-                      controlsDisabled || scrapersLoading,
-                  },
-                )}
               >
                 <option value="">
                   {t("settings.scrapeMedia.scraperPlaceholder")}
@@ -631,7 +625,7 @@ export function MediaScrapeCard() {
                     {scraper.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             <SystemSelectorTrigger

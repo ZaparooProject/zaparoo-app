@@ -232,21 +232,25 @@ export function LibraryTaggedCollection({
       <EmptyState title={t(config.empty)} description={t(config.hint)} />
     );
   } else {
+    // Rows centre their artwork with a 16px inset; cancel it so artwork sits at the
+    // standard page inset. Same for every collection page.
     content = (
-      <LibraryBrowseList
-        entries={entries}
-        systemId=""
-        deviceKey={deviceKey}
-        scrollRef={scrollRef}
-        hasNextPage={hasNextPage}
-        isFetchingNextPage={collectionQuery.isFetchingNextPage}
-        imagesPaused={false}
-        interactionDisabled={false}
-        onFetchMore={() => void collectionQuery.fetchNextPage()}
-        onSelect={setSelectedEntry}
-        showSystemName
-        ariaLabel={t(config.list)}
-      />
+      <div className="-mt-4">
+        <LibraryBrowseList
+          entries={entries}
+          systemId=""
+          deviceKey={deviceKey}
+          scrollRef={scrollRef}
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={collectionQuery.isFetchingNextPage}
+          imagesPaused={false}
+          interactionDisabled={false}
+          onFetchMore={() => void collectionQuery.fetchNextPage()}
+          onSelect={setSelectedEntry}
+          showSystemName
+          ariaLabel={t(config.list)}
+        />
+      </div>
     );
   }
 

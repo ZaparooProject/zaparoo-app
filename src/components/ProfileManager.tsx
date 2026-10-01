@@ -16,7 +16,7 @@ import { useStatusStore } from "@/lib/store";
 import { Button } from "@/components/wui/Button";
 import { Badge } from "@/components/wui/Badge";
 import { EmptyState } from "@/components/wui/EmptyState";
-import { Segmented } from "@/components/wui/Segmented";
+import { RadioGroup } from "@/components/wui/RadioGroup";
 import { TextInput } from "@/components/wui/TextInput";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
 import { SettingHelp } from "@/components/wui/SettingHelp";
@@ -376,14 +376,12 @@ export function ProfileManager(props: {
         </h2>
 
         <ToggleSwitch
-          label={
-            <span className="flex items-center">
-              {t("settings.core.profiles.requireForLaunch")}
-              <SettingHelp
-                title={t("settings.core.profiles.requireForLaunch")}
-                description={t("settings.core.profiles.requireForLaunchHelp")}
-              />
-            </span>
+          label={t("settings.core.profiles.requireForLaunch")}
+          help={
+            <SettingHelp
+              title={t("settings.core.profiles.requireForLaunch")}
+              description={t("settings.core.profiles.requireForLaunchHelp")}
+            />
           }
           value={props.requireForLaunch}
           setValue={props.onRequireForLaunchChange}
@@ -522,7 +520,7 @@ export function ProfileManager(props: {
                     : undefined
                 }
               />
-              <Segmented
+              <RadioGroup
                 label={t("settings.core.profiles.roleLabel")}
                 options={[
                   {
@@ -553,7 +551,7 @@ export function ProfileManager(props: {
                 }
               />
               {editor.action === "edit" && editor.profile?.hasPin && (
-                <Segmented
+                <RadioGroup
                   label={t("settings.core.profiles.pinAction")}
                   options={[
                     {
@@ -605,7 +603,7 @@ export function ProfileManager(props: {
                   }
                 />
               )}
-              <Segmented
+              <RadioGroup
                 label={t("settings.core.profiles.limits")}
                 options={[
                   {

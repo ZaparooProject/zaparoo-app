@@ -233,6 +233,7 @@ export function useNfcWriter(
       verifyErrorRef.current = null;
       deferredErrorToastRef.current = null;
       lastWriteArgsRef.current = { action, text };
+      currentWriteMethodRef.current = null;
 
       // Clean up any existing AbortController before creating new one
       if (
@@ -268,6 +269,7 @@ export function useNfcWriter(
               ? WriteMethod.LocalNFC
               : await determineWriteMethod(writeMethod, preferRemoteWriter);
           } catch (error) {
+            if (controller.signal.aborted) return;
             logger.error("Failed to determine write method:", error, {
               category: "nfc",
               action: "determineWriteMethod",
@@ -275,6 +277,8 @@ export function useNfcWriter(
             setStatus(Status.Error);
             throw error;
           }
+          // Dismissal can cancel while native/remote capability lookup is pending.
+          if (controller.signal.aborted) return;
           currentWriteMethodRef.current = selectedWriteMethod;
 
           if (selectedWriteMethod === WriteMethod.LocalNFC) {
@@ -481,6 +485,8 @@ export function useNfcWriter(
 
   const end = useCallback(async () => {
     const method = currentWriteMethodRef.current;
+    // Stop pending method selection before async session teardown can yield.
+    if (method === null) abortControllerRef.current?.abort();
 
     // Cancel pending write requests FIRST while pendingWriteId is still valid
     if (method === WriteMethod.RemoteReader) {

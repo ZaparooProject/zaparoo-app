@@ -80,26 +80,29 @@ export function ReaderActivityControl({
         : "";
 
   return (
-    <div className={classNames("flex flex-col gap-1", className)}>
+    <div className={classNames("w-full", className)}>
       {state === "error" ? (
-        <div className="mx-auto flex w-full max-w-80 gap-2">
+        <div className="wui-reader-actions grid w-full grid-cols-[repeat(auto-fit,minmax(min(100%,9rem),1fr))] gap-2">
           <div
-            className="wui-reader-button-shell min-w-0 flex-1"
+            className="wui-reader-button-shell min-w-0"
             data-reader-state="error"
           >
             <Button
               label={t("scan.retry")}
               icon={readerIcon}
               readerState="error"
+              readerStatus={statusText}
               intent="destructive"
-              className={classNames("w-full", buttonClassName)}
+              size={size}
+              layout={layout}
+              className={classNames("min-h-18 w-full", buttonClassName)}
               onClick={onRetry ?? onStart}
             />
           </div>
           <Button
             label={t("nav.cancel")}
             variant="outline"
-            className="min-w-0 flex-1"
+            className="min-h-18 w-full min-w-0"
             onClick={onCancel}
           />
         </div>
@@ -117,27 +120,17 @@ export function ReaderActivityControl({
             aria-busy={active || undefined}
             icon={active ? readerIcon : icon}
             readerState={active ? state : undefined}
+            readerStatus={statusText || undefined}
             variant={variant}
             intent={intent}
             size={size}
             layout={layout}
-            className={classNames("w-full", buttonClassName)}
+            className={classNames("min-h-18 w-full", buttonClassName)}
             disabled={disabled}
             onClick={active ? onCancel : onStart}
           />
         </div>
       )}
-      <span
-        className={classNames(
-          "min-h-5 text-center text-xs leading-5",
-          !statusText && "invisible",
-          statusText &&
-            (state === "error" ? "text-error" : "text-muted-foreground"),
-        )}
-        aria-hidden="true"
-      >
-        {statusText || "\u00a0"}
-      </span>
     </div>
   );
 }

@@ -3,50 +3,72 @@ import { describe, expect, it } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { render, screen } from "@/test-utils";
 import { TabBar } from "@/components/wui/TabBar";
+import { getTabBarPanelId, getTabBarTabId } from "@/components/wui/tabBarIds";
 
-function Choices({ disabled = false }: { disabled?: boolean }) {
-  const [value, setValue] = useState("");
+function Panels({ disabled = false }: { disabled?: boolean }) {
+  const [value, setValue] = useState("first");
   return (
-    <TabBar
-      label="Choice"
-      value={value}
-      options={[
-        { value: "first", label: "First" },
-        { value: "second", label: "Second" },
-      ]}
-      onChange={setValue}
-      disabled={disabled}
-    />
+    <>
+      <TabBar
+        label="Panels"
+        value={value}
+        options={[
+          { value: "first", label: "First" },
+          { value: "second", label: "Second" },
+        ]}
+        onChange={setValue}
+        disabled={disabled}
+      />
+      {["first", "second"].map((key) => (
+        <div
+          key={key}
+          role="tabpanel"
+          id={getTabBarPanelId(getTabBarTabId(key))}
+          aria-labelledby={getTabBarTabId(key)}
+          hidden={value !== key}
+        >
+          {key} content
+        </div>
+      ))}
+    </>
   );
 }
 
 describe("TabBar", () => {
-  it("should allow keyboard entry before any option is selected", async () => {
+  it("switches associated panels through arrow/Home/End navigation", async () => {
     const user = userEvent.setup();
-    render(<Choices />);
-    const first = screen.getByRole("radio", { name: "First" });
-    const second = screen.getByRole("radio", { name: "Second" });
+    render(<Panels />);
+    const first = screen.getByRole("tab", { name: "First" });
+    const second = screen.getByRole("tab", { name: "Second" });
+    expect(screen.getByRole("tablist", { name: "Panels" })).toBeVisible();
+    expect(screen.queryByRole("radiogroup")).not.toBeInTheDocument();
+    expect(first).toHaveAttribute(
+      "aria-controls",
+      screen.getByRole("tabpanel", { name: "First" }).id,
+    );
     await user.tab();
     expect(first).toHaveFocus();
-    expect(first).not.toBeChecked();
     await user.keyboard("{ArrowRight}");
     expect(second).toHaveFocus();
-    expect(second).toBeChecked();
+    expect(second).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tabpanel", { name: "Second" })).toHaveTextContent(
+      "second content",
+    );
     await user.keyboard("{Home}");
     expect(first).toHaveFocus();
-    expect(first).toBeChecked();
+    expect(first).toHaveAttribute("aria-selected", "true");
     await user.keyboard("{End}");
-    expect(second).toBeChecked();
+    expect(second).toHaveAttribute("aria-selected", "true");
   });
 
-  it("should not activate or focus disabled choices", async () => {
+  it("does not activate or focus disabled tabs", async () => {
     const user = userEvent.setup();
-    render(<Choices disabled />);
-    const first = screen.getByRole("radio", { name: "First" });
-    await user.click(first);
+    render(<Panels disabled />);
+    const second = screen.getByRole("tab", { name: "Second" });
+    await user.click(second);
     await user.tab();
-    expect(first).toBeDisabled();
-    expect(first).not.toHaveFocus();
-    expect(first).not.toBeChecked();
+    expect(second).toBeDisabled();
+    expect(second).not.toHaveFocus();
+    expect(second).toHaveAttribute("aria-selected", "false");
   });
 });

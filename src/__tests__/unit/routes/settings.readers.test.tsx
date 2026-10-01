@@ -1,6 +1,15 @@
 import type { ComponentType } from "react";
+import { render as renderWithProviders } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "../../../test-utils";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+  createTestQueryClient,
+  createProvidersWithQueryClient,
+} from "../../../test-utils";
 import { mockReaderInfo } from "../../../test-utils/factories";
 
 // Mock router - use vi.hoisted to make variables accessible in mocks
@@ -158,6 +167,34 @@ describe("Settings Readers Route", () => {
     const ReadersSettings = getReadersSettings();
     return render(<ReadersSettings />);
   };
+
+  it("keeps reader rows in name order when a refresh returns a different API order", async () => {
+    const readers = [
+      mockReaderInfo({ id: "ten", info: "Reader 10" }),
+      mockReaderInfo({ id: "alpha", info: "Alpha" }),
+      mockReaderInfo({ id: "two", info: "Reader 2" }),
+    ];
+    mockReaders
+      .mockResolvedValueOnce({ readers })
+      .mockResolvedValue({ readers: [...readers].reverse() });
+    const queryClient = createTestQueryClient();
+    const ReadersSettings = getReadersSettings();
+    renderWithProviders(<ReadersSettings />, {
+      wrapper: createProvidersWithQueryClient(queryClient),
+    });
+    await screen.findByText("Alpha");
+    const visibleNames = () =>
+      screen
+        .getAllByText(/^(Alpha|Reader 2|Reader 10)$/)
+        .map((element) => element.textContent);
+    expect(visibleNames()).toEqual(["Alpha", "Reader 2", "Reader 10"]);
+    await act(async () => {
+      await queryClient.invalidateQueries({ queryKey: ["readers"] });
+    });
+    expect(mockReaders).toHaveBeenCalledTimes(2);
+    expect(visibleNames()).toEqual(["Alpha", "Reader 2", "Reader 10"]);
+    queryClient.clear();
+  });
 
   describe("rendering", () => {
     it("should render the page title", () => {

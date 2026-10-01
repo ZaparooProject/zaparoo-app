@@ -71,7 +71,7 @@ describe("DeviceLinkButton", () => {
     expect(mockNavigate).toHaveBeenCalledWith({ to: "/settings/online" });
   });
 
-  it("should disable the action for an already-linked device", () => {
+  it("should show a noninteractive linked state", () => {
     mockUseDeviceLinking.mockReturnValue({
       state: "linked",
       linkDevice: mockLinkDevice,
@@ -79,9 +79,11 @@ describe("DeviceLinkButton", () => {
 
     render(<DeviceLinkButton enabled />);
 
-    expect(
-      screen.getByRole("button", { name: "online.deviceLink.linked" }),
-    ).toBeDisabled();
+    expect(screen.getByText("online.deviceLink.linked")).toHaveAttribute(
+      "role",
+      "status",
+    );
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
   it("should show a disabled checking state", () => {
