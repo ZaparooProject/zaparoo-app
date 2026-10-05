@@ -169,6 +169,79 @@ describe("MediaDetailsModal", () => {
     ).toBeTruthy();
   });
 
+  it.each(["waiting", "attention"] as const)(
+    "should keep the selected target and primary reader control through %s and cancel",
+    async (state) => {
+      const user = userEvent.setup();
+      const readerActivity = {
+        state: "idle" as const,
+        activeLabel:
+          state === "attention" ? "spinner.retapTag" : "spinner.holdTagReader",
+        onCancel: vi.fn(),
+        onRetry: vi.fn(),
+      };
+      const view = renderModal({ readerActivity });
+      const path = screen.getByRole("radio", {
+        name: /create\.search\.pathLabel/i,
+      });
+      await user.click(path);
+      const write = screen.getByRole("button", {
+        name: "create.search.writeLabel",
+      });
+      await user.click(write);
+      expect(view.props.onWrite).toHaveBeenCalledWith(mediaWithZapScript.path);
+
+      view.rerender(
+        <MediaDetailsModal
+          {...view.props}
+          readerActivity={{ ...readerActivity, state }}
+        />,
+      );
+      const cancel = screen.getByRole("button", {
+        name: "reader.cancelAction",
+      });
+      expect(cancel).toBe(write);
+      expect(cancel).toHaveFocus();
+      expect(cancel).toHaveAttribute("aria-pressed", "true");
+      expect(path).toBeChecked();
+      expect(
+        within(
+          screen.getByRole("group", { name: "create.search.mediaActions" }),
+        ).queryByRole("button", { name: "reader.cancelAction" }),
+      ).not.toBeInTheDocument();
+
+      await user.keyboard("{Enter}");
+      expect(readerActivity.onCancel).toHaveBeenCalledOnce();
+      expect(view.props.close).not.toHaveBeenCalled();
+      expect(
+        screen.getByRole("dialog", { name: "Super Mario World" }),
+      ).toBeVisible();
+    },
+  );
+
+  it("should keep verification recovery actions in the media footer", async () => {
+    const user = userEvent.setup();
+    const readerActivity = {
+      state: "error" as const,
+      activeLabel: "spinner.holdTagReader",
+      errorMessage: "spinner.verifyFailedRetry",
+      onCancel: vi.fn(),
+      onRetry: vi.fn(),
+    };
+    const { props } = renderModal({ readerActivity });
+    const dialog = screen.getByRole("dialog", { name: "Super Mario World" });
+    await user.click(
+      within(dialog).getByRole("button", { name: "scan.retry" }),
+    );
+    expect(readerActivity.onRetry).toHaveBeenCalledOnce();
+    await user.click(
+      within(dialog).getByRole("button", { name: "nav.cancel" }),
+    );
+    expect(readerActivity.onCancel).toHaveBeenCalledOnce();
+    expect(props.close).not.toHaveBeenCalled();
+    expect(dialog).toBeVisible();
+  });
+
   it("should add a favorite from indexed-media details", async () => {
     const updateSpy = vi.spyOn(CoreAPI, "mediaTagsUpdate").mockResolvedValue({
       tags: [{ type: "user", tag: "favorite" }],

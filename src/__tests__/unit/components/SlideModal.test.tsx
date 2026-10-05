@@ -701,8 +701,11 @@ describe("SlideModal", () => {
     const footerButton = screen.getByRole("button", { name: "Footer Button" });
     expect(scrollRef.current).not.toContainElement(footerButton);
 
-    await user.click(screen.getByRole("link", { name: "Skip to actions" }));
-    expect(footerButton.parentElement).toHaveFocus();
+    const skipLink = screen.getByRole("link", { name: "Skip to actions" });
+    const footerId = skipLink.getAttribute("href")!.slice(1);
+    await user.click(skipLink);
+    expect(document.getElementById(footerId)).toHaveFocus();
+    expect(document.getElementById(footerId)).toContainElement(footerButton);
 
     await user.click(footerButton);
     expect(action).toHaveBeenCalledTimes(1);

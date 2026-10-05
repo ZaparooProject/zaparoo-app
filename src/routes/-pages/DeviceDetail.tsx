@@ -151,7 +151,7 @@ export function DeviceDetail() {
         </h1>
       }
     >
-      <div className="flex flex-col gap-6 p-3">
+      <div className="flex flex-col gap-6">
         <TextInput
           label={t("settings.deviceDetail.nameLabel")}
           placeholder={endpoint.address}

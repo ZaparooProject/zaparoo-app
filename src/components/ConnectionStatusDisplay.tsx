@@ -172,13 +172,13 @@ export function ConnectionStatusDisplay({
           <div className="bg-muted mt-1 h-4 w-32 animate-pulse rounded" />
         ) : (
           config.subtitle && (
-            <p className={`truncate text-sm ${config.subtitleColorClass}`}>
+            <p className={`text-sm break-words ${config.subtitleColorClass}`}>
               {config.subtitle}
             </p>
           )
         )}
         {uiState === "connected" && connectedName && (
-          <p className={`truncate text-sm ${config.subtitleColorClass}`}>
+          <p className={`text-sm break-words ${config.subtitleColorClass}`}>
             {connectedName}
           </p>
         )}

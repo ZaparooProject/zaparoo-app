@@ -1,5 +1,4 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { useState } from "react";
 import { Browser } from "@capacitor/browser";
 import { useTranslation } from "react-i18next";
 import {
@@ -18,22 +17,15 @@ import {
   PurchaseSupportActions,
   useProPurchase,
 } from "@/components/ProPurchase.tsx";
-import { NetworkScanModal } from "@/components/NetworkScanModal";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
-import { useSelectDevice } from "@/hooks/useSelectDevice";
-import type { ScanDeviceSelection } from "@/hooks/useSelectDevice";
 import { PageFrame } from "@/components/PageFrame";
 import { useAppUi } from "@/hooks/useAppUi";
 import { useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { Button } from "@/components/wui/Button";
 import { ExternalIcon } from "@/lib/images";
-import {
-  activeAddressOf,
-  useDeviceRegistry,
-} from "@/lib/devices/deviceRegistry";
 import { MediaDatabaseCard } from "@/components/MediaDatabaseCard";
-import { DeviceConnectionCard } from "@/components/DeviceConnectionCard";
+import { DeviceConnectionSummary } from "@/components/DeviceConnectionSummary";
 import { CoreOutdatedNotice } from "@/components/CoreOutdatedNotice";
 import { GatedFeature } from "@/components/GatedFeature";
 import { InboxButton } from "@/components/InboxButton";
@@ -59,7 +51,6 @@ export function Settings() {
   const { purchaseModal, setProPurchaseModalOpen, proAccess } =
     useProPurchase();
 
-  const connectionError = useStatusStore((state) => state.connectionError);
   const loggedInUser = useStatusStore((state) => state.loggedInUser);
   const onlinePremiumAccess = usePreferencesStore(
     (state) => state.onlinePremiumAccess,
@@ -91,44 +82,6 @@ export function Settings() {
     coreVersion !== null &&
     !coreVersionPending &&
     isCoreFeatureAvailable("mediaScrapers", coreVersion);
-  const activeAddress = useDeviceRegistry(activeAddressOf);
-  const [address, setAddress] = useState(activeAddress);
-  const [trackedAddress, setTrackedAddress] = useState(activeAddress);
-  const [addressError, setAddressError] = useState("");
-  const [scanOpen, setScanOpen] = useState(false);
-
-  // The field is a draft the user can edit, so it can't just mirror the store.
-  // Re-seed it whenever the active device actually changes — registry hydration
-  // is async, and picking a device from the scan list resolves asynchronously
-  // too, so the address arrives after the first render either way.
-  if (activeAddress !== trackedAddress) {
-    setTrackedAddress(activeAddress);
-    setAddress(activeAddress);
-    setAddressError("");
-  }
-
-  const { selectDevice, selectScanDevice } = useSelectDevice();
-
-  const handleAddressInputChange = (newAddress: string) => {
-    setAddress(newAddress);
-    if (addressError) setAddressError("");
-  };
-
-  const handleDeviceAddressChange = (newAddress: string) => {
-    const result = selectDevice(newAddress);
-    if (!result.ok) {
-      setAddressError(t(result.errorKey));
-      return;
-    }
-
-    setAddress(result.address);
-    setAddressError("");
-  };
-
-  const handleScanDeviceSelect = (device: ScanDeviceSelection) => {
-    void selectScanDevice(device);
-  };
-
   const navigationGroups = [
     {
       id: "app",
@@ -217,24 +170,10 @@ export function Settings() {
       >
         <div className="flex flex-col gap-5">
           <div data-tour="device-address">
-            <DeviceConnectionCard
-              address={address}
-              setAddress={handleAddressInputChange}
-              onAddressChange={handleDeviceAddressChange}
-              connectionError={connectionError}
-              addressError={addressError}
-              onScanClick={() => setScanOpen(true)}
-            />
+            <DeviceConnectionSummary />
           </div>
 
           <CoreOutdatedNotice />
-
-          {/* Network Scan Modal */}
-          <NetworkScanModal
-            isOpen={scanOpen}
-            onClose={() => setScanOpen(false)}
-            onSelectDevice={handleScanDeviceSelect}
-          />
 
           <MediaDatabaseCard
             onViewScrapeDetails={() =>

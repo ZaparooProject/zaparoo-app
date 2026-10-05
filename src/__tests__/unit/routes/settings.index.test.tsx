@@ -1,40 +1,11 @@
 import userEvent from "@testing-library/user-event";
+import { Capacitor } from "@capacitor/core";
 import type { ComponentType } from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import {
-  render,
-  screen,
-  fireEvent,
-  waitFor,
-  within,
-} from "../../../test-utils";
+import { render, screen, waitFor, within } from "../../../test-utils";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { deviceRegistry } from "@/lib/devices/deviceRegistry";
+import { activeAddressOf, deviceRegistry } from "@/lib/devices/deviceRegistry";
 import { usePurchasePreviewStore } from "@/lib/purchasePreviewStore";
-
-// Mock CoreAPI
-vi.mock("@/lib/coreApi", () => ({
-  CoreAPI: {
-    reset: vi.fn(),
-  },
-  validateDeviceAddress: vi.fn((address: string) => {
-    if (address.includes("286")) {
-      return {
-        ok: false,
-        errorKey: "settings.deviceAddressInvalid",
-        message: "Invalid device address",
-      };
-    }
-
-    return {
-      ok: true,
-      address,
-      host: address.split(":")[0] ?? address,
-      port: 7497,
-      wsUrl: `ws://${address}/api/v0.1`,
-    };
-  }),
-}));
 
 // Mock stores
 const mockUseStatusStore = vi.fn();
@@ -136,68 +107,6 @@ vi.mock("@/components/MediaDatabaseCard", () => ({
   ),
 }));
 
-vi.mock("@/components/DeviceConnectionCard", () => ({
-  DeviceConnectionCard: ({
-    address,
-    setAddress,
-    onScanClick,
-    onAddressChange,
-    addressError,
-  }: {
-    address: string;
-    setAddress: (address: string) => void;
-    onAddressChange: (address: string) => void;
-    connectionError: string;
-    addressError?: string;
-    onScanClick: () => void;
-  }) => (
-    <div data-testid="device-connection-card">
-      <span data-testid="address-value">{address}</span>
-      {addressError && <span role="alert">{addressError}</span>}
-      <button onClick={onScanClick} data-testid="scan-button">
-        Scan
-      </button>
-      <button
-        onClick={() => onAddressChange("192.168.1.200")}
-        data-testid="change-address"
-      >
-        Change Address
-      </button>
-      <button
-        onClick={() => onAddressChange("192.168.1.286")}
-        data-testid="invalid-address"
-      >
-        Invalid Address
-      </button>
-      <button
-        onClick={() => {
-          setAddress("192.168.1.201");
-          onAddressChange("192.168.1.201");
-        }}
-        data-testid="valid-address"
-      >
-        Valid Address
-      </button>
-    </div>
-  ),
-}));
-
-vi.mock("@/components/NetworkScanModal", () => ({
-  NetworkScanModal: ({
-    isOpen,
-    onClose,
-  }: {
-    isOpen: boolean;
-    onClose: () => void;
-    onSelectDevice: (address: string) => void;
-  }) =>
-    isOpen ? (
-      <div data-testid="network-scan-modal">
-        <button onClick={onClose}>Close</button>
-      </div>
-    ) : null,
-}));
-
 // Import the route module to trigger createFileRoute which captures the component
 import "@/routes/settings.index";
 
@@ -227,6 +136,7 @@ describe("Settings Index Route", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
     mockProAccess = false;
     queryClient = new QueryClient({
       defaultOptions: {
@@ -266,9 +176,12 @@ describe("Settings Index Route", () => {
       ).toBeInTheDocument();
     });
 
-    it("should render the device connection card", () => {
+    it("should render a device summary without a permanent address editor", () => {
       renderComponent();
-      expect(screen.getByTestId("device-connection-card")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "settings.deviceSetup.connect" }),
+      ).toBeVisible();
+      expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     });
 
     it("should render the media database card", () => {
@@ -430,20 +343,48 @@ describe("Settings Index Route", () => {
     });
   });
 
+  async function openManualAddress(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(
+      screen.getByRole("button", { name: "settings.deviceSetup.connect" }),
+    );
+    const sheet = within(
+      screen.getByRole("dialog", { name: "scan.deviceSheetTitle" }),
+    );
+    await user.click(
+      sheet.getByRole("button", { name: "settings.deviceSetup.enterAddress" }),
+    );
+    return screen.getByRole("dialog", {
+      name: "settings.deviceSetup.enterAddress",
+    });
+  }
+
   describe("modals", () => {
-    it("should open network scan modal when scan button is clicked", async () => {
+    it("should open the shared device sheet from Settings", async () => {
+      const user = userEvent.setup();
       renderComponent();
-
-      fireEvent.click(screen.getByTestId("scan-button"));
-
-      await waitFor(() => {
-        expect(screen.getByTestId("network-scan-modal")).toBeInTheDocument();
+      await user.click(
+        screen.getByRole("button", { name: "settings.deviceSetup.connect" }),
+      );
+      const sheet = within(
+        screen.getByRole("dialog", { name: "scan.deviceSheetTitle" }),
+      );
+      expect(
+        sheet.getByRole("button", {
+          name: "settings.deviceSetup.enterAddress",
+        }),
+      ).toBeVisible();
+      await user.click(
+        sheet.getByRole("button", { name: "scan.deviceSheetAllDevices" }),
+      );
+      expect(mockRouterNavigate).toHaveBeenCalledWith({
+        to: "/settings/devices",
       });
     });
   });
 
   describe("device address changes", () => {
     it("should reset connection state when address changes", async () => {
+      const user = userEvent.setup();
       const mockResetConnectionState = vi.fn();
 
       mockUseStatusStore.mockImplementation((selector) =>
@@ -455,7 +396,14 @@ describe("Settings Index Route", () => {
 
       renderComponent();
 
-      fireEvent.click(screen.getByTestId("change-address"));
+      const manual = within(await openManualAddress(user));
+      await user.type(
+        manual.getByRole("textbox", { name: "settings.device" }),
+        "192.168.1.200",
+      );
+      await user.click(
+        manual.getByRole("button", { name: "settings.deviceSetup.connect" }),
+      );
 
       await waitFor(() => {
         expect(mockResetConnectionState).toHaveBeenCalled();
@@ -463,11 +411,19 @@ describe("Settings Index Route", () => {
     });
 
     it("should invalidate queries when address changes", async () => {
+      const user = userEvent.setup();
       const invalidateQueriesSpy = vi.spyOn(queryClient, "invalidateQueries");
 
       renderComponent();
 
-      fireEvent.click(screen.getByTestId("change-address"));
+      const manual = within(await openManualAddress(user));
+      await user.type(
+        manual.getByRole("textbox", { name: "settings.device" }),
+        "192.168.1.200",
+      );
+      await user.click(
+        manual.getByRole("button", { name: "settings.deviceSetup.connect" }),
+      );
 
       await waitFor(() => {
         expect(invalidateQueriesSpy).toHaveBeenCalled();
@@ -475,6 +431,7 @@ describe("Settings Index Route", () => {
     });
 
     it("should show validation message and not select invalid address", async () => {
+      const user = userEvent.setup();
       const mockResetConnectionState = vi.fn();
 
       mockUseStatusStore.mockImplementation((selector) =>
@@ -486,7 +443,14 @@ describe("Settings Index Route", () => {
 
       renderComponent();
 
-      fireEvent.click(screen.getByTestId("invalid-address"));
+      const manual = within(await openManualAddress(user));
+      await user.type(
+        manual.getByRole("textbox", { name: "settings.device" }),
+        "192.168.1.286",
+      );
+      await user.click(
+        manual.getByRole("button", { name: "settings.deviceSetup.connect" }),
+      );
 
       expect(
         await screen.findByText("settings.deviceAddressInvalid"),
@@ -498,22 +462,34 @@ describe("Settings Index Route", () => {
     });
 
     it("should clear validation message after a valid address", async () => {
+      const user = userEvent.setup();
       renderComponent();
 
-      fireEvent.click(screen.getByTestId("invalid-address"));
+      const manual = within(await openManualAddress(user));
+      const input = manual.getByRole("textbox", { name: "settings.device" });
+      await user.type(input, "192.168.1.286");
+      await user.click(
+        manual.getByRole("button", { name: "settings.deviceSetup.connect" }),
+      );
       expect(
         await screen.findByText("settings.deviceAddressInvalid"),
       ).toBeInTheDocument();
 
-      fireEvent.click(screen.getByTestId("valid-address"));
+      await user.clear(input);
+      await user.type(input, "192.168.1.201");
+      await user.click(
+        manual.getByRole("button", { name: "settings.deviceSetup.connect" }),
+      );
 
       await waitFor(() => {
         expect(
           screen.queryByText("settings.deviceAddressInvalid"),
         ).not.toBeInTheDocument();
       });
-      expect(screen.getByTestId("address-value")).toHaveTextContent(
-        "192.168.1.201",
+      await waitFor(() =>
+        expect(activeAddressOf(deviceRegistry.getSnapshot())).toBe(
+          "192.168.1.201",
+        ),
       );
     });
   });
@@ -556,7 +532,9 @@ describe("Settings Index Route", () => {
 
       renderComponent();
 
-      const onlineLink = screen.getByRole("link", { name: /online\.title/ });
+      const onlineLink = await screen.findByRole("link", {
+        name: /online\.title/,
+      });
       expect(onlineLink).toHaveTextContent("online.settingsStatusSignedIn");
       expect(
         screen.queryByRole("button", { name: "scan.purchaseProAction" }),
@@ -569,10 +547,9 @@ describe("Settings Index Route", () => {
 
       renderComponent();
 
-      expect(screen.getByTestId("purchase-support-actions")).toHaveAttribute(
-        "data-variant",
-        "restoreOnly",
-      );
+      expect(
+        await screen.findByTestId("purchase-support-actions"),
+      ).toHaveAttribute("data-variant", "restoreOnly");
     });
 
     it("should hide restore action when lifetime Pro is active", async () => {
@@ -581,6 +558,7 @@ describe("Settings Index Route", () => {
       mockProAccess = true;
 
       renderComponent();
+      expect(await screen.findByText("settings.app.proActive")).toBeVisible();
 
       expect(
         screen.queryByTestId("purchase-support-actions"),
@@ -595,6 +573,9 @@ describe("Settings Index Route", () => {
       );
 
       renderComponent();
+      expect(
+        await screen.findByRole("link", { name: /online\.title/ }),
+      ).toBeVisible();
 
       expect(
         screen.queryByTestId("purchase-support-actions"),
@@ -640,7 +621,9 @@ describe("Settings Index Route", () => {
 
       renderComponent();
 
-      const onlineLink = screen.getByRole("link", { name: /online\.title/ });
+      const onlineLink = await screen.findByRole("link", {
+        name: /online\.title/,
+      });
       expect(onlineLink).toHaveTextContent("online.settingsStatusWarpActive");
       expect(
         screen.queryByRole("button", { name: "scan.purchaseProAction" }),

@@ -587,6 +587,7 @@ export function MediaDatabaseCard({
       <div data-tour="update-database">
         <Button
           label={t("settings.updateDb")}
+          variant={variant === "card" ? "secondary" : "fill"}
           icon={<DatabaseIcon size="20" />}
           className="w-full"
           disabled={

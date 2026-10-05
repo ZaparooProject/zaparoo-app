@@ -462,9 +462,13 @@ export function SlideModal(props: {
           <div
             id={footerId}
             tabIndex={props.footerSkipLabel ? -1 : undefined}
-            className="border-border max-h-[33dvh] flex-shrink-0 overflow-y-auto overscroll-contain border-t border-solid pt-2"
+            className="border-border flex max-h-[33dvh] flex-shrink-0 flex-col border-t border-solid"
           >
-            {props.footer}
+            {/* Paint into the existing shell gutters without moving the actions.
+                The inner viewport still scrolls on short or zoomed screens. */}
+            <div className="-mx-4 -mb-4 min-h-0 scroll-px-4 scroll-pt-2 scroll-pb-4 overflow-y-auto overscroll-contain px-4 pt-2 pb-4">
+              {props.footer}
+            </div>
           </div>
         )}
         {/* eslint-enable react-hooks/refs */}

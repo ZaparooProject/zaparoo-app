@@ -886,6 +886,10 @@
       "title": "設定",
       "moreSettings": "その他の設定",
       "device": "デバイスアドレス",
+      "deviceSetup": {
+        "enterAddress": "アドレスを入力",
+        "connect": "接続"
+      },
       "deviceAddressRequired": "デバイスアドレスを入力してください",
       "deviceAddressInvalid": "有効なホスト名、IPアドレス、またはhost:portを入力してください。",
       "modeLabel": "スキャンモード",
@@ -1518,7 +1522,7 @@
       },
       "deviceAddress": {
         "title": "デバイスを接続",
-        "text": "検索アイコンをタップしてネットワーク上のZaparooデバイスを探すか、必要に応じてデバイスのIPアドレスを手動で入力してください。"
+        "text": "デバイス選択を開いて、保存済みまたは近くのZaparooデバイスを選択するか、アドレスを手動で入力してください。"
       },
       "mediaDatabase": {
         "title": "メディアライブラリを更新",

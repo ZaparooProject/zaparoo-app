@@ -64,9 +64,12 @@ const connection: ConnectionContextValue = {
   openPairingModal: mocks.openPairingModal,
 };
 
-function renderSheet(props: { isOpen: boolean; close: () => void }) {
+function renderSheet(
+  props: { isOpen: boolean; close: () => void },
+  overrides: Partial<ConnectionContextValue> = {},
+) {
   return render(
-    <ConnectionContext.Provider value={connection}>
+    <ConnectionContext.Provider value={{ ...connection, ...overrides }}>
       <DeviceSheet {...props} />
     </ConnectionContext.Provider>,
   );
@@ -124,6 +127,7 @@ describe("DeviceSheet", () => {
       coreVersionPending: false,
       coreVersion: "2.17.0",
       encryptionState: "plaintext",
+      pairingRequired: false,
     });
   });
 
@@ -184,7 +188,7 @@ describe("DeviceSheet", () => {
     await waitFor(() => expect(mocks.startScan).toHaveBeenCalledTimes(1));
 
     const pair = screen.getByRole("button", { name: "pairing.openPairing" });
-    expect(pair).toHaveAttribute("data-variant", "secondary");
+    expect(pair).toHaveAttribute("data-variant", "ghost");
     const switchList = screen.getByRole("region", {
       name: "scan.deviceSheetRecent",
     });
@@ -202,4 +206,67 @@ describe("DeviceSheet", () => {
     expect(mocks.openPairingModal).toHaveBeenCalledTimes(1);
     expect(close).toHaveBeenCalledTimes(1);
   });
+
+  it("offers pairing recovery even before the device is connected", async () => {
+    const user = userEvent.setup();
+    const close = vi.fn();
+    useStatusStore.setState({
+      pairingRequired: true,
+      encryptionState: "unknown",
+    });
+    renderSheet({ isOpen: true, close }, { isConnected: false });
+    expect(
+      screen.getByRole("heading", { name: "connection.pairingRequired" }),
+    ).toBeVisible();
+    await user.click(
+      screen.getByRole("button", { name: "pairing.openPairing" }),
+    );
+    expect(mocks.openPairingModal).toHaveBeenCalledOnce();
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it.each([true, false])(
+    "keeps manual entry available during scanning=%s or discovery failure",
+    async (isScanning) => {
+      const user = userEvent.setup();
+      mocks.isScanning = isScanning;
+      mocks.error = isScanning ? null : "Discovery unavailable";
+      renderSheet({ isOpen: true, close: vi.fn() });
+      await user.click(
+        screen.getByRole("button", {
+          name: "settings.deviceSetup.enterAddress",
+        }),
+      );
+      expect(
+        screen.getByRole("textbox", { name: "settings.device" }),
+      ).toHaveFocus();
+      expect(mocks.stopScan).toHaveBeenCalled();
+      expect(
+        screen.queryByRole("region", { name: "scan.deviceSheetRecent" }),
+      ).not.toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "nav.cancel" }));
+      expect(
+        screen.getByRole("button", {
+          name: "settings.deviceSetup.enterAddress",
+        }),
+      ).toHaveFocus();
+      expect(mocks.startScan).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  it.each(["{Enter}", " "])(
+    "opens pairing with %s from the icon control",
+    async (key) => {
+      const user = userEvent.setup();
+      const close = vi.fn();
+      renderSheet({ isOpen: true, close });
+      const pair = screen.getByRole("button", { name: "pairing.openPairing" });
+
+      pair.focus();
+      await user.keyboard(key);
+
+      expect(mocks.openPairingModal).toHaveBeenCalledOnce();
+      expect(close).toHaveBeenCalledOnce();
+    },
+  );
 });

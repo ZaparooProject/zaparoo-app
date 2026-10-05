@@ -923,6 +923,10 @@
       "title": "Settings",
       "moreSettings": "More settings",
       "device": "Device address",
+      "deviceSetup": {
+        "enterAddress": "Enter address",
+        "connect": "Connect"
+      },
       "deviceAddressRequired": "Enter a device address",
       "deviceAddressInvalid": "Enter a valid hostname, IP address, or host:port.",
       "modeLabel": "Scan mode",
@@ -1568,7 +1572,7 @@
       },
       "deviceAddress": {
         "title": "Connect Your Device",
-        "text": "Tap the search icon to find Zaparoo devices on your network, or enter a device IP address manually if needed."
+        "text": "Open device selection to choose a saved or nearby Zaparoo device, or enter its address manually."
       },
       "mediaDatabase": {
         "title": "Update Media Library",

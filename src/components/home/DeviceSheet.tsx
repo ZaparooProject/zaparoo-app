@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useId, useMemo, useRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "@tanstack/react-router";
 import { KeyRoundIcon, RefreshCwIcon } from "lucide-react";
@@ -7,8 +14,7 @@ import { DeviceRow } from "@/components/DeviceRow";
 import { SlideModal } from "@/components/SlideModal";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Button } from "@/components/wui/Button";
-import { CircleButton } from "@/components/wui/CircleButton";
-import { ModalActionBar } from "@/components/wui/ModalActionBar";
+import { TextInput } from "@/components/wui/TextInput";
 import { useAppUi } from "@/hooks/useAppUi";
 import { useConnection } from "@/hooks/useConnection";
 import { useActiveDeviceSummary } from "@/hooks/useDevicePresentation";
@@ -59,17 +65,64 @@ export function DeviceSheet({ isOpen, close }: DeviceSheetProps) {
   const router = useRouter();
   const appUi = useAppUi();
   const { isConnected, openPairingModal } = useConnection();
-  const { selectRecord, selectScanDevice } = useSelectDevice();
+  const {
+    selectRecord,
+    selectScanDevice,
+    selectDevice: selectAddress,
+  } = useSelectDevice();
   const { devices, isScanning, error, startScan, stopScan } = useNetworkScan();
   const connectionError = useStatusStore((state) => state.connectionError);
   const coreVersionPending = useStatusStore(
     (state) => state.coreVersionPending,
   );
-  const { name, deviceDetails, clientRoleLabel } = useActiveDeviceSummary();
+  const {
+    name,
+    address: activeAddress,
+    deviceDetails,
+    clientRoleLabel,
+  } = useActiveDeviceSummary();
+  const pairingRequired = useStatusStore((state) => state.pairingRequired);
   const records = useDeviceRegistry(selectRecords);
   const activeRecordId = useDeviceRegistry(selectActiveRecordId);
   const switchHeadingId = useId();
   const scanTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [enteringAddress, setEnteringAddress] = useState(false);
+  const [address, setAddress] = useState("");
+  const [addressError, setAddressError] = useState("");
+  const [wasOpen, setWasOpen] = useState(isOpen);
+  const addressInputRef = useRef<HTMLInputElement>(null);
+  const enterAddressRef = useRef<HTMLButtonElement>(null);
+  const wasEnteringAddressRef = useRef(false);
+
+  if (isOpen !== wasOpen) {
+    setWasOpen(isOpen);
+    setEnteringAddress(false);
+    setAddressError("");
+  }
+
+  useEffect(() => {
+    if (isOpen) {
+      if (enteringAddress) addressInputRef.current?.focus();
+      else if (wasEnteringAddressRef.current) enterAddressRef.current?.focus();
+    }
+    wasEnteringAddressRef.current = enteringAddress;
+  }, [isOpen, enteringAddress]);
+
+  const openAddressEntry = () => {
+    setAddress(activeAddress);
+    setAddressError("");
+    setEnteringAddress(true);
+  };
+
+  const connectByAddress = () => {
+    const result = selectAddress(address);
+    if (!result.ok) {
+      setAddressError(t(result.errorKey));
+      addressInputRef.current?.focus();
+      return;
+    }
+    close();
+  };
 
   const savedDevices = useMemo(() => {
     return Object.values(records)
@@ -134,7 +187,7 @@ export function DeviceSheet({ isOpen, close }: DeviceSheetProps) {
   }, [appUi.enabled, clearScanTimer, startScan, stopScan]);
 
   useEffect(() => {
-    if (!isOpen || !appUi.enabled) {
+    if (!isOpen || enteringAddress || !appUi.enabled) {
       clearScanTimer();
       stopScan();
       return;
@@ -149,7 +202,14 @@ export function DeviceSheet({ isOpen, close }: DeviceSheetProps) {
       clearScanTimer();
       stopScan();
     };
-  }, [appUi.enabled, clearScanTimer, isOpen, startScan, stopScan]);
+  }, [
+    appUi.enabled,
+    clearScanTimer,
+    isOpen,
+    enteringAddress,
+    startScan,
+    stopScan,
+  ]);
 
   const selectDevice = (entry: SwitchDevice) => {
     if (entry.saved) {
@@ -166,119 +226,169 @@ export function DeviceSheet({ isOpen, close }: DeviceSheetProps) {
     <SlideModal
       isOpen={isOpen}
       close={close}
-      title={t("scan.deviceSheetTitle")}
+      title={t(
+        enteringAddress
+          ? "settings.deviceSetup.enterAddress"
+          : "scan.deviceSheetTitle",
+      )}
       footer={
-        <ModalActionBar
-          primaryAction={
-            <Button
-              variant="secondary"
-              label={t("scan.deviceSheetAllDevices")}
-              onClick={() => {
-                close();
-                void router.navigate({ to: "/settings/devices" });
-              }}
-            />
-          }
-        />
-      }
-    >
-      <div className="flex flex-col gap-4 py-2">
-        <ConnectionStatusDisplay
-          connectionError={connectionError}
-          connectedSubtitle={deviceDetails}
-          connectedSubtitleLoading={isConnected && coreVersionPending}
-          connectedName={name ?? undefined}
-          connectedTitleSuffix={clientRoleLabel}
-          action={
-            isConnected ? (
-              <CircleButton
-                icon={<KeyRoundIcon size={20} />}
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,9rem),1fr))] gap-2 [&>*]:min-h-12 [&>*]:w-full [&>*]:max-w-none">
+          {enteringAddress ? (
+            <>
+              <Button
                 variant="secondary"
-                aria-label={t("pairing.openPairing")}
+                label={t("nav.cancel")}
+                onClick={() => setEnteringAddress(false)}
+              />
+              <Button
+                intent="primary"
+                label={t("settings.deviceSetup.connect")}
+                onClick={connectByAddress}
+              />
+            </>
+          ) : (
+            <>
+              <Button
+                ref={enterAddressRef}
+                variant="secondary"
+                label={t("settings.deviceSetup.enterAddress")}
+                onClick={openAddressEntry}
+              />
+              <Button
+                variant="secondary"
+                label={t("scan.deviceSheetAllDevices")}
                 onClick={() => {
-                  openPairingModal();
                   close();
+                  void router.navigate({ to: "/settings/devices" });
                 }}
               />
-            ) : undefined
-          }
-        />
-
-        {showSwitchList && (
-          <section
-            className="flex flex-col gap-2"
-            aria-labelledby={switchHeadingId}
-          >
-            <div className="flex min-h-12 items-center justify-between gap-2">
-              <h3
-                id={switchHeadingId}
-                className="text-muted-foreground font-bold capitalize"
-              >
-                {t("scan.deviceSheetRecent")}
-              </h3>
-              {appUi.enabled && (
+            </>
+          )}
+        </div>
+      }
+    >
+      {enteringAddress ? (
+        <div className="py-2">
+          <TextInput
+            ref={addressInputRef}
+            label={t("settings.device")}
+            placeholder="192.168.1.23"
+            value={address}
+            setValue={(value) => {
+              setAddress(value);
+              setAddressError("");
+            }}
+            inputMode="url"
+            autoComplete="off"
+            error={addressError}
+            onKeyUp={(event) => {
+              if (event.key === "Enter" && !event.nativeEvent.isComposing)
+                connectByAddress();
+            }}
+          />
+        </div>
+      ) : (
+        <div className="flex flex-col gap-4 py-2">
+          <ConnectionStatusDisplay
+            connectionError={connectionError}
+            connectedSubtitle={deviceDetails}
+            connectedSubtitleLoading={isConnected && coreVersionPending}
+            connectedName={name ?? undefined}
+            connectedTitleSuffix={clientRoleLabel}
+            action={
+              isConnected || (pairingRequired && activeAddress) ? (
                 <Button
-                  icon={
-                    isScanning ? (
-                      <LoadingSpinner size={20} decorative />
-                    ) : (
-                      <RefreshCwIcon size={20} />
-                    )
-                  }
+                  icon={<KeyRoundIcon size={20} />}
                   variant="ghost"
                   shape="square"
                   size="sm"
-                  disabled={isScanning}
-                  disabledAppearance={isScanning ? "busy" : "unavailable"}
-                  aria-label={t("settings.networkScan.refresh")}
-                  onClick={beginScan}
-                />
-              )}
-            </div>
-
-            {switchDevices.map((entry) => {
-              const { saved, discovered } = entry;
-              return (
-                <DeviceRow
-                  key={entry.key}
-                  entry={{
-                    address: saved
-                      ? saved.endpoint.address
-                      : displayDiscoveredDeviceAddress(discovered!),
-                    name: saved?.record.name || discovered?.name,
-                    platform: saved?.record.platform || discovered?.platform,
-                    version: saved?.record.version || discovered?.version,
-                    ...(discovered?.hostname && discovered.addresses.length > 0
-                      ? { resolvedAddresses: discovered.addresses }
-                      : {}),
+                  aria-label={t("pairing.openPairing")}
+                  onClick={() => {
+                    openPairingModal();
+                    close();
                   }}
-                  onSelect={() => selectDevice(entry)}
                 />
-              );
-            })}
+              ) : undefined
+            }
+          />
 
-            {isScanning && (
-              <p
-                className="text-muted-foreground flex items-center gap-2 text-sm"
-                role="status"
-              >
-                <LoadingSpinner size={16} decorative />
-                {t("settings.networkScan.searching")}
-              </p>
-            )}
-            {error && (
-              <p className="text-error text-sm" role="alert">
-                {error}
-              </p>
-            )}
-            {!isScanning && !error && switchDevices.length === 0 && (
-              <p className="text-muted-foreground text-sm" role="status">
-                {t("settings.networkScan.noOtherDevices")}
-              </p>
-            )}
-          </section>
-        )}
-      </div>
+          {showSwitchList && (
+            <section
+              className="flex flex-col gap-2"
+              aria-labelledby={switchHeadingId}
+            >
+              <div className="flex min-h-12 items-center justify-between gap-2">
+                <h3
+                  id={switchHeadingId}
+                  className="text-muted-foreground font-bold capitalize"
+                >
+                  {t("scan.deviceSheetRecent")}
+                </h3>
+                {appUi.enabled && (
+                  <Button
+                    icon={
+                      isScanning ? (
+                        <LoadingSpinner size={20} decorative />
+                      ) : (
+                        <RefreshCwIcon size={20} />
+                      )
+                    }
+                    variant="ghost"
+                    shape="square"
+                    size="sm"
+                    disabled={isScanning}
+                    disabledAppearance={isScanning ? "busy" : "unavailable"}
+                    aria-label={t("settings.networkScan.refresh")}
+                    onClick={beginScan}
+                  />
+                )}
+              </div>
+
+              {switchDevices.map((entry) => {
+                const { saved, discovered } = entry;
+                return (
+                  <DeviceRow
+                    key={entry.key}
+                    entry={{
+                      address: saved
+                        ? saved.endpoint.address
+                        : displayDiscoveredDeviceAddress(discovered!),
+                      name: saved?.record.name || discovered?.name,
+                      platform: saved?.record.platform || discovered?.platform,
+                      version: saved?.record.version || discovered?.version,
+                      ...(discovered?.hostname &&
+                      discovered.addresses.length > 0
+                        ? { resolvedAddresses: discovered.addresses }
+                        : {}),
+                    }}
+                    onSelect={() => selectDevice(entry)}
+                  />
+                );
+              })}
+
+              {isScanning && (
+                <p
+                  className="text-muted-foreground flex items-center gap-2 text-sm"
+                  role="status"
+                >
+                  <LoadingSpinner size={16} decorative />
+                  {t("settings.networkScan.searching")}
+                </p>
+              )}
+              {error && (
+                <p className="text-error text-sm" role="alert">
+                  {error}
+                </p>
+              )}
+              {!isScanning && !error && switchDevices.length === 0 && (
+                <p className="text-muted-foreground text-sm" role="status">
+                  {t("settings.networkScan.noOtherDevices")}
+                </p>
+              )}
+            </section>
+          )}
+        </div>
+      )}
     </SlideModal>
   );
 }

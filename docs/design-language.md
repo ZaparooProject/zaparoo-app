@@ -18,7 +18,7 @@ Use these before creating or changing UI:
 - Settings screens: `src/routes/settings.index.tsx`, `settings.readers.tsx`, `settings.advanced.tsx`, `settings.accessibility.tsx`, `settings.media.tsx`, `settings.play-controls.tsx`, `settings.about.tsx`, `settings.help.tsx`, `settings.online.tsx`, `src/routes/-pages/Devices.tsx`, `DeviceDetail.tsx`, `Logs.tsx`
 - Create/search flows: `src/routes/create.index.tsx`, `create.custom.tsx`, `create.nfc.tsx`, `create.mappings.tsx`, `src/routes/-pages/Search.tsx`, `MappingEditor.tsx`, `ZapScriptInput.tsx`
 - Home: `src/routes/-pages/Index.tsx`, `src/components/home/*`
-- Lists/selectors: `MappingRow.tsx`, `VirtualSearchResults.tsx`, `SystemSelector.tsx`, `TagSelector.tsx`, `SimpleSystemSelect.tsx`, `DeviceRow.tsx`, `NetworkScanModal.tsx`, `InboxModal.tsx`
+- Lists/selectors: `MappingRow.tsx`, `VirtualSearchResults.tsx`, `SystemSelector.tsx`, `TagSelector.tsx`, `SimpleSystemSelect.tsx`, `DeviceRow.tsx`, `home/DeviceSheet.tsx`, `InboxModal.tsx`
 - Foundations: `src/styles/theme.css` (semantic palette), `src/styles/components.css` (materials), `src/index.css` (Tailwind aliases, tours, keyboard)
 
 ## Visual foundations
@@ -136,7 +136,7 @@ Global connection status uses `ConnectionStatusBar`, an in-layout strip above bo
 - sub-second connecting/reconnecting stays hidden
 - routine connecting/reconnecting uses muted neutral styling and an inline spinner
 - prolonged Core/network unavailability uses warning styling and a Settings action
-- Settings landing relies on its contextual connection card instead of duplicating the visible strip; Home does not, because its device pill carries identity rather than connection state
+- Settings landing relies on its contextual connection summary instead of duplicating the visible strip; Home does not, because its device pill carries identity rather than connection state
 - restored status appears briefly only after a connection issue was presented
 
 `BackToTop` is the only floating circular page utility. Use it only on long,
@@ -196,7 +196,7 @@ Do not build custom buttons with raw `<button>` unless implementing a specialize
 
 ### CircleButton
 
-Use `src/components/wui/CircleButton.tsx` for raised circular icon actions. It mirrors Zaparoo Online's dedicated CircleButton material rather than approximating it with a rounded generic Button. Default controls retain a 48px touch target; variants are `primary`, `secondary`, `destructive` and `pro`. Use `variant="secondary"` for neutral contextual actions such as Pair in the device sheet and `BackToTop`.
+Use `src/components/wui/CircleButton.tsx` for raised circular icon actions. It mirrors Zaparoo Online's dedicated CircleButton material rather than approximating it with a rounded generic Button. Default controls retain a 48px touch target; variants are `primary`, `secondary`, `destructive` and `pro`. Use `variant="secondary"` for neutral contextual actions such as `BackToTop`.
 
 ### HeaderButton
 
@@ -242,7 +242,7 @@ Card style:
 
 Real use:
 
-- Settings top cards: device connection, media database
+- Settings device summary and media database cards
 - Home connection status
 - Create landing action cards
 - Search database warning card
@@ -385,11 +385,19 @@ Link rows inside settings subpages (Advanced, About) use `settings-nav-row`:
 - related rows share a raised Card shell; rows remain flat, not individual action cards
 - no invented descriptions
 
-Device history is a different settings subflow:
+The Settings device area uses `DeviceConnectionSummary`: a standard `Card` containing `ConnectionStatusDisplay` followed by a full-width secondary button with a switch-device icon, Change device (Connect before a device is selected). Keep the address editor, Save button, and routine pairing/discovery controls out of this summary. Device names, metadata, and connection errors wrap rather than competing with a toolbar. Pairing-required state adds a direct Pair with device recovery action.
 
+The Settings landing page's Update media database button is also secondary, retaining its database icon. The dedicated Manage Media page keeps that action primary.
+
+Settings and Zap open the same `DeviceSheet`. Its footer offers Enter address and Manage devices. Actions use the reader-recovery pattern's intrinsic 9rem grid: equal-width faces when they fit, stacked controls for narrow or enlarged-text layouts. Manual entry is a focused view within the same sheet, using a labeled `TextInput` and Cancel/Connect footer; Cancel returns to selection and restores focus to Enter address, while dismissal exits the flow. Discovery pauses during manual entry. Each entry starts from the selected address; validation stays inline and a valid selection closes the sheet. Manual entry remains available on web and when discovery fails.
+
+Device management is a separate settings subflow:
+
+- page title matches Manage devices; switching stays in the shared sheet
 - list wrapper `flex flex-col gap-3 pt-2`
-- rows use `DeviceRow`, which is a `Card` with active dot, primary name/address, muted address/platform/version metadata, optional lock icon, and optional right action button
-- device detail uses `flex flex-col gap-6 p-3`, TextInput for name, a home-style info section heading `text-muted-foreground font-bold capitalize`, and full-width buttons
+- rows use `DeviceRow`, which is a `Card` with active dot, primary name/address, muted address/platform/version metadata, and optional lock icon; tapping a row opens details without changing the active device
+- selection checkboxes appear only in the existing Combine editing mode
+- device detail uses `flex flex-col gap-6 p-3`, TextInput for name, an info section heading `text-lg font-semibold`, and full-width buttons for explicit device selection and Forget
 
 ### Settings toggles
 
@@ -423,6 +431,15 @@ Numeric field group pattern in Play Controls:
 If one sibling section has no visible description, new sibling sections must not add one.
 
 ## Forms and selectors
+
+### Input and Save rows
+
+`TextInput` owns the shared field-and-Save row. Keep `items-end` on the row:
+buttons reserve their physical front edge with a bottom margin, while recessed
+inputs sit flush with the ground plane. An enabled Save cap sits above the
+input; pressed or unavailable Save aligns with it. Do not top-align the faces
+or remove button travel to compensate. Keep the Save control mounted and the
+input footprint stable as edits enable or disable saving.
 
 ### Native selects
 
@@ -493,7 +510,7 @@ Visual behavior:
 Persistent footer behavior:
 
 - footer stays in normal flex flow below scrollable body with an 8px gap after its divider; never float actions over content
-- body shrinks and scrolls before footer; footer gets its own constrained overflow only as short-viewport/text-zoom fallback
+- body shrinks and scrolls before footer; footer gets its own constrained overflow only as short-viewport/text-zoom fallback. Its scroll viewport extends into existing side and bottom shell gutters so reader halos and button shadows are not clipped; inset padding keeps action geometry and the divider unchanged
 - simple confirmations keep two labelled, equal-width actions on one row
 - form and selector footers with one secondary action plus one primary action use `ModalActionBar`, preserving the same labelled, equal-width pair; examples include Reset/Apply, Clear/Apply, Delete/Save, and Logout/Save
 - media/detail modals with several independent contextual actions use `ModalActionRail`; do not treat those actions as confirmation buttons
@@ -585,8 +602,11 @@ Patterns:
 - Remote Keyboard is a full-width secondary `Button` below the scan actions,
   behind the `remoteInput` feature gate and disabled while disconnected.
 - Device identity is a `StatusPill` in the Home header actions, opening a
-  `SlideModal` device sheet. The sheet keeps Pair as a circular secondary icon
-  action on the connected-device status row. It runs one bounded discovery pass on open,
+  `SlideModal` device sheet. Pair is an unframed `ghost` icon action on the
+  connected-device status row, matching Refresh below with a 48px square target.
+  Pair remains available when pairing is required before connection. The sheet
+  is shared with Settings and includes the manual-address and management
+  actions described above. It runs one bounded discovery pass on open,
   offers an icon refresh action, and merges discovered devices into the saved
   switch list by stable ID, hostname, then endpoint. Omit the currently
   connected device; inactive rows do not reserve an empty status-indicator

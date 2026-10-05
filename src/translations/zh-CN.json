@@ -886,6 +886,10 @@
       "title": "设置",
       "moreSettings": "更多设置",
       "device": "设备地址",
+      "deviceSetup": {
+        "enterAddress": "输入地址",
+        "connect": "连接"
+      },
       "deviceAddressRequired": "请输入设备地址",
       "deviceAddressInvalid": "请输入有效的主机名、IP 地址或主机:端口。",
       "modeLabel": "扫描模式",
@@ -1518,7 +1522,7 @@
       },
       "deviceAddress": {
         "title": "连接设备",
-        "text": "轻触搜索图标以查找网络中的 Zaparoo 设备；也可根据需要手动输入设备 IP 地址。"
+        "text": "打开设备选择，选择已保存或附近的 Zaparoo 设备，或手动输入设备地址。"
       },
       "mediaDatabase": {
         "title": "更新媒体库",

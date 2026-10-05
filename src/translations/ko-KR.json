@@ -886,6 +886,10 @@
       "title": "설정",
       "moreSettings": "더 많은 설정",
       "device": "기기 주소",
+      "deviceSetup": {
+        "enterAddress": "주소 입력",
+        "connect": "연결"
+      },
       "deviceAddressRequired": "기기 주소를 입력하세요",
       "deviceAddressInvalid": "올바른 호스트명, IP 주소 또는 host:port를 입력하세요.",
       "modeLabel": "스캔 모드",
@@ -1518,7 +1522,7 @@
       },
       "deviceAddress": {
         "title": "기기 연결",
-        "text": "검색 아이콘을 눌러 네트워크의 Zaparoo 기기를 찾거나 필요한 경우 기기 IP 주소를 직접 입력하세요."
+        "text": "기기 선택을 열어 저장된 기기나 근처의 Zaparoo 기기를 선택하거나 주소를 직접 입력하세요."
       },
       "mediaDatabase": {
         "title": "미디어 라이브러리 업데이트",

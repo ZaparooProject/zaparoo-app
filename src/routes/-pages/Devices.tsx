@@ -2,10 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { ListChecks, PencilIcon, XIcon } from "lucide-react";
+import { ListChecks, XIcon } from "lucide-react";
 import { useConnection } from "@/hooks/useConnection";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
-import { useSelectDevice } from "@/hooks/useSelectDevice";
 import {
   credentialKeyForRecord,
   credentialStore,
@@ -56,7 +55,7 @@ const selectRegistrySettled = (state: {
 export function Devices() {
   const { t } = useTranslation();
   const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
-    t("settings.deviceHistory"),
+    t("scan.deviceSheetAllDevices"),
   );
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -75,7 +74,6 @@ export function Devices() {
   const registrySettled = useDeviceRegistry(selectRegistrySettled);
   const { isConnected } = useConnection();
 
-  const { selectRecord } = useSelectDevice();
   const [pairedKeys, setPairedKeys] = useState<Set<string>>(new Set());
   const [isEditing, setIsEditing] = useState(false);
   const [selectedRecordIds, setSelectedRecordIds] = useState<Set<string>>(
@@ -155,8 +153,10 @@ export function Devices() {
       toggleSelected(recordId);
       return;
     }
-    void selectRecord(recordId);
-    router.navigate({ to: "/settings" });
+    void router.navigate({
+      to: "/settings/devices/$recordId",
+      params: { recordId },
+    });
   };
 
   const closeEditMode = () => {
@@ -251,7 +251,7 @@ export function Devices() {
       }
       headerCenter={
         <h1 ref={headingRef} className="text-foreground text-xl">
-          {t("settings.deviceHistory")}
+          {t("scan.deviceSheetAllDevices")}
         </h1>
       }
       headerRight={
@@ -276,7 +276,7 @@ export function Devices() {
         ) : undefined
       }
     >
-      <div className="flex flex-col gap-3 pt-2">
+      <div className="flex flex-col gap-3">
         {!registrySettled ? (
           <DelayedLoading>
             <div className="text-muted-foreground flex items-center justify-center gap-2 py-8">
@@ -331,19 +331,7 @@ export function Devices() {
                       !selectedRecordIds.has(record.recordId)
                     }
                   />
-                ) : (
-                  <Button
-                    icon={<PencilIcon size={20} />}
-                    variant="ghost"
-                    aria-label={t("settings.deviceDetails")}
-                    onClick={() =>
-                      void router.navigate({
-                        to: "/settings/devices/$recordId",
-                        params: { recordId: record.recordId },
-                      })
-                    }
-                  />
-                )
+                ) : undefined
               }
             />
           ))

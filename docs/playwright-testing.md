@@ -25,9 +25,9 @@ The app stores the device address in `localStorage` under the key `deviceAddress
 
 1. Skip the welcome tour: click the "Skip Tour" button
 2. Navigate to Settings (bottom nav bar)
-3. Fill the "Device address" textbox with the device IP (e.g. `10.0.0.107`)
-4. Click the "Save" button
-5. Wait a few seconds, then take a snapshot to confirm "Connected" status
+3. Open device selection with "Connect" (no selected device) or "Change device"
+4. Choose "Enter address", fill the "Device address" textbox with the device IP (e.g. `10.0.0.107`), then click "Connect"
+5. Wait for the summary to show "Connected", then take a snapshot
 
 **Option B: Inject localStorage directly**
 
@@ -70,22 +70,22 @@ The only time `goto` is appropriate is for the initial page load or if you inten
 
 ### App Routes
 
-| Route                     | Page             | Notes                                             |
-| ------------------------- | ---------------- | ------------------------------------------------- |
-| `/`                       | Home (Zap)       | Connection status, last scanned, now playing      |
-| `/create`                 | Create a New Tag | Links to sub-pages, "Current media" button        |
-| `/create/search`          | Search for Media | Search box, system/tag filters, results list      |
-| `/create/custom`          | Custom ZapScript | Text editor with command palette                  |
-| `/create/mappings`        | Add a Mapping    | Token ID input, NFC/Camera scan, ZapScript editor |
-| `/settings`               | Settings         | Device connection, media database, language       |
-| `/settings/readers`       | Readers          | Device readers, scan mode, chat/AI config         |
-| `/settings/play-controls` | Play Controls    | Playtime limits and launch guard configuration    |
-| `/settings/media`         | Manage Media     | Database update and metadata scraper controls     |
-| `/settings/advanced`      | Advanced         | Debug logging, error reporting, view logs         |
-| `/settings/logs`          | Logs             | Filterable log viewer                             |
-| `/settings/help`          | Help             | Documentation and community links                 |
-| `/settings/about`         | About            | Version, credits, translations                    |
-| `/settings/online`        | Zaparoo Online   | Login form                                        |
+| Route                     | Page             | Notes                                              |
+| ------------------------- | ---------------- | -------------------------------------------------- |
+| `/`                       | Home (Zap)       | Connection status, last scanned, now playing       |
+| `/create`                 | Create a New Tag | Links to sub-pages, "Current media" button         |
+| `/create/search`          | Search for Media | Search box, system/tag filters, results list       |
+| `/create/custom`          | Custom ZapScript | Text editor with command palette                   |
+| `/create/mappings`        | Add a Mapping    | Token ID input, NFC/Camera scan, ZapScript editor  |
+| `/settings`               | Settings         | Device summary/selection, media database, language |
+| `/settings/readers`       | Readers          | Device readers, scan mode, chat/AI config          |
+| `/settings/play-controls` | Play Controls    | Playtime limits and launch guard configuration     |
+| `/settings/media`         | Manage Media     | Database update and metadata scraper controls      |
+| `/settings/advanced`      | Advanced         | Debug logging, error reporting, view logs          |
+| `/settings/logs`          | Logs             | Filterable log viewer                              |
+| `/settings/help`          | Help             | Documentation and community links                  |
+| `/settings/about`         | About            | Version, credits, translations                     |
+| `/settings/online`        | Zaparoo Online   | Login form                                         |
 
 ### Bottom Navigation Bar
 
@@ -219,12 +219,15 @@ playwright-cli snapshot
 # Find "Skip Tour" button ref, then:
 playwright-cli click <skip-tour-ref>
 
-# 3. Connect to device via Settings
+# 3. Connect to device via Settings and shared device sheet
 playwright-cli click <settings-nav-ref>
 playwright-cli snapshot
-# Find device address textbox ref
+playwright-cli click <connect-or-change-device-ref>
+playwright-cli snapshot
+playwright-cli click <enter-address-ref>
+playwright-cli snapshot
 playwright-cli fill <textbox-ref> "10.0.0.107"
-playwright-cli click <save-button-ref>
+playwright-cli click <connect-button-ref>
 
 # 4. Wait and verify connection
 sleep 3

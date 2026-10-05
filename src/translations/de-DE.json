@@ -886,6 +886,10 @@
       "title": "Einstellungen",
       "moreSettings": "Weitere Einstellungen",
       "device": "Geräteadresse",
+      "deviceSetup": {
+        "enterAddress": "Adresse eingeben",
+        "connect": "Verbinden"
+      },
       "deviceAddressRequired": "Geräteadresse eingeben",
       "deviceAddressInvalid": "Gib einen gültigen Hostnamen, eine IP-Adresse oder Host:Port ein.",
       "modeLabel": "Scan-Modus",
@@ -1518,7 +1522,7 @@
       },
       "deviceAddress": {
         "title": "Gerät verbinden",
-        "text": "Tippe auf das Suchsymbol, um Zaparoo-Geräte in deinem Netzwerk zu finden. Bei Bedarf kannst du auch manuell die IP-Adresse eines Geräts eingeben."
+        "text": "Öffne die Geräteauswahl, um ein gespeichertes oder nahegelegenes Zaparoo-Gerät auszuwählen, oder gib seine Adresse manuell ein."
       },
       "mediaDatabase": {
         "title": "Medienbibliothek aktualisieren",

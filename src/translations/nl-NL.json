@@ -886,6 +886,10 @@
       "title": "Instellingen",
       "moreSettings": "Meer instellingen",
       "device": "Apparaatadres",
+      "deviceSetup": {
+        "enterAddress": "Adres invoeren",
+        "connect": "Verbinden"
+      },
       "deviceAddressRequired": "Voer een apparaatadres in",
       "deviceAddressInvalid": "Voer een geldige hostnaam, een geldig IP-adres of een geldige host:poort in.",
       "modeLabel": "Scanmodus",
@@ -1518,7 +1522,7 @@
       },
       "deviceAddress": {
         "title": "Verbind je apparaat",
-        "text": "Tik op het zoekpictogram om Zaparoo-apparaten in je netwerk te vinden, of voer indien nodig handmatig het IP-adres van een apparaat in."
+        "text": "Open de apparaatselectie om een opgeslagen of nabijgelegen Zaparoo-apparaat te kiezen, of voer het adres handmatig in."
       },
       "mediaDatabase": {
         "title": "Mediabibliotheek bijwerken",

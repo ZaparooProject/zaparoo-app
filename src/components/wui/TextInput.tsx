@@ -66,7 +66,7 @@ export function TextInput(props: {
           {props.label}
         </label>
       )}
-      <div className="flex items-start gap-2">
+      <div className="flex items-end gap-2">
         <div className="relative min-w-0 flex-1">
           <input
             id={inputId}

@@ -267,7 +267,7 @@ describe("Settings Devices Route", () => {
     });
   });
 
-  it("should make the tapped record active and return to settings", async () => {
+  it("should open a device's details without changing the active device", async () => {
     const user = userEvent.setup();
     const [first, second] = await seedRecords(
       [
@@ -281,13 +281,14 @@ describe("Settings Devices Route", () => {
     renderRoute();
     await user.click(screen.getByText("Pick me"));
 
-    await waitFor(() => {
-      expect(deviceRegistry.getSnapshot().activeRecordId).toBe(first!.recordId);
+    expect(deviceRegistry.getSnapshot().activeRecordId).toBe(second!.recordId);
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/settings/devices/$recordId",
+      params: { recordId: first!.recordId },
     });
-    expect(mockNavigate).toHaveBeenCalledWith({ to: "/settings" });
   });
 
-  it("should open each row's record detail page from its edit button", async () => {
+  it("should present management with one detail action per device", async () => {
     const user = userEvent.setup();
     const [record] = await seedRecords([
       { address: "192.168.1.30", name: "With Info" },
@@ -295,9 +296,10 @@ describe("Settings Devices Route", () => {
 
     renderRoute();
 
-    await user.click(
-      await screen.findByRole("button", { name: "settings.deviceDetails" }),
-    );
+    expect(
+      screen.getByRole("heading", { name: "scan.deviceSheetAllDevices" }),
+    ).toBeVisible();
+    await user.click(await screen.findByRole("button", { name: /With Info/ }));
 
     expect(mockNavigate).toHaveBeenCalledWith({
       to: "/settings/devices/$recordId",

@@ -886,6 +886,10 @@
       "title": "Ajustes",
       "moreSettings": "Más ajustes",
       "device": "Dirección del dispositivo",
+      "deviceSetup": {
+        "enterAddress": "Introducir dirección",
+        "connect": "Conectar"
+      },
       "deviceAddressRequired": "Introduce una dirección de dispositivo",
       "deviceAddressInvalid": "Introduce un nombre de host, una dirección IP o un host:port válidos.",
       "modeLabel": "Modo de escaneo",
@@ -1518,7 +1522,7 @@
       },
       "deviceAddress": {
         "title": "Conecta tu dispositivo",
-        "text": "Pulsa el icono de búsqueda para encontrar dispositivos Zaparoo en tu red o introduce manualmente la dirección IP del dispositivo si es necesario."
+        "text": "Abre la selección de dispositivos para elegir un dispositivo Zaparoo guardado o cercano, o introduce su dirección manualmente."
       },
       "mediaDatabase": {
         "title": "Actualizar biblioteca multimedia",

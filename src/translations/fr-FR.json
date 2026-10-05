@@ -886,6 +886,10 @@
       "title": "Réglages",
       "moreSettings": "Plus de réglages",
       "device": "Adresse de l’appareil",
+      "deviceSetup": {
+        "enterAddress": "Saisir une adresse",
+        "connect": "Connecter"
+      },
       "deviceAddressRequired": "Saisissez une adresse d’appareil",
       "deviceAddressInvalid": "Saisissez un nom d’hôte, une adresse IP ou une adresse hôte:port valide.",
       "modeLabel": "Mode de scan",
@@ -1518,7 +1522,7 @@
       },
       "deviceAddress": {
         "title": "Connectez votre appareil",
-        "text": "Appuyez sur l’icône de recherche pour trouver les appareils Zaparoo sur votre réseau ou saisissez manuellement l’adresse IP d’un appareil si nécessaire."
+        "text": "Ouvrez la sélection des appareils pour choisir un appareil Zaparoo enregistré ou à proximité, ou saisissez son adresse manuellement."
       },
       "mediaDatabase": {
         "title": "Mettez à jour la bibliothèque multimédia",
