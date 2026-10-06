@@ -26,7 +26,7 @@ The app stores the device address in `localStorage` under the key `deviceAddress
 1. Skip the welcome tour: click the "Skip Tour" button
 2. Navigate to Settings (bottom nav bar)
 3. Open device selection with "Connect" (no selected device) or "Change device"
-4. Choose "Enter address", fill the "Device address" textbox with the device IP (e.g. `10.0.0.107`), then click "Connect"
+4. Choose "Add device manually", fill the "Device address" textbox with the device IP (e.g. `10.0.0.107`), then click "Connect"
 5. Wait for the summary to show "Connected", then take a snapshot
 
 **Option B: Inject localStorage directly**

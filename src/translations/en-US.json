@@ -1,4 +1,6 @@
 {
+  "copyToClipboard": "Copy to clipboard",
+  "copyFailed": "Could not copy to clipboard",
   "translation": {
     "copy": "Copy",
     "copied": "Copied",
@@ -924,6 +926,7 @@
       "moreSettings": "More settings",
       "device": "Device address",
       "deviceSetup": {
+        "addDeviceManually": "Add device manually",
         "enterAddress": "Enter address",
         "connect": "Connect"
       },

@@ -49,6 +49,7 @@ export function NfcUtils() {
   const [writeIntent, setWriteIntent] = useState(false);
   const writeOpen = isReaderActivityOpen(writeIntent, nfcWriter);
   const [activeTab, setActiveTab] = useState("read");
+  const [activeTool, setActiveTool] = useState<WriteAction | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   // Track previous status to detect completion
   const prevStatusRef = useRef(nfcWriter.status);
@@ -86,6 +87,7 @@ export function NfcUtils() {
     void router.navigate(appBackNavigationOptions("/create"));
 
   const handleScan = () => {
+    setActiveTool(null);
     nfcWriter.write(WriteAction.Read).catch((e) => {
       logger.error("NFC read failed:", e, {
         category: "nfc",
@@ -97,6 +99,7 @@ export function NfcUtils() {
   };
 
   const handleToolAction = (action: WriteAction) => {
+    setActiveTool(action);
     nfcWriter.write(action).catch((e) => {
       logger.error("NFC tool action failed:", e, {
         category: "nfc",
@@ -187,17 +190,35 @@ export function NfcUtils() {
                   t("create.nfc.readTab.scanTag"),
                 )}
               />
-            ) : writeOpen ? (
-              <div className="px-2 pt-6">
-                {readerControl(
-                  () => undefined,
-                  t("create.nfc.toolsTab.formatTag"),
-                )}
-              </div>
             ) : (
               <ToolsTab
                 onToolAction={handleToolAction}
                 isProcessing={nfcWriter.writing}
+                renderToolControl={({ action, label, icon }) => (
+                  <ReaderActivityControl
+                    state={activeTool === action ? readerState : "idle"}
+                    idleLabel={label}
+                    activeLabel={
+                      nfcWriter.retapRequired
+                        ? t("spinner.retapTag")
+                        : t("spinner.holdTagReader")
+                    }
+                    errorMessage={
+                      nfcWriter.verifyError
+                        ? t("spinner.verifyFailedRetry")
+                        : undefined
+                    }
+                    icon={icon}
+                    variant="outline"
+                    intent="destructive"
+                    disabled={
+                      activeTool !== action && (writeOpen || nfcWriter.writing)
+                    }
+                    onStart={() => handleToolAction(action)}
+                    onCancel={() => void cancelReaderActivity()}
+                    onRetry={() => void nfcWriter.retry()}
+                  />
+                )}
               />
             )}
           </div>

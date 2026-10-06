@@ -18,6 +18,7 @@ import {
 import { invalidateLibraryImageCache } from "@/lib/libraryImageCache";
 import { PageFrame } from "@/components/PageFrame";
 import { HeaderButton } from "@/components/wui/HeaderButton";
+import { Card } from "@/components/wui/Card";
 import { Button } from "@/components/wui/Button";
 import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { TextInput } from "@/components/wui/TextInput";
@@ -151,7 +152,7 @@ export function DeviceDetail() {
         </h1>
       }
     >
-      <div className="flex flex-col gap-6">
+      <Card className="flex flex-col gap-4">
         <TextInput
           label={t("settings.deviceDetail.nameLabel")}
           placeholder={endpoint.address}
@@ -201,7 +202,7 @@ export function DeviceDetail() {
           onClick={() => setConfirmOpen(true)}
           className="w-full"
         />
-      </div>
+      </Card>
 
       <SlideModal
         isOpen={confirmOpen}

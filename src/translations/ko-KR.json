@@ -1,4 +1,6 @@
 {
+  "copyToClipboard": "Copy to clipboard",
+  "copyFailed": "Could not copy to clipboard",
   "translation": {
     "copy": "복사",
     "copied": "복사됨",
@@ -887,6 +889,7 @@
       "moreSettings": "더 많은 설정",
       "device": "기기 주소",
       "deviceSetup": {
+        "addDeviceManually": "Add device manually",
         "enterAddress": "주소 입력",
         "connect": "연결"
       },

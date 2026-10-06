@@ -351,7 +351,9 @@ describe("Settings Index Route", () => {
       screen.getByRole("dialog", { name: "scan.deviceSheetTitle" }),
     );
     await user.click(
-      sheet.getByRole("button", { name: "settings.deviceSetup.enterAddress" }),
+      sheet.getByRole("button", {
+        name: "settings.deviceSetup.addDeviceManually",
+      }),
     );
     return screen.getByRole("dialog", {
       name: "settings.deviceSetup.enterAddress",
@@ -370,7 +372,7 @@ describe("Settings Index Route", () => {
       );
       expect(
         sheet.getByRole("button", {
-          name: "settings.deviceSetup.enterAddress",
+          name: "settings.deviceSetup.addDeviceManually",
         }),
       ).toBeVisible();
       await user.click(

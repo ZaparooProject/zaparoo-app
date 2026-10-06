@@ -149,7 +149,9 @@ describe("Shared device discovery flow", () => {
     const sheet = within(await openSheet(user));
     await waitForScan();
     await user.click(
-      sheet.getByRole("button", { name: "settings.deviceSetup.enterAddress" }),
+      sheet.getByRole("button", {
+        name: "settings.deviceSetup.addDeviceManually",
+      }),
     );
     const manual = within(
       screen.getByRole("dialog", { name: "settings.deviceSetup.enterAddress" }),
@@ -161,7 +163,9 @@ describe("Shared device discovery flow", () => {
     await user.click(manual.getByRole("button", { name: "nav.cancel" }));
     await waitFor(() => expect(ZeroConf.watch).toHaveBeenCalledTimes(2));
     expect(
-      sheet.getByRole("button", { name: "settings.deviceSetup.enterAddress" }),
+      sheet.getByRole("button", {
+        name: "settings.deviceSetup.addDeviceManually",
+      }),
     ).toHaveFocus();
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -176,7 +180,9 @@ describe("Shared device discovery flow", () => {
     const sheet = within(await openSheet(user));
     expect(await sheet.findByRole("alert")).toBeVisible();
     await user.click(
-      sheet.getByRole("button", { name: "settings.deviceSetup.enterAddress" }),
+      sheet.getByRole("button", {
+        name: "settings.deviceSetup.addDeviceManually",
+      }),
     );
     const manual = within(
       screen.getByRole("dialog", { name: "settings.deviceSetup.enterAddress" }),
@@ -205,7 +211,9 @@ describe("Shared device discovery flow", () => {
       sheet.queryByRole("button", { name: "settings.networkScan.refresh" }),
     ).not.toBeInTheDocument();
     await user.click(
-      sheet.getByRole("button", { name: "settings.deviceSetup.enterAddress" }),
+      sheet.getByRole("button", {
+        name: "settings.deviceSetup.addDeviceManually",
+      }),
     );
     expect(
       screen.getByRole("textbox", { name: "settings.device" }),

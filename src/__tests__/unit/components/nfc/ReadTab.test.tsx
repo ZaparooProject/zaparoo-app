@@ -202,7 +202,7 @@ describe("ReadTab", () => {
 
       // Find copy buttons by their accessible aria-label
       const copyButtons = screen.getAllByRole("button", {
-        name: "Copy to clipboard",
+        name: "copyToClipboard",
       });
 
       // First copy button should be for UID
@@ -230,7 +230,7 @@ describe("ReadTab", () => {
 
       // Find copy buttons by their accessible aria-label
       const copyButtons = screen.getAllByRole("button", {
-        name: "Copy to clipboard",
+        name: "copyToClipboard",
       });
 
       fireEvent.click(copyButtons[0]!);
@@ -921,7 +921,7 @@ describe("ReadTab", () => {
 
       // Find copy buttons - there should be multiple
       const copyButtons = screen.getAllByRole("button", {
-        name: "Copy to clipboard",
+        name: "copyToClipboard",
       });
 
       expect(copyButtons.length).toBeGreaterThan(0);

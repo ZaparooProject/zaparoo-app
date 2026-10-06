@@ -286,46 +286,8 @@
     "left ok right"
     ". down .";
   grid-template-columns: repeat(3, 4rem);
-  grid-template-rows: repeat(3, 3.5rem);
-  gap: 0.35rem;
-}
-
-.remote-keyboard-pad-button,
-.remote-keyboard-pad-action {
-  border: 1px solid var(--edge-subtle);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  background: linear-gradient(
-    180deg,
-    var(--secondary-cap),
-    var(--surface-raised),
-    var(--surface-inset)
-  );
-  box-shadow:
-    0 4px 0 var(--secondary-edge),
-    inset 0 1px 0 var(--material-highlight);
-  color: var(--text-primary);
-  font-size: 1rem;
-  font-weight: 600;
-  transition:
-    opacity 0.1s,
-    transform 0.1s;
-}
-
-.remote-keyboard-pad-button:active,
-.remote-keyboard-pad-action:active {
-  transform: translateY(4px);
-  box-shadow: inset 0 1px 0 var(--material-highlight);
-}
-
-.remote-keyboard-pad-button:focus-visible,
-.remote-keyboard-pad-action:focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 2px var(--interaction),
-    0 0 0 4px var(--background);
+  grid-template-rows: repeat(3, auto);
+  gap: 0.5rem;
 }
 
 .remote-keyboard-pad-up {
@@ -353,19 +315,7 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0.35rem;
-}
-
-.remote-keyboard-pad-action {
-  min-height: 3.5rem;
-  min-width: 4rem;
-  padding: 0 0.875rem;
-}
-
-.remote-keyboard-pad-action:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-  transform: none;
+  gap: 0.5rem;
 }
 
 .remote-keyboard-screenshot-result {
@@ -385,41 +335,14 @@
 
 .remote-keyboard-screenshot-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
   gap: 0.5rem;
-}
-
-.remote-keyboard-screenshot-control {
-  display: inline-flex;
-  min-height: 2.5rem;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  border: 1px solid var(--edge-subtle);
-  border-radius: 4px;
-  background: linear-gradient(
-    180deg,
-    var(--secondary-cap),
-    var(--surface-raised),
-    var(--surface-inset)
-  );
-  box-shadow:
-    0 4px 0 var(--secondary-edge),
-    inset 0 1px 0 var(--material-highlight);
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
-.remote-keyboard-screenshot-control:focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 2px var(--interaction),
-    0 0 0 4px var(--background);
 }
 
 .remote-keyboard-wrapper .remote-keyboard {
   background: transparent;
   padding: 0;
+  overflow: visible;
   font-family: inherit;
 }
 
@@ -436,30 +359,53 @@
   margin-bottom: 0.25rem;
 }
 
+/* Vendor keys use a quieter outline while retaining shared depth and travel. */
 .remote-keyboard-wrapper .remote-keyboard .hg-button {
-  min-height: 2.5rem;
+  min-height: 3rem;
   border: 1px solid var(--edge-subtle);
   border-radius: 4px;
-  background: linear-gradient(
-    180deg,
-    var(--secondary-cap),
-    var(--surface-raised),
-    var(--surface-inset)
-  );
+  background: var(--surface-inset);
   box-shadow:
-    0 4px 0 var(--secondary-edge),
-    inset 0 1px 0 var(--material-highlight);
+    0 var(--button-depth) 0 var(--button-edge),
+    0 6px 10px var(--material-shadow),
+    inset 0 1px 0 var(--button-highlight);
   color: var(--text-primary);
-  font-size: 1rem;
-  font-weight: 600;
-  transition:
-    opacity 0.1s,
-    transform 0.1s;
+  font-size: 0.875rem;
+  text-transform: none;
+  letter-spacing: normal;
 }
 
-.remote-keyboard-wrapper .remote-keyboard .hg-button:active {
-  transform: translateY(4px);
-  box-shadow: inset 0 1px 0 var(--material-highlight);
+@media (hover: hover) and (pointer: fine) {
+  .remote-keyboard-wrapper
+    fieldset:not(:disabled)
+    .remote-keyboard
+    .hg-button:hover {
+    transform: translateY(var(--button-hover-travel));
+    box-shadow:
+      0 var(--button-hover-edge) 0 var(--button-edge),
+      0 4px 6px var(--material-shadow),
+      inset 0 1px 0 var(--button-highlight);
+  }
+}
+
+.remote-keyboard-wrapper fieldset:disabled .remote-keyboard .hg-button {
+  cursor: not-allowed;
+  color: var(--text-muted);
+  background: var(--surface-inset);
+  border-color: var(--edge-subtle);
+  box-shadow: inset 0 2px 4px var(--material-shadow);
+  transform: none;
+}
+
+.remote-keyboard-wrapper
+  fieldset:not(:disabled)
+  .remote-keyboard
+  .hg-button:is(:active, .hg-activeButton) {
+  transform: translateY(var(--button-depth));
+  box-shadow:
+    0 0 0 var(--button-edge),
+    0 2px 4px var(--material-shadow),
+    inset 0 1px 0 rgb(255 255 255 / 10%);
 }
 
 .remote-keyboard-wrapper .remote-keyboard .hg-button:focus-visible {

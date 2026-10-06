@@ -12,6 +12,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen } from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { ErrorComponent } from "@/components/ErrorComponent";
+import { render as renderStandalone } from "@testing-library/react";
 
 // Mock window.location.reload
 const mockReload = vi.fn();
@@ -27,6 +28,21 @@ describe("ErrorComponent", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("keeps recovery usable without app or router providers", async () => {
+    const user = userEvent.setup();
+    renderStandalone(<ErrorComponent error={new Error("Provider failure")} />);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "errorBoundary.title",
+    );
+    expect(
+      screen.getByRole("button", { name: "copyToClipboard" }),
+    ).toBeEnabled();
+    const reload = screen.getByRole("button", { name: "errorBoundary.reload" });
+    reload.focus();
+    await user.keyboard("{Enter}");
+    expect(mockReload).toHaveBeenCalledOnce();
   });
 
   describe("rendering", () => {
@@ -119,7 +135,7 @@ describe("ErrorComponent", () => {
       render(<ErrorComponent error={error} />);
 
       expect(
-        screen.getByRole("button", { name: /copy to clipboard/i }),
+        screen.getByRole("button", { name: "copyToClipboard" }),
       ).toBeInTheDocument();
     });
   });
@@ -153,7 +169,7 @@ describe("ErrorComponent", () => {
       render(<ErrorComponent error={error} />);
 
       const copyButton = screen.getByRole("button", {
-        name: /copy to clipboard/i,
+        name: "copyToClipboard",
       });
       expect(copyButton).toBeInTheDocument();
     });

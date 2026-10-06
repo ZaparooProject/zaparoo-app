@@ -1,4 +1,6 @@
 {
+  "copyToClipboard": "Copy to clipboard",
+  "copyFailed": "Could not copy to clipboard",
   "translation": {
     "copy": "コピー",
     "copied": "コピーしました",
@@ -887,6 +889,7 @@
       "moreSettings": "その他の設定",
       "device": "デバイスアドレス",
       "deviceSetup": {
+        "addDeviceManually": "Add device manually",
         "enterAddress": "アドレスを入力",
         "connect": "接続"
       },

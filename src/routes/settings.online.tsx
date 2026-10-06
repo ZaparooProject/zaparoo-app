@@ -594,7 +594,7 @@ export function OnlinePage() {
       <div className="flex flex-col gap-4">
         {loggedInUser !== null ? (
           // Logged in state
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-5">
             <OnlineDeviceSetup
               connected={connected}
               warpActive={displayedWarpActive}
@@ -712,33 +712,35 @@ export function OnlinePage() {
             </Card>
           </div>
         ) : purchasePreview !== "live" ? (
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-5">
             <WarpSubscription appUserID="purchase-preview" />
           </div>
         ) : (
-          <div className="flex flex-col gap-6">
-            <section
-              className="flex flex-col gap-3"
-              aria-label={t("online.account")}
-            >
-              <p className="text-muted-foreground text-center text-sm">
-                {t("online.description")}
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  label={t("online.login")}
-                  onClick={() => openAuthSheet(false)}
-                  className="flex-1"
-                  intent="primary"
-                />
-                <Button
-                  label={t("online.signUp")}
-                  variant="secondary"
-                  onClick={() => openAuthSheet(true)}
-                  className="flex-1"
-                />
-              </div>
-            </section>
+          <div className="flex flex-col gap-5">
+            <Card>
+              <section
+                className="flex flex-col gap-3"
+                aria-label={t("online.account")}
+              >
+                <p className="text-muted-foreground text-center text-sm">
+                  {t("online.description")}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    label={t("online.login")}
+                    onClick={() => openAuthSheet(false)}
+                    className="flex-1"
+                    intent="primary"
+                  />
+                  <Button
+                    label={t("online.signUp")}
+                    variant="secondary"
+                    onClick={() => openAuthSheet(true)}
+                    className="flex-1"
+                  />
+                </div>
+              </section>
+            </Card>
 
             <OnlineDeviceSetup
               connected={connected}

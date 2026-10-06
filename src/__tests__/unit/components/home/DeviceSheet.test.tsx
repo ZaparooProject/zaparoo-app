@@ -234,7 +234,7 @@ describe("DeviceSheet", () => {
       renderSheet({ isOpen: true, close: vi.fn() });
       await user.click(
         screen.getByRole("button", {
-          name: "settings.deviceSetup.enterAddress",
+          name: "settings.deviceSetup.addDeviceManually",
         }),
       );
       expect(
@@ -247,10 +247,35 @@ describe("DeviceSheet", () => {
       await user.click(screen.getByRole("button", { name: "nav.cancel" }));
       expect(
         screen.getByRole("button", {
-          name: "settings.deviceSetup.enterAddress",
+          name: "settings.deviceSetup.addDeviceManually",
         }),
       ).toHaveFocus();
       expect(mocks.startScan).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  it.each(["{Enter}", " "])(
+    "opens manual entry with %s from its device-list row",
+    async (key) => {
+      const user = userEvent.setup();
+      renderSheet({ isOpen: true, close: vi.fn() });
+      const manual = screen.getByRole("button", {
+        name: "settings.deviceSetup.addDeviceManually",
+      });
+      expect(
+        screen.getByRole("region", { name: "scan.deviceSheetRecent" }),
+      ).toContainElement(manual);
+      manual.focus();
+      await user.keyboard(key);
+      expect(
+        screen.getByRole("textbox", { name: "settings.device" }),
+      ).toHaveFocus();
+      await user.click(screen.getByRole("button", { name: "nav.cancel" }));
+      expect(
+        screen.getByRole("button", {
+          name: "settings.deviceSetup.addDeviceManually",
+        }),
+      ).toHaveFocus();
     },
   );
 

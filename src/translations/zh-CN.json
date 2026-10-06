@@ -1,4 +1,6 @@
 {
+  "copyToClipboard": "Copy to clipboard",
+  "copyFailed": "Could not copy to clipboard",
   "translation": {
     "copy": "复制",
     "copied": "已复制",
@@ -887,6 +889,7 @@
       "moreSettings": "更多设置",
       "device": "设备地址",
       "deviceSetup": {
+        "addDeviceManually": "Add device manually",
         "enterAddress": "输入地址",
         "connect": "连接"
       },

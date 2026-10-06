@@ -2,10 +2,13 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import { CopyButton } from "@/components/CopyButton.tsx";
+import { Button } from "@/components/wui/Button";
+import { useStatusStore } from "@/lib/store";
 import { logger, isRollbarEnabled } from "@/lib/logger";
 
 export function ErrorComponent({ error }: { error: Error }) {
   const { t } = useTranslation();
+  const safeInsets = useStatusStore((state) => state.safeInsets);
 
   // Report to Rollbar when this component mounts (native + production only)
   useEffect(() => {
@@ -26,20 +29,21 @@ User Agent: ${navigator.userAgent}
 Timestamp: ${new Date().toISOString()}
   `.trim();
 
+  // Recovery must work outside the router and announcer providers.
   return (
     <div
-      className="bg-background text-foreground flex min-h-screen flex-col items-center justify-center p-4"
+      className="bg-background text-foreground fixed inset-0 z-[9999] flex flex-col items-center overflow-y-auto"
       style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        zIndex: 9999,
+        paddingTop: `calc(1rem + max(${safeInsets.top}px, var(--safe-area-inset-top, env(safe-area-inset-top, 0px))))`,
+        paddingRight: `calc(1rem + max(${safeInsets.right}px, var(--safe-area-inset-right, env(safe-area-inset-right, 0px))))`,
+        paddingBottom: `calc(1rem + max(${safeInsets.bottom}px, var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))))`,
+        paddingLeft: `calc(1rem + max(${safeInsets.left}px, var(--safe-area-inset-left, env(safe-area-inset-left, 0px))))`,
       }}
     >
-      <div className="bg-error-wash w-full max-w-md rounded-lg p-6 shadow-lg">
-        <h1 className="mb-4 text-2xl font-bold">{t("errorBoundary.title")}</h1>
+      <div className="bg-error-wash my-auto w-full max-w-md shrink-0 rounded-lg p-6 shadow-lg">
+        <h1 className="mb-4 text-xl font-semibold">
+          {t("errorBoundary.title")}
+        </h1>
         <p className="mb-6">{t("errorBoundary.description")}</p>
 
         <div className="bg-surface-inset mb-4 rounded p-3">
@@ -54,12 +58,12 @@ Timestamp: ${new Date().toISOString()}
           </pre>
         </div>
 
-        <button
+        <Button
           onClick={() => window.location.reload()}
-          className="site-button site-button-secondary w-full px-4 py-2 text-center"
-        >
-          {t("errorBoundary.reload")}
-        </button>
+          variant="secondary"
+          className="w-full"
+          label={t("errorBoundary.reload")}
+        />
       </div>
     </div>
   );

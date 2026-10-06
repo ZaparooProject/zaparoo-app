@@ -1,4 +1,6 @@
 {
+  "copyToClipboard": "Copy to clipboard",
+  "copyFailed": "Could not copy to clipboard",
   "translation": {
     "copy": "Kopiëren",
     "copied": "Gekopieerd",
@@ -887,6 +889,7 @@
       "moreSettings": "Meer instellingen",
       "device": "Apparaatadres",
       "deviceSetup": {
+        "addDeviceManually": "Add device manually",
         "enterAddress": "Adres invoeren",
         "connect": "Verbinden"
       },

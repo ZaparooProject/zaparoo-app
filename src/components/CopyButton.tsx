@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import toast from "react-hot-toast";
 import { Clipboard } from "@capacitor/clipboard";
 import { Capacitor } from "@capacitor/core";
 import { CopyIcon, Check } from "lucide-react";
@@ -18,24 +20,37 @@ export const CopyButton = (props: {
   size?: number;
   className?: string;
 }) => {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState(false);
+  const copyingRef = useRef(false);
+  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (resetTimerRef.current !== null) clearTimeout(resetTimerRef.current);
+    },
+    [],
+  );
   const size = props.size ?? 14;
   const { notification } = useHaptics();
 
   const handleCopy = async (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
-    if (copied) return;
+    if (copied || copyingRef.current) return;
+    copyingRef.current = true;
+    setCopyError(false);
 
     try {
       await writeToClipboard(props.text);
+      setCopied(true);
+      void notification("success");
+      resetTimerRef.current = setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Clipboard API may fail on web due to permissions, but browser
-      // fallbacks often still copy the text. Continue with animation.
+      setCopyError(true);
+      toast.error(t("copyFailed"));
+    } finally {
+      copyingRef.current = false;
     }
-
-    setCopied(true);
-    notification("success");
-    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -52,10 +67,14 @@ export const CopyButton = (props: {
         props.className,
       )}
       onClick={handleCopy}
-      aria-label={copied ? "Copied" : "Copy to clipboard"}
+      aria-label={copied ? t("copied") : t("copyToClipboard")}
       style={{ width: size + 4, height: size + 4 }}
     >
+      <span className="sr-only" role="status">
+        {copyError ? t("copyFailed") : copied ? t("copied") : ""}
+      </span>
       <CopyIcon
+        aria-hidden="true"
         size={size}
         className={classNames(
           "absolute inset-0 m-auto transition-all duration-200",
@@ -63,6 +82,7 @@ export const CopyButton = (props: {
         )}
       />
       <Check
+        aria-hidden="true"
         size={size}
         className={classNames(
           "text-success absolute inset-0 m-auto transition-all duration-200",

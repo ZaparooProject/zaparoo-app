@@ -4,6 +4,7 @@ import { MediaDatabaseCard } from "@/components/MediaDatabaseCard";
 import { MediaScrapeCard } from "@/components/MediaScrapeCard";
 import { CoreOutdatedNotice } from "@/components/CoreOutdatedNotice";
 import { PageFrame } from "@/components/PageFrame";
+import { Card } from "@/components/wui/Card";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { BackIcon } from "@/lib/images";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
@@ -40,30 +41,34 @@ export function MediaSettings() {
     >
       <div className="flex flex-col gap-5">
         <CoreOutdatedNotice />
-        <section
-          className="flex flex-col gap-3"
-          aria-labelledby="media-database-heading"
-        >
-          <h2
-            id="media-database-heading"
-            className="text-foreground text-lg font-semibold"
+        <Card>
+          <section
+            className="flex flex-col gap-3"
+            aria-labelledby="media-database-heading"
           >
-            {t("settings.media.databaseTitle")}
-          </h2>
-          <MediaDatabaseCard variant="plain" showMaintenanceActions />
-        </section>
-        <section
-          className="flex flex-col gap-3"
-          aria-labelledby="media-scraper-heading"
-        >
-          <h2
-            id="media-scraper-heading"
-            className="text-foreground text-lg font-semibold"
+            <h2
+              id="media-database-heading"
+              className="text-foreground text-lg font-semibold"
+            >
+              {t("settings.media.databaseTitle")}
+            </h2>
+            <MediaDatabaseCard variant="plain" showMaintenanceActions />
+          </section>
+        </Card>
+        <Card>
+          <section
+            className="flex flex-col gap-3"
+            aria-labelledby="media-scraper-heading"
           >
-            {t("settings.media.scraperTitle")}
-          </h2>
-          <MediaScrapeCard />
-        </section>
+            <h2
+              id="media-scraper-heading"
+              className="text-foreground text-lg font-semibold"
+            >
+              {t("settings.media.scraperTitle")}
+            </h2>
+            <MediaScrapeCard />
+          </section>
+        </Card>
       </div>
     </PageFrame>
   );

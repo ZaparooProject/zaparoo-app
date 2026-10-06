@@ -353,7 +353,7 @@ describe("HistoryModal", () => {
 
       // Assert - Should have copy buttons for UID and text
       const copyButtons = screen.getAllByRole("button", {
-        name: "Copy to clipboard",
+        name: "copyToClipboard",
       });
       expect(copyButtons.length).toBeGreaterThanOrEqual(1);
     });
@@ -369,7 +369,7 @@ describe("HistoryModal", () => {
 
       // Assert - Should have copy buttons for both UID and text
       const copyButtons = screen.getAllByRole("button", {
-        name: "Copy to clipboard",
+        name: "copyToClipboard",
       });
       expect(copyButtons).toHaveLength(2);
     });
@@ -385,7 +385,7 @@ describe("HistoryModal", () => {
 
       // Assert - Only one copy button for text
       const copyButtons = screen.getAllByRole("button", {
-        name: "Copy to clipboard",
+        name: "copyToClipboard",
       });
       expect(copyButtons).toHaveLength(1);
     });
@@ -401,7 +401,7 @@ describe("HistoryModal", () => {
 
       // Assert - Only one copy button for text
       const copyButtons = screen.getAllByRole("button", {
-        name: "Copy to clipboard",
+        name: "copyToClipboard",
       });
       expect(copyButtons).toHaveLength(1);
     });
@@ -417,7 +417,7 @@ describe("HistoryModal", () => {
 
       // Assert - Only one copy button for UID
       const copyButtons = screen.getAllByRole("button", {
-        name: "Copy to clipboard",
+        name: "copyToClipboard",
       });
       expect(copyButtons).toHaveLength(1);
     });
@@ -433,7 +433,7 @@ describe("HistoryModal", () => {
 
       // Assert - No copy buttons
       expect(
-        screen.queryByRole("button", { name: "Copy to clipboard" }),
+        screen.queryByRole("button", { name: "copyToClipboard" }),
       ).not.toBeInTheDocument();
     });
 
@@ -448,14 +448,14 @@ describe("HistoryModal", () => {
 
       // Act - Click the first copy button (for UID)
       const copyButtons = screen.getAllByRole("button", {
-        name: "Copy to clipboard",
+        name: "copyToClipboard",
       });
       expect(copyButtons[0]).toBeDefined();
       await user.click(copyButtons[0]!);
 
-      // Assert - Button state changes to "Copied"
+      // Assert - Button state changes to "copied"
       expect(
-        screen.getByRole("button", { name: "Copied" }),
+        screen.getByRole("button", { name: "copied" }),
       ).toBeInTheDocument();
     });
   });

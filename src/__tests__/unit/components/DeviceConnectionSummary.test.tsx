@@ -47,7 +47,7 @@ async function enterAddress(user: ReturnType<typeof userEvent.setup>) {
   const sheet = screen.getByRole("dialog", { name: "scan.deviceSheetTitle" });
   await user.click(
     within(sheet).getByRole("button", {
-      name: "settings.deviceSetup.enterAddress",
+      name: "settings.deviceSetup.addDeviceManually",
     }),
   );
   return screen.getByRole("dialog", {
@@ -152,14 +152,18 @@ describe("DeviceConnectionSummary", () => {
       screen.getByRole("dialog", { name: "scan.deviceSheetTitle" }),
     );
     expect(
-      sheet.getByRole("button", { name: "settings.deviceSetup.enterAddress" }),
+      sheet.getByRole("button", {
+        name: "settings.deviceSetup.addDeviceManually",
+      }),
     ).toHaveFocus();
     expect(
       sheet.queryByRole("button", { name: "settings.networkScan.refresh" }),
     ).not.toBeInTheDocument();
     expect(activeAddressOf(deviceRegistry.getSnapshot())).toBe("192.168.1.100");
     await user.click(
-      sheet.getByRole("button", { name: "settings.deviceSetup.enterAddress" }),
+      sheet.getByRole("button", {
+        name: "settings.deviceSetup.addDeviceManually",
+      }),
     );
     expect(
       screen.getByRole("textbox", { name: "settings.device" }),
@@ -294,7 +298,9 @@ describe("DeviceConnectionSummary", () => {
       screen.getByRole("dialog", { name: "scan.deviceSheetTitle" }),
     );
     await user.click(
-      sheet.getByRole("button", { name: "settings.deviceSetup.enterAddress" }),
+      sheet.getByRole("button", {
+        name: "settings.deviceSetup.addDeviceManually",
+      }),
     );
     expect(
       screen.getByRole("textbox", { name: "settings.device" }),

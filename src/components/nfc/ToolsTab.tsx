@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
-import { ReactElement } from "react";
+import { ReactElement, type ReactNode } from "react";
 import {
   EraserIcon,
   PencilOffIcon,
@@ -13,6 +13,11 @@ import { WriteAction } from "@/lib/writeNfcHook";
 interface ToolsTabProps {
   onToolAction: (action: WriteAction) => void;
   isProcessing: boolean;
+  renderToolControl?: (tool: {
+    action: WriteAction;
+    label: string;
+    icon: ReactElement;
+  }) => ReactNode;
 }
 
 interface Tool {
@@ -25,7 +30,11 @@ interface Tool {
   dangerous: boolean;
 }
 
-export function ToolsTab({ onToolAction, isProcessing }: ToolsTabProps) {
+export function ToolsTab({
+  onToolAction,
+  isProcessing,
+  renderToolControl,
+}: ToolsTabProps) {
   const { t } = useTranslation();
 
   const tools: Tool[] = [
@@ -86,16 +95,18 @@ export function ToolsTab({ onToolAction, isProcessing }: ToolsTabProps) {
                 {tool.description}
               </p>
 
-              <Button
-                onClick={() => handleToolClick(tool.action)}
-                disabled={isProcessing}
-                disabledAppearance="busy"
-                label={isProcessing ? t("loading") : tool.label}
-                icon={tool.icon}
-                variant="outline"
-                intent={tool.dangerous ? "destructive" : "default"}
-                className="w-full"
-              />
+              {renderToolControl?.(tool) ?? (
+                <Button
+                  onClick={() => handleToolClick(tool.action)}
+                  disabled={isProcessing}
+                  disabledAppearance="busy"
+                  label={isProcessing ? t("loading") : tool.label}
+                  icon={tool.icon}
+                  variant="outline"
+                  intent={tool.dangerous ? "destructive" : "default"}
+                  className="w-full"
+                />
+              )}
 
               {tool.dangerous && (
                 <div className="mt-3 flex items-start gap-2">

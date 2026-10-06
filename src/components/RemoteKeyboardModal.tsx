@@ -12,7 +12,6 @@ import {
   ChevronUp,
   Download,
   House,
-  Loader2,
   Share2,
   Undo2,
   XIcon,
@@ -21,6 +20,9 @@ import Keyboard from "react-simple-keyboard/build/index.modern.esm.js";
 import "react-simple-keyboard/build/css/index.css";
 import { SlideModal } from "@/components/SlideModal";
 import { TabBar } from "@/components/wui/TabBar";
+import { Button } from "@/components/wui/Button";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { useTactilePress } from "@/hooks/useTactilePress";
 import { getTabBarPanelId, getTabBarTabId } from "@/components/wui/tabBarIds";
 import { CoreAPI, getScreenshotFailureKind } from "@/lib/coreApi";
 import { useHaptics } from "@/hooks/useHaptics";
@@ -225,6 +227,7 @@ export function RemoteKeyboardModal(props: {
   const [screenshot, setScreenshot] = useState<ScreenshotResult | null>(null);
   const [capturingScreenshot, setCapturingScreenshot] = useState(false);
   const sendQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const downloadPress = useTactilePress({ hasOnClick: true });
 
   const isNative = Capacitor.isNativePlatform();
   const remoteActions = getRemoteActions(corePlatform);
@@ -251,8 +254,8 @@ export function RemoteKeyboardModal(props: {
     impact("light");
   };
 
-  const sendMacro = (keys: string) => {
-    triggerControlHaptic();
+  const sendMacro = (keys: string, withHaptic = true) => {
+    if (withHaptic) triggerControlHaptic();
 
     if (!connected) {
       const message = t("remoteKeyboard.disconnected");
@@ -292,8 +295,6 @@ export function RemoteKeyboardModal(props: {
   };
 
   const handleScreenshot = () => {
-    triggerControlHaptic();
-
     if (!connected) {
       const message = t("remoteKeyboard.disconnected");
       setError(null);
@@ -326,8 +327,6 @@ export function RemoteKeyboardModal(props: {
   };
 
   const shareScreenshot = async () => {
-    triggerControlHaptic();
-
     if (!screenshot) return;
 
     try {
@@ -392,76 +391,85 @@ export function RemoteKeyboardModal(props: {
         {mode === "remote" ? (
           <div className="remote-keyboard-pad" {...activePanelProps}>
             <div className="remote-keyboard-dpad">
-              <button
-                type="button"
-                className="remote-keyboard-pad-button remote-keyboard-pad-up"
+              <Button
+                variant="secondary"
+                shape="square"
+                className="remote-keyboard-pad-up min-h-16 w-full max-w-none min-w-16"
+                disabled={!connected}
                 aria-label={t("remoteKeyboard.up")}
-                onClick={() => sendMacro("{up}")}
-              >
-                <ChevronUp size={28} aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                className="remote-keyboard-pad-button remote-keyboard-pad-left"
+                onClick={() => sendMacro("{up}", false)}
+                icon={<ChevronUp size={28} />}
+              />
+              <Button
+                variant="secondary"
+                shape="square"
+                className="remote-keyboard-pad-left min-h-16 w-full max-w-none min-w-16"
+                disabled={!connected}
                 aria-label={t("remoteKeyboard.left")}
-                onClick={() => sendMacro("{left}")}
-              >
-                <ChevronLeft size={28} aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                className="remote-keyboard-pad-button remote-keyboard-pad-ok"
-                onClick={() => sendMacro("{enter}")}
-              >
-                {t("remoteKeyboard.ok")}
-              </button>
-              <button
-                type="button"
-                className="remote-keyboard-pad-button remote-keyboard-pad-right"
+                onClick={() => sendMacro("{left}", false)}
+                icon={<ChevronLeft size={28} />}
+              />
+              <Button
+                variant="secondary"
+                size="sm"
+                className="remote-keyboard-pad-ok min-h-16 w-full max-w-none min-w-16"
+                disabled={!connected}
+                label={t("remoteKeyboard.ok")}
+                onClick={() => sendMacro("{enter}", false)}
+              />
+              <Button
+                variant="secondary"
+                shape="square"
+                className="remote-keyboard-pad-right min-h-16 w-full max-w-none min-w-16"
+                disabled={!connected}
                 aria-label={t("remoteKeyboard.right")}
-                onClick={() => sendMacro("{right}")}
-              >
-                <ChevronRight size={28} aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                className="remote-keyboard-pad-button remote-keyboard-pad-down"
+                onClick={() => sendMacro("{right}", false)}
+                icon={<ChevronRight size={28} />}
+              />
+              <Button
+                variant="secondary"
+                shape="square"
+                className="remote-keyboard-pad-down min-h-16 w-full max-w-none min-w-16"
+                disabled={!connected}
                 aria-label={t("remoteKeyboard.down")}
-                onClick={() => sendMacro("{down}")}
-              >
-                <ChevronDown size={28} aria-hidden="true" />
-              </button>
+                onClick={() => sendMacro("{down}", false)}
+                icon={<ChevronDown size={28} />}
+              />
             </div>
             <div className="remote-keyboard-pad-actions">
               {remoteActions.map((action) => (
-                <button
+                <Button
                   key={`${action.labelKey}-${action.keys}`}
-                  type="button"
-                  className="remote-keyboard-pad-action"
+                  variant="secondary"
+                  shape="square"
+                  size="sm"
+                  className="min-h-16 min-w-16"
                   aria-label={t(action.ariaLabelKey ?? action.labelKey)}
-                  onClick={() => sendMacro(action.keys)}
-                >
-                  {action.icon ?? t(action.labelKey)}
-                </button>
+                  disabled={!connected}
+                  onClick={() => sendMacro(action.keys, false)}
+                  icon={action.icon}
+                  label={action.icon ? undefined : t(action.labelKey)}
+                />
               ))}
-              <button
-                type="button"
-                className="remote-keyboard-pad-action"
+              <Button
+                variant="secondary"
+                shape="square"
+                className="min-h-16 min-w-16"
                 aria-label={t("remoteKeyboard.screenshotAction")}
                 aria-busy={capturingScreenshot}
                 onClick={handleScreenshot}
-                disabled={capturingScreenshot}
-              >
-                {capturingScreenshot ? (
-                  <Loader2
-                    size={28}
-                    className="animate-spin"
-                    aria-hidden="true"
-                  />
-                ) : (
-                  <Camera size={28} aria-hidden="true" />
-                )}
-              </button>
+                disabled={!connected || capturingScreenshot}
+                disabledAppearance={
+                  capturingScreenshot ? "busy" : "unavailable"
+                }
+                icon={
+                  capturingScreenshot ? (
+                    <LoadingSpinner size={28} decorative />
+                  ) : (
+                    <Camera size={28} />
+                  )
+                }
+              />
             </div>
             {screenshot && screenshotUrl && (
               <div className="remote-keyboard-screenshot-result">
@@ -472,50 +480,77 @@ export function RemoteKeyboardModal(props: {
                 />
                 <div className="remote-keyboard-screenshot-actions">
                   {isNative ? (
-                    <button
-                      type="button"
-                      className="remote-keyboard-screenshot-control"
-                      onClick={shareScreenshot}
-                    >
-                      <Share2 size={20} aria-hidden="true" />
-                      {t("remoteKeyboard.screenshotShare")}
-                    </button>
+                    <Button
+                      variant="secondary"
+                      className="w-full max-w-none min-w-0"
+                      icon={<Share2 size={20} />}
+                      label={t("remoteKeyboard.screenshotShare")}
+                      onClick={() => void shareScreenshot()}
+                    />
                   ) : (
                     <a
-                      className="remote-keyboard-screenshot-control"
+                      className="wui-button flex min-h-12 min-w-0 touch-manipulation items-center justify-center gap-2 border border-solid border-transparent px-5 py-3 text-sm font-bold tracking-wider uppercase"
+                      data-variant="secondary"
+                      data-intent="default"
+                      data-pressed={downloadPress.pressed}
+                      {...downloadPress.handlers}
+                      onClick={(event) => {
+                        if (!downloadPress.shouldFireClick())
+                          event.preventDefault();
+                      }}
                       href={screenshotUrl}
                       download={getScreenshotFileName(screenshot.path)}
                     >
-                      <Download size={20} aria-hidden="true" />
+                      <span
+                        className="wui-button-icon flex shrink-0 items-center"
+                        aria-hidden="true"
+                      >
+                        <Download size={20} />
+                      </span>
                       {t("remoteKeyboard.screenshotDownload")}
                     </a>
                   )}
-                  <button
-                    type="button"
-                    className="remote-keyboard-screenshot-control"
-                    onClick={() => {
-                      triggerControlHaptic();
-                      setScreenshot(null);
-                    }}
-                  >
-                    <XIcon size={20} aria-hidden="true" />
-                    {t("remoteKeyboard.screenshotClear")}
-                  </button>
+                  <Button
+                    variant="secondary"
+                    className="w-full max-w-none min-w-0"
+                    icon={<XIcon size={20} />}
+                    label={t("remoteKeyboard.screenshotClear")}
+                    onClick={() => setScreenshot(null)}
+                  />
                 </div>
               </div>
             )}
           </div>
         ) : (
           <div className="remote-keyboard-wrapper" {...activePanelProps}>
-            <Keyboard
-              layout={layout}
-              layoutName={layoutName}
-              display={display}
-              onKeyPress={handleKeyPress}
-              disableButtonHold
-              useButtonTag
-              theme="hg-theme-default remote-keyboard"
-            />
+            <fieldset
+              className="min-w-0 border-0 p-0"
+              disabled={!connected}
+              aria-label={t("remoteKeyboard.keyboardMode")}
+            >
+              <Keyboard
+                layout={layout}
+                layoutName={layoutName}
+                display={display}
+                onKeyPress={handleKeyPress}
+                disableButtonHold
+                useButtonTag
+                buttonTheme={[
+                  {
+                    class: "wui-button",
+                    buttons: layout[layoutName].join(" "),
+                  },
+                ]}
+                buttonAttributes={[
+                  {
+                    attribute: "data-variant",
+                    value: "outline",
+                    buttons: layout[layoutName].join(" "),
+                  },
+                ]}
+                theme="hg-theme-default remote-keyboard"
+              />
+            </fieldset>
           </div>
         )}
       </div>

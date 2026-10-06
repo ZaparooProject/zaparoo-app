@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, render, screen, waitFor } from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
+import { Capacitor } from "@capacitor/core";
 import { CoreAPI } from "@/lib/coreApi";
 import { useStatusStore } from "@/lib/store";
 
@@ -89,34 +90,6 @@ vi.mock("@/components/nfc/ReadTab", () => ({
   ),
 }));
 
-// Mock ToolsTab with functional action buttons
-vi.mock("@/components/nfc/ToolsTab", () => ({
-  ToolsTab: ({
-    onToolAction,
-    isProcessing,
-  }: {
-    onToolAction: (action: string) => void;
-    isProcessing: boolean;
-  }) => (
-    <div data-testid="tools-tab">
-      <button
-        data-testid="format-button"
-        onClick={() => onToolAction("format")}
-        disabled={isProcessing}
-      >
-        Format
-      </button>
-      <button
-        data-testid="erase-button"
-        onClick={() => onToolAction("erase")}
-        disabled={isProcessing}
-      >
-        Erase
-      </button>
-    </div>
-  ),
-}));
-
 // Import the route module to trigger createFileRoute which captures the component
 import "@/routes/create.nfc";
 
@@ -128,6 +101,7 @@ describe("Create NFC Route", () => {
     useStatusStore.setState({ ...initialStatusState });
     CoreAPI.reset();
     vi.clearAllMocks();
+    vi.mocked(Capacitor.getPlatform).mockReturnValue("android");
     mockNfcWriter.status = null;
     mockNfcWriter.writing = false;
     mockNfcWriter.result = null;
@@ -244,7 +218,9 @@ describe("Create NFC Route", () => {
 
       // Tools tab content should be visible
       await waitFor(() => {
-        expect(screen.getByTestId("tools-tab")).toBeInTheDocument();
+        expect(
+          screen.getByRole("heading", { name: "create.nfc.format" }),
+        ).toBeInTheDocument();
       });
     });
 
@@ -267,7 +243,9 @@ describe("Create NFC Route", () => {
       const toolsTab = screen.getByRole("tab", { name: /tools/i });
       await user.click(toolsTab);
       await waitFor(() => {
-        expect(screen.getByTestId("tools-tab")).toBeInTheDocument();
+        expect(
+          screen.getByRole("heading", { name: "create.nfc.format" }),
+        ).toBeInTheDocument();
       });
 
       // Switch back to Read
@@ -280,6 +258,46 @@ describe("Create NFC Route", () => {
   });
 
   describe("tool actions", () => {
+    it.each([
+      ["format", "create.nfc.format", "create.nfc.tools.formatWarning"],
+      ["erase", "create.nfc.erase", "create.nfc.tools.eraseWarning"],
+      [
+        "makeReadOnly",
+        "create.nfc.makeReadOnly",
+        "create.nfc.tools.makeReadOnlyWarning",
+      ],
+    ])(
+      "keeps %s control and warning mounted until cancellation",
+      async (action, label, warning) => {
+        const user = userEvent.setup();
+        renderComponent();
+        await user.click(
+          screen.getByRole("tab", { name: "create.nfc.tabs.tools" }),
+        );
+        const control = screen.getByRole("button", { name: label });
+        control.focus();
+        await user.click(control);
+        expect(mockNfcWriter.write).toHaveBeenCalledWith(action);
+        expect(screen.getByRole("heading", { name: label })).toBeVisible();
+        expect(screen.getByText(warning)).toBeVisible();
+        expect(
+          screen.getByRole("button", { name: "reader.cancelAction" }),
+        ).toBe(control);
+        expect(control).toHaveFocus();
+        for (const other of [
+          "create.nfc.format",
+          "create.nfc.erase",
+          "create.nfc.makeReadOnly",
+        ].filter((value) => value !== label)) {
+          expect(screen.getByRole("button", { name: other })).toBeDisabled();
+        }
+        await user.click(control);
+        expect(mockNfcWriter.end).toHaveBeenCalledOnce();
+        expect(screen.getByRole("button", { name: label })).toBe(control);
+        expect(control).toHaveFocus();
+      },
+    );
+
     it("should call nfcWriter.write with format action when format button clicked", async () => {
       const user = userEvent.setup();
       renderComponent();
@@ -289,11 +307,15 @@ describe("Create NFC Route", () => {
       await user.click(toolsTab);
 
       await waitFor(() => {
-        expect(screen.getByTestId("format-button")).toBeInTheDocument();
+        expect(
+          screen.getByRole("button", { name: "create.nfc.format" }),
+        ).toBeInTheDocument();
       });
 
       // Click format button
-      await user.click(screen.getByTestId("format-button"));
+      await user.click(
+        screen.getByRole("button", { name: "create.nfc.format" }),
+      );
 
       expect(mockNfcWriter.write).toHaveBeenCalledWith("format");
     });
@@ -307,11 +329,15 @@ describe("Create NFC Route", () => {
       await user.click(toolsTab);
 
       await waitFor(() => {
-        expect(screen.getByTestId("erase-button")).toBeInTheDocument();
+        expect(
+          screen.getByRole("button", { name: "create.nfc.erase" }),
+        ).toBeInTheDocument();
       });
 
       // Click erase button
-      await user.click(screen.getByTestId("erase-button"));
+      await user.click(
+        screen.getByRole("button", { name: "create.nfc.erase" }),
+      );
 
       expect(mockNfcWriter.write).toHaveBeenCalledWith("erase");
     });
@@ -326,11 +352,15 @@ describe("Create NFC Route", () => {
       await user.click(toolsTab);
 
       await waitFor(() => {
-        expect(screen.getByTestId("format-button")).toBeInTheDocument();
+        expect(
+          screen.getByRole("button", { name: "create.nfc.format" }),
+        ).toBeInTheDocument();
       });
 
       // Click format button
-      await user.click(screen.getByTestId("format-button"));
+      await user.click(
+        screen.getByRole("button", { name: "create.nfc.format" }),
+      );
 
       expect(
         screen.getByRole("button", { name: "reader.cancelAction" }),
@@ -347,11 +377,17 @@ describe("Create NFC Route", () => {
       await user.click(toolsTab);
 
       await waitFor(() => {
-        expect(screen.getByTestId("format-button")).toBeInTheDocument();
+        expect(
+          screen.getByRole("button", { name: "create.nfc.format" }),
+        ).toBeInTheDocument();
       });
 
-      expect(screen.getByTestId("format-button")).toBeDisabled();
-      expect(screen.getByTestId("erase-button")).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "create.nfc.format" }),
+      ).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "create.nfc.erase" }),
+      ).toBeDisabled();
     });
   });
 

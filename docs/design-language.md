@@ -249,7 +249,7 @@ Real use:
 - Device rows/history entries via `DeviceRow`
 - Core outdated notice with warning border/background overrides
 
-Group related settings on a shared raised Card; controls recess into that surface. Do not wrap each toggle in its own card. Accessibility and Language & Region are single form panels; Readers separates reader status from controls; Play Controls preserves its existing named groups.
+Settings forms use one shared raised Card per functional section, not per control. Headings, related status, fields, toggles, and section actions belong inside the same panel; do not nest raised Cards. Simple forms such as Accessibility, Language & Region, Advanced, and Device Detail use one panel without inventing an extra heading. Readers separates reader status from controls; Play Controls preserves its named groups; Manage Media has Database and Metadata scraper panels; Online groups account, connected-device, features, and Warp sections, including the signed-out account entry.
 
 ### ToggleSwitch
 
@@ -355,7 +355,9 @@ Do not replace an existing help-icon pattern with visible helper paragraphs.
 
 ## Settings pages
 
-Settings are restrained control panels: raised grouped surfaces, inset fields and choices, and neutral navigation rows. Avoid decorative icons, invented helper copy, and a separate card for every setting.
+Settings forms are restrained control panels: one raised Card per functional section, inset fields and choices, and neutral navigation rows. Keep any section heading inside its panel and use `gap-5` between panels. Preserve existing control-specific spacing inside panels; do not invent headings for simple forms, decorative icons, helper copy, a separate card for every setting, or nested raised Cards.
+
+Apply this rule by purpose, not route location: Logs, Manage devices, Help, About, and Licenses remain list/document screens with their established row styles. Existing entity cards (such as device rows), warnings, and inset status wells retain their own semantics. Modal shells are not settings panels.
 
 ### Structure
 
@@ -370,7 +372,7 @@ Subpage pattern:
 Examples:
 
 - `settings.advanced.tsx`: simple `gap-5` stack of toggles and nav row
-- `settings.readers.tsx`: dense `gap-3` stack because it has multiple reader controls
+- `settings.readers.tsx`: reader status and controls in separate panels, `gap-5` between panels
 - `settings.play-controls.tsx`: grouped settings; inner field groups must match within page
 
 ### Settings navigation rows
@@ -389,7 +391,7 @@ The Settings device area uses `DeviceConnectionSummary`: a standard `Card` conta
 
 The Settings landing page's Update media database button is also secondary, retaining its database icon. The dedicated Manage Media page keeps that action primary.
 
-Settings and Zap open the same `DeviceSheet`. Its footer offers Enter address and Manage devices. Actions use the reader-recovery pattern's intrinsic 9rem grid: equal-width faces when they fit, stacked controls for narrow or enlarged-text layouts. Manual entry is a focused view within the same sheet, using a labeled `TextInput` and Cancel/Connect footer; Cancel returns to selection and restores focus to Enter address, while dismissal exits the flow. Discovery pauses during manual entry. Each entry starts from the selected address; validation stays inline and a valid selection closes the sheet. Manual entry remains available on web and when discovery fails.
+Settings and Zap open the same `DeviceSheet`. Selection has no footer: Add device manually is the final card row below saved/discovered devices, with a trailing chevron. Manage devices is a separate quiet text action beneath the list. The address form footer uses the reader-recovery pattern's intrinsic 9rem grid: equal-width faces when they fit, stacked controls for narrow or enlarged-text layouts. Manual entry is a focused view within the same sheet, using a labeled `TextInput` and Cancel/Connect footer; Cancel returns to selection and restores focus to Add device manually, while dismissal exits the flow. Discovery pauses during manual entry. Each entry starts from the selected address; validation stays inline and a valid selection closes the sheet. Manual entry remains available on web and when discovery fails.
 
 Device management is a separate settings subflow:
 
@@ -397,7 +399,7 @@ Device management is a separate settings subflow:
 - list wrapper `flex flex-col gap-3 pt-2`
 - rows use `DeviceRow`, which is a `Card` with active dot, primary name/address, muted address/platform/version metadata, and optional lock icon; tapping a row opens details without changing the active device
 - selection checkboxes appear only in the existing Combine editing mode
-- device detail uses `flex flex-col gap-6 p-3`, TextInput for name, an info section heading `text-lg font-semibold`, and full-width buttons for explicit device selection and Forget
+- device detail uses one Card with a `flex flex-col gap-4` form stack: TextInput for name, an info section heading `text-lg font-semibold`, and full-width buttons for explicit device selection and Forget
 
 ### Settings toggles
 
@@ -726,6 +728,17 @@ NFC content panels use custom rounded blocks, not WUI `Card`:
 - values: `bg-surface-inset rounded-lg px-3 py-2`, often mono/small
 - badges for NFC booleans/tech types
 - dangerous tool warnings use red icon/text in the Tools tab
+- Tools keeps every panel and warning mounted during physical waits. Each tool uses its own `ReaderActivityControl`; only the selected action latches, with the other operations unavailable until completion or cancellation
+
+### Remote Keyboard and screenshots
+
+Remote Keyboard keeps its specialized D-pad and virtual-key geometry. Remote controls use chunky secondary WUI Buttons with 64px minimum targets; keyboard keys use a keyboard-only muted outline at a compact size with 48px minimum height: a 1px subtle border, retaining the shared 2px front edge and press travel. Focus outlines remain full contrast. Key labels preserve their actual case so Shift remains meaningful. Disconnecting disables send/capture controls with the recessed unavailable material; mode tabs, dismissal, and captured screenshot exports remain available. The virtual keyboard uses a disabled fieldset around semantic key buttons rather than a clickable overlay. Screenshot Share/Clear use secondary WUI buttons; Download keeps native anchor/download semantics with the same shared material and touch geometry. Result actions use an intrinsic two-action grid that stacks when narrow or enlarged text requires it.
+
+### Inline copy and crash recovery
+
+`CopyButton` stays compact beside history/NFC values. Accessible labels and feedback are translated. Clipboard success alone shows Copied/checkmark/success haptic; failure reports an error and permits retry, with a local live region that also works outside the app announcer.
+
+`ErrorComponent` is a standalone recovery shell, not `PageFrame`: it must work outside router and announcer providers. Its viewport scrolls, safe-area padding combines cached and CSS insets, and automatic vertical margins center content only when it fits. Diagnostics remain bounded and Reload uses a shared secondary Button.
 
 Do not copy WUI Card styling into NFC tab panels; match the NFC panel pattern.
 

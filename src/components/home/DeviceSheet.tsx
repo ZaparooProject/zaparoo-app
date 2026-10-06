@@ -14,6 +14,8 @@ import { DeviceRow } from "@/components/DeviceRow";
 import { SlideModal } from "@/components/SlideModal";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Button } from "@/components/wui/Button";
+import { Card } from "@/components/wui/Card";
+import { NextIcon } from "@/lib/images";
 import { TextInput } from "@/components/wui/TextInput";
 import { useAppUi } from "@/hooks/useAppUi";
 import { useConnection } from "@/hooks/useConnection";
@@ -91,7 +93,7 @@ export function DeviceSheet({ isOpen, close }: DeviceSheetProps) {
   const [addressError, setAddressError] = useState("");
   const [wasOpen, setWasOpen] = useState(isOpen);
   const addressInputRef = useRef<HTMLInputElement>(null);
-  const enterAddressRef = useRef<HTMLButtonElement>(null);
+  const enterAddressRef = useRef<HTMLDivElement>(null);
   const wasEnteringAddressRef = useRef(false);
 
   if (isOpen !== wasOpen) {
@@ -103,7 +105,10 @@ export function DeviceSheet({ isOpen, close }: DeviceSheetProps) {
   useEffect(() => {
     if (isOpen) {
       if (enteringAddress) addressInputRef.current?.focus();
-      else if (wasEnteringAddressRef.current) enterAddressRef.current?.focus();
+      else if (wasEnteringAddressRef.current)
+        enterAddressRef.current
+          ?.querySelector<HTMLElement>('[role="button"]')
+          ?.focus();
     }
     wasEnteringAddressRef.current = enteringAddress;
   }, [isOpen, enteringAddress]);
@@ -232,39 +237,20 @@ export function DeviceSheet({ isOpen, close }: DeviceSheetProps) {
           : "scan.deviceSheetTitle",
       )}
       footer={
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,9rem),1fr))] gap-2 [&>*]:min-h-12 [&>*]:w-full [&>*]:max-w-none">
-          {enteringAddress ? (
-            <>
-              <Button
-                variant="secondary"
-                label={t("nav.cancel")}
-                onClick={() => setEnteringAddress(false)}
-              />
-              <Button
-                intent="primary"
-                label={t("settings.deviceSetup.connect")}
-                onClick={connectByAddress}
-              />
-            </>
-          ) : (
-            <>
-              <Button
-                ref={enterAddressRef}
-                variant="secondary"
-                label={t("settings.deviceSetup.enterAddress")}
-                onClick={openAddressEntry}
-              />
-              <Button
-                variant="secondary"
-                label={t("scan.deviceSheetAllDevices")}
-                onClick={() => {
-                  close();
-                  void router.navigate({ to: "/settings/devices" });
-                }}
-              />
-            </>
-          )}
-        </div>
+        enteringAddress ? (
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,9rem),1fr))] gap-2 [&>*]:min-h-12 [&>*]:w-full [&>*]:max-w-none">
+            <Button
+              variant="secondary"
+              label={t("nav.cancel")}
+              onClick={() => setEnteringAddress(false)}
+            />
+            <Button
+              intent="primary"
+              label={t("settings.deviceSetup.connect")}
+              onClick={connectByAddress}
+            />
+          </div>
+        ) : undefined
       }
     >
       {enteringAddress ? (
@@ -312,11 +298,11 @@ export function DeviceSheet({ isOpen, close }: DeviceSheetProps) {
             }
           />
 
-          {showSwitchList && (
-            <section
-              className="flex flex-col gap-2"
-              aria-labelledby={switchHeadingId}
-            >
+          <section
+            className="flex flex-col gap-2"
+            aria-labelledby={showSwitchList ? switchHeadingId : undefined}
+          >
+            {showSwitchList && (
               <div className="flex min-h-12 items-center justify-between gap-2">
                 <h3
                   id={switchHeadingId}
@@ -343,50 +329,71 @@ export function DeviceSheet({ isOpen, close }: DeviceSheetProps) {
                   />
                 )}
               </div>
+            )}
 
-              {switchDevices.map((entry) => {
-                const { saved, discovered } = entry;
-                return (
-                  <DeviceRow
-                    key={entry.key}
-                    entry={{
-                      address: saved
-                        ? saved.endpoint.address
-                        : displayDiscoveredDeviceAddress(discovered!),
-                      name: saved?.record.name || discovered?.name,
-                      platform: saved?.record.platform || discovered?.platform,
-                      version: saved?.record.version || discovered?.version,
-                      ...(discovered?.hostname &&
-                      discovered.addresses.length > 0
-                        ? { resolvedAddresses: discovered.addresses }
-                        : {}),
-                    }}
-                    onSelect={() => selectDevice(entry)}
-                  />
-                );
-              })}
+            {switchDevices.map((entry) => {
+              const { saved, discovered } = entry;
+              return (
+                <DeviceRow
+                  key={entry.key}
+                  entry={{
+                    address: saved
+                      ? saved.endpoint.address
+                      : displayDiscoveredDeviceAddress(discovered!),
+                    name: saved?.record.name || discovered?.name,
+                    platform: saved?.record.platform || discovered?.platform,
+                    version: saved?.record.version || discovered?.version,
+                    ...(discovered?.hostname && discovered.addresses.length > 0
+                      ? { resolvedAddresses: discovered.addresses }
+                      : {}),
+                  }}
+                  onSelect={() => selectDevice(entry)}
+                />
+              );
+            })}
 
-              {isScanning && (
-                <p
-                  className="text-muted-foreground flex items-center gap-2 text-sm"
-                  role="status"
-                >
-                  <LoadingSpinner size={16} decorative />
-                  {t("settings.networkScan.searching")}
-                </p>
-              )}
-              {error && (
-                <p className="text-error text-sm" role="alert">
-                  {error}
-                </p>
-              )}
-              {!isScanning && !error && switchDevices.length === 0 && (
+            {isScanning && (
+              <p
+                className="text-muted-foreground flex items-center gap-2 text-sm"
+                role="status"
+              >
+                <LoadingSpinner size={16} decorative />
+                {t("settings.networkScan.searching")}
+              </p>
+            )}
+            {error && (
+              <p className="text-error text-sm" role="alert">
+                {error}
+              </p>
+            )}
+            {showSwitchList &&
+              !isScanning &&
+              !error &&
+              switchDevices.length === 0 && (
                 <p className="text-muted-foreground text-sm" role="status">
                   {t("settings.networkScan.noOtherDevices")}
                 </p>
               )}
-            </section>
-          )}
+            <div ref={enterAddressRef}>
+              <Card
+                onClick={openAddressEntry}
+                className="flex min-h-12 items-center justify-between gap-3"
+              >
+                <span className="text-foreground font-medium">
+                  {t("settings.deviceSetup.addDeviceManually")}
+                </span>
+                <NextIcon size="20" />
+              </Card>
+            </div>
+          </section>
+          <Button
+            variant="text"
+            label={t("scan.deviceSheetAllDevices")}
+            onClick={() => {
+              close();
+              void router.navigate({ to: "/settings/devices" });
+            }}
+          />
         </div>
       )}
     </SlideModal>

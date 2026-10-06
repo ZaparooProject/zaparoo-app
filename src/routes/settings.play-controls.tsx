@@ -327,7 +327,7 @@ export function PlayControlsSettings() {
         </h1>
       }
     >
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-5">
         <ProfileManager
           connected={connected}
           canManage={canManageProfiles}
