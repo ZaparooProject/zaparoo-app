@@ -34,6 +34,8 @@ function getScanStatusAnnouncement(
 
 interface ScanActionsProps {
   layout: ScanLayout;
+  /** Wide workspaces use full-width inline controls instead of the phone scan pad. */
+  compact?: boolean;
   scanSession: boolean;
   scanStatus: ScanResult;
   /** Starts a scan, and stops one already running. */
@@ -46,6 +48,7 @@ interface ScanActionsProps {
 
 export function ScanActions({
   layout,
+  compact = false,
   scanSession,
   scanStatus,
   onTapScan,
@@ -84,9 +87,11 @@ export function ScanActions({
         <Button
           key="camera"
           variant="secondary"
-          size="lg"
-          layout="stacked"
-          className="min-h-[4.5rem] w-full"
+          size={compact ? "default" : "lg"}
+          layout={compact ? "inline" : "stacked"}
+          className={
+            compact ? "min-h-18 w-full max-w-none" : "min-h-[4.5rem] w-full"
+          }
           icon={<Camera size={24} />}
           label={t("scan.scanCode")}
           aria-label={t("scan.scanCode")}
@@ -103,9 +108,11 @@ export function ScanActions({
           key="nfc"
           variant="fill"
           intent="primary"
-          size="lg"
-          layout="stacked"
-          className="min-h-[8.5rem] w-full"
+          size={compact ? "default" : "lg"}
+          layout={compact ? "inline" : "stacked"}
+          className={
+            compact ? "min-h-18 w-full max-w-none" : "min-h-[8.5rem] w-full"
+          }
           icon={<NfcIcon size={28} />}
           label={t("spinner.nfcDisabledLabel")}
           aria-label={t("spinner.openNfcSettings")}
@@ -124,10 +131,12 @@ export function ScanActions({
         icon={<NfcIcon size={28} />}
         onStart={onTapScan}
         onCancel={onTapScan}
-        size="lg"
-        layout="stacked"
+        size={compact ? "default" : "lg"}
+        layout={compact ? "inline" : "stacked"}
         className="w-full"
-        buttonClassName="min-h-[8.5rem] w-full"
+        buttonClassName={
+          compact ? "min-h-18 w-full max-w-none" : "min-h-[8.5rem] w-full"
+        }
         readerIconSize={28}
         announceStateChanges={false}
       />

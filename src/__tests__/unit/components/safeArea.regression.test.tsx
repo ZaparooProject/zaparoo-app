@@ -9,7 +9,8 @@
  * Regression for: Safe area not working on iOS after refactor to Tailwind classes
  */
 
-import { render } from "../../../test-utils";
+import { render, screen } from "../../../test-utils";
+import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock store with specific safe inset values to verify they're used
@@ -89,7 +90,9 @@ describe("Safe Area Regression Tests", () => {
 
       // Verify inline custom properties expose store values to responsive CSS.
       const style = (headerDiv as HTMLElement).style;
-      expect(style.getPropertyValue("--page-header-safe-top")).toBe("47px");
+      expect(style.getPropertyValue("--page-header-safe-top")).toBe(
+        "var(--page-content-safe-top, 47px)",
+      );
       expect(style.getPropertyValue("--page-header-safe-right")).toBe("10px");
       expect(style.getPropertyValue("--page-header-safe-left")).toBe("10px");
     });
@@ -109,31 +112,29 @@ describe("Safe Area Regression Tests", () => {
       expect(scrollContainer).toBeInTheDocument();
 
       const style = (scrollContainer as HTMLElement).style;
-      expect(style.paddingRight).toBe("calc(1rem + 10px)");
-      expect(style.paddingLeft).toBe("calc(1rem + 10px)");
+      expect(style.getPropertyValue("--page-scroll-safe-right")).toBe("10px");
+      expect(style.getPropertyValue("--page-scroll-safe-left")).toBe("10px");
       expect(style.getPropertyValue("--page-header-overlay-height")).toBe(
-        "calc(47px + max(56px, 3.5rem) + 1px)",
+        "calc(var(--page-content-safe-top, 47px) + max(56px, 3.5rem) + 1px)",
       );
       expect(style.getPropertyValue("--page-header-overlay-clearance")).toBe(
-        "calc(47px + 1.5rem + max(68px, 3.5rem))",
+        "calc(var(--page-content-safe-top, 47px) + 1.5rem + max(68px, 3.5rem))",
       );
     });
 
-    it("should always render top padding area even without header content", async () => {
+    it("should keep headerless content keyboard-accessible with native insets", async () => {
       const { PageFrame } = await import("@/components/PageFrame");
-
-      const { container } = render(
+      const user = userEvent.setup();
+      render(
         <PageFrame>
-          <div>Content without header</div>
+          <input aria-label="Address" />
         </PageFrame>,
       );
-
-      // The sticky div should exist and have top padding even without header
-      const stickyDiv = container.querySelector(".sticky.top-0");
-      expect(stickyDiv).toBeInTheDocument();
-
-      const style = (stickyDiv as HTMLElement).style;
-      expect(style.paddingTop).toBe("calc(1rem + 47px)");
+      await user.tab();
+      const input = screen.getByRole("textbox", { name: "Address" });
+      expect(input).toHaveFocus();
+      await user.keyboard("device.local");
+      expect(input).toHaveValue("device.local");
     });
   });
 
@@ -148,18 +149,11 @@ describe("Safe Area Regression Tests", () => {
       expect(nav).toBeInTheDocument();
 
       const style = (nav as HTMLElement).style;
-      expect(nav).toHaveClass(
-        "[height:calc(var(--bottom-nav-base-height)+var(--bottom-nav-safe-inset))]",
-      );
       expect(style.getPropertyValue("--bottom-nav-safe-inset")).toBe("34px");
-      expect(nav).toHaveClass("bottom-nav-shell");
-      expect(
-        container.querySelector(".bottom-nav-surface"),
-      ).toBeInTheDocument();
-
-      const tabGrid = container.querySelector(".grid-cols-4") as HTMLElement;
-      expect(tabGrid.style.paddingRight).toBe("calc(8px + 10px)");
-      expect(tabGrid.style.paddingLeft).toBe("calc(8px + 10px)");
+      expect(style.getPropertyValue("--app-navigation-safe-left")).toBe("10px");
+      expect(style.getPropertyValue("--app-navigation-safe-right")).toBe(
+        "10px",
+      );
     });
   });
 });

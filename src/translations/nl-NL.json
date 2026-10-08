@@ -126,6 +126,7 @@
       "confirmDelete": "{{name}} verwijderen? Dit kan niet ongedaan worden gemaakt."
     },
     "library": {
+      "selectMedia": "Selecteer media",
       "title": "Bibliotheek",
       "collections": "Collecties",
       "systems": "Systemen",
@@ -415,7 +416,11 @@
       "statusScanning": "Scannen naar NFC-tag",
       "statusSuccess": "Tag gescand",
       "statusError": "Tagscan mislukt",
-      "remoteKeyboard": "Bediening"
+      "remoteKeyboard": "Bediening",
+      "scanHistoryTitle": "Scangeschiedenis",
+      "playHistoryTitle": "Afspeelgeschiedenis",
+      "historyRefresh": "Geschiedenis vernieuwen",
+      "historyLoadError": "Geschiedenis kon niet worden geladen"
     },
     "create": {
       "title": "Maken",
@@ -1285,7 +1290,9 @@
         "technicalSupport": "Technische ondersteuning",
         "reportIssue": "Een probleem melden op GitHub",
         "emailLabel": "E-mailadres voor ondersteuning:"
-      }
+      },
+      "connectDevice": "Verbinden met {{device}}",
+      "savedDevices": "Opgeslagen apparaten"
     },
     "systemSelector": {
       "loadError": "Systemen konden niet worden geladen",
@@ -1546,6 +1553,13 @@
         "next": "Volgende",
         "finish": "Voltooien"
       }
+    },
+    "navigation": {
+      "devices": "Apparaten",
+      "currentDevice": "Huidig apparaat",
+      "openMenu": "Navigatie openen",
+      "expandSection": "{{section}} uitklappen",
+      "collapseSection": "{{section}} inklappen"
     }
   }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, RefObject } from "react";
 
 const FOCUSABLE_SELECTORS = [
   "a[href]",
@@ -132,6 +132,12 @@ export function useFocusTrap({
   inertBackground = true,
 }: UseFocusTrapOptions): void {
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+  const restoreFocusRef = useRef(restoreFocus);
+  // A dialog becoming a pane releases isolation without pulling focus out of
+  // surviving content. Actual dismissal still restores the original trigger.
+  useLayoutEffect(() => {
+    restoreFocusRef.current = restoreFocus;
+  }, [restoreFocus]);
   const onEscapeRef = useRef(onEscape);
 
   useEffect(() => {
@@ -222,7 +228,7 @@ export function useFocusTrap({
 
       const previouslyFocused = previouslyFocusedRef.current;
       previouslyFocusedRef.current = null;
-      if (!restoreFocus) return;
+      if (!restoreFocusRef.current) return;
       if (previouslyFocused && canRestoreFocus(previouslyFocused)) {
         previouslyFocused.focus();
         return;

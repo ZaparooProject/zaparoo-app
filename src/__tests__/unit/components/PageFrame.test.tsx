@@ -126,7 +126,6 @@ describe("PageFrame", () => {
 
     const pageFrame = container.firstChild as HTMLElement;
     expect(pageFrame).toHaveClass("custom-class");
-    expect(pageFrame).toHaveClass("flex", "h-full", "w-full", "flex-col");
   });
 
   it("should pass through additional props", () => {
@@ -525,7 +524,7 @@ describe("PageFrame", () => {
     expect(screen.getByTestId("only-right")).toBeInTheDocument();
   });
 
-  it("should keep compact header material stable while content scrolls", () => {
+  it("keeps the heading mounted outside the scrolling content", () => {
     const { container } = render(
       <PageFrame
         headerCenter={<h1 className="text-foreground text-xl">Test Title</h1>}
@@ -534,26 +533,18 @@ describe("PageFrame", () => {
       </PageFrame>,
     );
 
-    const header = container.querySelector(".page-header-shell");
-    const scrollContainer = container.querySelector(".flex-1.overflow-y-auto");
-    expect(header).not.toHaveAttribute("data-scrolled");
-    expect(header).toHaveClass("absolute", "inset-x-0");
-    const surface = header?.firstElementChild;
-    const content = surface?.firstElementChild;
-    expect(surface).toHaveClass("page-header-surface");
-    expect(content).toHaveClass("page-header-content");
-    expect(content?.firstElementChild).toHaveClass("min-h-14");
-    expect(scrollContainer).toBeInTheDocument();
-    expect(scrollContainer).toHaveClass(
-      "page-frame-scroll",
-      "page-frame-scroll-with-header",
+    const heading = screen.getByRole("heading", { name: "Test Title" });
+    const scrollContainer = container.querySelector(
+      '[data-scroll-restoration-id="page-scroll"]',
     );
+    expect(scrollContainer).toContainElement(screen.getByText("Test content"));
+    expect(scrollContainer).not.toContainElement(heading);
 
     fireEvent.scroll(scrollContainer as HTMLElement, {
       target: { scrollTop: 20 },
     });
 
-    expect(header).not.toHaveAttribute("data-scrolled");
+    expect(screen.getByRole("heading", { name: "Test Title" })).toBe(heading);
   });
 
   it("should apply correct styles when header is not present", () => {

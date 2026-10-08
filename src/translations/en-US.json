@@ -126,6 +126,7 @@
       "confirmDelete": "Delete {{name}}? This cannot be undone."
     },
     "library": {
+      "selectMedia": "Select media",
       "title": "Library",
       "collections": "Collections",
       "systems": "Systems",
@@ -452,7 +453,11 @@
       "history": {
         "empty": "No scans yet"
       },
-      "playlistProgressLabel": "Playlist position"
+      "playlistProgressLabel": "Playlist position",
+      "scanHistoryTitle": "Scan history",
+      "playHistoryTitle": "Play history",
+      "historyRefresh": "Refresh history",
+      "historyLoadError": "Could not load history"
     },
     "create": {
       "title": "Create",
@@ -1332,7 +1337,9 @@
         "technicalSupport": "Technical Support",
         "reportIssue": "Report an issue on GitHub",
         "emailLabel": "Support email:"
-      }
+      },
+      "connectDevice": "Connect to {{device}}",
+      "savedDevices": "Saved devices"
     },
     "systemSelector": {
       "loadError": "Could not load systems",
@@ -1596,6 +1603,13 @@
         "next": "Next",
         "finish": "Finish"
       }
+    },
+    "navigation": {
+      "devices": "Devices",
+      "currentDevice": "Current device",
+      "openMenu": "Open navigation",
+      "expandSection": "Expand {{section}}",
+      "collapseSection": "Collapse {{section}}"
     }
   }
 }

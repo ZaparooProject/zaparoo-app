@@ -38,6 +38,8 @@ import { Route as SettingsMediaRouteImport } from "./routes/settings.media";
 import { Route as SettingsOnlineRouteImport } from "./routes/settings.online";
 import { Route as SettingsPlayControlsRouteImport } from "./routes/settings.play-controls";
 import { Route as SettingsReadersRouteImport } from "./routes/settings.readers";
+import { Route as ZapPlayHistoryRouteImport } from "./routes/zap.play-history";
+import { Route as ZapScanHistoryRouteImport } from "./routes/zap.scan-history";
 import { Route as CreateDecksNewRouteImport } from "./routes/create.decks.new";
 import { Route as CreateMappingsNewRouteImport } from "./routes/create.mappings_.new";
 import { Route as LibraryDecksDeckIdRouteImport } from "./routes/library.decks.$deckId";
@@ -191,6 +193,16 @@ const SettingsReadersRoute = SettingsReadersRouteImport.update({
   path: "/settings/readers",
   getParentRoute: () => rootRouteImport,
 } as any);
+const ZapPlayHistoryRoute = ZapPlayHistoryRouteImport.update({
+  id: "/zap/play-history",
+  path: "/zap/play-history",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const ZapScanHistoryRoute = ZapScanHistoryRouteImport.update({
+  id: "/zap/scan-history",
+  path: "/zap/scan-history",
+  getParentRoute: () => rootRouteImport,
+} as any);
 const CreateDecksNewRoute = CreateDecksNewRouteImport.update({
   id: "/create/decks/new",
   path: "/create/decks/new",
@@ -254,6 +266,8 @@ export interface FileRoutesByFullPath {
   "/settings/online": typeof SettingsOnlineRoute;
   "/settings/play-controls": typeof SettingsPlayControlsRoute;
   "/settings/readers": typeof SettingsReadersRoute;
+  "/zap/play-history": typeof ZapPlayHistoryRoute;
+  "/zap/scan-history": typeof ZapScanHistoryRoute;
   "/create/": typeof CreateIndexRoute;
   "/library/": typeof LibraryIndexRoute;
   "/settings/": typeof SettingsIndexRoute;
@@ -292,6 +306,8 @@ export interface FileRoutesByTo {
   "/settings/online": typeof SettingsOnlineRoute;
   "/settings/play-controls": typeof SettingsPlayControlsRoute;
   "/settings/readers": typeof SettingsReadersRoute;
+  "/zap/play-history": typeof ZapPlayHistoryRoute;
+  "/zap/scan-history": typeof ZapScanHistoryRoute;
   "/create": typeof CreateIndexRoute;
   "/library": typeof LibraryIndexRoute;
   "/settings": typeof SettingsIndexRoute;
@@ -331,6 +347,8 @@ export interface FileRoutesById {
   "/settings/online": typeof SettingsOnlineRoute;
   "/settings/play-controls": typeof SettingsPlayControlsRoute;
   "/settings/readers": typeof SettingsReadersRoute;
+  "/zap/play-history": typeof ZapPlayHistoryRoute;
+  "/zap/scan-history": typeof ZapScanHistoryRoute;
   "/create/": typeof CreateIndexRoute;
   "/library/": typeof LibraryIndexRoute;
   "/settings/": typeof SettingsIndexRoute;
@@ -371,6 +389,8 @@ export interface FileRouteTypes {
     | "/settings/online"
     | "/settings/play-controls"
     | "/settings/readers"
+    | "/zap/play-history"
+    | "/zap/scan-history"
     | "/create/"
     | "/library/"
     | "/settings/"
@@ -409,6 +429,8 @@ export interface FileRouteTypes {
     | "/settings/online"
     | "/settings/play-controls"
     | "/settings/readers"
+    | "/zap/play-history"
+    | "/zap/scan-history"
     | "/create"
     | "/library"
     | "/settings"
@@ -447,6 +469,8 @@ export interface FileRouteTypes {
     | "/settings/online"
     | "/settings/play-controls"
     | "/settings/readers"
+    | "/zap/play-history"
+    | "/zap/scan-history"
     | "/create/"
     | "/library/"
     | "/settings/"
@@ -486,6 +510,8 @@ export interface RootRouteChildren {
   SettingsOnlineRoute: typeof SettingsOnlineRoute;
   SettingsPlayControlsRoute: typeof SettingsPlayControlsRoute;
   SettingsReadersRoute: typeof SettingsReadersRoute;
+  ZapPlayHistoryRoute: typeof ZapPlayHistoryRoute;
+  ZapScanHistoryRoute: typeof ZapScanHistoryRoute;
   CreateIndexRoute: typeof CreateIndexRoute;
   LibraryIndexRoute: typeof LibraryIndexRoute;
   SettingsIndexRoute: typeof SettingsIndexRoute;
@@ -703,6 +729,20 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof SettingsReadersRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    "/zap/play-history": {
+      id: "/zap/play-history";
+      path: "/zap/play-history";
+      fullPath: "/zap/play-history";
+      preLoaderRoute: typeof ZapPlayHistoryRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/zap/scan-history": {
+      id: "/zap/scan-history";
+      path: "/zap/scan-history";
+      fullPath: "/zap/scan-history";
+      preLoaderRoute: typeof ZapScanHistoryRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     "/create/decks/new": {
       id: "/create/decks/new";
       path: "/create/decks/new";
@@ -782,6 +822,8 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsOnlineRoute: SettingsOnlineRoute,
   SettingsPlayControlsRoute: SettingsPlayControlsRoute,
   SettingsReadersRoute: SettingsReadersRoute,
+  ZapPlayHistoryRoute: ZapPlayHistoryRoute,
+  ZapScanHistoryRoute: ZapScanHistoryRoute,
   CreateIndexRoute: CreateIndexRoute,
   LibraryIndexRoute: LibraryIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,

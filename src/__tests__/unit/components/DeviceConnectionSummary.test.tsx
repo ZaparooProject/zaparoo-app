@@ -77,7 +77,7 @@ describe("DeviceConnectionSummary", () => {
 
   afterEach(() => vi.restoreAllMocks());
 
-  it("shows device identity and status without an address editor or utility toolbar", () => {
+  it("shows device identity and status with pairing but without an address editor", () => {
     renderSummary();
     expect(
       screen.getByRole("heading", { name: /scan.connectedHeading/ }),
@@ -90,11 +90,24 @@ describe("DeviceConnectionSummary", () => {
       screen.queryByRole("button", { name: "save" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "pairing.openPairing" }),
-    ).not.toBeInTheDocument();
+      summary.getByRole("button", { name: "pairing.openPairing" }),
+    ).toBeVisible();
     expect(
       screen.getByRole("button", { name: "settings.deviceHistory" }),
     ).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("opens pairing directly from the connected-device summary", async () => {
+    const user = userEvent.setup();
+    renderSummary();
+    await user.click(
+      screen.getByRole("button", { name: "pairing.openPairing" }),
+    );
+    expect(openPairingModal).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "settings.deviceHistory" }),
+    ).toBeVisible();
   });
 
   it.each([

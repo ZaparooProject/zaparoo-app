@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { ListChecks, XIcon } from "lucide-react";
+import { ListChecks, MonitorIcon, XIcon } from "lucide-react";
+import { DeviceConnectionPanel } from "@/components/home/DeviceConnectionPanel";
+import { useSelectDevice } from "@/hooks/useSelectDevice";
 import { useConnection } from "@/hooks/useConnection";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import {
@@ -73,6 +75,7 @@ export function Devices() {
   // same misleading empty state, just from a different cause.
   const registrySettled = useDeviceRegistry(selectRegistrySettled);
   const { isConnected } = useConnection();
+  const { selectRecord } = useSelectDevice();
 
   const [pairedKeys, setPairedKeys] = useState<Set<string>>(new Set());
   const [isEditing, setIsEditing] = useState(false);
@@ -241,6 +244,7 @@ export function Devices() {
 
   return (
     <PageFrame
+      layout="workspace"
       onSwipeBack={goBack}
       headerLeft={
         <HeaderButton
@@ -276,78 +280,104 @@ export function Devices() {
         ) : undefined
       }
     >
-      <div className="flex flex-col gap-3">
-        {!registrySettled ? (
-          <DelayedLoading>
-            <div className="text-muted-foreground flex items-center justify-center gap-2 py-8">
-              <LoadingSpinner size={16} className="text-primary" decorative />
-              <span>{t("settings.deviceHistoryLoading")}</span>
-            </div>
-          </DelayedLoading>
-        ) : sortedRecords.length === 0 ? (
-          <EmptyState
-            size="compact"
-            title={t(
-              hydrationError
-                ? "settings.deviceHistoryError"
-                : "settings.deviceHistoryEmpty",
-            )}
-            action={
-              hydrationError ? (
-                <Button
-                  variant="outline"
-                  label={t("scan.retry")}
-                  onClick={() => void deviceRegistry.hydrate()}
-                />
-              ) : undefined
-            }
-          />
-        ) : (
-          sortedRecords.map(({ record, endpoint }) => (
-            <DeviceRow
-              key={record.recordId}
-              entry={{
-                address: endpoint.address,
-                name: record.name,
-                platform: record.platform,
-                version: record.version,
-              }}
-              isActive={isConnected && activeRecordId === record.recordId}
-              // A record migrated from an older build still holds its pairing
-              // under the pre-V2 address key until its first encrypted connect,
-              // so the lock icon has to accept either key.
-              isPaired={hasCredentials(record)}
-              onSelect={() => handleSelect(record.recordId)}
-              rightSlot={
-                isEditing ? (
-                  <Checkbox
-                    checked={selectedRecordIds.has(record.recordId)}
-                    onCheckedChange={() => toggleSelected(record.recordId)}
-                    aria-label={t("settings.deviceCombine.select", {
-                      device: record.name || endpoint.address,
-                    })}
-                    disabled={
-                      selectedRecordIds.size >= 2 &&
-                      !selectedRecordIds.has(record.recordId)
-                    }
+      <div className="grid items-start gap-5 min-[1024px]:grid-cols-2">
+        <DeviceConnectionPanel
+          isOpen={registrySettled}
+          close={() => undefined}
+          presentation="page"
+        />
+        <section
+          aria-labelledby="saved-devices-heading"
+          className="flex min-w-0 flex-col gap-3"
+        >
+          <h2 id="saved-devices-heading" className="text-lg font-semibold">
+            {t("settings.savedDevices")}
+          </h2>
+          {!registrySettled ? (
+            <DelayedLoading>
+              <div className="text-muted-foreground flex items-center justify-center gap-2 py-8">
+                <LoadingSpinner size={16} className="text-primary" decorative />
+                <span>{t("settings.deviceHistoryLoading")}</span>
+              </div>
+            </DelayedLoading>
+          ) : sortedRecords.length === 0 ? (
+            <EmptyState
+              size="compact"
+              title={t(
+                hydrationError
+                  ? "settings.deviceHistoryError"
+                  : "settings.deviceHistoryEmpty",
+              )}
+              action={
+                hydrationError ? (
+                  <Button
+                    variant="outline"
+                    label={t("scan.retry")}
+                    onClick={() => void deviceRegistry.hydrate()}
                   />
                 ) : undefined
               }
             />
-          ))
-        )}
-        {isEditing && sortedRecords.length > 0 && (
-          <Button
-            label={t("settings.deviceCombine.action")}
-            intent="primary"
-            onClick={() => {
-              setCombineFailed(false);
-              setCombineOpen(true);
-            }}
-            disabled={selectedRecordIds.size !== 2}
-            className="mt-3 w-full"
-          />
-        )}
+          ) : (
+            sortedRecords.map(({ record, endpoint }) => (
+              <DeviceRow
+                key={record.recordId}
+                entry={{
+                  address: endpoint.address,
+                  name: record.name,
+                  platform: record.platform,
+                  version: record.version,
+                }}
+                isActive={isConnected && activeRecordId === record.recordId}
+                // A record migrated from an older build still holds its pairing
+                // under the pre-V2 address key until its first encrypted connect,
+                // so the lock icon has to accept either key.
+                isPaired={hasCredentials(record)}
+                onSelect={() => handleSelect(record.recordId)}
+                rightSlot={
+                  isEditing ? (
+                    <Checkbox
+                      checked={selectedRecordIds.has(record.recordId)}
+                      onCheckedChange={() => toggleSelected(record.recordId)}
+                      aria-label={t("settings.deviceCombine.select", {
+                        device: record.name || endpoint.address,
+                      })}
+                      disabled={
+                        selectedRecordIds.size >= 2 &&
+                        !selectedRecordIds.has(record.recordId)
+                      }
+                    />
+                  ) : (
+                    <Button
+                      icon={<MonitorIcon size={20} />}
+                      variant="ghost"
+                      shape="square"
+                      aria-label={t("settings.connectDevice", {
+                        device: record.name || endpoint.address,
+                      })}
+                      disabled={
+                        isConnected && activeRecordId === record.recordId
+                      }
+                      onClick={() => void selectRecord(record.recordId)}
+                    />
+                  )
+                }
+              />
+            ))
+          )}
+          {isEditing && sortedRecords.length > 0 && (
+            <Button
+              label={t("settings.deviceCombine.action")}
+              intent="primary"
+              onClick={() => {
+                setCombineFailed(false);
+                setCombineOpen(true);
+              }}
+              disabled={selectedRecordIds.size !== 2}
+              className="mt-3 w-full"
+            />
+          )}
+        </section>
       </div>
 
       <SlideModal

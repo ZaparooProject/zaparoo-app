@@ -1,4 +1,4 @@
-import { useRef, useCallback, ReactNode } from "react";
+import { useRef, useCallback, useMemo, ReactNode } from "react";
 import {
   SlideModalContext,
   SlideModalManager,
@@ -10,6 +10,22 @@ export const SlideModalProvider = ({ children }: { children: ReactNode }) => {
     Map<string, { closeFunction: () => void; blocking: boolean }>
   >(new Map());
 
+  const listeners = useRef(new Set<() => void>());
+  const notify = useCallback(() => {
+    listeners.current.forEach((listener) => listener());
+  }, []);
+  const subscribe = useCallback((listener: () => void) => {
+    listeners.current.add(listener);
+    return () => {
+      listeners.current.delete(listener);
+    };
+  }, []);
+  const hasOpenModalExcept = useCallback(
+    (exceptId: string) =>
+      Array.from(modals.current.keys()).some((id) => id !== exceptId),
+    [],
+  );
+
   const registerModal = useCallback(
     (
       id: string,
@@ -20,13 +36,17 @@ export const SlideModalProvider = ({ children }: { children: ReactNode }) => {
         closeFunction,
         blocking: options?.blocking === true,
       });
+      notify();
     },
-    [],
+    [notify],
   );
 
-  const unregisterModal = useCallback((id: string) => {
-    modals.current.delete(id);
-  }, []);
+  const unregisterModal = useCallback(
+    (id: string) => {
+      if (modals.current.delete(id)) notify();
+    },
+    [notify],
+  );
 
   const closeAllExcept = useCallback((exceptId: string): boolean => {
     const blocked = Array.from(modals.current.entries()).some(
@@ -40,11 +60,22 @@ export const SlideModalProvider = ({ children }: { children: ReactNode }) => {
     return true;
   }, []);
 
-  const manager: SlideModalManager = {
-    registerModal,
-    unregisterModal,
-    closeAllExcept,
-  };
+  const manager: SlideModalManager = useMemo(
+    () => ({
+      registerModal,
+      unregisterModal,
+      closeAllExcept,
+      hasOpenModalExcept,
+      subscribe,
+    }),
+    [
+      registerModal,
+      unregisterModal,
+      closeAllExcept,
+      hasOpenModalExcept,
+      subscribe,
+    ],
+  );
 
   return (
     <SlideModalContext.Provider value={manager}>

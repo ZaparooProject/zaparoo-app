@@ -1,10 +1,9 @@
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useContext, useLayoutEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
-import type { SearchResultGame } from "@/lib/models";
 import { CoreAPI } from "@/lib/coreApi";
 import { useStatusStore } from "@/lib/store";
 import { useLibrarySessionStore } from "@/lib/librarySessionStore";
@@ -18,13 +17,17 @@ import { DEFAULT_LOADING_DELAY_MS } from "@/components/DelayedLoading";
 import { TextInput } from "@/components/wui/TextInput";
 import { Button } from "@/components/wui/Button";
 import { HeaderButton } from "@/components/wui/HeaderButton";
-import { searchResultToBrowseEntry } from "@/lib/libraryMedia";
 import {
   SystemSelector,
   SystemSelectorTrigger,
 } from "@/components/SystemSelector";
 import { TagSelector, TagSelectorTrigger } from "@/components/TagSelector";
-import { LibraryMediaDetailsModal } from "@/components/library/LibraryMediaDetailsModal";
+import { LibraryDetailsSurface } from "@/components/library/LibraryDetailsSurface";
+import {
+  LibraryMediaSelectionContext,
+  useLibraryMediaSelection,
+  useLibraryMediaSelectionContext,
+} from "@/hooks/useLibraryMediaSelection";
 
 interface LibraryGameSearchProps {
   initialSystemId?: string;
@@ -36,7 +39,29 @@ interface LibraryGameSearchProps {
   title?: string;
 }
 
-export function LibraryGameSearch({
+export function LibraryGameSearch(props: LibraryGameSearchProps = {}) {
+  const shared = useContext(LibraryMediaSelectionContext);
+  return shared ? (
+    <LibraryGameSearchContent {...props} />
+  ) : (
+    <StandaloneLibraryGameSearch {...props} />
+  );
+}
+
+function StandaloneLibraryGameSearch(props: LibraryGameSearchProps) {
+  const deviceKey = useActiveDeviceKey();
+  const selection = useLibraryMediaSelection(
+    `search:${props.sessionScope ?? props.initialSystemId ?? "all"}`,
+    deviceKey,
+  );
+  return (
+    <LibraryMediaSelectionContext.Provider value={selection}>
+      <LibraryGameSearchContent {...props} ownsDetails />
+    </LibraryMediaSelectionContext.Provider>
+  );
+}
+
+function LibraryGameSearchContent({
   initialSystemId,
   onBack,
   embedded = false,
@@ -44,7 +69,8 @@ export function LibraryGameSearch({
   fixedTags = [],
   sessionScope,
   title,
-}: LibraryGameSearchProps = {}) {
+  ownsDetails = false,
+}: LibraryGameSearchProps & { ownsDetails?: boolean }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const pageTitle = title ?? t("library.searchTitle");
@@ -91,13 +117,8 @@ export function LibraryGameSearch({
   const [isSearching, setIsSearching] = useState(false);
   const [systemSelectorOpen, setSystemSelectorOpen] = useState(false);
   const [tagSelectorOpen, setTagSelectorOpen] = useState(false);
-  const [selectedResult, setSelectedResult] = useState<SearchResultGame | null>(
-    null,
-  );
-  const selectedEntry = useMemo(
-    () => (selectedResult ? searchResultToBrowseEntry(selectedResult) : null),
-    [selectedResult],
-  );
+  const selection = useLibraryMediaSelectionContext();
+  const { result: selectedResult, selectResult: setSelectedResult } = selection;
   const canUseSearch =
     connected && gamesIndex.exists && libraryFeature.available;
   const effectiveQueryTags = mediaTagsFeature.available ? queryTags : [];
@@ -211,6 +232,7 @@ export function LibraryGameSearch({
         }
         selectedResult={selectedResult}
         setSelectedResult={setSelectedResult}
+        selectionPresentation={selection.docked ? "pane" : "modal"}
         hasSearched={searchParams !== null}
         searchSystem={searchParams?.system ?? "all"}
         searchTags={searchParams?.tags ?? []}
@@ -226,13 +248,13 @@ export function LibraryGameSearch({
 
   const overlays = (
     <>
-      <LibraryMediaDetailsModal
-        isOpen={selectedEntry !== null}
-        close={() => setSelectedResult(null)}
-        entry={selectedEntry}
-        systemId={selectedResult?.system.id ?? ""}
-        deviceKey={deviceKey}
-      />
+      {embedded && ownsDetails && (
+        <LibraryDetailsSurface
+          selection={{ ...selection, docked: false }}
+          systemId={selectedResult?.system.id ?? ""}
+          deviceKey={deviceKey}
+        />
+      )}
       <SystemSelector
         isOpen={systemSelectorOpen}
         onClose={() => setSystemSelectorOpen(false)}
@@ -274,6 +296,16 @@ export function LibraryGameSearch({
   return (
     <>
       <PageFrame
+        layout="workspace"
+        supportingPane={
+          ownsDetails ? (
+            <LibraryDetailsSurface
+              selection={selection}
+              systemId={selectedResult?.system.id ?? ""}
+              deviceKey={deviceKey}
+            />
+          ) : undefined
+        }
         onSwipeBack={goBack}
         scrollRef={scrollRef}
         headerLeft={

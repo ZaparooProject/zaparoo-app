@@ -145,7 +145,7 @@ function QueueProcessors() {
   return (
     <>
       {writeOpen && (
-        <div className="bg-surface-raised border-border fixed inset-x-0 bottom-[var(--app-footer-overlay-clearance,92px)] z-40 border-t px-4 py-3 shadow-[0_-4px_12px_var(--material-shadow)]">
+        <div className="app-global-reader-strip bg-surface-raised border-border fixed right-0 bottom-[var(--app-footer-overlay-clearance,92px)] z-40 border-t px-4 py-3 shadow-[0_-4px_12px_var(--material-shadow)]">
           <div className="mx-auto max-w-md">
             <ReaderActivityControl
               state={

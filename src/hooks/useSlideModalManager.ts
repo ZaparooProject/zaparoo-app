@@ -13,6 +13,9 @@ export interface SlideModalManager {
   unregisterModal: (id: string) => void;
   /** Closes existing modals, or rejects opening when another modal is blocking. */
   closeAllExcept: (exceptId: string) => boolean;
+  /** Supporting surfaces defer becoming modal while another task owns focus. */
+  hasOpenModalExcept?: (exceptId: string) => boolean;
+  subscribe?: (listener: () => void) => () => void;
 }
 
 export const SlideModalContext = createContext<SlideModalManager | null>(null);

@@ -30,7 +30,7 @@ const defaultLastHref: Record<BottomTabId, string> = {
 };
 
 export function bottomTabForPath(pathname: string): BottomTabId | null {
-  if (pathname === "/") return "zap";
+  if (pathname === "/" || pathname.startsWith("/zap/")) return "zap";
   if (pathname === "/library" || pathname.startsWith("/library/")) {
     return "library";
   }
@@ -58,6 +58,7 @@ export function appBackDestination(
     pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
 
   if (normalizedPath === "/") return null;
+  if (normalizedPath.startsWith("/zap/")) return "/";
   if (
     normalizedPath === "/library" ||
     normalizedPath === "/create" ||
@@ -84,7 +85,12 @@ export function appBackNavigationOptions<T extends AppBackDestination>(to: T) {
 function scrollKeyBelongsToTab(key: string, tab: BottomTabId): boolean {
   switch (tab) {
     case "zap":
-      return key === "/" || key.startsWith("/?");
+      return (
+        key === "/" ||
+        key.startsWith("/?") ||
+        key.startsWith("/zap/") ||
+        key.startsWith("zap:")
+      );
     case "library":
       return (
         key === "/library" ||

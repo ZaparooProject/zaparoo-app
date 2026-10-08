@@ -126,6 +126,7 @@
       "confirmDelete": "{{name}}を削除しますか？この操作は元に戻せません。"
     },
     "library": {
+      "selectMedia": "メディアを選択",
       "title": "ライブラリ",
       "collections": "コレクション",
       "systems": "システム",
@@ -415,7 +416,11 @@
       "statusScanning": "NFCタグをスキャン中",
       "statusSuccess": "タグのスキャンに成功しました",
       "statusError": "タグのスキャンに失敗しました",
-      "remoteKeyboard": "操作"
+      "remoteKeyboard": "操作",
+      "scanHistoryTitle": "スキャン履歴",
+      "playHistoryTitle": "再生履歴",
+      "historyRefresh": "履歴を更新",
+      "historyLoadError": "履歴を読み込めませんでした"
     },
     "create": {
       "title": "作成",
@@ -1285,7 +1290,9 @@
         "technicalSupport": "技術サポート",
         "reportIssue": "GitHubで問題を報告",
         "emailLabel": "サポートメール:"
-      }
+      },
+      "connectDevice": "{{device}}に接続",
+      "savedDevices": "保存済みデバイス"
     },
     "systemSelector": {
       "loadError": "システムを読み込めませんでした",
@@ -1546,6 +1553,13 @@
         "next": "次へ",
         "finish": "完了"
       }
+    },
+    "navigation": {
+      "devices": "デバイス",
+      "currentDevice": "現在のデバイス",
+      "openMenu": "ナビゲーションを開く",
+      "expandSection": "{{section}}を展開",
+      "collapseSection": "{{section}}を折りたたむ"
     }
   }
 }

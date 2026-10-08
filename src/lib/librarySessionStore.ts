@@ -1,5 +1,9 @@
 import { create } from "zustand";
-import type { MediaBrowseSort } from "@/lib/models";
+import type {
+  MediaBrowseEntry,
+  MediaBrowseSort,
+  SearchResultGame,
+} from "@/lib/models";
 import {
   type SessionSearchParams,
   useTabSessionStore,
@@ -7,6 +11,11 @@ import {
 import type { SystemReleasePeriod, SystemSort } from "@/lib/systemFilters";
 
 export type LibraryView = "systems" | "collections";
+
+export interface LibraryMediaSelection {
+  entry: MediaBrowseEntry;
+  result?: SearchResultGame;
+}
 
 export interface LibraryFolderLevel {
   name: string;
@@ -53,6 +62,11 @@ interface LibrarySessionState {
   embeddedSearchOpen: Record<string, boolean>;
   searches: Record<string, SessionSearchParams>;
   browseWindows: Record<string, LibraryBrowseWindow>;
+  selectedMedia: Record<string, LibraryMediaSelection>;
+  setSelectedMedia: (
+    scope: string,
+    selection: LibraryMediaSelection | null,
+  ) => void;
   setView: (view: LibraryView) => void;
   setCategory: (category: string) => void;
   setManufacturer: (manufacturer: string) => void;
@@ -85,10 +99,18 @@ const initialLibrarySessionState = {
   embeddedSearchOpen: {},
   searches: {},
   browseWindows: {},
+  selectedMedia: {},
 };
 
 export const useLibrarySessionStore = create<LibrarySessionState>()((set) => ({
   ...initialLibrarySessionState,
+  setSelectedMedia: (scope, selection) =>
+    set((state) => {
+      const selectedMedia = { ...state.selectedMedia };
+      if (selection) selectedMedia[scope] = selection;
+      else delete selectedMedia[scope];
+      return { selectedMedia };
+    }),
   setView: (view) => set({ view }),
   setCategory: (category) => set({ category }),
   setManufacturer: (manufacturer) => set({ manufacturer }),
@@ -134,6 +156,7 @@ export const useLibrarySessionStore = create<LibrarySessionState>()((set) => ({
       embeddedSearchOpen: {},
       searches: {},
       browseWindows: {},
+      selectedMedia: {},
     }),
   activateDevice: (deviceAddress) =>
     set((state) =>

@@ -43,6 +43,7 @@ export interface VirtualSearchResultsProps {
   scrollContainerRef?: RefObject<HTMLDivElement | null>;
   loadingDelayMs?: number;
   compactEmptyState?: boolean;
+  selectionPresentation?: "modal" | "pane";
 }
 
 export function VirtualSearchResults({
@@ -51,6 +52,7 @@ export function VirtualSearchResults({
   tags = [],
   selectedResult,
   setSelectedResult,
+  selectionPresentation = "modal",
   hasSearched = false,
   searchSystem = "all",
   searchTags = [],
@@ -323,6 +325,7 @@ export function VirtualSearchResults({
                   )}
                   selectedResult={selectedResult}
                   setSelectedResult={setSelectedResult}
+                  docked={selectionPresentation === "pane"}
                   isLast={!hasNextPage && index === allItems.length - 1}
                   index={index}
                 />
@@ -413,6 +416,7 @@ export function VirtualSearchResults({
                   )}
                   selectedResult={selectedResult}
                   setSelectedResult={setSelectedResult}
+                  docked={selectionPresentation === "pane"}
                   isLast={virtualItem.index === totalCount - 1}
                   index={virtualItem.index}
                 />
@@ -432,6 +436,7 @@ interface SearchResultItemProps {
   setSelectedResult: (game: SearchResultGame | null) => void;
   isLast: boolean;
   index: number;
+  docked: boolean;
 }
 
 const SearchResultItem = React.memo(function SearchResultItem({
@@ -441,6 +446,7 @@ const SearchResultItem = React.memo(function SearchResultItem({
   setSelectedResult,
   isLast,
   index,
+  docked,
 }: SearchResultItemProps) {
   const { t } = useTranslation();
   const showFilenames = usePreferencesStore((s) => s.showFilenames);
@@ -454,6 +460,10 @@ const SearchResultItem = React.memo(function SearchResultItem({
   const displayTags = game.disambiguatingTags ?? [];
 
   const handleGameSelect = () => {
+    if (docked) {
+      setSelectedResult(game);
+      return;
+    }
     if (selectedResult && selectedResult.path === game.path) {
       setSelectedResult(null);
     } else if (selectedResult && selectedResult.path !== game.path) {
@@ -470,10 +480,17 @@ const SearchResultItem = React.memo(function SearchResultItem({
     <button
       type="button"
       className={classNames(
-        "focus-visible:ring-ring flex w-full cursor-pointer flex-row items-center justify-between gap-1 px-1 pt-3 pb-5 text-left focus-visible:ring-2 focus-visible:outline-none",
+        "library-browse-row focus-visible:ring-ring flex w-full cursor-pointer flex-row items-center justify-between gap-1 px-1 pt-3 pb-5 text-left focus-visible:ring-2 focus-visible:outline-none",
         { "border-border border-b": !isLast },
       )}
       data-testid={`result-${index}`}
+      aria-current={
+        docked &&
+        selectedResult?.path === game.path &&
+        selectedResult.system.id === game.system.id
+          ? "true"
+          : undefined
+      }
       onPointerUp={handleHapticPress}
       onClick={(e) => {
         e.preventDefault();

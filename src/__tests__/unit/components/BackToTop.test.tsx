@@ -74,6 +74,26 @@ describe("BackToTop", () => {
     expect(button).toBeInTheDocument();
   });
 
+  it("retains pointer focus instead of moving it to the page heading", async () => {
+    render(<TestWrapper />);
+    const button = screen.getByRole("button", {
+      name: "backToTop",
+      hidden: true,
+    });
+    const container = screen.getByTestId("scroll-container");
+    container.scrollTop = 400;
+    fireEvent.scroll(container);
+    await waitFor(() =>
+      expect(button.parentElement).not.toHaveAttribute("inert"),
+    );
+    button.focus();
+    fireEvent.click(button, { detail: 1 });
+    expect(button).toHaveFocus();
+    expect(
+      screen.getByRole("heading", { name: "Page title" }),
+    ).not.toHaveFocus();
+  });
+
   it("should be hidden and inert by default when scroll position is 0", () => {
     render(<TestWrapper />);
 
@@ -286,7 +306,6 @@ describe("BackToTop", () => {
       hidden: true,
     });
     const wrapper = button.parentElement as HTMLElement;
-    expect(wrapper.style.right).toBe("1rem");
     expect(wrapper.style.bottom).toBe("calc(100px + 1rem)");
     vi.restoreAllMocks();
     vi.unstubAllGlobals();

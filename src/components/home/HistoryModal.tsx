@@ -1,7 +1,6 @@
 import { memo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { TabBar } from "@/components/wui/TabBar";
 import { getTabBarPanelId } from "@/components/wui/tabBarIds";
@@ -17,11 +16,9 @@ import {
 import type { HistoryResponse, HistoryResponseEntry } from "@/lib/models";
 import { useStatusStore } from "@/lib/store";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
-import { PlayIcon } from "@/lib/images";
-import { CopyButton } from "../CopyButton";
-import { HistoryListRow } from "../HistoryListRow";
 import { SlideModal } from "../SlideModal";
 import { PlayedHistoryList } from "./PlayedHistoryList";
+import { ScanHistoryList } from "./ScanHistoryList";
 
 type HistoryTab = "scans" | "played";
 
@@ -32,76 +29,6 @@ interface HistoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   historyData: HistoryResponse | undefined;
-}
-
-function ScanHistoryRow({
-  item,
-  connected,
-  onReplay,
-}: {
-  item: HistoryResponseEntry;
-  connected: boolean;
-  onReplay: (item: HistoryResponseEntry) => void;
-}) {
-  const { t } = useTranslation();
-  const visibleUid = item.uid !== "" && item.uid !== "__api__";
-  const primaryValue =
-    item.text ||
-    (visibleUid ? item.uid : "") ||
-    item.data ||
-    t("scan.historyUnknown");
-  const copyValue =
-    item.text || (visibleUid ? item.uid : "") || item.data || null;
-  const showUidDetail = visibleUid && item.text !== "";
-
-  return (
-    <HistoryListRow
-      title={
-        <>
-          <span className="min-w-0 break-all">{primaryValue}</span>
-          {copyValue && (
-            <CopyButton text={copyValue} className="mt-0.5 shrink-0" />
-          )}
-        </>
-      }
-      meta={
-        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
-          {!item.success && (
-            <>
-              <span className="text-error font-medium">
-                {t("scan.historyFailed")}
-              </span>
-              <span aria-hidden="true">·</span>
-            </>
-          )}
-          <span>{new Date(item.time).toLocaleString()}</span>
-        </div>
-      }
-      details={
-        showUidDetail ? (
-          <div className="flex items-start gap-1">
-            <span className="break-all">
-              {t("scan.lastScannedUid", { uid: item.uid })}
-            </span>
-            <CopyButton text={item.uid} className="shrink-0" />
-          </div>
-        ) : undefined
-      }
-      action={
-        <Button
-          icon={<PlayIcon size="20" />}
-          variant="ghost"
-          size="sm"
-          aria-label={t("scan.historyReplay")}
-          disabled={
-            !connected ||
-            (item.uid === "" && item.text === "" && item.data === "")
-          }
-          onClick={() => onReplay(item)}
-        />
-      }
-    />
-  );
 }
 
 export const HistoryModal = memo(function HistoryModal({
@@ -203,16 +130,11 @@ export const HistoryModal = memo(function HistoryModal({
         ) : isEmpty ? (
           <EmptyState title={t("scan.history.empty")} />
         ) : (
-          <ul>
-            {historyData.entries?.map((item, index) => (
-              <ScanHistoryRow
-                key={`${item.time}:${item.type}:${item.uid}:${index}`}
-                item={item}
-                connected={connected}
-                onReplay={replayScan}
-              />
-            ))}
-          </ul>
+          <ScanHistoryList
+            entries={historyData.entries ?? []}
+            connected={connected}
+            onReplay={replayScan}
+          />
         )}
       </div>
     </SlideModal>

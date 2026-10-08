@@ -112,11 +112,11 @@ export function NowPlayingCard({
       deviceKey={deviceKey}
       maxSize={256}
       priority="detail"
-      className="h-20 w-15"
+      className="now-playing-artwork"
     />
   );
   return (
-    <section aria-labelledby={headingId}>
+    <section className="now-playing-section" aria-labelledby={headingId}>
       <h2
         id={headingId}
         className="text-muted-foreground mb-2 font-bold capitalize"

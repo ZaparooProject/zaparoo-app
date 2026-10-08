@@ -21,6 +21,7 @@ import {
   isPlainFolderEntry,
   libraryEntryDisplayName,
   libraryEntryTags,
+  mediaRefKey,
 } from "@/lib/libraryMedia";
 import type { LibraryBrowseRange } from "@/lib/libraryBrowse";
 import type { MediaBrowseEntry } from "@/lib/models";
@@ -135,6 +136,7 @@ function LibraryBrowseRow(props: {
   hasDivider: boolean;
   showSystemName: boolean;
   detail?: string;
+  selected: boolean;
   onSelect: (entry: MediaBrowseEntry) => void;
 }) {
   const { t } = useTranslation();
@@ -169,7 +171,7 @@ function LibraryBrowseRow(props: {
       ref={rowRef}
       type="button"
       className={classNames(
-        "focus-visible:ring-ring flex w-full items-center gap-3 px-1 py-3 text-left focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed",
+        "library-browse-row focus-visible:ring-ring flex w-full items-center gap-3 px-1 py-3 text-left focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed",
         {
           "h-full": !props.textZoomed,
           "border-border border-b": props.hasDivider,
@@ -177,6 +179,7 @@ function LibraryBrowseRow(props: {
       )}
       style={{ minHeight: `${props.minHeight}px` }}
       disabled={props.interactionDisabled}
+      aria-current={props.selected ? "true" : undefined}
       onPointerUp={handleHapticPress}
       onClick={() => props.onSelect(entry)}
     >
@@ -281,6 +284,7 @@ export const LibraryBrowseList = forwardRef<
     interactionDisabled: boolean;
     onFetchMore: () => void;
     onSelect: (entry: MediaBrowseEntry) => void;
+    selectedEntry?: MediaBrowseEntry | null;
     onLoadIndex?: (index: number, options?: { retry?: boolean }) => void;
     isLoadingIndex?: boolean;
     failedRanges?: readonly LibraryBrowseRange[];
@@ -469,6 +473,11 @@ export const LibraryBrowseList = forwardRef<
       minHeight={rowHeight}
       showSystemName={props.showSystemName ?? false}
       detail={props.entryDetail?.(entry)}
+      selected={Boolean(
+        props.selectedEntry &&
+        JSON.stringify(mediaRefKey(entry, props.systemId)) ===
+          JSON.stringify(mediaRefKey(props.selectedEntry, props.systemId)),
+      )}
       hasDivider={props.hasNextPage || index < props.entries.length - 1}
       onSelect={props.onSelect}
     />
@@ -616,9 +625,7 @@ export const LibraryBrowseList = forwardRef<
               top: 0,
               left: 0,
               width: "100%",
-              ...(textZoomed
-                ? { minHeight: `${rowHeight}px` }
-                : { height: `${virtualItem.size}px` }),
+              minHeight: `${rowHeight}px`,
               transform: `translateY(${virtualItem.start}px)`,
             }}
           >

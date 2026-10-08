@@ -217,6 +217,7 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
 vi.mock("@/lib/coreApi", () => ({
   isUnindexedMediaError: vi.fn(() => false),
   CoreAPI: {
+    isConnected: vi.fn(() => true),
     history: vi.fn(),
     run: vi.fn().mockResolvedValue(undefined),
     mediaControl: vi.fn().mockResolvedValue(undefined),
@@ -1229,26 +1230,6 @@ describe("Index Route Integration", () => {
       await waitFor(() => {
         const dialog = screen.getByRole("dialog");
         expect(dialog).toHaveAttribute("aria-hidden", "false");
-      });
-    });
-
-    it("should refetch history when modal opens", async () => {
-      const user = userEvent.setup();
-      mockHistoryQueryState.data = { entries: [] };
-
-      render(
-        <TestWrapper>
-          <Index />
-        </TestWrapper>,
-      );
-
-      const historyButton = screen.getByRole("button", {
-        name: /scan.historyTitle/i,
-      });
-      await user.click(historyButton);
-
-      await waitFor(() => {
-        expect(mockHistoryQueryState.refetch).toHaveBeenCalled();
       });
     });
   });

@@ -106,7 +106,7 @@ function metadataFactLabelKey(type: LibraryDetailFactType): string {
 function TagRow(props: { label: string; tags: TagInfo[] }) {
   if (props.tags.length === 0) return null;
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
+    <div className="library-media-tag-row">
       <span className="text-muted-foreground text-sm sm:min-w-[120px]">
         {props.label}
       </span>
@@ -131,6 +131,7 @@ export function LibraryMediaDetailsModal(props: {
   systemId: string;
   deviceKey: string;
   context?: "library" | "nowPlaying";
+  docked?: boolean;
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -614,7 +615,11 @@ export function LibraryMediaDetailsModal(props: {
 
   const detailsModal = (
     <SlideModal
-      isOpen={props.isOpen && !writeOptionsOpen && !deckPickerOpen}
+      isOpen={
+        props.isOpen && (props.docked || (!writeOptionsOpen && !deckPickerOpen))
+      }
+      presentation={props.docked ? "pane" : "modal"}
+      suspendWhenCovered
       close={closeModal}
       title={title}
       footer={footer}

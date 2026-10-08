@@ -1,9 +1,9 @@
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowLeftRightIcon } from "lucide-react";
+import { KeyRoundIcon, MonitorIcon } from "lucide-react";
 import { useActiveDeviceSummary } from "@/hooks/useDevicePresentation";
 import { useConnection } from "@/hooks/useConnection";
 import { useStatusStore } from "@/lib/store";
+import { useDeviceSheetController } from "@/hooks/useDeviceSheetController";
 import { ConnectionStatusDisplay } from "./ConnectionStatusDisplay";
 import { DeviceSheet } from "./home/DeviceSheet";
 import { Button } from "./wui/Button";
@@ -11,7 +11,11 @@ import { Card } from "./wui/Card";
 
 export function DeviceConnectionSummary() {
   const { t } = useTranslation();
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const {
+    isOpen: sheetOpen,
+    setOpen: setSheetOpen,
+    shared,
+  } = useDeviceSheetController();
   const { isConnected, openPairingModal } = useConnection();
   const { name, address, deviceDetails, clientRoleLabel } =
     useActiveDeviceSummary();
@@ -32,16 +36,20 @@ export function DeviceConnectionSummary() {
             connectedSubtitleLoading={isConnected && coreVersionPending}
             connectedName={name ?? undefined}
             connectedTitleSuffix={clientRoleLabel}
+            action={
+              isConnected || (pairingRequired && address) ? (
+                <Button
+                  icon={<KeyRoundIcon size={20} />}
+                  variant="ghost"
+                  shape="square"
+                  size="sm"
+                  aria-label={t("pairing.openPairing")}
+                  onClick={openPairingModal}
+                />
+              ) : undefined
+            }
           />
           <div className="flex flex-col gap-2">
-            {pairingRequired && address && (
-              <Button
-                label={t("pairing.openPairing")}
-                variant="secondary"
-                className="w-full"
-                onClick={openPairingModal}
-              />
-            )}
             <Button
               label={t(
                 address
@@ -49,7 +57,7 @@ export function DeviceConnectionSummary() {
                   : "settings.deviceSetup.connect",
               )}
               variant="secondary"
-              icon={<ArrowLeftRightIcon size={20} />}
+              icon={<MonitorIcon size={20} />}
               className="w-full"
               aria-expanded={sheetOpen}
               onClick={() => setSheetOpen(true)}
@@ -57,7 +65,9 @@ export function DeviceConnectionSummary() {
           </div>
         </Card>
       </section>
-      <DeviceSheet isOpen={sheetOpen} close={() => setSheetOpen(false)} />
+      {!shared && (
+        <DeviceSheet isOpen={sheetOpen} close={() => setSheetOpen(false)} />
+      )}
     </>
   );
 }

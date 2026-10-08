@@ -126,6 +126,7 @@
       "confirmDelete": "¿Eliminar {{name}}? Esta acción no se puede deshacer."
     },
     "library": {
+      "selectMedia": "Selecciona un medio",
       "title": "Biblioteca",
       "collections": "Colecciones",
       "systems": "Sistemas",
@@ -415,7 +416,11 @@
       "statusScanning": "Escaneando etiqueta NFC",
       "statusSuccess": "Etiqueta escaneada correctamente",
       "statusError": "Error al escanear la etiqueta",
-      "remoteKeyboard": "Controles"
+      "remoteKeyboard": "Controles",
+      "scanHistoryTitle": "Historial de escaneos",
+      "playHistoryTitle": "Historial de reproducción",
+      "historyRefresh": "Actualizar historial",
+      "historyLoadError": "No se pudo cargar el historial"
     },
     "create": {
       "title": "Crear",
@@ -1285,7 +1290,9 @@
         "technicalSupport": "Soporte técnico",
         "reportIssue": "Informar de un problema en GitHub",
         "emailLabel": "Correo de soporte:"
-      }
+      },
+      "connectDevice": "Conectar a {{device}}",
+      "savedDevices": "Dispositivos guardados"
     },
     "systemSelector": {
       "loadError": "No se pudieron cargar los sistemas",
@@ -1546,6 +1553,13 @@
         "next": "Siguiente",
         "finish": "Finalizar"
       }
+    },
+    "navigation": {
+      "devices": "Dispositivos",
+      "currentDevice": "Dispositivo actual",
+      "openMenu": "Abrir navegación",
+      "expandSection": "Expandir {{section}}",
+      "collapseSection": "Contraer {{section}}"
     }
   }
 }

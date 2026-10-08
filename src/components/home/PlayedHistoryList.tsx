@@ -64,12 +64,16 @@ interface PlayedHistoryListProps {
   entries: MediaHistoryEntry[];
   isPending: boolean;
   connected: boolean;
+  launchAvailable?: boolean;
+  onLaunch?: (entry: MediaHistoryEntry) => void;
 }
 
 export function PlayedHistoryList({
   entries,
   isPending,
   connected,
+  launchAvailable = connected,
+  onLaunch,
 }: PlayedHistoryListProps) {
   const { t } = useTranslation();
   // A ref, not state: a second tap must be rejected before React re-renders.
@@ -107,8 +111,8 @@ export function PlayedHistoryList({
         <PlayedHistoryRow
           key={`${entry.systemId}:${entry.mediaPath}:${index}`}
           entry={entry}
-          connected={connected}
-          onLaunch={launch}
+          connected={launchAvailable}
+          onLaunch={onLaunch ?? launch}
         />
       ))}
     </ul>

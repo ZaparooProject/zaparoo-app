@@ -126,6 +126,7 @@
       "confirmDelete": "Supprimer {{name}} ? Cette action est irréversible."
     },
     "library": {
+      "selectMedia": "Sélectionnez un média",
       "title": "Bibliothèque",
       "collections": "Collections",
       "systems": "Systèmes",
@@ -415,7 +416,11 @@
       "statusScanning": "Recherche d’un tag NFC",
       "statusSuccess": "Tag scanné avec succès",
       "statusError": "Échec du scan du tag",
-      "remoteKeyboard": "Commandes"
+      "remoteKeyboard": "Commandes",
+      "scanHistoryTitle": "Historique des scans",
+      "playHistoryTitle": "Historique de lecture",
+      "historyRefresh": "Actualiser l’historique",
+      "historyLoadError": "Impossible de charger l’historique"
     },
     "create": {
       "title": "Créer",
@@ -1285,7 +1290,9 @@
         "technicalSupport": "Assistance technique",
         "reportIssue": "Signaler un problème sur GitHub",
         "emailLabel": "E-mail de l’assistance :"
-      }
+      },
+      "connectDevice": "Se connecter à {{device}}",
+      "savedDevices": "Appareils enregistrés"
     },
     "systemSelector": {
       "loadError": "Impossible de charger les systèmes",
@@ -1546,6 +1553,13 @@
         "next": "Suivant",
         "finish": "Terminer"
       }
+    },
+    "navigation": {
+      "devices": "Appareils",
+      "currentDevice": "Appareil actuel",
+      "openMenu": "Ouvrir la navigation",
+      "expandSection": "Développer {{section}}",
+      "collapseSection": "Réduire {{section}}"
     }
   }
 }

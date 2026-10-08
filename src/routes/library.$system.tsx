@@ -62,7 +62,11 @@ import {
 } from "@/components/library/LibraryBrowseList";
 import { LibraryHeaderActions } from "@/components/library/LibraryHeader";
 import { LibraryLetterJumpModal } from "@/components/library/LibraryLetterJumpModal";
-import { LibraryMediaDetailsModal } from "@/components/library/LibraryMediaDetailsModal";
+import { LibraryDetailsSurface } from "@/components/library/LibraryDetailsSurface";
+import {
+  LibraryMediaSelectionContext,
+  useLibraryMediaSelection,
+} from "@/hooks/useLibraryMediaSelection";
 import { LibraryMediaOptionsModal } from "@/components/library/LibraryMediaOptionsModal";
 import { LibraryRefinementSummary } from "@/components/library/LibrarySystemRefinementBar";
 import { LibraryGameSearch } from "@/components/library/LibraryGameSearch";
@@ -94,9 +98,6 @@ export function LibrarySystem() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<LibraryBrowseListHandle>(null);
   const jumpGenerationRef = useRef(0);
-  const [selectedEntry, setSelectedEntry] = useState<MediaBrowseEntry | null>(
-    null,
-  );
   const [letterModalOpen, setLetterModalOpen] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [jumpingLabel, setJumpingLabel] = useState<string | null>(null);
@@ -149,6 +150,11 @@ export function LibrarySystem() {
   );
   const searchScrollKey = librarySearchScrollKey(systemId);
   const sessionScrollKey = searchOpen ? searchScrollKey : browseScrollKey;
+  const selection = useLibraryMediaSelection(
+    searchOpen ? `search:${systemId}` : browseScrollKey,
+    deviceKey,
+  );
+  const { entry: selectedEntry, selectEntry: setSelectedEntry } = selection;
   const forgetScroll = useTabSessionStore((state) => state.forgetScroll);
   const browseWindow = useLibrarySessionStore((state) =>
     state.deviceAddress === deviceKey
@@ -291,6 +297,7 @@ export function LibrarySystem() {
     navigate,
     searchOpen,
     setFolderLevels,
+    setSelectedEntry,
     systemId,
   ]);
 
@@ -405,6 +412,7 @@ export function LibrarySystem() {
         interactionDisabled={jumpingLabel !== null}
         onFetchMore={() => void browse.fetchMore()}
         onSelect={selectEntry}
+        selectedEntry={selectedEntry}
         onLoadIndex={browse.loadIndex}
         isLoadingIndex={browse.isLoadingIndex}
         failedRanges={browse.failedRanges}
@@ -413,8 +421,16 @@ export function LibrarySystem() {
   }
 
   return (
-    <>
+    <LibraryMediaSelectionContext.Provider value={selection}>
       <PageFrame
+        layout="workspace"
+        supportingPane={
+          <LibraryDetailsSurface
+            selection={selection}
+            systemId={systemId}
+            deviceKey={deviceKey}
+          />
+        }
         onSwipeBack={goBack}
         scrollRef={scrollRef}
         sessionScrollKey={sessionScrollKey}
@@ -518,13 +534,6 @@ export function LibrarySystem() {
         sort={mediaSort}
         onSelect={(group) => void selectLetter(group)}
       />
-      <LibraryMediaDetailsModal
-        isOpen={selectedEntry !== null}
-        close={() => setSelectedEntry(null)}
-        entry={selectedEntry}
-        systemId={systemId}
-        deviceKey={deviceKey}
-      />
-    </>
+    </LibraryMediaSelectionContext.Provider>
   );
 }

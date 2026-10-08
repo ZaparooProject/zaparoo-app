@@ -84,20 +84,17 @@ describe("BottomNav", () => {
     expect(await findA11yViolations(baseElement)).toEqual([]);
   });
 
-  it("keeps an edge-to-edge mobile shell with a separately containable surface", () => {
-    const { container } = render(<BottomNav />);
+  it("renders one named navigation with four linked destinations", () => {
+    render(<BottomNav />);
 
-    expect(screen.getByRole("navigation")).toHaveClass(
-      "bottom-nav-shell",
-      "[height:calc(var(--bottom-nav-base-height)+var(--bottom-nav-safe-inset))]",
-    );
-    expect(container.querySelector(".bottom-nav-surface")).toBeInTheDocument();
-    for (const link of screen.getAllByRole("link")) {
-      expect(link).toHaveClass("w-full", "min-w-0", "min-h-12", "py-[4px]");
-    }
-    expect(screen.getByText("nav.settings")).toHaveClass(
-      "wrap-anywhere",
-      "hyphens-auto",
+    expect(screen.getAllByRole("navigation")).toHaveLength(1);
+    expect(
+      screen.getByRole("navigation", { name: "nav.mainNavigation" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("link")).toHaveLength(4);
+    expect(screen.getByRole("link", { name: "nav.index" })).toHaveAttribute(
+      "aria-current",
+      "page",
     );
   });
 

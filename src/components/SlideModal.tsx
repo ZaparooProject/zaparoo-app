@@ -1,6 +1,8 @@
 import {
   ReactNode,
   RefObject,
+  useCallback,
+  useSyncExternalStore,
   useEffect,
   useId,
   useLayoutEffect,
@@ -99,6 +101,12 @@ export function SlideModal(props: {
   dismissible?: boolean;
   fixedHeight?: string;
   scrollClassName?: string;
+  /** Opt-in nonmodal supporting region; feature content stays mounted through resize. */
+  presentation?: "modal" | "pane";
+  /** Home sections keep their heading outside the material owned by their body. */
+  paneLayout?: "card" | "section";
+  /** Do not replace another active dialog solely because a pane collapses. */
+  suspendWhenCovered?: boolean;
 }) {
   const { t } = useTranslation();
   const modalId = useId();
@@ -111,7 +119,23 @@ export function SlideModal(props: {
   const screenReaderEnabled = useScreenReaderEnabled();
   const wasOpenRef = useRef(props.isOpen);
   const dismissible = props.dismissible ?? true;
-  const requestedOpen = props.isOpen;
+  const isPane = props.presentation === "pane";
+  const isSection = isPane && props.paneLayout === "section";
+  const subscribe = useCallback(
+    (listener: () => void) => modalManager.subscribe?.(listener) ?? (() => {}),
+    [modalManager],
+  );
+  const getCovered = useCallback(
+    () =>
+      Boolean(
+        props.suspendWhenCovered && modalManager.hasOpenModalExcept?.(modalId),
+      ),
+    [props.suspendWhenCovered, modalManager, modalId],
+  );
+  const covered = useSyncExternalStore(subscribe, getCovered, () => false);
+  const surfaceOpen = props.isOpen && (isPane || !covered);
+  const modalOpen = surfaceOpen && !isPane;
+  const requestedOpen = modalOpen;
   const requestClose = props.close;
 
   useEffect(() => {
@@ -128,17 +152,19 @@ export function SlideModal(props: {
 
   // Trap focus within modal when open
   useFocusTrap({
-    isActive: props.isOpen,
+    isActive: modalOpen,
     containerRef: modalRef,
-    restoreFocus: true,
+    restoreFocus: !isPane,
     autoFocus: false, // The dialog heading receives initial focus.
     onEscape: dismissible ? props.close : undefined,
   });
 
   // Focus the title when modal opens (better for screen readers)
   useEffect(() => {
-    if (props.isOpen) titleRef.current?.focus();
-  }, [props.isOpen]);
+    if (modalOpen && !modalRef.current?.contains(document.activeElement)) {
+      titleRef.current?.focus();
+    }
+  }, [modalOpen]);
 
   // Install drag handling before paint so a sheet revealed after a covering
   // modal closes cannot briefly appear without responding to touchstart.
@@ -146,10 +172,17 @@ export function SlideModal(props: {
     const modal = modalRef.current;
     if (!modal) return;
 
-    if (!props.isOpen || screenReaderEnabled || !dismissible) {
+    if (isPane) {
+      modal.removeAttribute("data-dragging");
+      modal.style.transition = "none";
+      modal.style.transform = "none";
+      return;
+    }
+
+    if (!surfaceOpen || screenReaderEnabled || !dismissible) {
       modal.removeAttribute("data-dragging");
       modal.style.transition = DRAG_TRANSITION;
-      modal.style.transform = props.isOpen ? OPEN_TRANSFORM : CLOSED_TRANSFORM;
+      modal.style.transform = surfaceOpen ? OPEN_TRANSFORM : CLOSED_TRANSFORM;
       return;
     }
 
@@ -300,20 +333,20 @@ export function SlideModal(props: {
       modal.removeEventListener("touchend", handleTouchEnd);
       modal.removeEventListener("touchcancel", handleTouchCancel);
     };
-  }, [props.isOpen, screenReaderEnabled, dismissible, impact]);
+  }, [surfaceOpen, isPane, screenReaderEnabled, dismissible, impact]);
 
   // Handle Android back button
   useBackButtonHandler(
     "slide-modal",
     () => {
-      if (props.isOpen) {
+      if (modalOpen) {
         if (dismissible) props.close();
         return true; // Consume the event
       }
       return false; // Let other handlers process it
     },
     100, // High priority
-    props.isOpen, // Only active when modal is open
+    modalOpen, // Supporting panes never consume modal-priority Back.
   );
 
   // Register before paint so a blocking modal can reject later sheets without a visible or focusable flash.
@@ -350,8 +383,8 @@ export function SlideModal(props: {
         data-focus-trap-exempt
         className="fixed inset-0 z-40 bg-black/60 transition-opacity duration-200 ease-in-out"
         style={{
-          opacity: props.isOpen ? 1 : 0,
-          pointerEvents: props.isOpen ? "auto" : "none",
+          opacity: modalOpen ? 1 : 0,
+          pointerEvents: modalOpen ? "auto" : "none",
         }}
         onClick={dismissible ? props.close : undefined}
         aria-hidden="true"
@@ -360,51 +393,86 @@ export function SlideModal(props: {
       {/* Modal */}
       <div
         ref={modalRef}
-        role="dialog"
-        aria-modal={props.isOpen || undefined}
-        aria-hidden={!props.isOpen}
+        role={isPane ? "region" : "dialog"}
+        aria-modal={modalOpen || undefined}
+        aria-hidden={!surfaceOpen}
         aria-labelledby={`${modalId}-title`}
-        inert={!props.isOpen}
+        inert={!surfaceOpen || covered}
         tabIndex={-1}
-        className={classNames(
-          "fixed",
-          "z-50",
-          "left-0", // Mobile: align to left edge
-          "sm:left-1/2", // Desktop: center horizontally
-          "sm:-translate-x-1/2", // Desktop: translate back to center
-          "w-full",
-          "max-w-none", // Mobile: full width
-          "sm:max-w-2xl", // Desktop: responsive width (672px)
-          "flex",
-          "flex-col",
-          "rounded-t-lg",
-          "shadow-[0_-8px_32px_var(--material-shadow),inset_0_1px_0_var(--material-highlight)]",
-          "border",
-          "border-b-0",
-          "border-solid",
-          "border-border",
-          "bg-surface-raised",
-          "px-4",
-          "pt-3",
-          "mix-blend-normal",
-          props.className,
-        )}
-        style={{
-          bottom: 0,
-          transform: props.isOpen ? OPEN_TRANSFORM : CLOSED_TRANSFORM,
-          transition: DRAG_TRANSITION,
-          willChange: props.isOpen ? "transform" : "auto",
-          pointerEvents: props.isOpen ? "auto" : "none",
-          boxShadow: props.isOpen ? undefined : "none",
-          paddingBottom: `calc(${safeInsets.bottom} + 1rem)`,
-          maxHeight: `min(80vh, calc(100vh - ${safeInsets.top} - 75px))`,
-          ...(props.fixedHeight ? { height: props.fixedHeight } : {}),
+        onKeyDown={(event) => {
+          if (
+            !isPane ||
+            !dismissible ||
+            event.defaultPrevented ||
+            event.key !== "Escape"
+          )
+            return;
+          const target = event.target;
+          if (
+            target instanceof Element &&
+            target.closest("input, textarea, select, [contenteditable='true']")
+          )
+            return;
+          event.preventDefault();
+          event.stopPropagation();
+          props.close();
         }}
+        className={
+          isPane
+            ? classNames(
+                isSection
+                  ? "slide-modal-section flex w-full min-w-0 flex-col"
+                  : "library-details-panel wui-card",
+                props.className,
+              )
+            : classNames(
+                "fixed",
+                "z-50",
+                "left-0", // Mobile: align to left edge
+                "sm:left-1/2", // Desktop: center horizontally
+                "sm:-translate-x-1/2", // Desktop: translate back to center
+                "w-full",
+                "max-w-none", // Mobile: full width
+                "sm:max-w-2xl", // Desktop: responsive width (672px)
+                "flex",
+                "flex-col",
+                "rounded-t-lg",
+                "shadow-[0_-8px_32px_var(--material-shadow),inset_0_1px_0_var(--material-highlight)]",
+                "border",
+                "border-b-0",
+                "border-solid",
+                "border-border",
+                "bg-surface-raised",
+                "px-4",
+                "pt-3",
+                "mix-blend-normal",
+                props.className,
+              )
+        }
+        style={
+          isPane
+            ? {
+                display: surfaceOpen ? undefined : "none",
+                transform: "none",
+                transition: "none",
+              }
+            : {
+                bottom: 0,
+                transform: surfaceOpen ? OPEN_TRANSFORM : CLOSED_TRANSFORM,
+                transition: DRAG_TRANSITION,
+                willChange: surfaceOpen ? "transform" : "auto",
+                pointerEvents: surfaceOpen ? "auto" : "none",
+                boxShadow: surfaceOpen ? undefined : "none",
+                paddingBottom: `calc(${safeInsets.bottom} + 1rem)`,
+                maxHeight: `min(80vh, calc(100vh - ${safeInsets.top} - 75px))`,
+                ...(props.fixedHeight ? { height: props.fixedHeight } : {}),
+              }
+        }
       >
         {/* Swipeable handle and title area */}
         <div style={{ touchAction: "pan-x pinch-zoom" }}>
           {/* Mobile drag handle */}
-          {dismissible && (
+          {dismissible && !isPane && (
             <div className="-mt-3 sm:hidden">
               <button
                 type="button"
@@ -421,12 +489,16 @@ export function SlideModal(props: {
             </div>
           )}
           {/* Shared visible title and desktop close action */}
-          <div className="relative pb-2 sm:min-h-11">
+          <div className={isSection ? "relative" : "relative pb-2 sm:min-h-11"}>
             <h2
               ref={titleRef}
               id={`${modalId}-title`}
               tabIndex={-1}
-              className="text-center text-lg leading-snug font-semibold tracking-tight outline-none sm:pr-10 sm:text-left"
+              className={
+                isSection
+                  ? "text-muted-foreground mb-2 font-bold capitalize outline-none"
+                  : "text-center text-lg leading-snug font-semibold tracking-tight outline-none sm:pr-10 sm:text-left"
+              }
             >
               {props.title}
             </h2>

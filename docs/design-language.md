@@ -25,9 +25,9 @@ Use these before creating or changing UI:
 
 ### Theme
 
-Zaparoo App is mobile-first UI using Online's tactile materials in dark and cool-neutral light themes. System is the default; Settings → Accessibility → Appearance offers System, Light, and Dark. Appearance applies app-wide, follows OS changes live in System mode, and persists through Capacitor Preferences. A valid legacy `vite-ui-theme` is migrated without replacing explicit choices.
+Zaparoo App treats phone, tablet, and desktop as first-class contexts using Online's tactile materials in dark and cool-neutral light themes. System is the default; Settings → Accessibility → Appearance offers System, Light, and Dark. Appearance applies app-wide, follows OS changes live in System mode, and persists through Capacitor Preferences. A valid legacy `vite-ui-theme` is migrated without replacing explicit choices.
 
-Online, not the constrained Rust frontend, owns the visual direction: chunky arcade buttons, Outfit typography, recessed inputs, small-radius surfaces, and restrained status/interaction colors. Existing Zap composition and workflows remain unchanged; the customizable Hub is a separate delivery.
+Online, not the constrained Rust frontend, owns the visual direction: chunky arcade buttons, Outfit typography, recessed inputs, small-radius surfaces, and restrained status/interaction colors. Phone Zap workflows remain reader-first; wider Zap recomposes the same mounted features. The customizable Hub is a separate delivery.
 
 Use semantic roles from `src/styles/theme.css` through existing Tailwind aliases:
 
@@ -78,16 +78,17 @@ Hierarchy must be obvious. Section headings should not look less important than 
 
 Use `PageFrame` for pages. It owns:
 
-- full-height column layout
-- safe-area padding from `useStatusStore().safeInsets`
+- full-height page layout, with an opt-in supporting pane for Library
+- safe-area padding from the root-owned inset variables
 - sticky top header
-- scrollable content
+- primary page scroll element, retaining `page-scroll` restoration identity through resize
 - `ResponsiveContainer`
 
 `ResponsiveContainer` constrains content on larger screens:
 
-- app content: `sm:mx-auto sm:max-w-2xl`
-- nav content: `sm:mx-auto sm:max-w-lg`
+- default form/reference content: `sm:mx-auto sm:max-w-2xl` (672px)
+- `PageFrame layout="workspace"`: intentionally full-width browse content, not a global removal of form bounds
+- phone nav content: `sm:mx-auto sm:max-w-lg`; hierarchical sidebar/drawer content fills its own chrome
 
 Do not add page-level max widths or safe-area padding manually when `PageFrame` already handles it.
 
@@ -118,18 +119,25 @@ Subpages use:
 - header controls move face and content together when pressed; modal triggers expose `aria-expanded` and retain the active inset face while their modal is open
 - `useSmartSwipe({ onSwipeRight: goBack })` when nearby routes use swipe-back
 
-Root tab pages can omit the back button and use a left-aligned title or existing branded content. Visible header controls use the same 8px mobile chrome inset as bottom navigation rather than the 16px page-content gutter. On Home, keep the compact logo left and group the content-sized device status control directly beside History on the right. Both controls use the same header-button face; the status control must not grow to consume remaining header space.
+Root tab pages can omit the back button and use a left-aligned title or existing branded content. Visible header controls use the same 8px mobile chrome inset as bottom navigation rather than the 16px page-content gutter. On phone Home, keep the compact logo left and group the content-sized device status control directly beside History on the right. Both controls use the same header-button face; the status control must not grow to consume remaining header space. Wide Home omits this duplicate header. Sidebar/tablet chrome owns branding; navigation exposes Devices under Settings and separate scan/play history destinations under Zap. The page heading remains mounted for route focus and announcements.
 
-### Bottom navigation and floating app chrome
+### Adaptive navigation and floating app chrome
 
-Bottom nav is its own pattern in `BottomNav`:
+`BottomNav` retains phone tab-return/reselect behavior; `AdaptiveNavigation` and `SidebarNavigation` provide a purpose-built hierarchy for wider contexts, inspired by zaparoo.com's mobile disclosure navigation:
 
-- below `md`: a 64px dock plus the bottom safe inset (`--bottom-nav-base-height`), full width, flush to the screen edges, flat `surface-raised` face with a top edge
-- from `md`: a contained floating bar (max 42rem, 8px corners, material shadow, 80px tall) with icon and label side by side
-- four equal nav buttons with 48px minimum hit height
-- uppercase 12px/600 labels with neutral icons; the active destination uses primary text on a recessed surface, a blue icon with a restrained glow, and `aria-current="page"`
-- no attention/throb animation on nav items; unread counts use `NotificationBadge`
-- `RootLayout` measures the footer and publishes `--app-footer-overlay-height` and `--app-footer-overlay-clearance` on the layout wrapper and on `:root`. Anything fixed above the nav (the global write strip, `BackToTop`) positions with the clearance variable, not `--bottom-nav-base-height`, so it clears the floating desktop bar and the status strip
+- below 760 CSS px: existing 64px bottom dock plus bottom safe inset, with four destinations, uppercase 12px labels, and recessed active tab
+- 760–1279 CSS px: compact top bar with menu control and branding; the menu opens the same labeled hierarchy in a side drawer rather than a phone-style icon rail
+- from 1280 CSS px: persistent 256px sidebar plus left safe inset
+- parent labels link to section roots. Independent chevrons expand/collapse child destinations without navigating. The current branch opens on navigation; other expanded branches stay as chosen
+- use consistent 48px-minimum navigation rows, not a mixture of WUI action-button variants. Parent labels are uppercase 14px/600; child links use 14px/500 source casing. Heading, chevron, and submenu form one full-width unframed group, without an inset surface, shadow, separate submenu box, or gap. Alignment, spacing, and indented child labels establish hierarchy rather than narrowing the group
+- active section icon uses primary interaction blue, including on child routes; expansion alone does not color the icon. Text stays neutral; current child uses brighter neutral text and 600 weight, not a filled row or dot. No blue selection stripe or glow. Link and chevron retain separate hit targets. Fine-pointer hover uses a faint neutral wash without shadow or travel; keyboard focus retains its explicit outline
+- parent branch treatment and `aria-expanded` describe hierarchy; `aria-current="page"` identifies the actual destination. Ordinary links and disclosure buttons, not an ARIA menu/tree or tab widget. Unread Settings counts retain `NotificationBadge`
+- Zap exposes Scan history and Play history; Library exposes existing search/collection destinations; Create exposes existing tools; Settings exposes existing sections and Devices. Feature/capability gates remain in force
+- passive device name, explicit connection state, and address form a separate context block near the bottom when space permits. It is not a button or modal launcher. Devices is the navigation destination for connecting/managing devices
+- the whole sidebar/drawer scrolls in short windows; controls do not shrink. Drawer owns focus trapping, Escape/app Back, and modal coordination. Navigation focuses the new page, while dismissal restores its trigger. Becoming a desktop sidebar releases modality without stealing focus
+- root owns one route outlet; resizing does not remount pages, reader work, or drafts, nor redirect History URLs. Phone sheets remain available and retain intent through resizing
+- tablet top chrome owns its top safe inset; pages do not add it again. Desktop sidebar owns left safe inset. Docked details own right safe inset without narrowing nominal content width
+- `RootLayout` publishes measured `--app-footer-overlay-height` and `--app-footer-overlay-clearance`. Wider layouts remove bottom-dock clearance while retaining connection-status strip and bottom safe inset. Global reader strip and `BackToTop` stay within the page workspace
 
 Global connection status uses `ConnectionStatusBar`, an in-layout strip above bottom nav:
 
@@ -139,11 +147,15 @@ Global connection status uses `ConnectionStatusBar`, an in-layout strip above bo
 - Settings landing relies on its contextual connection summary instead of duplicating the visible strip; Home does not, because its device pill carries identity rather than connection state
 - restored status appears briefly only after a connection issue was presented
 
-`BackToTop` is the only floating circular page utility. Use it only on long,
+`BackToTop` is the only floating page utility. Use it only on long,
 scrollable result or reference surfaces where returning to controls or the list
-start would otherwise require substantial reverse scrolling. It uses the
-neutral secondary `CircleButton`, clears the measured footer (`--app-footer-overlay-clearance` plus 1rem by default) and safe areas,
-respects reduced motion, and returns keyboard focus with the viewport. Do not
+start would otherwise require substantial reverse scrolling. It uses a flat
+48px square with 8px corners, a neutral `surface-raised` face, and a semantic
+border; no raised material, depth shadow, or press travel. Keep haptic feedback
+and a visible focus ring. It clears the measured footer
+(`--app-footer-overlay-clearance` plus 1rem by default), matching the right-edge
+margin. Footer measurement already includes the bottom safe inset; do not add
+it again. It respects reduced motion and returns keyboard focus with the viewport. Do not
 introduce additional floating actions or use primary action colour for this
 navigation utility.
 
@@ -196,7 +208,7 @@ Do not build custom buttons with raw `<button>` unless implementing a specialize
 
 ### CircleButton
 
-Use `src/components/wui/CircleButton.tsx` for raised circular icon actions. It mirrors Zaparoo Online's dedicated CircleButton material rather than approximating it with a rounded generic Button. Default controls retain a 48px touch target; variants are `primary`, `secondary`, `destructive` and `pro`. Use `variant="secondary"` for neutral contextual actions such as `BackToTop`.
+Use `src/components/wui/CircleButton.tsx` for raised circular icon actions. It mirrors Zaparoo Online's dedicated CircleButton material rather than approximating it with a rounded generic Button. Default controls retain a 48px touch target; variants are `primary`, `secondary`, `destructive` and `pro`. Use `variant="secondary"` for neutral contextual actions. `BackToTop` keeps its documented flat utility style instead.
 
 ### HeaderButton
 
@@ -387,7 +399,7 @@ Link rows inside settings subpages (Advanced, About) use `settings-nav-row`:
 - related rows share a raised Card shell; rows remain flat, not individual action cards
 - no invented descriptions
 
-The Settings device area uses `DeviceConnectionSummary`: a standard `Card` containing `ConnectionStatusDisplay` followed by a full-width secondary button with a switch-device icon, Change device (Connect before a device is selected). Keep the address editor, Save button, and routine pairing/discovery controls out of this summary. Device names, metadata, and connection errors wrap rather than competing with a toolbar. Pairing-required state adds a direct Pair with device recovery action.
+The Settings device area uses `DeviceConnectionSummary`: a standard `Card` containing `ConnectionStatusDisplay` followed by a full-width secondary button with a neutral Monitor device icon in both states, Change device (Connect before a device is selected). Keep the address editor, Save button, and discovery controls out of this summary. A ghost square Pair key icon sits in the status row, matching DeviceSheet; show it when connected or when pairing is required for the selected address. Device names, metadata, and connection errors wrap alongside this compact action.
 
 The Settings landing page's Update media database button is also secondary, retaining its database icon. The dedicated Manage Media page keeps that action primary.
 
@@ -531,6 +543,19 @@ Use `dismissible={false}` only for mandatory blocking flows. This keeps the visi
 
 Do not implement one-off bottom-sheet shells.
 
+### Adaptive Library details
+
+Library preserves Systems/Collections, system/folder browsing, searches, tagged collections, history, and decks. Broad browse pages use the workspace layout; forms remain bounded.
+
+- from 1100 CSS px, selected-media details occupy a separate 320px supporting pane (340px beside full sidebar); smaller windows retain the existing sheet
+- one mounted details feature and presentation host survive resize, including carousel state, contextual NFC work, and child-dialog drafts
+- pane is a labeled nonmodal region, with its own detail scroll; no backdrop, focus trap, inert background, swipe-dismiss, or modal-priority Back registration
+- selection stays scoped to device and browse/search/collection context in session memory; selection neither launches media nor creates a URL/history entry
+- wide selection keeps list focus; narrow sheet traps focus. Closing/invalidating selection cancels its owned work; changing presentation does not
+- virtual browse rows retain existing minimum estimates but measure natural content height, allowing larger text and wrapping without overlapping rows
+- child dialogs retain takeover behavior and mounted underlying context; collapsing details defers its modal presentation while a competing dialog owns focus
+- pane footer stacks the existing horizontally scrolling action rail above full-width Launch; action order, captions, reachability, and 48px targets remain unchanged
+
 ### Reader activity
 
 Physical NFC waits stay in context instead of opening an app-owned modal. `ReaderActivityControl` is the shared full-size control for NFC scan, read, and write actions, including Zap’s Tap a tag action; compact action rails use `ReaderActivityAction` below. Do not reproduce their latched state or pulse with a one-off `Button`:
@@ -609,7 +634,9 @@ Patterns:
   Pair remains available when pairing is required before connection. The sheet
   is shared with Settings and includes the manual-address and management
   actions described above. It runs one bounded discovery pass on open,
-  offers an icon refresh action, and merges discovered devices into the saved
+  offers an icon refresh action whose spinner and busy state indicate scanning
+  without a visible searching row; a screen-reader-only status announces discovery.
+  It merges discovered devices into the saved
   switch list by stable ID, hostname, then endpoint. Omit the currently
   connected device; inactive rows do not reserve an empty status-indicator
   gutter. Selecting an unsaved result saves and connects it. Connection
@@ -642,6 +669,19 @@ Patterns:
 - Home section headings use `text-muted-foreground font-bold capitalize`.
 - Stop and transport actions are icon-only outline `Button` controls inside a
   shared recessed transport deck.
+
+### Adaptive Zap
+
+- Phone keeps the order above. From 760 CSS px playback leads, with reader tools/status before secondary cover rows.
+- From 1024px playback/background slots and Controls occupy equal top columns. Scan tools and Readers occupy the next row; Readers spans both columns when no scan tools exist. Without supported remote input, playback spans both columns. Covers span the workspace below. Short windows scroll; controls never shrink to fit height.
+- Now playing, Controls, and Readers use the same outside-card Home heading. Docked Controls owns its body material, not its section heading. Omit the Controls launcher while the pane is visible.
+- Wide scan/write controls use full-width inline captions and at least 72px height rather than the tall phone scan pad. Playback artwork expands to 96×128 CSS px at default text size, with a full-width transport bank and 64px minimum key height. Remote D-pad and secondary keys retain 64px targets; their horizontal grouping wraps when width or text size requires it.
+- Scan history and Play history are real Zap child routes, accessible directly at any width. Scan history shares row/copy/replay presentation with the phone History sheet. Play history lists chronological sessions, including repeated games, with cursor pagination; Library Recently played remains a deduplicated collection. Page queries are device-scoped and expose loading, offline, error/retry and unsupported-Core states. Replay requires a live target, and stale target errors are ignored.
+- Devices combines the shared connection/discovery/manual-entry flow with saved-device management and direct connection actions. At wide widths these occupy separate columns; narrow widths stack. The phone DeviceSheet hosts the same connection feature with its existing footer/focus behavior. Width changes do not restart discovery or clear address drafts.
+- One Home/session tree and one Controls controller remain mounted. Controls use the existing nonmodal pane on wide screens and the existing phone modal intent below the threshold; width alone does not open a previously closed phone modal.
+- Keyboard mode/case, focused surviving controls, screenshot results, and in-flight captures survive presentation changes. Captured exports remain usable offline.
+- Cached media is not a live connection. Play/transport/remote/capture require current connection state and actual transport readiness. Serialized input rechecks its record, endpoint, transport, and session generation immediately before dispatch; reconnect/device changes drop stale pending work and ignore stale responses.
+- Existing scanner offline behavior, capability hydration, native keep-awake preference, and feature gates remain unchanged.
 
 Do not copy Home heading style into Settings; it is home/status-specific.
 

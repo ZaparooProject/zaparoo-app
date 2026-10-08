@@ -126,6 +126,7 @@
       "confirmDelete": "{{name}} löschen? Dies kann nicht rückgängig gemacht werden."
     },
     "library": {
+      "selectMedia": "Medium auswählen",
       "title": "Bibliothek",
       "collections": "Sammlungen",
       "systems": "Systeme",
@@ -415,7 +416,11 @@
       "statusScanning": "NFC-Tag wird gesucht",
       "statusSuccess": "Tag erfolgreich gescannt",
       "statusError": "Scannen des Tags fehlgeschlagen",
-      "remoteKeyboard": "Steuerung"
+      "remoteKeyboard": "Steuerung",
+      "scanHistoryTitle": "Scan-Verlauf",
+      "playHistoryTitle": "Wiedergabeverlauf",
+      "historyRefresh": "Verlauf aktualisieren",
+      "historyLoadError": "Verlauf konnte nicht geladen werden"
     },
     "create": {
       "title": "Erstellen",
@@ -1285,7 +1290,9 @@
         "technicalSupport": "Technischer Support",
         "reportIssue": "Problem auf GitHub melden",
         "emailLabel": "Support-E-Mail:"
-      }
+      },
+      "connectDevice": "Mit {{device}} verbinden",
+      "savedDevices": "Gespeicherte Geräte"
     },
     "systemSelector": {
       "loadError": "Systeme konnten nicht geladen werden",
@@ -1546,6 +1553,13 @@
         "next": "Weiter",
         "finish": "Fertig"
       }
+    },
+    "navigation": {
+      "devices": "Geräte",
+      "currentDevice": "Aktuelles Gerät",
+      "openMenu": "Navigation öffnen",
+      "expandSection": "{{section}} ausklappen",
+      "collapseSection": "{{section}} einklappen"
     }
   }
 }

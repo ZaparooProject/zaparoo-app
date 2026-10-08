@@ -4,7 +4,6 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
-  useState,
 } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -17,7 +16,6 @@ import {
   LIBRARY_QUERY_KEYS,
   searchResultToBrowseEntry,
 } from "@/lib/libraryMedia";
-import type { MediaBrowseEntry } from "@/lib/models";
 import {
   librarySearchScrollKey,
   useLibrarySessionStore,
@@ -37,7 +35,11 @@ import { HeaderButton } from "@/components/wui/HeaderButton";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { LibraryBrowseList } from "@/components/library/LibraryBrowseList";
 import { LibraryGameSearch } from "@/components/library/LibraryGameSearch";
-import { LibraryMediaDetailsModal } from "@/components/library/LibraryMediaDetailsModal";
+import { LibraryDetailsSurface } from "@/components/library/LibraryDetailsSurface";
+import {
+  LibraryMediaSelectionContext,
+  useLibraryMediaSelection,
+} from "@/hooks/useLibraryMediaSelection";
 
 const PAGE_SIZE = 100;
 
@@ -117,9 +119,11 @@ export function LibraryTaggedCollection({
     (state) => state.setEmbeddedSearchOpen,
   );
   const forgetScroll = useTabSessionStore((state) => state.forgetScroll);
-  const [selectedEntry, setSelectedEntry] = useState<MediaBrowseEntry | null>(
-    null,
+  const selection = useLibraryMediaSelection(
+    searchOpen ? `search:${scope}` : `collection:${scope}`,
+    deviceKey,
   );
+  const { entry: selectedEntry, selectEntry: setSelectedEntry } = selection;
   const libraryFeature = useCoreFeature("mediaLibrary");
   // Same strictness as the Library entry points, so a collection reachable
   // from Library never opens on "Update Core".
@@ -180,7 +184,7 @@ export function LibraryTaggedCollection({
       return;
     }
     void navigate({ to: "/library", resetScroll: false });
-  }, [closeSearch, navigate, searchOpen]);
+  }, [closeSearch, navigate, searchOpen, setSelectedEntry]);
   const handleBackButton = useCallback(() => {
     goBack();
     return true;
@@ -247,6 +251,7 @@ export function LibraryTaggedCollection({
           interactionDisabled={false}
           onFetchMore={() => void collectionQuery.fetchNextPage()}
           onSelect={setSelectedEntry}
+          selectedEntry={selectedEntry}
           showSystemName
           ariaLabel={t(config.list)}
         />
@@ -255,8 +260,16 @@ export function LibraryTaggedCollection({
   }
 
   return (
-    <>
+    <LibraryMediaSelectionContext.Provider value={selection}>
       <PageFrame
+        layout="workspace"
+        supportingPane={
+          <LibraryDetailsSurface
+            selection={selection}
+            systemId={selectedEntry ? entrySystemId(selectedEntry) : ""}
+            deviceKey={deviceKey}
+          />
+        }
         onSwipeBack={goBack}
         scrollRef={scrollRef}
         sessionScrollKey={`library:${scope}:${searchOpen ? "search" : "list"}`}
@@ -308,13 +321,6 @@ export function LibraryTaggedCollection({
           </>
         )}
       </PageFrame>
-      <LibraryMediaDetailsModal
-        isOpen={selectedEntry !== null}
-        close={() => setSelectedEntry(null)}
-        entry={selectedEntry}
-        systemId={selectedEntry ? entrySystemId(selectedEntry) : ""}
-        deviceKey={deviceKey}
-      />
-    </>
+    </LibraryMediaSelectionContext.Provider>
   );
 }

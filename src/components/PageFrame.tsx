@@ -17,8 +17,14 @@ export const PAGE_SCROLL_RESTORATION_SELECTOR = `[data-scroll-restoration-id="${
 
 interface PageFrameProps extends React.HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
+  /** Broad browsing workspaces opt out of the default form width. */
+  layout?: "default" | "workspace";
+  /** One stable supporting surface, modal on narrow windows and docked on wide ones. */
+  supportingPane?: ReactNode;
   /** Full custom header that replaces the default header structure */
   header?: ReactNode;
+  /** Root-page chrome can move into adaptive navigation without remounting content. */
+  headerMode?: "always" | "phone";
   /** Leading header content, such as a back button. */
   headerLeft?: ReactNode;
   /** Left-aligned title content that uses all remaining header width. */
@@ -110,6 +116,7 @@ function RoutedPageFrame(props: PageFrameProps) {
 
 function PageFrameLayout(props: PageFrameLayoutProps) {
   const safeInsets = useStatusStore((state) => state.safeInsets);
+  const contentSafeTop = `var(--page-content-safe-top, ${safeInsets.top})`;
   const internalScrollRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const hasRestoredScroll = useRef(false);
@@ -119,7 +126,10 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
   // Destructure known props and collect the rest
   const {
     children,
+    layout = "default",
+    supportingPane,
     header,
+    headerMode = "always",
     headerLeft,
     headerCenter,
     headerRight,
@@ -235,7 +245,15 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
 
   return (
     <div
-      className={`relative flex h-full w-full flex-col ${className || ""}`}
+      className={classNames(
+        "page-frame relative h-full w-full",
+        {
+          "page-frame-workspace": layout === "workspace",
+          "page-frame-with-pane": Boolean(supportingPane),
+          "page-frame-phone-header": headerMode === "phone",
+        },
+        className,
+      )}
       {...restProps}
       {...rootSwipeHandlers}
       onTouchCancel={
@@ -251,20 +269,19 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
         ref={headerRef}
         className={classNames("top-0 z-10", {
           sticky: !hasHeaderContent,
-          "page-header-shell absolute inset-x-0 md:pointer-events-none":
-            hasHeaderContent,
+          "page-header-shell absolute md:pointer-events-none": hasHeaderContent,
         })}
         style={
           hasHeaderContent
             ? ({
-                "--page-header-safe-top": safeInsets.top,
+                "--page-header-safe-top": contentSafeTop,
                 "--page-header-safe-right": safeInsets.right,
                 "--page-header-safe-left": safeInsets.left,
               } as React.CSSProperties)
             : {
-                paddingTop: `calc(1rem + ${safeInsets.top})`,
+                paddingTop: `calc(1rem + ${contentSafeTop})`,
                 paddingRight: `calc(1rem + ${safeInsets.right})`,
-                paddingLeft: `calc(1rem + ${safeInsets.left})`,
+                paddingLeft: `calc(1rem + var(--page-content-safe-left, ${safeInsets.left}))`,
               }
         }
       >
@@ -307,19 +324,30 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
         }}
         style={
           {
-            "--page-header-overlay-height": `calc(${safeInsets.top} + max(56px, 3.5rem) + 1px)`,
-            "--page-header-overlay-clearance": `calc(${safeInsets.top} + 1.5rem + max(68px, 3.5rem))`,
-            paddingRight: `calc(1rem + ${safeInsets.right})`,
-            paddingLeft: `calc(1rem + ${safeInsets.left})`,
+            "--page-header-overlay-height": `calc(${contentSafeTop} + max(56px, 3.5rem) + 1px)`,
+            "--page-header-overlay-clearance": `calc(${contentSafeTop} + 1.5rem + max(68px, 3.5rem))`,
+            "--page-scroll-safe-top": safeInsets.top,
+            "--page-scroll-safe-right": safeInsets.right,
+            "--page-scroll-safe-left": safeInsets.left,
           } as React.CSSProperties
         }
       >
-        <ResponsiveContainer>
+        <ResponsiveContainer maxWidth={layout === "workspace" ? "full" : "app"}>
           <InitialPageScrollOffsetContext.Provider value={initialScrollOffset}>
             {children}
           </InitialPageScrollOffsetContext.Provider>
         </ResponsiveContainer>
       </div>
+      {supportingPane && (
+        <div
+          className="page-frame-support"
+          style={
+            { "--page-support-safe-top": contentSafeTop } as React.CSSProperties
+          }
+        >
+          {supportingPane}
+        </div>
+      )}
       {onSwipeBack && <SwipeBackIndicator progress={progress} />}
     </div>
   );

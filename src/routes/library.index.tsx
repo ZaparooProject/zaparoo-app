@@ -396,6 +396,7 @@ export function Library() {
   return (
     <>
       <PageFrame
+        layout="workspace"
         scrollRef={scrollRef}
         headerCenter={
           <h1 ref={headingRef} className="text-foreground text-xl">

@@ -105,6 +105,13 @@
     pointer-events: auto;
   }
 
+  /* Disabled controls still need a visible target during passive guidance. */
+  .zaparoo-tour-target {
+    border-radius: 4px;
+    outline: 2px solid var(--interaction);
+    outline-offset: 4px;
+  }
+
   /* Step element - remove any white backgrounds */
   .zaparoo-tour-step {
     background: transparent;
@@ -285,7 +292,8 @@
     ". up ."
     "left ok right"
     ". down .";
-  grid-template-columns: repeat(3, 4rem);
+  width: min(100%, 13rem);
+  grid-template-columns: repeat(3, minmax(64px, 1fr));
   grid-template-rows: repeat(3, auto);
   gap: 0.5rem;
 }
@@ -300,7 +308,11 @@
 
 .remote-keyboard-pad-ok {
   grid-area: ok;
-  min-width: 4rem;
+}
+
+.remote-keyboard-dpad .wui-button {
+  min-width: 64px;
+  padding-inline: 0.5rem;
 }
 
 .remote-keyboard-pad-right {
@@ -316,6 +328,23 @@
   flex-wrap: wrap;
   justify-content: center;
   gap: 0.5rem;
+}
+
+@media (min-width: 1024px) {
+  .zap-remote-surface .remote-keyboard-pad {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+  }
+
+  .zap-remote-surface .remote-keyboard-dpad {
+    flex: 0 1 13rem;
+  }
+
+  .zap-remote-surface .remote-keyboard-pad-actions {
+    flex-direction: column;
+  }
 }
 
 .remote-keyboard-screenshot-result {

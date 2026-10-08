@@ -10,7 +10,7 @@ import { ChevronUp } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useDebouncedCallback } from "use-debounce";
 import { useStatusStore } from "@/lib/store";
-import { CircleButton } from "@/components/wui/CircleButton";
+import { useTactilePress } from "@/hooks/useTactilePress";
 
 /** Inset from the right and bottom edges, so the button sits evenly in its corner. */
 const EDGE_MARGIN = "1rem";
@@ -59,8 +59,13 @@ export function BackToTop({
   const [isVisible, setIsVisible] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [dialogGap, setDialogGap] = useState<number | null>(null);
+  const [pageRightGap, setPageRightGap] = useState(0);
   const { t } = useTranslation();
   const safeInsets = useStatusStore((state) => state.safeInsets);
+  const { pressed, shouldFireClick, handlers } = useTactilePress({
+    intent: "default",
+    hasOnClick: true,
+  });
 
   const toggleVisibility = useDebouncedCallback(() => {
     const container = scrollContainerRef.current;
@@ -93,9 +98,14 @@ export function BackToTop({
     const wrapper = wrapperRef.current;
     if (!container || !wrapper || bottomOffset !== undefined) return;
     if (!container.closest('[role="dialog"]')) {
+      const bounds = container.getBoundingClientRect();
+      setPageRightGap(
+        bounds.width > 0 ? Math.max(0, window.innerWidth - bounds.right) : 0,
+      );
       setDialogGap(null);
       return;
     }
+    setPageRightGap(0);
     const blockBottom =
       fixedContainingBlock(wrapper)?.getBoundingClientRect().bottom ??
       window.innerHeight;
@@ -164,21 +174,27 @@ export function BackToTop({
         zIndex: 30,
         transform: "translateZ(0)",
         willChange: "opacity",
-        right: EDGE_MARGIN,
+        right: `max(calc(${pageRightGap}px + ${EDGE_MARGIN}), calc(${EDGE_MARGIN} + var(--app-safe-right, ${safeInsets.right})))`,
         bottom:
           dialogGap !== null
             ? `calc(${dialogGap}px + ${EDGE_MARGIN})`
             : bottomOffset
               ? `calc(${bottomOffset} + ${safeInsets.bottom})`
-              : `calc(var(--app-footer-overlay-clearance, 92px) + ${EDGE_MARGIN} + ${safeInsets.bottom})`,
+              : `calc(var(--app-footer-overlay-clearance, 92px) + ${EDGE_MARGIN})`,
       }}
     >
-      <CircleButton
-        icon={<ChevronUp size={24} />}
-        variant="secondary"
-        onClick={scrollToTop}
+      <button
+        type="button"
+        className="border-border bg-surface-raised text-foreground hover:bg-surface-highlight data-[pressed=true]:bg-surface-highlight focus-visible:ring-ring flex h-12 w-12 touch-manipulation items-center justify-center rounded-lg border border-solid focus-visible:ring-2 focus-visible:outline-none"
+        data-pressed={pressed}
+        onClick={(event) => {
+          if (shouldFireClick()) scrollToTop(event);
+        }}
         aria-label={t("backToTop")}
-      />
+        {...handlers}
+      >
+        <ChevronUp size={24} aria-hidden="true" />
+      </button>
     </div>
   );
 }

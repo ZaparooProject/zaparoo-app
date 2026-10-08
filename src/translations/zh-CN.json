@@ -126,6 +126,7 @@
       "confirmDelete": "删除 {{name}}？此操作无法撤销。"
     },
     "library": {
+      "selectMedia": "选择媒体",
       "title": "媒体库",
       "collections": "合集",
       "systems": "系统",
@@ -415,7 +416,11 @@
       "statusScanning": "正在扫描 NFC 标签",
       "statusSuccess": "标签扫描成功",
       "statusError": "标签扫描失败",
-      "remoteKeyboard": "控制"
+      "remoteKeyboard": "控制",
+      "scanHistoryTitle": "扫描历史",
+      "playHistoryTitle": "播放历史",
+      "historyRefresh": "刷新历史",
+      "historyLoadError": "无法加载历史记录"
     },
     "create": {
       "title": "创建",
@@ -1285,7 +1290,9 @@
         "technicalSupport": "技术支持",
         "reportIssue": "在 GitHub 上报告问题",
         "emailLabel": "支持邮箱："
-      }
+      },
+      "connectDevice": "连接到{{device}}",
+      "savedDevices": "已保存的设备"
     },
     "systemSelector": {
       "loadError": "无法加载系统",
@@ -1546,6 +1553,13 @@
         "next": "下一步",
         "finish": "完成"
       }
+    },
+    "navigation": {
+      "devices": "设备",
+      "currentDevice": "当前设备",
+      "openMenu": "打开导航",
+      "expandSection": "展开{{section}}",
+      "collapseSection": "收起{{section}}"
     }
   }
 }

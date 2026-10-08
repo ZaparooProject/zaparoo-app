@@ -7,9 +7,14 @@ import {
   ZapIcon,
 } from "lucide-react";
 import classNames from "classnames";
-import { type CSSProperties, ReactElement, useLayoutEffect } from "react";
+import { ReactElement, useLayoutEffect } from "react";
+import { AdaptiveNavigation } from "@/components/AdaptiveNavigation";
 import { useStatusStore } from "@/lib/store";
-import { type BottomTabId, useTabSessionStore } from "@/lib/tabSessionStore";
+import {
+  bottomTabForPath,
+  type BottomTabId,
+  useTabSessionStore,
+} from "@/lib/tabSessionStore";
 import { useLibrarySessionStore } from "@/lib/librarySessionStore";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
@@ -56,9 +61,9 @@ function NavButton(props: {
         }}
         aria-current={props.isActive ? "page" : undefined}
         aria-label={props.ariaLabel}
-        className="bottom-nav-tab flex min-h-12 w-full min-w-0 items-center justify-center rounded-md px-[4px] py-[4px] md:px-2 md:py-2"
+        className="bottom-nav-tab flex w-full min-w-0 items-center rounded-md"
       >
-        <div className="flex min-w-0 flex-col gap-[2px] md:flex-row md:items-center md:gap-2">
+        <div className="flex min-w-0">
           <div className="relative mx-auto flex w-fit justify-center">
             <span className="bottom-nav-icon">{props.icon}</span>
             <NotificationBadge
@@ -68,7 +73,7 @@ function NavButton(props: {
           </div>
           {/* Hyphenate labels too long for the tab, and only break inside a
               word when hyphenation cannot, such as capitalized English. */}
-          <div className="text-center text-xs leading-[0.875rem] font-semibold tracking-[0.5px] wrap-anywhere hyphens-auto uppercase md:text-sm md:leading-4">
+          <div className="app-navigation-label text-center font-semibold tracking-[0.5px] wrap-anywhere hyphens-auto uppercase">
             {props.text}
           </div>
         </div>
@@ -89,7 +94,6 @@ export function BottomNav() {
   const resetLibraryNavigation = useLibrarySessionStore(
     (state) => state.resetNavigation,
   );
-  const safeInsets = useStatusStore((state) => state.safeInsets);
   const inboxCount = useStatusStore((state) => state.inboxMessages.length);
   const inboxFeature = useCoreFeature("inbox");
 
@@ -98,7 +102,7 @@ export function BottomNav() {
   }, [location.href, pathname, rememberLocation]);
 
   // Determine which nav item is active based on current path
-  const isHome = pathname === "/";
+  const isHome = bottomTabForPath(pathname) === "zap";
   const isLibrary = pathname.startsWith("/library");
   const isCreate = pathname.startsWith("/create");
   const isSettings = pathname.startsWith("/settings");
@@ -137,24 +141,10 @@ export function BottomNav() {
       : undefined;
 
   return (
-    <nav
-      aria-label={t("nav.mainNavigation")}
-      className="bottom-nav-shell [height:calc(var(--bottom-nav-base-height)+var(--bottom-nav-safe-inset))]"
-      style={
-        {
-          "--bottom-nav-safe-inset": safeInsets.bottom,
-        } as CSSProperties
-      }
-    >
+    <AdaptiveNavigation>
       <div className="bottom-nav-surface">
-        <ResponsiveContainer maxWidth="nav" className="h-full">
-          <div
-            className="mx-auto grid h-full max-w-lg grid-cols-4 items-center gap-[4px] px-[8px]"
-            style={{
-              paddingRight: `calc(8px + ${safeInsets.right})`,
-              paddingLeft: `calc(8px + ${safeInsets.left})`,
-            }}
-          >
+        <ResponsiveContainer maxWidth="nav" className="app-navigation-items">
+          <div className="app-navigation-grid mx-auto grid max-w-lg items-center">
             <NavButton
               text={t("nav.index")}
               icon={<ZapIcon size="24" />}
@@ -202,6 +192,6 @@ export function BottomNav() {
           </div>
         </ResponsiveContainer>
       </div>
-    </nav>
+    </AdaptiveNavigation>
   );
 }

@@ -113,6 +113,9 @@ export const createAppTour = (
   // Step 3 (or 2 if connected): Media Database Update
   tour.addStep({
     id: "media-database",
+    highlightClass: "zaparoo-tour-target",
+    modalOverlayOpeningPadding: 8,
+    modalOverlayOpeningRadius: 4,
     title: t("tour.mediaDatabase.title"),
     text: formatText(connected ? 2 : 3, t("tour.mediaDatabase.text")),
     attachTo: {

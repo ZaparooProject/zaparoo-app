@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -28,7 +28,8 @@ import { Button } from "@/components/wui/Button";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { LibraryBrowseList } from "@/components/library/LibraryBrowseList";
-import { LibraryMediaDetailsModal } from "@/components/library/LibraryMediaDetailsModal";
+import { LibraryDetailsSurface } from "@/components/library/LibraryDetailsSurface";
+import { useLibraryMediaSelection } from "@/hooks/useLibraryMediaSelection";
 
 const PAGE_SIZE = 100;
 
@@ -69,9 +70,8 @@ export function LibraryHistoryCollection({
     (state) => state.coreVersionPending,
   );
   const deviceKey = useActiveDeviceKey();
-  const [selectedEntry, setSelectedEntry] = useState<MediaBrowseEntry | null>(
-    null,
-  );
+  const selection = useLibraryMediaSelection(`history:${kind}`, deviceKey);
+  const { entry: selectedEntry, selectEntry: setSelectedEntry } = selection;
   const historyFeature = useCoreFeature("mediaRecents", {
     requireKnownSupport: true,
   });
@@ -136,7 +136,7 @@ export function LibraryHistoryCollection({
   const goBack = useCallback(() => {
     setSelectedEntry(null);
     void navigate({ to: "/library", resetScroll: false });
-  }, [navigate]);
+  }, [navigate, setSelectedEntry]);
   const handleBackButton = useCallback(() => {
     goBack();
     return true;
@@ -203,6 +203,7 @@ export function LibraryHistoryCollection({
           interactionDisabled={false}
           onFetchMore={() => void recentQuery.fetchNextPage()}
           onSelect={setSelectedEntry}
+          selectedEntry={selectedEntry}
           showSystemName
           entryDetail={(entry) => details.get(entry)}
           ariaLabel={t(config.list)}
@@ -214,6 +215,14 @@ export function LibraryHistoryCollection({
   return (
     <>
       <PageFrame
+        layout="workspace"
+        supportingPane={
+          <LibraryDetailsSurface
+            selection={selection}
+            systemId={selectedEntry ? entrySystemId(selectedEntry) : ""}
+            deviceKey={deviceKey}
+          />
+        }
         onSwipeBack={goBack}
         scrollRef={scrollRef}
         sessionScrollKey={`library:${kind}:list`}
@@ -233,13 +242,6 @@ export function LibraryHistoryCollection({
         {content}
         <BackToTop scrollContainerRef={scrollRef} threshold={200} />
       </PageFrame>
-      <LibraryMediaDetailsModal
-        isOpen={selectedEntry !== null}
-        close={() => setSelectedEntry(null)}
-        entry={selectedEntry}
-        systemId={selectedEntry ? entrySystemId(selectedEntry) : ""}
-        deviceKey={deviceKey}
-      />
     </>
   );
 }

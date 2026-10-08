@@ -61,8 +61,8 @@ export function ModalActionRail({
     <div
       className={
         primaryAction
-          ? "flex flex-col gap-2 sm:grid sm:grid-cols-[minmax(0,auto)_minmax(12rem,1fr)]"
-          : "flex flex-col gap-2"
+          ? "wui-modal-action-rail wui-modal-action-rail-primary gap-2"
+          : "wui-modal-action-rail gap-2"
       }
     >
       <div className="relative min-w-0 overflow-hidden">

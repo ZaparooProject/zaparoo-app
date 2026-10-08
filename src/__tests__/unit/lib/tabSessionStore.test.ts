@@ -13,6 +13,8 @@ describe("tabSessionStore", () => {
 
   it("should classify bottom-tab routes", () => {
     expect(bottomTabForPath("/")).toBe("zap");
+    expect(bottomTabForPath("/zap/scan-history")).toBe("zap");
+    expect(bottomTabForPath("/zap/play-history")).toBe("zap");
     expect(bottomTabForPath("/library/SNES")).toBe("library");
     expect(bottomTabForPath("/create/search")).toBe("create");
     expect(bottomTabForPath("/settings/advanced")).toBe("settings");
@@ -21,6 +23,8 @@ describe("tabSessionStore", () => {
 
   it("should resolve app Back within the active tab hierarchy", () => {
     expect(appBackDestination("/")).toBeNull();
+    expect(appBackDestination("/zap/scan-history")).toBe("/");
+    expect(appBackDestination("/zap/play-history/")).toBe("/");
     expect(appBackDestination("/settings")).toBe("/");
     expect(appBackDestination("/settings/about")).toBe("/settings");
     expect(appBackDestination("/settings/devices/device-a")).toBe(
@@ -125,6 +129,24 @@ describe("tabSessionStore", () => {
       scrollY: 300,
     });
     expect(state.createSearch).toBeNull();
+  });
+
+  it("should remember History as part of Zap and clear only its child scroll on tab reselect", () => {
+    const store = useTabSessionStore.getState();
+    store.rememberLocation("/zap/play-history", "/zap/play-history");
+    store.rememberScroll("/", 0, 80);
+    store.rememberScroll("zap:played:device-a", 0, 320);
+    store.rememberScroll("/zap/scan-history", 0, 240);
+    store.rememberScroll("/library", 0, 100);
+    expect(useTabSessionStore.getState().lastHref.zap).toBe(
+      "/zap/play-history",
+    );
+    store.popTabToRoot("zap");
+    expect(useTabSessionStore.getState().lastHref.zap).toBe("/");
+    expect(useTabSessionStore.getState().scrollPositions).toEqual({
+      "/": { scrollX: 0, scrollY: 80 },
+      "/library": { scrollX: 0, scrollY: 100 },
+    });
   });
 
   it("should reset all tab state without persisted storage", () => {

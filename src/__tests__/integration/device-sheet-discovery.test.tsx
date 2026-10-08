@@ -77,7 +77,14 @@ describe("Shared device discovery flow", () => {
     expect(sheet.getByText("mister.local")).toBeVisible();
     expect(sheet.getByText("mister")).toBeVisible();
     expect(sheet.getByText("settings.networkScan.version")).toBeVisible();
-    expect(sheet.getByText("settings.networkScan.searching")).toBeVisible();
+    expect(
+      sheet.getByRole("button", { name: "settings.networkScan.refresh" }),
+    ).toHaveAttribute("aria-busy", "true");
+    expect(
+      within(
+        sheet.getByRole("region", { name: "scan.deviceSheetRecent" }),
+      ).getByRole("status"),
+    ).toHaveTextContent("settings.networkScan.searching");
   });
 
   it.each([

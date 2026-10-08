@@ -126,6 +126,7 @@
       "confirmDelete": "{{name}}을(를) 삭제할까요? 이 작업은 취소할 수 없습니다."
     },
     "library": {
+      "selectMedia": "미디어 선택",
       "title": "라이브러리",
       "collections": "컬렉션",
       "systems": "시스템",
@@ -415,7 +416,11 @@
       "statusScanning": "NFC 태그 스캔 중",
       "statusSuccess": "태그를 스캔했습니다",
       "statusError": "태그 스캔에 실패했습니다",
-      "remoteKeyboard": "컨트롤"
+      "remoteKeyboard": "컨트롤",
+      "scanHistoryTitle": "스캔 기록",
+      "playHistoryTitle": "재생 기록",
+      "historyRefresh": "기록 새로고침",
+      "historyLoadError": "기록을 불러오지 못했습니다"
     },
     "create": {
       "title": "만들기",
@@ -1285,7 +1290,9 @@
         "technicalSupport": "기술 지원",
         "reportIssue": "GitHub에 문제 신고",
         "emailLabel": "지원 이메일:"
-      }
+      },
+      "connectDevice": "{{device}}에 연결",
+      "savedDevices": "저장된 기기"
     },
     "systemSelector": {
       "loadError": "시스템을 불러오지 못했습니다",
@@ -1546,6 +1553,13 @@
         "next": "다음",
         "finish": "완료"
       }
+    },
+    "navigation": {
+      "devices": "기기",
+      "currentDevice": "현재 기기",
+      "openMenu": "탐색 메뉴 열기",
+      "expandSection": "{{section}} 펼치기",
+      "collapseSection": "{{section}} 접기"
     }
   }
 }
