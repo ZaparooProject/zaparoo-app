@@ -49,7 +49,7 @@ function responsiveWindow(initialWidth: number) {
   };
 }
 
-async function renderZap(initialPath = "/") {
+async function renderZap(initialPath = "/", basepath?: string) {
   const root = createRootRoute({ component: RootLayout });
   const home = createRoute({
     getParentRoute: () => root,
@@ -72,6 +72,7 @@ async function renderZap(initialPath = "/") {
     component: PlayHistory,
   });
   const router = createRouter({
+    basepath,
     routeTree: root.addChildren([home, settings, scans, played]),
     history: createMemoryHistory({ initialEntries: [initialPath] }),
   });
@@ -236,20 +237,59 @@ describe("Adaptive Zap", () => {
     );
     expect(router.state.location.pathname).toBe("/zap/scan-history");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "nav.index" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
+    const zapNavigation = within(
+      screen.getByRole("navigation", { name: "nav.mainNavigation" }),
+    ).getByRole("link", { name: "nav.index" });
+    expect(zapNavigation).toHaveAttribute("aria-current", "page");
     await act(() =>
       useStatusStore.setState({
         connectionState: ConnectionState.RECONNECTING,
       }),
     );
     expect(replay).toBeDisabled();
-    await user.click(screen.getByRole("link", { name: "nav.index" }));
+    await user.click(zapNavigation);
     await screen.findByRole("heading", { name: "Zaparoo", level: 1 });
     expect(router.state.location.pathname).toBe("/");
   });
+
+  it.each([
+    ["scan-history", "scan.scanHistoryTitle"],
+    ["play-history", "scan.playHistoryTitle"],
+  ])(
+    "should keep %s title/actions and embedded Zap parent in page content",
+    async (path, title) => {
+      const resize = responsiveWindow(1440);
+      const user = userEvent.setup();
+      const { router } = await renderZap(`/app/zap/${path}`, "/app");
+      const heading = await screen.findByRole("heading", {
+        name: title,
+        level: 1,
+      });
+      const scroll = heading.closest<HTMLElement>(
+        "[data-scroll-restoration-id]",
+      )!;
+      const parent = within(scroll).getByRole("link", { name: "nav.index" });
+      const refresh = within(scroll).getByRole("button", {
+        name: "scan.historyRefresh",
+      });
+      expect(parent).toHaveAttribute("href", "/app/");
+      for (const width of [820, 390, 1440]) {
+        await resize(width);
+        expect(screen.getByRole("heading", { name: title, level: 1 })).toBe(
+          heading,
+        );
+        expect(within(scroll).getByRole("link", { name: "nav.index" })).toBe(
+          parent,
+        );
+        expect(
+          within(scroll).getByRole("button", { name: "scan.historyRefresh" }),
+        ).toBe(refresh);
+      }
+      await user.click(parent);
+      await screen.findByRole("heading", { name: "Zaparoo", level: 1 });
+      expect(router.state.location.pathname).toBe("/");
+    },
+  );
 
   it("should paginate individual play sessions without collapsing repeat games", async () => {
     responsiveWindow(1440);
@@ -523,18 +563,36 @@ describe("Adaptive Zap", () => {
     const resize = responsiveWindow(390);
     const user = userEvent.setup();
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
-    usePreferencesStore.setState({ nfcAvailable: true });
+    usePreferencesStore.setState({ nfcAvailable: true, cameraAvailable: true });
     const read = vi
       .spyOn(nfc, "readTag")
       .mockReturnValue(new Promise(() => {}));
     const cancel = vi.spyOn(nfc, "cancelSession").mockResolvedValue();
     const { unmount } = await renderZap();
+    const camera = screen.getByRole("button", { name: "scan.scanCode" });
+    const playback = screen.getByRole("region", {
+      name: "scan.nowPlayingHeading",
+    });
+    const readers = screen.getByRole("region", { name: "scan.readersHeading" });
+    expect(camera).toBeEnabled();
     await user.click(screen.getByRole("button", { name: "scan.tapTag" }));
     const stop = await screen.findByRole("button", { name: "scan.tapTagStop" });
+    expect(camera).toBeDisabled();
+    await resize(820);
+    expect(screen.getByRole("button", { name: "scan.tapTagStop" })).toBe(stop);
+    expect(screen.getByRole("button", { name: "scan.scanCode" })).toBe(camera);
     await resize(1180);
     await resize(1440);
     await resize(390);
     expect(screen.getByRole("button", { name: "scan.tapTagStop" })).toBe(stop);
+    expect(screen.getByRole("button", { name: "scan.scanCode" })).toBe(camera);
+    expect(camera).toBeDisabled();
+    expect(screen.getByRole("region", { name: "scan.nowPlayingHeading" })).toBe(
+      playback,
+    );
+    expect(screen.getByRole("region", { name: "scan.readersHeading" })).toBe(
+      readers,
+    );
     expect(read).toHaveBeenCalledTimes(1);
     expect(cancel).not.toHaveBeenCalled();
     unmount();

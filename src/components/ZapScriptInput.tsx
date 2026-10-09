@@ -50,7 +50,7 @@ export function ZapScriptInput(props: {
   };
 
   return (
-    <div>
+    <div className="zapscript-input">
       <div className="wui-editor flex flex-col">
         <textarea
           ref={textareaRef}

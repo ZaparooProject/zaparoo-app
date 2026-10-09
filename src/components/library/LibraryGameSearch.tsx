@@ -11,6 +11,7 @@ import { BackIcon, SearchIcon } from "@/lib/images";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { PageFrame } from "@/components/PageFrame";
+import { PageParentLink } from "@/components/PageParentLink";
 import { VirtualSearchResults } from "@/components/VirtualSearchResults";
 import { BackToTop } from "@/components/BackToTop";
 import { DEFAULT_LOADING_DELAY_MS } from "@/components/DelayedLoading";
@@ -153,95 +154,105 @@ function LibraryGameSearchContent({
 
   const content = (
     <>
-      <div role="search" aria-label={pageTitle} className="space-y-3">
-        <TextInput
-          label={t("library.searchInput")}
-          placeholder={t("library.searchPlaceholder")}
-          value={query}
-          setValue={setQuery}
-          type="search"
-          clearable
-          disabled={!canUseSearch}
-          onKeyUp={(event) => {
-            if (event.key === "Enter") {
-              event.currentTarget.blur();
-              search();
-            }
-          }}
-        />
+      <div className="library-search-workspace">
+        <div
+          role="search"
+          aria-label={pageTitle}
+          className="library-search-filters space-y-3"
+        >
+          <TextInput
+            label={t("library.searchInput")}
+            placeholder={t("library.searchPlaceholder")}
+            value={query}
+            setValue={setQuery}
+            type="search"
+            clearable
+            disabled={!canUseSearch}
+            onKeyUp={(event) => {
+              if (event.key === "Enter") {
+                event.currentTarget.blur();
+                search();
+              }
+            }}
+          />
 
-        <div className="flex flex-col gap-3 md:flex-row">
-          <div className="flex flex-col md:flex-1">
-            <span
-              id="library-search-system-label"
-              className="text-foreground mb-1"
-            >
-              {t("create.search.systemInput")}
-            </span>
-            <SystemSelectorTrigger
-              aria-labelledby="library-search-system-label"
-              selectedSystems={querySystem === "all" ? [] : [querySystem]}
-              systemsData={systemsQuery.data}
-              placeholder={t("create.search.allSystems")}
-              mode="single"
-              onClick={() => setSystemSelectorOpen(true)}
-              disabled={!canUseSearch}
-            />
-          </div>
-
-          {mediaTagsFeature.available && (
+          <div className="library-search-filter-selectors">
             <div className="flex flex-col md:flex-1">
               <span
-                id="library-search-tags-label"
+                id="library-search-system-label"
                 className="text-foreground mb-1"
               >
-                {t("create.search.tagsInput")}
+                {t("create.search.systemInput")}
               </span>
-              <TagSelectorTrigger
-                aria-labelledby="library-search-tags-label"
-                selectedTags={queryTags}
-                placeholder={t("create.search.allTags")}
-                onClick={() => setTagSelectorOpen(true)}
+              <SystemSelectorTrigger
+                aria-labelledby="library-search-system-label"
+                selectedSystems={querySystem === "all" ? [] : [querySystem]}
+                systemsData={systemsQuery.data}
+                placeholder={t("create.search.allSystems")}
+                mode="single"
+                onClick={() => setSystemSelectorOpen(true)}
                 disabled={!canUseSearch}
               />
             </div>
-          )}
+
+            {mediaTagsFeature.available && (
+              <div className="flex flex-col md:flex-1">
+                <span
+                  id="library-search-tags-label"
+                  className="text-foreground mb-1"
+                >
+                  {t("create.search.tagsInput")}
+                </span>
+                <TagSelectorTrigger
+                  aria-labelledby="library-search-tags-label"
+                  selectedTags={queryTags}
+                  placeholder={t("create.search.allTags")}
+                  onClick={() => setTagSelectorOpen(true)}
+                  disabled={!canUseSearch}
+                />
+              </div>
+            )}
+          </div>
+
+          <Button
+            label={t("library.searchAction")}
+            icon={<SearchIcon size="20" />}
+            onClick={search}
+            disabled={!canSubmitSearch || isSearching}
+            disabledAppearance={isSearching ? "busy" : "unavailable"}
+            className="w-full"
+          />
         </div>
 
-        <Button
-          label={t("library.searchAction")}
-          icon={<SearchIcon size="20" />}
-          onClick={search}
-          disabled={!canSubmitSearch || isSearching}
-          disabledAppearance={isSearching ? "busy" : "unavailable"}
-          className="w-full"
-        />
+        <div className="library-search-results">
+          <VirtualSearchResults
+            query={searchParams?.query ?? ""}
+            systems={
+              searchParams && searchParams.system !== "all"
+                ? [searchParams.system]
+                : []
+            }
+            tags={
+              searchParams
+                ? Array.from(
+                    new Set([...fixedTags, ...(searchParams.tags ?? [])]),
+                  )
+                : []
+            }
+            selectedResult={selectedResult}
+            setSelectedResult={setSelectedResult}
+            selectionPresentation={selection.docked ? "pane" : "modal"}
+            hasSearched={searchParams !== null}
+            searchSystem={searchParams?.system ?? "all"}
+            searchTags={searchParams?.tags ?? []}
+            onClearFilters={clearFilters}
+            isSearching={isSearching}
+            onSearchComplete={() => setIsSearching(false)}
+            scrollContainerRef={scrollRef}
+            loadingDelayMs={DEFAULT_LOADING_DELAY_MS}
+          />
+        </div>
       </div>
-
-      <VirtualSearchResults
-        query={searchParams?.query ?? ""}
-        systems={
-          searchParams && searchParams.system !== "all"
-            ? [searchParams.system]
-            : []
-        }
-        tags={
-          searchParams
-            ? Array.from(new Set([...fixedTags, ...(searchParams.tags ?? [])]))
-            : []
-        }
-        selectedResult={selectedResult}
-        setSelectedResult={setSelectedResult}
-        selectionPresentation={selection.docked ? "pane" : "modal"}
-        hasSearched={searchParams !== null}
-        searchSystem={searchParams?.system ?? "all"}
-        searchTags={searchParams?.tags ?? []}
-        onClearFilters={clearFilters}
-        isSearching={isSearching}
-        onSearchComplete={() => setIsSearching(false)}
-        scrollContainerRef={scrollRef}
-        loadingDelayMs={DEFAULT_LOADING_DELAY_MS}
-      />
       <BackToTop scrollContainerRef={scrollRef} threshold={200} />
     </>
   );
@@ -296,6 +307,16 @@ function LibraryGameSearchContent({
   return (
     <>
       <PageFrame
+        headerMode="content-wide"
+        headerParent={
+          onBack ? (
+            <button type="button" className="page-parent-link" onClick={goBack}>
+              {t("library.title")}
+            </button>
+          ) : (
+            <PageParentLink to="/library" label={t("library.title")} />
+          )
+        }
         layout="workspace"
         supportingPane={
           ownsDetails ? (

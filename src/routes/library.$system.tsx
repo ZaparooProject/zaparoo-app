@@ -49,6 +49,7 @@ import { useSystemName } from "@/hooks/useSystemName";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
 import { PageFrame } from "@/components/PageFrame";
+import { PageParentLink } from "@/components/PageParentLink";
 import { BackToTop } from "@/components/BackToTop";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { Button } from "@/components/wui/Button";
@@ -271,11 +272,15 @@ export function LibrarySystem() {
     setEmbeddedSearchOpen(systemId, false);
   }, [setEmbeddedSearchOpen, systemId]);
 
-  const goBack = useCallback(() => {
+  const clearBrowseActions = useCallback(() => {
     cancelJump();
     setSelectedEntry(null);
     setLetterModalOpen(false);
     setOptionsOpen(false);
+  }, [cancelJump, setSelectedEntry]);
+
+  const goBack = useCallback(() => {
+    clearBrowseActions();
     if (searchOpen) {
       closeSearch();
       return;
@@ -291,13 +296,12 @@ export function LibrarySystem() {
     void navigate({ to: "/library", resetScroll: false });
   }, [
     autoEnteredRoot,
-    cancelJump,
+    clearBrowseActions,
     closeSearch,
     levels,
     navigate,
     searchOpen,
     setFolderLevels,
-    setSelectedEntry,
     systemId,
   ]);
 
@@ -423,6 +427,22 @@ export function LibrarySystem() {
   return (
     <LibraryMediaSelectionContext.Provider value={selection}>
       <PageFrame
+        headerMode="content-wide"
+        headerParent={
+          searchOpen ||
+          levels.length > 1 ||
+          (levels.length === 1 && !autoEnteredRoot) ? (
+            <button type="button" className="page-parent-link" onClick={goBack}>
+              {searchOpen ? heading : (levels.at(-2)?.name ?? systemName)}
+            </button>
+          ) : (
+            <PageParentLink
+              to="/library"
+              label={t("library.title")}
+              onNavigate={clearBrowseActions}
+            />
+          )
+        }
         layout="workspace"
         supportingPane={
           <LibraryDetailsSurface

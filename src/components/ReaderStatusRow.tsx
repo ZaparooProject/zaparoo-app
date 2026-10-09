@@ -8,6 +8,8 @@ interface ReaderStatusRowProps {
   detail?: string;
   /** Marks the reader responsible for the media currently running. */
   holdingMedia?: boolean;
+  /** Keep the reader name/state readable in narrow enlarged-text panels. */
+  reflow?: boolean;
 }
 
 /**
@@ -19,20 +21,41 @@ export function ReaderStatusRow({
   connected,
   detail,
   holdingMedia,
+  reflow = false,
 }: ReaderStatusRowProps) {
   const { t } = useTranslation();
 
   return (
-    <div className="flex items-center gap-2">
+    <div
+      className={classNames("flex items-center gap-2", { "flex-wrap": reflow })}
+    >
       <span
         className={classNames(
-          "h-2 w-2 shrink-0 rounded-full",
-          connected ? "bg-success" : "bg-error",
+          "flex min-w-0 items-center gap-2",
+          reflow ? "flex-[1_1_8rem]" : "flex-1",
         )}
-        aria-hidden="true"
-      />
-      <span className="text-foreground min-w-0 flex-1 truncate">{name}</span>
-      <span className="text-muted-foreground shrink-0 text-sm">
+      >
+        <span
+          className={classNames(
+            "h-2 w-2 shrink-0 rounded-full",
+            connected ? "bg-success" : "bg-error",
+          )}
+          aria-hidden="true"
+        />
+        <span
+          className={classNames(
+            "text-foreground min-w-0 flex-1",
+            reflow ? "wrap-anywhere" : "truncate",
+          )}
+        >
+          {name}
+        </span>
+      </span>
+      <span
+        className={classNames("text-muted-foreground shrink-0 text-sm", {
+          "max-w-full wrap-anywhere": reflow,
+        })}
+      >
         {holdingMedia
           ? t("scan.readerHolding")
           : connected

@@ -18,6 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useStatusStore } from "@/lib/store.ts";
 import { PageFrame } from "@/components/PageFrame.tsx";
+import { PageParentLink } from "@/components/PageParentLink";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { BackIcon, ExternalIcon, GoogleIcon, AppleIcon } from "@/lib/images";
 import { logger } from "@/lib/logger";
@@ -576,7 +577,16 @@ export function OnlinePage() {
 
   return (
     <PageFrame
-      className="online-settings-page"
+      headerMode="content-wide"
+      headerParent={
+        <PageParentLink to="/settings" label={t("settings.title")} />
+      }
+      layout={loggedInUser !== null ? "workspace" : "default"}
+      className={
+        loggedInUser !== null
+          ? "online-settings-page settings-panel-page"
+          : "online-settings-page"
+      }
       onSwipeBack={goBack}
       headerLeft={
         <HeaderButton
@@ -594,122 +604,131 @@ export function OnlinePage() {
       <div className="flex flex-col gap-4">
         {loggedInUser !== null ? (
           // Logged in state
-          <div className="flex flex-col gap-5">
-            <OnlineDeviceSetup
-              connected={connected}
-              warpActive={displayedWarpActive}
-            />
+          <div className="settings-panel-layout settings-online-panels">
+            <div className="settings-online-device">
+              <OnlineDeviceSetup
+                connected={connected}
+                warpActive={displayedWarpActive}
+              />
+            </div>
+            <div className="settings-online-account">
+              {(Capacitor.isNativePlatform() || purchasePreview !== "live") && (
+                <WarpSubscription appUserID={loggedInUser.uid} />
+              )}
 
-            {(Capacitor.isNativePlatform() || purchasePreview !== "live") && (
-              <WarpSubscription appUserID={loggedInUser.uid} />
-            )}
-
-            {/* Account actions */}
-            <Card>
-              <section
-                className="flex w-full flex-col gap-3"
-                aria-labelledby="online-account-actions-title"
-              >
-                <h2
-                  id="online-account-actions-title"
-                  className="text-foreground text-lg font-semibold"
+              {/* Account actions */}
+              <Card>
+                <section
+                  className="flex w-full flex-col gap-3"
+                  aria-labelledby="online-account-actions-title"
                 >
-                  {t("online.account")}
-                </h2>
-                <div className="flex flex-col gap-1">
-                  {loggedInUser.displayName && (
-                    <span className="text-foreground font-medium">
-                      {loggedInUser.displayName}
+                  <h2
+                    id="online-account-actions-title"
+                    className="text-foreground text-lg font-semibold"
+                  >
+                    {t("online.account")}
+                  </h2>
+                  <div className="flex flex-col gap-1">
+                    {loggedInUser.displayName && (
+                      <span className="text-foreground font-medium">
+                        {loggedInUser.displayName}
+                      </span>
+                    )}
+                    <span className="text-muted-foreground text-sm break-all">
+                      {loggedInUser.email}
                     </span>
-                  )}
-                  <span className="text-muted-foreground text-sm break-all">
-                    {loggedInUser.email}
-                  </span>
-                </div>
+                  </div>
 
-                {/* Dashboard button */}
-                <Button
-                  label={t("online.dashboard")}
-                  variant="outline"
-                  icon={<ExternalIcon size="20" />}
-                  onClick={() =>
-                    Browser.open({ url: "https://online.zaparoo.com" })
-                  }
-                  className="w-full"
-                />
-
-                {/* Change password - only for email/password users */}
-                {hasPasswordProvider(loggedInUser.providerData) && (
+                  {/* Dashboard button */}
                   <Button
-                    label={t("online.changePassword")}
+                    label={t("online.dashboard")}
                     variant="outline"
-                    onClick={() => {
-                      if (loggedInUser.email) {
-                        FirebaseAuthentication.sendPasswordResetEmail({
-                          email: loggedInUser.email,
-                        })
-                          .then(() => {
-                            toast.success(t("online.resetEmailSent"));
-                          })
-                          .catch((e: Error) => {
-                            logger.error("Firebase password reset failed:", e, {
-                              category: "api",
-                              action: "sendPasswordResetEmail",
-                              severity: "warning",
-                            });
-                            toast.error(t("online.resetEmailFailed"));
-                          });
-                      }
-                    }}
+                    icon={<ExternalIcon size="20" />}
+                    onClick={() =>
+                      Browser.open({ url: "https://online.zaparoo.com" })
+                    }
                     className="w-full"
                   />
-                )}
 
-                {/* Log out button */}
-                <Button
-                  label={t("online.logout")}
-                  variant="outline"
-                  icon={<LogOutIcon size="20" />}
-                  onClick={handleSignOut}
-                  className="w-full"
-                />
-
-                {/* Delete account section */}
-                {scheduledDeletion ? (
-                  <div className="border-error/30 bg-error-wash mt-2 rounded-lg border p-3">
-                    <p className="text-error text-sm font-medium">
-                      {t("online.deletionScheduledTitle")}
-                    </p>
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      {t("online.deletionScheduledMessage", {
-                        date: new Date(scheduledDeletion).toLocaleDateString(),
-                      })}
-                    </p>
+                  {/* Change password - only for email/password users */}
+                  {hasPasswordProvider(loggedInUser.providerData) && (
                     <Button
-                      label={
-                        isCancelling
-                          ? t("spinner.cancelling")
-                          : t("online.cancelDeletion")
-                      }
+                      label={t("online.changePassword")}
                       variant="outline"
-                      onClick={handleCancelDeletion}
-                      disabled={isCancelling}
-                      disabledAppearance="busy"
-                      className="mt-3 w-full"
+                      onClick={() => {
+                        if (loggedInUser.email) {
+                          FirebaseAuthentication.sendPasswordResetEmail({
+                            email: loggedInUser.email,
+                          })
+                            .then(() => {
+                              toast.success(t("online.resetEmailSent"));
+                            })
+                            .catch((e: Error) => {
+                              logger.error(
+                                "Firebase password reset failed:",
+                                e,
+                                {
+                                  category: "api",
+                                  action: "sendPasswordResetEmail",
+                                  severity: "warning",
+                                },
+                              );
+                              toast.error(t("online.resetEmailFailed"));
+                            });
+                        }
+                      }}
+                      className="w-full"
                     />
-                  </div>
-                ) : (
+                  )}
+
+                  {/* Log out button */}
                   <Button
-                    label={t("online.deleteAccount")}
+                    label={t("online.logout")}
                     variant="outline"
-                    intent="destructive"
-                    icon={<Trash2Icon size="20" />}
-                    onClick={() => setDeleteModalOpen(true)}
-                    className="mt-2 w-full"
+                    icon={<LogOutIcon size="20" />}
+                    onClick={handleSignOut}
+                    className="w-full"
                   />
-                )}
-              </section>
-            </Card>
+
+                  {/* Delete account section */}
+                  {scheduledDeletion ? (
+                    <div className="border-error/30 bg-error-wash mt-2 rounded-lg border p-3">
+                      <p className="text-error text-sm font-medium">
+                        {t("online.deletionScheduledTitle")}
+                      </p>
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        {t("online.deletionScheduledMessage", {
+                          date: new Date(
+                            scheduledDeletion,
+                          ).toLocaleDateString(),
+                        })}
+                      </p>
+                      <Button
+                        label={
+                          isCancelling
+                            ? t("spinner.cancelling")
+                            : t("online.cancelDeletion")
+                        }
+                        variant="outline"
+                        onClick={handleCancelDeletion}
+                        disabled={isCancelling}
+                        disabledAppearance="busy"
+                        className="mt-3 w-full"
+                      />
+                    </div>
+                  ) : (
+                    <Button
+                      label={t("online.deleteAccount")}
+                      variant="outline"
+                      intent="destructive"
+                      icon={<Trash2Icon size="20" />}
+                      onClick={() => setDeleteModalOpen(true)}
+                      className="mt-2 w-full"
+                    />
+                  )}
+                </section>
+              </Card>
+            </div>
           </div>
         ) : purchasePreview !== "live" ? (
           <div className="flex flex-col gap-5">

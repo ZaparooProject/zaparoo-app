@@ -19,6 +19,7 @@ import {
 } from "@/lib/writeNfcHook";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { PageFrame } from "@/components/PageFrame";
+import { PageParentLink } from "@/components/PageParentLink";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { BackIcon } from "@/lib/images";
 import { TabBar } from "@/components/wui/TabBar";
@@ -143,6 +144,10 @@ export function NfcUtils() {
   return (
     <>
       <PageFrame
+        layout="workspace"
+        className="nfc-workspace-page"
+        headerMode="content-wide"
+        headerParent={<PageParentLink to="/create" label={t("create.title")} />}
         onSwipeBack={goBack}
         scrollRef={scrollContainerRef}
         headerLeft={
@@ -158,7 +163,7 @@ export function NfcUtils() {
           </h1>
         }
       >
-        <div className="flex flex-col">
+        <div className="nfc-workspace">
           <TabBar
             label={t("create.nfc.title")}
             role="tab"

@@ -27,6 +27,7 @@ import {
 } from "@/lib/tabSessionStore";
 import { TextInput } from "@/components/wui/TextInput";
 import { PageFrame } from "@/components/PageFrame";
+import { PageParentLink } from "@/components/PageParentLink";
 import {
   SystemSelector,
   SystemSelectorTrigger,
@@ -326,6 +327,10 @@ export function Search() {
   return (
     <>
       <PageFrame
+        layout="workspace"
+        className="create-search-page"
+        headerMode="content-wide"
+        headerParent={<PageParentLink to="/create" label={t("create.title")} />}
         onSwipeBack={goBack}
         headerLeft={
           <HeaderButton
@@ -352,91 +357,95 @@ export function Search() {
           />
         }
       >
-        <div
-          role="search"
-          aria-label={t("create.search.title")}
-          className="space-y-3"
-        >
-          <TextInput
-            label={t("create.search.gameInput")}
-            placeholder={t("create.search.gameInputPlaceholder")}
-            value={query}
-            setValue={(v) => setQuery(v)}
-            type="search"
-            clearable={true}
-            disabled={!connected || !gamesIndex.exists}
-            onKeyUp={(e) => {
-              if (e.key === "Enter") {
-                e.currentTarget.blur();
-                if (canSearch) {
-                  performSearch();
+        <div className="create-search-workspace">
+          <div
+            role="search"
+            aria-label={t("create.search.title")}
+            className="create-search-filters space-y-3"
+          >
+            <TextInput
+              label={t("create.search.gameInput")}
+              placeholder={t("create.search.gameInputPlaceholder")}
+              value={query}
+              setValue={(v) => setQuery(v)}
+              type="search"
+              clearable={true}
+              disabled={!connected || !gamesIndex.exists}
+              onKeyUp={(e) => {
+                if (e.key === "Enter") {
+                  e.currentTarget.blur();
+                  if (canSearch) {
+                    performSearch();
+                  }
                 }
-              }
-            }}
-          />
+              }}
+            />
 
-          <div className="flex flex-col gap-3 md:flex-row">
-            <div className="flex flex-col md:flex-1">
-              <span id="search-system-label" className="text-foreground mb-1">
-                {t("create.search.systemInput")}
-              </span>
-              <SystemSelectorTrigger
-                aria-labelledby="search-system-label"
-                selectedSystems={querySystem === "all" ? [] : [querySystem]}
-                systemsData={loaderData.systems}
-                placeholder={t("create.search.allSystems")}
-                mode="single"
-                onClick={() => setSystemSelectorOpen(true)}
-                disabled={!connected || !gamesIndex.exists}
-              />
-            </div>
-
-            {mediaTagsAvailable && (
+            <div className="create-search-filter-selectors">
               <div className="flex flex-col md:flex-1">
-                <span id="search-tags-label" className="text-foreground mb-1">
-                  {t("create.search.tagsInput")}
+                <span id="search-system-label" className="text-foreground mb-1">
+                  {t("create.search.systemInput")}
                 </span>
-                <TagSelectorTrigger
-                  aria-labelledby="search-tags-label"
-                  selectedTags={queryTags}
-                  placeholder={t("create.search.allTags")}
-                  onClick={() => setTagSelectorOpen(true)}
+                <SystemSelectorTrigger
+                  aria-labelledby="search-system-label"
+                  selectedSystems={querySystem === "all" ? [] : [querySystem]}
+                  systemsData={loaderData.systems}
+                  placeholder={t("create.search.allSystems")}
+                  mode="single"
+                  onClick={() => setSystemSelectorOpen(true)}
                   disabled={!connected || !gamesIndex.exists}
                 />
               </div>
-            )}
+
+              {mediaTagsAvailable && (
+                <div className="flex flex-col md:flex-1">
+                  <span id="search-tags-label" className="text-foreground mb-1">
+                    {t("create.search.tagsInput")}
+                  </span>
+                  <TagSelectorTrigger
+                    aria-labelledby="search-tags-label"
+                    selectedTags={queryTags}
+                    placeholder={t("create.search.allTags")}
+                    onClick={() => setTagSelectorOpen(true)}
+                    disabled={!connected || !gamesIndex.exists}
+                  />
+                </div>
+              )}
+            </div>
+
+            <Button
+              label={t("create.search.searchButton")}
+              icon={<SearchIcon size="20" />}
+              onClick={performSearch}
+              disabled={!canSearch || isSearching}
+              disabledAppearance={isSearching ? "busy" : "unavailable"}
+              className="w-full"
+            />
           </div>
 
-          <Button
-            label={t("create.search.searchButton")}
-            icon={<SearchIcon size="20" />}
-            onClick={performSearch}
-            disabled={!canSearch || isSearching}
-            disabledAppearance={isSearching ? "busy" : "unavailable"}
-            className="w-full"
-          />
+          <div className="create-search-results">
+            <VirtualSearchResults
+              query={effectiveSearchParams?.query || ""}
+              systems={
+                effectiveSearchParams
+                  ? effectiveSearchParams.system === "all"
+                    ? []
+                    : [effectiveSearchParams.system]
+                  : []
+              }
+              tags={effectiveSearchParams?.tags || []}
+              selectedResult={selectedResult}
+              setSelectedResult={setSelectedResult}
+              hasSearched={effectiveSearchParams !== null}
+              searchSystem={effectiveSearchParams?.system || "all"}
+              searchTags={effectiveSearchParams?.tags || []}
+              onClearFilters={handleClearFilters}
+              isSearching={isSearching}
+              onSearchComplete={() => setIsSearching(false)}
+              scrollContainerRef={scrollContainerRef}
+            />
+          </div>
         </div>
-
-        <VirtualSearchResults
-          query={effectiveSearchParams?.query || ""}
-          systems={
-            effectiveSearchParams
-              ? effectiveSearchParams.system === "all"
-                ? []
-                : [effectiveSearchParams.system]
-              : []
-          }
-          tags={effectiveSearchParams?.tags || []}
-          selectedResult={selectedResult}
-          setSelectedResult={setSelectedResult}
-          hasSearched={effectiveSearchParams !== null}
-          searchSystem={effectiveSearchParams?.system || "all"}
-          searchTags={effectiveSearchParams?.tags || []}
-          onClearFilters={handleClearFilters}
-          isSearching={isSearching}
-          onSearchComplete={() => setIsSearching(false)}
-          scrollContainerRef={scrollContainerRef}
-        />
       </PageFrame>
 
       <MediaDetailsModal

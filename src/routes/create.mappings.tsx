@@ -20,6 +20,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { DelayedLoading } from "@/components/DelayedLoading";
 import { BackToTop } from "@/components/BackToTop";
 import { PageFrame } from "@/components/PageFrame";
+import { PageParentLink } from "@/components/PageParentLink";
 import { MappingRow } from "@/components/MappingRow";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
@@ -111,6 +112,9 @@ export function Mappings() {
 
   return (
     <PageFrame
+      layout="workspace"
+      headerMode="content-wide"
+      headerParent={<PageParentLink to="/create" label={t("create.title")} />}
       onSwipeBack={goBack}
       headerLeft={
         <HeaderButton
@@ -171,23 +175,25 @@ export function Mappings() {
           />
         ) : (
           <>
-            {sortedMappings.length > 0 && (
-              <TextInput
-                value={search}
-                setValue={setSearch}
-                placeholder={t("create.mappings.list.searchPlaceholder")}
-                clearable
-                inputMode="search"
-                type="search"
+            <div className="mapping-list-toolbar">
+              {sortedMappings.length > 0 && (
+                <TextInput
+                  value={search}
+                  setValue={setSearch}
+                  placeholder={t("create.mappings.list.searchPlaceholder")}
+                  clearable
+                  inputMode="search"
+                  type="search"
+                />
+              )}
+              <Button
+                icon={<PlusIcon size={20} />}
+                label={t("create.mappings.list.newMapping")}
+                intent="primary"
+                onClick={goToNew}
+                className="w-full"
               />
-            )}
-            <Button
-              icon={<PlusIcon size={20} />}
-              label={t("create.mappings.list.newMapping")}
-              intent="primary"
-              onClick={goToNew}
-              className="w-full"
-            />
+            </div>
             {filteredMappings.length === 0 ? (
               <EmptyState
                 size="compact"

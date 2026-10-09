@@ -29,10 +29,10 @@ export function DeviceRow({
   const { t } = useTranslation();
 
   return (
-    <div className="flex flex-row items-center gap-2">
+    <div className="flex flex-row flex-wrap items-center gap-2">
       <Card
         onClick={onSelect}
-        className="flex flex-1 flex-row items-center gap-3"
+        className="flex min-w-0 flex-[1_1_8rem] flex-row items-center gap-3 wrap-anywhere"
       >
         {isActive && (
           <span
@@ -53,8 +53,8 @@ export function DeviceRow({
             )}
           </div>
           {entry.name && (
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-muted-foreground truncate text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-muted-foreground min-w-0 truncate text-sm">
                 {entry.address}
               </span>
               {entry.platform && (
@@ -73,7 +73,7 @@ export function DeviceRow({
             </span>
           )}
           {entry.version && (
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-muted-foreground text-xs">
                 {t("settings.networkScan.version", { version: entry.version })}
               </span>

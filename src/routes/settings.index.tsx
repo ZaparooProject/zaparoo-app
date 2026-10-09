@@ -157,6 +157,9 @@ export function Settings() {
   return (
     <>
       <PageFrame
+        layout="workspace"
+        headerMode="content-wide"
+        className="settings-overview-page wrap-anywhere"
         headerCenter={
           <h1 ref={headingRef} className="text-foreground text-xl">
             {t("settings.title")}
@@ -168,63 +171,64 @@ export function Settings() {
           </GatedFeature>
         }
       >
-        <div className="flex flex-col gap-5">
-          <div data-tour="device-address">
-            <DeviceConnectionSummary />
-          </div>
-
-          <CoreOutdatedNotice />
-
-          <MediaDatabaseCard
-            onViewScrapeDetails={() =>
-              void router.navigate({ to: "/settings/media" })
-            }
-          />
-
-          {!appUi.enabled && (
-            <div>
-              <Button
-                label={t("settings.getApp")}
-                variant="secondary"
-                className="w-full"
-                icon={<ExternalIcon size="20" />}
-                onClick={() => Browser.open({ url: "https://zaparoo.app" })}
-              />
+        <div className="settings-overview">
+          <div className="settings-overview-context">
+            <div data-tour="device-address">
+              <DeviceConnectionSummary />
             </div>
-          )}
 
-          {showNativePurchaseUI && displayedOnlinePremiumAccess === false && (
-            <div className="flex flex-col gap-5">
-              {displayedProAccess ? (
-                <p
-                  role="status"
-                  className="text-success flex min-h-12 items-center gap-2 text-sm font-medium"
-                >
-                  <Check size={20} aria-hidden="true" />
-                  {t("settings.app.proActive")}
-                </p>
-              ) : (
+            <CoreOutdatedNotice />
+
+            <MediaDatabaseCard
+              onViewScrapeDetails={() =>
+                void router.navigate({ to: "/settings/media" })
+              }
+            />
+
+            {!appUi.enabled && (
+              <div>
                 <Button
-                  label={t("scan.purchaseProAction")}
-                  intent="pro"
+                  label={t("settings.getApp")}
+                  variant="secondary"
                   className="w-full"
-                  onClick={
-                    purchasePreviewEnabled
-                      ? () => undefined
-                      : () => setProPurchaseModalOpen(true)
-                  }
+                  icon={<ExternalIcon size="20" />}
+                  onClick={() => Browser.open({ url: "https://zaparoo.app" })}
                 />
-              )}
-            </div>
-          )}
-
-          {appUi.enabled &&
-            !displayedProAccess &&
-            displayedOnlinePremiumAccess !== true && (
-              <PurchaseSupportActions variant="restoreOnly" />
+              </div>
             )}
 
-          <div className="flex flex-col gap-5">
+            {showNativePurchaseUI && displayedOnlinePremiumAccess === false && (
+              <div className="flex flex-col gap-5">
+                {displayedProAccess ? (
+                  <p
+                    role="status"
+                    className="text-success flex min-h-12 items-center gap-2 text-sm font-medium"
+                  >
+                    <Check size={20} aria-hidden="true" />
+                    {t("settings.app.proActive")}
+                  </p>
+                ) : (
+                  <Button
+                    label={t("scan.purchaseProAction")}
+                    intent="pro"
+                    className="w-full"
+                    onClick={
+                      purchasePreviewEnabled
+                        ? () => undefined
+                        : () => setProPurchaseModalOpen(true)
+                    }
+                  />
+                )}
+              </div>
+            )}
+
+            {appUi.enabled &&
+              !displayedProAccess &&
+              displayedOnlinePremiumAccess !== true && (
+                <PurchaseSupportActions variant="restoreOnly" />
+              )}
+          </div>
+          <div className="settings-overview-destinations">
             {navigationGroups.map((group) => (
               <nav
                 key={group.id}

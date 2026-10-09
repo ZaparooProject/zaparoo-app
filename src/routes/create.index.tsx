@@ -117,13 +117,16 @@ export function Create() {
   return (
     <>
       <PageFrame
+        layout="workspace"
+        headerMode="content-wide"
+        className="create-overview-page wrap-anywhere"
         headerCenter={
           <h1 ref={headingRef} className="text-foreground text-xl">
             {t("create.title")}
           </h1>
         }
       >
-        <div className="flex flex-col gap-3">
+        <div className="create-destinations">
           <Link
             to="/create/search"
             disabled={!connected}
@@ -131,12 +134,12 @@ export function Create() {
             data-tour="create-search"
           >
             <Card disabled={!connected} pressable>
-              <div className="flex flex-row items-center gap-3">
+              <div className="flex flex-row flex-wrap items-center gap-3">
                 <CreateActionIcon
                   disabled={!connected}
                   icon={<SearchIcon size="20" />}
                 />
-                <div className="flex min-w-0 grow flex-col gap-1">
+                <div className="flex min-w-0 grow basis-[8rem] flex-col gap-1">
                   <span className="font-semibold">
                     {t("create.searchGameHeading")}
                   </span>
@@ -159,12 +162,12 @@ export function Create() {
             disabled={!connected || playing.mediaPath === ""}
             onClick={() => void openCurrentMediaDetails()}
           >
-            <div className="flex flex-row items-center gap-3">
+            <div className="flex flex-row flex-wrap items-center gap-3">
               <CreateActionIcon
                 icon={<PlayIcon size="26" />}
                 disabled={playing.mediaPath === "" && playing.mediaName === ""}
               />
-              <div className="flex min-w-0 grow flex-col gap-1">
+              <div className="flex min-w-0 grow basis-[8rem] flex-col gap-1">
                 <span className="font-semibold">
                   {t("create.currentGameHeading")}
                 </span>
@@ -184,12 +187,12 @@ export function Create() {
               aria-disabled={!connected}
             >
               <Card disabled={!connected} pressable>
-                <div className="flex flex-row items-center gap-3">
+                <div className="flex flex-row flex-wrap items-center gap-3">
                   <CreateActionIcon
                     disabled={!connected}
                     icon={<BookMarkedIcon size="20" />}
                   />
-                  <div className="flex min-w-0 grow flex-col gap-1">
+                  <div className="flex min-w-0 grow basis-[8rem] flex-col gap-1">
                     <span className="font-semibold">{t("decks.new")}</span>
                     <span className="text-muted-foreground text-sm leading-relaxed">
                       {t("decks.createSubtitle")}
@@ -212,12 +215,12 @@ export function Create() {
             aria-disabled={!connected}
           >
             <Card disabled={!connected} pressable>
-              <div className="flex flex-row items-center gap-3">
+              <div className="flex flex-row flex-wrap items-center gap-3">
                 <CreateActionIcon
                   icon={<ListPlusIcon size="20" />}
                   disabled={!connected}
                 />
-                <div className="flex min-w-0 grow flex-col gap-1">
+                <div className="flex min-w-0 grow basis-[8rem] flex-col gap-1">
                   <span className="font-semibold">
                     {t("create.mappingsHeading")}
                   </span>
@@ -237,9 +240,9 @@ export function Create() {
 
           <Link to="/create/custom">
             <Card pressable>
-              <div className="flex flex-row items-center gap-3">
+              <div className="flex flex-row flex-wrap items-center gap-3">
                 <CreateActionIcon icon={<TextIcon size="20" />} />
-                <div className="flex min-w-0 grow flex-col gap-1">
+                <div className="flex min-w-0 grow basis-[8rem] flex-col gap-1">
                   <span className="font-semibold">
                     {t("create.customHeading")}
                   </span>
@@ -263,12 +266,12 @@ export function Create() {
             aria-disabled={!nfcAvailable}
           >
             <Card disabled={!nfcAvailable} pressable>
-              <div className="flex flex-row items-center gap-3">
+              <div className="flex flex-row flex-wrap items-center gap-3">
                 <CreateActionIcon
                   icon={<NfcIcon size="24" />}
                   disabled={!nfcAvailable}
                 />
-                <div className="flex min-w-0 grow flex-col gap-1">
+                <div className="flex min-w-0 grow basis-[8rem] flex-col gap-1">
                   <span className="font-semibold">
                     {t("create.nfcHeading")}
                   </span>

@@ -79,7 +79,9 @@ export function SettingHelp({
       </button>
 
       <SlideModal isOpen={open} close={close} title={title}>
-        <div className="text-muted-foreground py-2">{formattedDescription}</div>
+        <div className="text-muted-foreground py-2 wrap-anywhere">
+          {formattedDescription}
+        </div>
       </SlideModal>
     </span>
   );

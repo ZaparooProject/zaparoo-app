@@ -15,6 +15,8 @@ export function ToggleSwitch(props: {
   suffix?: React.ReactNode;
   /** When true, shows a skeleton placeholder instead of the toggle */
   loading?: boolean;
+  /** Let long labels/help and the switch wrap when their panel is narrow. */
+  reflow?: boolean;
 }) {
   const { impact } = useHaptics();
   const inputId = useId();
@@ -38,16 +40,27 @@ export function ToggleSwitch(props: {
 
   return (
     <div
-      className="text-foreground flex min-h-12 items-center justify-between gap-4 select-none"
+      className={classNames(
+        "text-foreground flex min-h-12 items-center justify-between gap-4 select-none",
+        { "flex-wrap": props.reflow },
+      )}
       onClick={handleContainerClick}
       onKeyDown={handleContainerKeyDown}
       role={hasDisabledClickHandler ? "button" : undefined}
       tabIndex={hasDisabledClickHandler ? 0 : undefined}
     >
-      <span className="flex min-w-0 flex-1 items-center gap-1">
+      <span
+        className={classNames(
+          "flex min-w-0 items-center gap-1",
+          props.reflow ? "flex-[1_1_8rem] flex-wrap" : "flex-1",
+        )}
+      >
         <label
           htmlFor={inputId}
-          className="cursor-pointer text-sm leading-6 font-medium"
+          className={classNames(
+            "cursor-pointer text-sm leading-6 font-medium",
+            { "min-w-0 wrap-anywhere": props.reflow },
+          )}
         >
           {props.label}
         </label>

@@ -13,6 +13,7 @@ import { useHaptics } from "@/hooks/useHaptics";
 import { useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { PageFrame } from "@/components/PageFrame";
+import { PageParentLink } from "@/components/PageParentLink";
 import { TextInput } from "@/components/wui/TextInput";
 import { Button } from "@/components/wui/Button";
 import { BackIcon } from "@/lib/images";
@@ -247,6 +248,11 @@ export function Logs() {
   return (
     <>
       <PageFrame
+        layout="workspace"
+        headerMode="content-wide"
+        headerParent={
+          <PageParentLink to="/settings" label={t("settings.title")} />
+        }
         onSwipeBack={goBack}
         headerLeft={
           <HeaderButton

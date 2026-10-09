@@ -640,6 +640,7 @@ export function MediaScrapeCard() {
             />
 
             <ToggleSwitch
+              reflow
               value={force}
               setValue={setForce}
               disabled={controlsDisabled}

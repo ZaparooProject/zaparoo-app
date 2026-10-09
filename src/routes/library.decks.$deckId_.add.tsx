@@ -12,6 +12,7 @@ import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { PageFrame } from "@/components/PageFrame";
+import { PageParentLink } from "@/components/PageParentLink";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { TextInput } from "@/components/wui/TextInput";
@@ -97,6 +98,14 @@ export function AddDeckItem() {
 
   return (
     <PageFrame
+      headerMode="content-wide"
+      headerParent={
+        <PageParentLink
+          to="/library/decks/$deckId"
+          params={{ deckId }}
+          label={deck?.name ?? t("decks.title")}
+        />
+      }
       onSwipeBack={goBack}
       headerLeft={
         <HeaderButton

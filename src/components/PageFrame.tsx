@@ -23,8 +23,10 @@ interface PageFrameProps extends React.HTMLAttributes<HTMLDivElement> {
   supportingPane?: ReactNode;
   /** Full custom header that replaces the default header structure */
   header?: ReactNode;
-  /** Root-page chrome can move into adaptive navigation without remounting content. */
-  headerMode?: "always" | "phone";
+  /** Phone chrome can be omitted or become a scrolling content row on wider screens. */
+  headerMode?: "always" | "phone" | "content-wide";
+  /** Quiet parent destination above a content-wide title; hidden on phones. */
+  headerParent?: ReactNode;
   /** Leading header content, such as a back button. */
   headerLeft?: ReactNode;
   /** Left-aligned title content that uses all remaining header width. */
@@ -42,13 +44,26 @@ interface PageHeaderProps {
   left?: ReactNode;
   title?: ReactNode;
   actions?: ReactNode;
+  contentWide?: boolean;
 }
 
-export function PageHeader({ left, title, actions }: PageHeaderProps) {
+export function PageHeader({
+  left,
+  title,
+  actions,
+  contentWide = false,
+}: PageHeaderProps) {
   return (
-    <div className="grid min-h-14 grid-cols-[auto_minmax(0,1fr)_auto] items-center">
+    <div
+      className={classNames("grid min-h-14 items-center", {
+        "grid-cols-[auto_minmax(0,1fr)_auto]": !contentWide,
+        "page-header-content-row": contentWide,
+      })}
+    >
       <div
-        className={classNames("flex shrink-0", {
+        className={classNames({
+          "flex shrink-0": !contentWide,
+          "page-header-leading": contentWide,
           "mr-[12px] md:mr-[16px]": left,
         })}
       >
@@ -56,8 +71,11 @@ export function PageHeader({ left, title, actions }: PageHeaderProps) {
       </div>
       <div
         className={classNames(
-          "min-w-0 text-left [&>h1]:text-xl [&>h1]:leading-tight [&>h1]:font-semibold [&>h1]:tracking-tight [&>h1]:break-words [&>h1]:outline-none",
-          { "pl-[4px]": !left },
+          "page-header-title min-w-0 text-left [&>h1]:text-xl [&>h1]:leading-tight [&>h1]:font-semibold [&>h1]:tracking-tight [&>h1]:break-words [&>h1]:outline-none",
+          {
+            "pl-[4px]": !left && !contentWide,
+            "page-header-title-inset": !left && contentWide,
+          },
         )}
       >
         {title}
@@ -130,6 +148,7 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
     supportingPane,
     header,
     headerMode = "always",
+    headerParent,
     headerLeft,
     headerCenter,
     headerRight,
@@ -243,6 +262,51 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
     return () => observer.disconnect();
   }, [activeScrollRef, hasHeaderContent, safeInsets.top]);
 
+  const headerShell = (
+    <div
+      ref={headerRef}
+      className={classNames("top-0 z-10", {
+        sticky: !hasHeaderContent,
+        "page-header-shell": hasHeaderContent,
+        "absolute md:pointer-events-none":
+          hasHeaderContent && headerMode !== "content-wide",
+      })}
+      style={
+        hasHeaderContent
+          ? ({
+              "--page-header-safe-top": contentSafeTop,
+              "--page-header-safe-right": safeInsets.right,
+              "--page-header-safe-left": safeInsets.left,
+            } as React.CSSProperties)
+          : {
+              paddingTop: `calc(1rem + ${contentSafeTop})`,
+              paddingRight: `calc(1rem + ${safeInsets.right})`,
+              paddingLeft: `calc(1rem + var(--page-content-safe-left, ${safeInsets.left}))`,
+            }
+      }
+    >
+      {hasHeaderContent && (
+        <div className="page-header-surface">
+          <ResponsiveContainer maxWidth="full" className="page-header-content">
+            {headerMode === "content-wide" && headerParent && (
+              <div className="page-header-parent">{headerParent}</div>
+            )}
+            {header ? (
+              header
+            ) : (
+              <PageHeader
+                left={headerLeft}
+                title={headerCenter}
+                actions={headerRight}
+                contentWide={headerMode === "content-wide"}
+              />
+            )}
+          </ResponsiveContainer>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div
       className={classNames(
@@ -251,6 +315,7 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
           "page-frame-workspace": layout === "workspace",
           "page-frame-with-pane": Boolean(supportingPane),
           "page-frame-phone-header": headerMode === "phone",
+          "page-frame-content-wide-header": headerMode === "content-wide",
         },
         className,
       )}
@@ -265,45 +330,7 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
           : undefined
       }
     >
-      <div
-        ref={headerRef}
-        className={classNames("top-0 z-10", {
-          sticky: !hasHeaderContent,
-          "page-header-shell absolute md:pointer-events-none": hasHeaderContent,
-        })}
-        style={
-          hasHeaderContent
-            ? ({
-                "--page-header-safe-top": contentSafeTop,
-                "--page-header-safe-right": safeInsets.right,
-                "--page-header-safe-left": safeInsets.left,
-              } as React.CSSProperties)
-            : {
-                paddingTop: `calc(1rem + ${contentSafeTop})`,
-                paddingRight: `calc(1rem + ${safeInsets.right})`,
-                paddingLeft: `calc(1rem + var(--page-content-safe-left, ${safeInsets.left}))`,
-              }
-        }
-      >
-        {hasHeaderContent && (
-          <div className="page-header-surface">
-            <ResponsiveContainer
-              maxWidth="full"
-              className="page-header-content"
-            >
-              {header ? (
-                header
-              ) : (
-                <PageHeader
-                  left={headerLeft}
-                  title={headerCenter}
-                  actions={headerRight}
-                />
-              )}
-            </ResponsiveContainer>
-          </div>
-        )}
-      </div>
+      {headerMode !== "content-wide" && headerShell}
       <div
         ref={activeScrollRef}
         data-scroll-restoration-id={PAGE_SCROLL_RESTORATION_ID}
@@ -332,6 +359,7 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
           } as React.CSSProperties
         }
       >
+        {headerMode === "content-wide" && headerShell}
         <ResponsiveContainer maxWidth={layout === "workspace" ? "full" : "app"}>
           <InitialPageScrollOffsetContext.Provider value={initialScrollOffset}>
             {children}

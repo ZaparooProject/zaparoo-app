@@ -34,6 +34,7 @@ import { useAnnouncer } from "@/components/A11yAnnouncer";
 import { useHapticPress } from "@/hooks/useHapticPress";
 import { DelayedLoading } from "@/components/DelayedLoading";
 import { useInitialPageScrollOffset } from "@/lib/pageScrollContext";
+import { useVirtualListScrollMargin } from "@/hooks/useVirtualListScrollMargin";
 import { TagList } from "@/components/TagList";
 import { LibraryArtworkFrame } from "@/components/library/LibraryArtworkFrame";
 
@@ -308,6 +309,8 @@ export const LibraryBrowseList = forwardRef<
   const loadMoreStartRef = useRef<number | null>(null);
   const loadEarlierRangeRef = useRef<LibraryBrowseRange | null>(null);
   const initialScrollOffset = useInitialPageScrollOffset();
+  const { listRef, scrollMargin, scrollPaddingStart } =
+    useVirtualListScrollMargin(props.scrollRef);
   // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual exposes imperative functions that React Compiler cannot memoize safely.
   const virtualizer = useVirtualizer({
     count: props.entries.length + (props.hasNextPage ? 1 : 0),
@@ -315,6 +318,8 @@ export const LibraryBrowseList = forwardRef<
     estimateSize: () => rowHeight,
     overscan: 2,
     initialOffset: initialScrollOffset,
+    scrollMargin,
+    scrollPaddingStart,
   });
   const virtualItems = virtualizer.getVirtualItems();
   const isScrolling = virtualizer.isScrolling;
@@ -517,7 +522,10 @@ export const LibraryBrowseList = forwardRef<
             role="listitem"
             aria-posinset={index + 1}
             aria-setsize={setSize}
-            style={{ minHeight: `${rowHeight}px` }}
+            style={{
+              minHeight: `${rowHeight}px`,
+              scrollMarginTop: `${scrollPaddingStart}px`,
+            }}
           >
             {renderEntry(entry, index, true)}
           </div>,
@@ -547,6 +555,7 @@ export const LibraryBrowseList = forwardRef<
       <>
         <div
           role="list"
+          ref={listRef}
           aria-label={props.ariaLabel ?? t("library.entriesLabel")}
         >
           {rows}
@@ -575,6 +584,7 @@ export const LibraryBrowseList = forwardRef<
 
   return (
     <div
+      ref={listRef}
       role="list"
       aria-label={props.ariaLabel ?? t("library.entriesLabel")}
       style={{
@@ -594,7 +604,7 @@ export const LibraryBrowseList = forwardRef<
               style={{
                 position: "absolute",
                 width: "100%",
-                transform: `translateY(${virtualItem.start}px)`,
+                transform: `translateY(${virtualItem.start - scrollMargin}px)`,
               }}
             >
               <DelayedLoading>
@@ -626,7 +636,7 @@ export const LibraryBrowseList = forwardRef<
               left: 0,
               width: "100%",
               minHeight: `${rowHeight}px`,
-              transform: `translateY(${virtualItem.start}px)`,
+              transform: `translateY(${virtualItem.start - scrollMargin}px)`,
             }}
           >
             {entry ? (

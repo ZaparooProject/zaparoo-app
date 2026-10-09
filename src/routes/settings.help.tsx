@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/wui/Button";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { PageFrame } from "@/components/PageFrame";
+import { PageParentLink } from "@/components/PageParentLink";
 import { BackIcon, ExternalIcon } from "@/lib/images";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
@@ -23,6 +24,10 @@ export function Help() {
 
   return (
     <PageFrame
+      headerMode="content-wide"
+      headerParent={
+        <PageParentLink to="/settings" label={t("settings.title")} />
+      }
       onSwipeBack={goBack}
       headerLeft={
         <HeaderButton

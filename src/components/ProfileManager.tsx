@@ -376,6 +376,7 @@ export function ProfileManager(props: {
         </h2>
 
         <ToggleSwitch
+          reflow
           label={t("settings.core.profiles.requireForLaunch")}
           help={
             <SettingHelp

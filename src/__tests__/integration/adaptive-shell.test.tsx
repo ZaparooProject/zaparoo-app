@@ -17,6 +17,7 @@ import {
   within,
 } from "@/test-utils";
 import { RootLayout } from "@/routes/__root";
+import { InboxModal } from "@/components/InboxModal";
 import { Library } from "@/routes/library.index";
 import { Create } from "@/routes/create.index";
 import { Settings } from "@/routes/settings.index";
@@ -57,7 +58,7 @@ function responsiveWindow(initialWidth: number) {
   };
 }
 
-async function renderShell(initialPath = "/library") {
+async function renderShell(initialPath = "/library", withInbox = false) {
   const root = createRootRoute({ component: RootLayout });
   const routes = [
     createRoute({
@@ -86,7 +87,15 @@ async function renderShell(initialPath = "/library") {
     history: createMemoryHistory({ initialEntries: [initialPath] }),
   });
   await router.load();
-  return { ...render(<RouterProvider router={router} />), router };
+  return {
+    ...render(
+      <>
+        <RouterProvider router={router} />
+        {withInbox && <InboxModal />}
+      </>,
+    ),
+    router,
+  };
 }
 
 async function enableLibrary() {
@@ -304,6 +313,70 @@ describe("Adaptive application shell", () => {
     ).toHaveFocus();
   });
 
+  it("should preserve Settings overview navigation and heading through phone/tablet/desktop changes", async () => {
+    const resize = responsiveWindow(1440);
+    const { router, baseElement } = await renderShell("/settings");
+    const heading = await screen.findByRole("heading", {
+      name: "settings.title",
+    });
+    const app = screen.getByRole("navigation", { name: "settings.groups.app" });
+    const online = within(app).getByRole("link", { name: /online.title/ });
+    expect(online).toHaveAttribute("href", "/settings/online");
+    for (const width of [820, 390, 1440]) {
+      await resize(width);
+      expect(screen.getByRole("heading", { name: "settings.title" })).toBe(
+        heading,
+      );
+      expect(
+        screen.getByRole("navigation", { name: "settings.groups.app" }),
+      ).toBe(app);
+      expect(online).toBeVisible();
+      expect(router.state.location.pathname).toBe("/settings");
+    }
+    expect(await findA11yViolations(baseElement)).toEqual([]);
+  });
+
+  it("should retain one content-owned Settings heading and Inbox action across resize", async () => {
+    const resize = responsiveWindow(1440);
+    const user = userEvent.setup();
+    useStatusStore.setState({
+      coreVersion: "2.23.0",
+      coreVersionPending: false,
+    });
+    await renderShell("/settings", true);
+    const heading = await screen.findByRole("heading", {
+      name: "settings.title",
+    });
+    const scroll = heading.closest<HTMLElement>("[data-scroll-restoration-id]");
+    expect(scroll).not.toBeNull();
+    const inbox = within(scroll!).getByRole("button", {
+      name: "inbox.openLabel",
+    });
+    await user.click(inbox);
+    const dialog = await screen.findByRole("dialog", { name: "inbox.title" });
+    for (const width of [820, 390, 1440]) {
+      await resize(width);
+      expect(screen.getByRole("dialog", { name: "inbox.title" })).toBe(dialog);
+      expect(
+        within(scroll!).getByRole("heading", {
+          name: "settings.title",
+          hidden: true,
+        }),
+      ).toBe(heading);
+      expect(
+        within(scroll!).getByRole("button", {
+          name: "inbox.openLabel",
+          hidden: true,
+        }),
+      ).toBe(inbox);
+    }
+    await user.keyboard("{Escape}");
+    expect(
+      screen.queryByRole("dialog", { name: "inbox.title" }),
+    ).not.toBeInTheDocument();
+    expect(inbox).toHaveFocus();
+  });
+
   it("should preserve device-entry draft and sheet identity across wide presentation changes", async () => {
     const resize = responsiveWindow(1440);
     const user = userEvent.setup();
@@ -321,6 +394,12 @@ describe("Adaptive application shell", () => {
     await user.clear(input);
     await user.type(input, "192.168.1.200");
     await resize(820);
+    expect(screen.getByRole("textbox", { name: "settings.device" })).toBe(
+      input,
+    );
+    expect(input).toHaveValue("192.168.1.200");
+    await resize(390);
+    await resize(1440);
     expect(screen.getByRole("textbox", { name: "settings.device" })).toBe(
       input,
     );

@@ -81,7 +81,7 @@ export function ToolsTab({
   };
 
   return (
-    <div className="space-y-4 px-2 pt-4">
+    <div className="nfc-tools-grid px-2 pt-4">
       {/* Tools */}
       {availableTools.map((tool) => {
         return (

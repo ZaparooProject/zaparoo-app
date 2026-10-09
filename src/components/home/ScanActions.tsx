@@ -34,7 +34,7 @@ function getScanStatusAnnouncement(
 
 interface ScanActionsProps {
   layout: ScanLayout;
-  /** Wide workspaces use full-width inline controls instead of the phone scan pad. */
+  /** Wider layouts group equal action tiles instead of the phone scan pad. */
   compact?: boolean;
   scanSession: boolean;
   scanStatus: ScanResult;
@@ -88,9 +88,11 @@ export function ScanActions({
           key="camera"
           variant="secondary"
           size={compact ? "default" : "lg"}
-          layout={compact ? "inline" : "stacked"}
+          layout="stacked"
           className={
-            compact ? "min-h-18 w-full max-w-none" : "min-h-[4.5rem] w-full"
+            compact
+              ? "zap-scan-tile w-full max-w-none"
+              : "min-h-[4.5rem] w-full"
           }
           icon={<Camera size={24} />}
           label={t("scan.scanCode")}
@@ -109,11 +111,13 @@ export function ScanActions({
           variant="fill"
           intent="primary"
           size={compact ? "default" : "lg"}
-          layout={compact ? "inline" : "stacked"}
+          layout="stacked"
           className={
-            compact ? "min-h-18 w-full max-w-none" : "min-h-[8.5rem] w-full"
+            compact
+              ? "zap-scan-tile w-full max-w-none"
+              : "min-h-[8.5rem] w-full"
           }
-          icon={<NfcIcon size={28} />}
+          icon={<NfcIcon size={compact ? 24 : 28} />}
           label={t("spinner.nfcDisabledLabel")}
           aria-label={t("spinner.openNfcSettings")}
           onClick={onOpenNfcSettings}
@@ -128,16 +132,16 @@ export function ScanActions({
         idleLabel={t("scan.tapTag")}
         activeLabel={t("scan.tapTagScanning")}
         activeAriaLabel={t("scan.tapTagStop")}
-        icon={<NfcIcon size={28} />}
+        icon={<NfcIcon size={compact ? 24 : 28} />}
         onStart={onTapScan}
         onCancel={onTapScan}
         size={compact ? "default" : "lg"}
-        layout={compact ? "inline" : "stacked"}
+        layout="stacked"
         className="w-full"
         buttonClassName={
-          compact ? "min-h-18 w-full max-w-none" : "min-h-[8.5rem] w-full"
+          compact ? "zap-scan-tile w-full max-w-none" : "min-h-[8.5rem] w-full"
         }
-        readerIconSize={28}
+        readerIconSize={compact ? 24 : 28}
         announceStateChanges={false}
       />
     );
@@ -161,7 +165,7 @@ export function ScanActions({
         (writeActivity ? (
           writeActivity
         ) : (
-          <div className="flex flex-col gap-2">
+          <div className={compact ? "zap-scan-actions" : "flex flex-col gap-2"}>
             {layout.leading && renderAction(layout.leading)}
             {layout.alternate && renderAction(layout.alternate)}
           </div>

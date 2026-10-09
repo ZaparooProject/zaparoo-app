@@ -14,6 +14,7 @@ import {
 } from "@/lib/writeNfcHook";
 import { logger } from "@/lib/logger";
 import { PageFrame } from "@/components/PageFrame";
+import { PageParentLink } from "@/components/PageParentLink";
 import { usePreferencesStore, selectCustomText } from "@/lib/preferencesStore";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
@@ -49,6 +50,8 @@ export function CustomText() {
   return (
     <>
       <PageFrame
+        headerMode="content-wide"
+        headerParent={<PageParentLink to="/create" label={t("create.title")} />}
         onSwipeBack={goBack}
         headerLeft={
           <HeaderButton

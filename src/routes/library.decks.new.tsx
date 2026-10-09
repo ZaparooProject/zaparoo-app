@@ -12,6 +12,7 @@ import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { PageFrame } from "@/components/PageFrame";
+import { PageParentLink } from "@/components/PageParentLink";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { TextInput } from "@/components/wui/TextInput";
 import { DeckDescriptionInput } from "@/components/library/DeckDescriptionInput";
@@ -67,6 +68,13 @@ export function NewDeck({
 
   return (
     <PageFrame
+      headerMode="content-wide"
+      headerParent={
+        <PageParentLink
+          to={backTo}
+          label={t(backTo === "/create" ? "create.title" : "library.title")}
+        />
+      }
       onSwipeBack={goBack}
       headerLeft={
         <HeaderButton

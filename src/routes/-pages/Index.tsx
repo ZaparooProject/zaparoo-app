@@ -429,11 +429,11 @@ export function Index() {
             scanLayout.canScan || scanLayout.showEmptyState || writeOpen
           }
         >
-          <div className="zap-controls">
+          <div className="zap-session">
             <div className="zap-reader-tools">
               <ScanActions
                 layout={scanLayout}
-                compact={remoteDocked}
+                compact={wide}
                 scanSession={scanSession}
                 scanStatus={scanStatus}
                 onTapScan={handleScanButton}
@@ -461,8 +461,8 @@ export function Index() {
                           ? t("spinner.verifyFailedRetry")
                           : undefined
                       }
-                      icon={<NfcSymbol size={28} />}
-                      readerIconSize={28}
+                      icon={<NfcSymbol size={remoteDocked ? 24 : 28} />}
+                      readerIconSize={remoteDocked ? 24 : 28}
                       size={remoteDocked ? "default" : "lg"}
                       layout={remoteDocked ? "inline" : "stacked"}
                       buttonClassName={
@@ -492,6 +492,59 @@ export function Index() {
               )}
             </div>
 
+            <div className="zap-playback">
+              <NowPlayingCard
+                media={playing}
+                playlist={primaryPlaylist}
+                connected={controls.available}
+                canPausePlaylist={canPausePlaylist(playing)}
+                lastPlayed={lastPlayed}
+                replayingLast={replayingLast}
+                onReplayLast={() => void replayLastPlayed()}
+                onStop={() => requestStop("primary")}
+                onPlaylistPrevious={() =>
+                  runPlaylistCommand("primary", "previous")
+                }
+                onPlaylistToggle={() =>
+                  runPlaylistCommand(
+                    "primary",
+                    primaryPlaylist?.playing ? "pause" : "play",
+                  )
+                }
+                onPlaylistNext={() => runPlaylistCommand("primary", "next")}
+                onPlaylistSelect={(index) => runPlaylistItem("primary", index)}
+              />
+
+              {backgroundMediaAvailable &&
+                (backgroundPlaying.mediaName !== "" || backgroundPlaylist) && (
+                  <NowPlayingCard
+                    media={backgroundPlaying}
+                    playlist={backgroundPlaylist}
+                    connected={controls.available}
+                    headingLabel={t("scan.backgroundMediaHeading")}
+                    stopButtonLabel={t("scan.stopBackgroundMediaButton")}
+                    canPausePlaylist={canPausePlaylist(backgroundPlaying)}
+                    onStop={() => requestStop("background")}
+                    onPlaylistPrevious={() =>
+                      runPlaylistCommand("background", "previous")
+                    }
+                    onPlaylistToggle={() =>
+                      runPlaylistCommand(
+                        "background",
+                        backgroundPlaylist?.playing ? "pause" : "play",
+                      )
+                    }
+                    onPlaylistNext={() =>
+                      runPlaylistCommand("background", "next")
+                    }
+                    onPlaylistSelect={(index) =>
+                      runPlaylistItem("background", index)
+                    }
+                  />
+                )}
+            </div>
+          </div>
+          <div className="zap-supporting">
             <div className="zap-remote-slot">
               <RemoteKeyboardModal
                 isOpen={remoteKeyboardOpen}
@@ -502,57 +555,6 @@ export function Index() {
             <div className="zap-readers">
               <ReaderStrip connected={controls.available} />
             </div>
-          </div>
-          <div className="zap-playback">
-            <NowPlayingCard
-              media={playing}
-              playlist={primaryPlaylist}
-              connected={controls.available}
-              canPausePlaylist={canPausePlaylist(playing)}
-              lastPlayed={lastPlayed}
-              replayingLast={replayingLast}
-              onReplayLast={() => void replayLastPlayed()}
-              onStop={() => requestStop("primary")}
-              onPlaylistPrevious={() =>
-                runPlaylistCommand("primary", "previous")
-              }
-              onPlaylistToggle={() =>
-                runPlaylistCommand(
-                  "primary",
-                  primaryPlaylist?.playing ? "pause" : "play",
-                )
-              }
-              onPlaylistNext={() => runPlaylistCommand("primary", "next")}
-              onPlaylistSelect={(index) => runPlaylistItem("primary", index)}
-            />
-
-            {backgroundMediaAvailable &&
-              (backgroundPlaying.mediaName !== "" || backgroundPlaylist) && (
-                <NowPlayingCard
-                  media={backgroundPlaying}
-                  playlist={backgroundPlaylist}
-                  connected={controls.available}
-                  headingLabel={t("scan.backgroundMediaHeading")}
-                  stopButtonLabel={t("scan.stopBackgroundMediaButton")}
-                  canPausePlaylist={canPausePlaylist(backgroundPlaying)}
-                  onStop={() => requestStop("background")}
-                  onPlaylistPrevious={() =>
-                    runPlaylistCommand("background", "previous")
-                  }
-                  onPlaylistToggle={() =>
-                    runPlaylistCommand(
-                      "background",
-                      backgroundPlaylist?.playing ? "pause" : "play",
-                    )
-                  }
-                  onPlaylistNext={() =>
-                    runPlaylistCommand("background", "next")
-                  }
-                  onPlaylistSelect={(index) =>
-                    runPlaylistItem("background", index)
-                  }
-                />
-              )}
           </div>
           <div className="zap-collections">
             <MediaCoverRow

@@ -85,8 +85,9 @@ export function CommandsModal(props: {
       close={props.close}
       title={t("create.custom.commandsTitle")}
       scrollRef={scrollContainerRef}
+      layout="workspace"
     >
-      <div className="flex flex-col gap-4 pb-16">
+      <div className="commands-workspace pb-16">
         {categories.map(({ label, commandLabels }) => (
           <div key={label} className="flex flex-col gap-2">
             <h3 className="text-lg font-semibold">{label}</h3>

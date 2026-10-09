@@ -27,6 +27,7 @@ import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { PageFrame } from "@/components/PageFrame";
+import { PageParentLink } from "@/components/PageParentLink";
 import { BackToTop } from "@/components/BackToTop";
 import { DelayedLoading } from "@/components/DelayedLoading";
 import { EmptyState } from "@/components/wui/EmptyState";
@@ -262,6 +263,20 @@ export function LibraryTaggedCollection({
   return (
     <LibraryMediaSelectionContext.Provider value={selection}>
       <PageFrame
+        headerMode="content-wide"
+        headerParent={
+          searchOpen ? (
+            <button type="button" className="page-parent-link" onClick={goBack}>
+              {t(config.title)}
+            </button>
+          ) : (
+            <PageParentLink
+              to="/library"
+              label={t("library.title")}
+              onNavigate={() => setSelectedEntry(null)}
+            />
+          )
+        }
         layout="workspace"
         supportingPane={
           <LibraryDetailsSurface

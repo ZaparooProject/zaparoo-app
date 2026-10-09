@@ -396,6 +396,7 @@ export function Library() {
   return (
     <>
       <PageFrame
+        headerMode="content-wide"
         layout="workspace"
         scrollRef={scrollRef}
         headerCenter={

@@ -8,6 +8,7 @@ import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
 import { SettingHelp } from "@/components/wui/SettingHelp";
 import { useStatusStore, ConnectionState } from "@/lib/store";
 import { PageFrame } from "@/components/PageFrame";
+import { PageParentLink } from "@/components/PageParentLink";
 import { BackIcon } from "@/lib/images";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { TextInput } from "@/components/wui/TextInput";
@@ -313,6 +314,12 @@ export function PlayControlsSettings() {
 
   return (
     <PageFrame
+      layout="workspace"
+      className="settings-panel-page"
+      headerMode="content-wide"
+      headerParent={
+        <PageParentLink to="/settings" label={t("settings.title")} />
+      }
       onSwipeBack={goBack}
       headerLeft={
         <HeaderButton
@@ -327,313 +334,333 @@ export function PlayControlsSettings() {
         </h1>
       }
     >
-      <div className="flex flex-col gap-5">
-        <ProfileManager
-          connected={connected}
-          canManage={canManageProfiles}
-          canWriteSettings={canWriteCoreSettings}
-          requireForLaunch={coreSettings?.profilesRequireForLaunch ?? false}
-          settingsLoading={isConnecting || (connected && !coreSettings)}
-          onRequireForLaunchChange={(profilesRequireForLaunch) => {
-            updateCoreSetting.mutate({ profilesRequireForLaunch });
-          }}
-          available={profilesAvailable}
-        />
+      <div
+        className="settings-panel-layout settings-play-panels"
+        data-profiles-available={profilesAvailable}
+      >
+        <div className="settings-play-profiles">
+          <ProfileManager
+            connected={connected}
+            canManage={canManageProfiles}
+            canWriteSettings={canWriteCoreSettings}
+            requireForLaunch={coreSettings?.profilesRequireForLaunch ?? false}
+            settingsLoading={isConnecting || (connected && !coreSettings)}
+            onRequireForLaunchChange={(profilesRequireForLaunch) => {
+              updateCoreSetting.mutate({ profilesRequireForLaunch });
+            }}
+            available={profilesAvailable}
+          />
+        </div>
+        <div className="settings-play-main">
+          <GatedFeature featureId="playtimeLimits">
+            <section>
+              <Card className="flex flex-col gap-4">
+                <h2 className="text-foreground text-lg font-semibold">
+                  {t("settings.core.playtime.title")}
+                </h2>
 
-        <GatedFeature featureId="playtimeLimits">
-          <section>
-            <Card className="flex flex-col gap-4">
-              <h2 className="text-foreground text-lg font-semibold">
-                {t("settings.core.playtime.title")}
-              </h2>
+                <ToggleSwitch
+                  reflow
+                  label={t("settings.core.playtime.enabled")}
+                  help={
+                    <SettingHelp
+                      title={t("settings.core.playtime.enabled")}
+                      description={t("settings.core.playtime.enabledHelp")}
+                    />
+                  }
+                  value={limitsConfig?.enabled ?? false}
+                  setValue={handleEnabledToggle}
+                  disabled={!canWriteCoreSettings}
+                  loading={isConnecting || (connected && isPending)}
+                />
 
-              <ToggleSwitch
-                label={t("settings.core.playtime.enabled")}
-                help={
-                  <SettingHelp
-                    title={t("settings.core.playtime.enabled")}
-                    description={t("settings.core.playtime.enabledHelp")}
-                  />
-                }
-                value={limitsConfig?.enabled ?? false}
-                setValue={handleEnabledToggle}
-                disabled={!canWriteCoreSettings}
-                loading={isConnecting || (connected && isPending)}
-              />
-
-              {limitsConfig?.enabled && (
-                <div className="bg-surface-inset border-border flex flex-col gap-2 rounded-md border p-3">
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">
-                        {t("settings.core.playtime.currentSession")}
-                      </span>
-                      {isStatusPending ? (
-                        <Skeleton className="h-5 w-16" />
-                      ) : (
-                        <Badge
-                          variant={getStateBadgeVariant(
-                            playtimeStatus?.state ?? "reset",
-                          )}
-                        >
-                          {getStateLabel(playtimeStatus?.state ?? "reset")}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        {t("settings.core.playtime.sessionDuration")}
-                      </span>
-                      {isStatusPending ? (
-                        <Skeleton className="h-5 w-14" />
-                      ) : (
-                        <span
-                          aria-label={formatDurationAccessible(
-                            playtimeStatus?.sessionDuration ?? "0s",
-                            t,
-                          )}
-                        >
-                          {formatDurationDisplay(
-                            playtimeStatus?.sessionDuration ?? "0s",
-                          )}
+                {limitsConfig?.enabled && (
+                  <div className="playtime-status bg-surface-inset border-border flex flex-col gap-2 rounded-md border p-3">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">
+                          {t("settings.core.playtime.currentSession")}
                         </span>
-                      )}
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        {t("settings.core.playtime.sessionRemaining")}
-                      </span>
-                      {isStatusPending ? (
-                        <Skeleton className="h-5 w-14" />
-                      ) : (
-                        <span
-                          aria-label={formatDurationAccessible(
-                            playtimeStatus?.sessionRemaining ?? "0s",
-                            t,
-                          )}
-                        >
-                          {formatDurationDisplay(
-                            playtimeStatus?.sessionRemaining ?? "0s",
-                          )}
+                        {isStatusPending ? (
+                          <Skeleton className="h-5 w-16" />
+                        ) : (
+                          <Badge
+                            className="max-w-full wrap-anywhere"
+                            variant={getStateBadgeVariant(
+                              playtimeStatus?.state ?? "reset",
+                            )}
+                          >
+                            {getStateLabel(playtimeStatus?.state ?? "reset")}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          {t("settings.core.playtime.sessionDuration")}
                         </span>
-                      )}
-                    </div>
-                    {playtimeStatus?.cooldownRemaining &&
-                      playtimeStatus?.state === "cooldown" && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            {t("settings.core.playtime.cooldownRemaining")}
-                          </span>
+                        {isStatusPending ? (
+                          <Skeleton className="h-5 w-14" />
+                        ) : (
                           <span
                             aria-label={formatDurationAccessible(
-                              playtimeStatus.cooldownRemaining,
+                              playtimeStatus?.sessionDuration ?? "0s",
                               t,
                             )}
                           >
                             {formatDurationDisplay(
-                              playtimeStatus.cooldownRemaining,
+                              playtimeStatus?.sessionDuration ?? "0s",
                             )}
                           </span>
-                        </div>
-                      )}
-                  </div>
+                        )}
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          {t("settings.core.playtime.sessionRemaining")}
+                        </span>
+                        {isStatusPending ? (
+                          <Skeleton className="h-5 w-14" />
+                        ) : (
+                          <span
+                            aria-label={formatDurationAccessible(
+                              playtimeStatus?.sessionRemaining ?? "0s",
+                              t,
+                            )}
+                          >
+                            {formatDurationDisplay(
+                              playtimeStatus?.sessionRemaining ?? "0s",
+                            )}
+                          </span>
+                        )}
+                      </div>
+                      {playtimeStatus?.cooldownRemaining &&
+                        playtimeStatus?.state === "cooldown" && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">
+                              {t("settings.core.playtime.cooldownRemaining")}
+                            </span>
+                            <span
+                              aria-label={formatDurationAccessible(
+                                playtimeStatus.cooldownRemaining,
+                                t,
+                              )}
+                            >
+                              {formatDurationDisplay(
+                                playtimeStatus.cooldownRemaining,
+                              )}
+                            </span>
+                          </div>
+                        )}
+                    </div>
 
-                  <div className="border-border flex flex-col gap-2 border-t pt-2">
-                    <span className="text-sm font-medium">
-                      {t("settings.core.playtime.dailyUsage")}
-                    </span>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        {t("settings.core.playtime.dailyUsageToday")}
+                    <div className="border-border flex flex-col gap-2 border-t pt-2">
+                      <span className="text-sm font-medium">
+                        {t("settings.core.playtime.dailyUsage")}
                       </span>
-                      {isStatusPending ? (
-                        <Skeleton className="h-5 w-14" />
-                      ) : (
-                        <span
-                          aria-label={formatDurationAccessible(
-                            playtimeStatus?.dailyUsageToday ?? "0s",
-                            t,
-                          )}
-                        >
-                          {formatDurationDisplay(
-                            playtimeStatus?.dailyUsageToday ?? "0s",
-                          )}
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          {t("settings.core.playtime.dailyUsageToday")}
                         </span>
-                      )}
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        {t("settings.core.playtime.dailyRemaining")}
-                      </span>
-                      {isStatusPending ? (
-                        <Skeleton className="h-5 w-14" />
-                      ) : (
-                        <span
-                          aria-label={formatDurationAccessible(
-                            playtimeStatus?.dailyRemaining ?? "0s",
-                            t,
-                          )}
-                        >
-                          {formatDurationDisplay(
-                            playtimeStatus?.dailyRemaining ?? "0s",
-                          )}
+                        {isStatusPending ? (
+                          <Skeleton className="h-5 w-14" />
+                        ) : (
+                          <span
+                            aria-label={formatDurationAccessible(
+                              playtimeStatus?.dailyUsageToday ?? "0s",
+                              t,
+                            )}
+                          >
+                            {formatDurationDisplay(
+                              playtimeStatus?.dailyUsageToday ?? "0s",
+                            )}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          {t("settings.core.playtime.dailyRemaining")}
                         </span>
-                      )}
+                        {isStatusPending ? (
+                          <Skeleton className="h-5 w-14" />
+                        ) : (
+                          <span
+                            aria-label={formatDurationAccessible(
+                              playtimeStatus?.dailyRemaining ?? "0s",
+                              t,
+                            )}
+                          >
+                            {formatDurationDisplay(
+                              playtimeStatus?.dailyRemaining ?? "0s",
+                            )}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
+                )}
+
+                <div className="flex flex-col gap-3">
+                  <fieldset className="flex flex-col gap-2">
+                    <legend className="text-sm font-medium">
+                      {t("settings.core.playtime.dailyLimit")}
+                    </legend>
+                    <div className="flex gap-2">
+                      <TextInput
+                        type="number"
+                        placeholder="0"
+                        value={dailyHours}
+                        setValue={setDailyHours}
+                        label={t("settings.core.playtime.hours")}
+                        disabled={
+                          !canWriteCoreSettings || !limitsConfig?.enabled
+                        }
+                      />
+                      <TextInput
+                        type="number"
+                        placeholder="0"
+                        value={dailyMinutes}
+                        setValue={setDailyMinutes}
+                        label={t("settings.core.playtime.minutes")}
+                        disabled={
+                          !canWriteCoreSettings || !limitsConfig?.enabled
+                        }
+                      />
+                    </div>
+                  </fieldset>
+
+                  <fieldset className="flex flex-col gap-2">
+                    <legend className="text-sm font-medium">
+                      {t("settings.core.playtime.sessionLimit")}
+                    </legend>
+                    <div className="flex gap-2">
+                      <TextInput
+                        type="number"
+                        placeholder="0"
+                        value={sessionHours}
+                        setValue={setSessionHours}
+                        label={t("settings.core.playtime.hours")}
+                        disabled={
+                          !canWriteCoreSettings || !limitsConfig?.enabled
+                        }
+                      />
+                      <TextInput
+                        type="number"
+                        placeholder="0"
+                        value={sessionMinutes}
+                        setValue={setSessionMinutes}
+                        label={t("settings.core.playtime.minutes")}
+                        disabled={
+                          !canWriteCoreSettings || !limitsConfig?.enabled
+                        }
+                      />
+                    </div>
+                  </fieldset>
+
+                  <fieldset className="flex flex-col gap-2">
+                    <legend className="text-sm font-medium">
+                      {t("settings.core.playtime.sessionReset")}
+                    </legend>
+                    <div className="flex gap-2">
+                      <TextInput
+                        type="number"
+                        placeholder="0"
+                        value={resetMinutes}
+                        setValue={setResetMinutes}
+                        label={t("settings.core.playtime.minutes")}
+                        disabled={
+                          !canWriteCoreSettings || !limitsConfig?.enabled
+                        }
+                        className="max-w-[calc(50%-0.25rem)]"
+                      />
+                    </div>
+                    <span className="text-muted-foreground text-xs">
+                      {t("settings.core.playtime.neverReset")}
+                    </span>
+                  </fieldset>
                 </div>
-              )}
+              </Card>
+            </section>
+          </GatedFeature>
+
+          <section>
+            <Card className="flex flex-col gap-4">
+              <h2 className="text-foreground text-lg font-semibold">
+                {t("settings.core.launchGuard.title")}
+              </h2>
+
+              <ToggleSwitch
+                reflow
+                label={t("settings.core.launchGuard.enabled")}
+                help={
+                  <SettingHelp
+                    title={t("settings.core.launchGuard.enabled")}
+                    description={t("settings.core.launchGuard.enabledHelp")}
+                  />
+                }
+                value={launchGuardEnabled}
+                setValue={(launchGuardEnabled) => {
+                  updateCoreSetting.mutate({ launchGuardEnabled });
+                }}
+                disabled={!canWriteCoreSettings}
+                loading={isConnecting || (connected && !coreSettings)}
+              />
+
+              <ToggleSwitch
+                reflow
+                label={t("settings.core.launchGuard.requireConfirm")}
+                help={
+                  <SettingHelp
+                    title={t("settings.core.launchGuard.requireConfirm")}
+                    description={t(
+                      "settings.core.launchGuard.requireConfirmHelp",
+                    )}
+                  />
+                }
+                value={coreSettings?.launchGuardRequireConfirm ?? false}
+                setValue={(launchGuardRequireConfirm) => {
+                  updateCoreSetting.mutate({ launchGuardRequireConfirm });
+                }}
+                disabled={!canWriteCoreSettings || !launchGuardEnabled}
+                loading={isConnecting || (connected && !coreSettings)}
+              />
 
               <div className="flex flex-col gap-3">
                 <fieldset className="flex flex-col gap-2">
                   <legend className="text-sm font-medium">
-                    {t("settings.core.playtime.dailyLimit")}
+                    {t("settings.core.launchGuard.timeout")}
                   </legend>
                   <div className="flex gap-2">
                     <TextInput
                       type="number"
-                      placeholder="0"
-                      value={dailyHours}
-                      setValue={setDailyHours}
-                      label={t("settings.core.playtime.hours")}
-                      disabled={!canWriteCoreSettings || !limitsConfig?.enabled}
-                    />
-                    <TextInput
-                      type="number"
-                      placeholder="0"
-                      value={dailyMinutes}
-                      setValue={setDailyMinutes}
-                      label={t("settings.core.playtime.minutes")}
-                      disabled={!canWriteCoreSettings || !limitsConfig?.enabled}
-                    />
-                  </div>
-                </fieldset>
-
-                <fieldset className="flex flex-col gap-2">
-                  <legend className="text-sm font-medium">
-                    {t("settings.core.playtime.sessionLimit")}
-                  </legend>
-                  <div className="flex gap-2">
-                    <TextInput
-                      type="number"
-                      placeholder="0"
-                      value={sessionHours}
-                      setValue={setSessionHours}
-                      label={t("settings.core.playtime.hours")}
-                      disabled={!canWriteCoreSettings || !limitsConfig?.enabled}
-                    />
-                    <TextInput
-                      type="number"
-                      placeholder="0"
-                      value={sessionMinutes}
-                      setValue={setSessionMinutes}
-                      label={t("settings.core.playtime.minutes")}
-                      disabled={!canWriteCoreSettings || !limitsConfig?.enabled}
-                    />
-                  </div>
-                </fieldset>
-
-                <fieldset className="flex flex-col gap-2">
-                  <legend className="text-sm font-medium">
-                    {t("settings.core.playtime.sessionReset")}
-                  </legend>
-                  <div className="flex gap-2">
-                    <TextInput
-                      type="number"
-                      placeholder="0"
-                      value={resetMinutes}
-                      setValue={setResetMinutes}
-                      label={t("settings.core.playtime.minutes")}
-                      disabled={!canWriteCoreSettings || !limitsConfig?.enabled}
+                      placeholder="15"
+                      value={launchGuardTimeout}
+                      setValue={setLaunchGuardTimeout}
+                      label={t("settings.core.launchGuard.seconds")}
+                      disabled={!canWriteCoreSettings || !launchGuardEnabled}
                       className="max-w-[calc(50%-0.25rem)]"
                     />
                   </div>
-                  <span className="text-muted-foreground text-xs">
-                    {t("settings.core.playtime.neverReset")}
-                  </span>
+                </fieldset>
+
+                <fieldset className="flex flex-col gap-2">
+                  <legend className="text-sm font-medium">
+                    {t("settings.core.launchGuard.delay")}
+                  </legend>
+                  <div className="flex gap-2">
+                    <TextInput
+                      type="number"
+                      placeholder="0"
+                      value={launchGuardDelay}
+                      setValue={setLaunchGuardDelay}
+                      label={t("settings.core.launchGuard.seconds")}
+                      disabled={!canWriteCoreSettings || !launchGuardEnabled}
+                      className="max-w-[calc(50%-0.25rem)]"
+                    />
+                  </div>
                 </fieldset>
               </div>
             </Card>
           </section>
-        </GatedFeature>
-
-        <section>
-          <Card className="flex flex-col gap-4">
-            <h2 className="text-foreground text-lg font-semibold">
-              {t("settings.core.launchGuard.title")}
-            </h2>
-
-            <ToggleSwitch
-              label={t("settings.core.launchGuard.enabled")}
-              help={
-                <SettingHelp
-                  title={t("settings.core.launchGuard.enabled")}
-                  description={t("settings.core.launchGuard.enabledHelp")}
-                />
-              }
-              value={launchGuardEnabled}
-              setValue={(launchGuardEnabled) => {
-                updateCoreSetting.mutate({ launchGuardEnabled });
-              }}
-              disabled={!canWriteCoreSettings}
-              loading={isConnecting || (connected && !coreSettings)}
-            />
-
-            <ToggleSwitch
-              label={t("settings.core.launchGuard.requireConfirm")}
-              help={
-                <SettingHelp
-                  title={t("settings.core.launchGuard.requireConfirm")}
-                  description={t(
-                    "settings.core.launchGuard.requireConfirmHelp",
-                  )}
-                />
-              }
-              value={coreSettings?.launchGuardRequireConfirm ?? false}
-              setValue={(launchGuardRequireConfirm) => {
-                updateCoreSetting.mutate({ launchGuardRequireConfirm });
-              }}
-              disabled={!canWriteCoreSettings || !launchGuardEnabled}
-              loading={isConnecting || (connected && !coreSettings)}
-            />
-
-            <div className="flex flex-col gap-3">
-              <fieldset className="flex flex-col gap-2">
-                <legend className="text-sm font-medium">
-                  {t("settings.core.launchGuard.timeout")}
-                </legend>
-                <div className="flex gap-2">
-                  <TextInput
-                    type="number"
-                    placeholder="15"
-                    value={launchGuardTimeout}
-                    setValue={setLaunchGuardTimeout}
-                    label={t("settings.core.launchGuard.seconds")}
-                    disabled={!canWriteCoreSettings || !launchGuardEnabled}
-                    className="max-w-[calc(50%-0.25rem)]"
-                  />
-                </div>
-              </fieldset>
-
-              <fieldset className="flex flex-col gap-2">
-                <legend className="text-sm font-medium">
-                  {t("settings.core.launchGuard.delay")}
-                </legend>
-                <div className="flex gap-2">
-                  <TextInput
-                    type="number"
-                    placeholder="0"
-                    value={launchGuardDelay}
-                    setValue={setLaunchGuardDelay}
-                    label={t("settings.core.launchGuard.seconds")}
-                    disabled={!canWriteCoreSettings || !launchGuardEnabled}
-                    className="max-w-[calc(50%-0.25rem)]"
-                  />
-                </div>
-              </fieldset>
-            </div>
-          </Card>
-        </section>
+        </div>
       </div>
     </PageFrame>
   );

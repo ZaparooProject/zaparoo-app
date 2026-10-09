@@ -588,6 +588,40 @@
     border-bottom: 1px solid var(--edge-default);
     box-shadow: inset 0 1px 0 var(--material-highlight);
   }
+  .page-frame-content-wide-header .page-header-shell {
+    position: absolute;
+  }
+  .page-header-title-inset {
+    padding-left: 4px;
+  }
+  .page-header-content-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .page-header-leading {
+    display: flex;
+    flex-shrink: 0;
+  }
+  .page-header-parent {
+    display: none;
+  }
+  .page-parent-link {
+    display: inline-flex;
+    min-height: 3rem;
+    align-items: center;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+  }
+  .page-parent-link:hover {
+    color: var(--text-primary);
+    text-decoration: underline;
+  }
+  .page-parent-link:focus-visible {
+    outline: 2px solid var(--interaction);
+    outline-offset: 2px;
+  }
   .wui-header-button {
     position: relative;
     isolation: isolate;
@@ -673,7 +707,9 @@
   }
   /* Persistent app navigation adapts the shared elevated header material. */
   .bottom-nav-shell {
-    height: calc(var(--bottom-nav-base-height) + var(--bottom-nav-safe-inset));
+    min-height: calc(
+      var(--bottom-nav-base-height) + var(--bottom-nav-safe-inset)
+    );
     padding-bottom: var(--bottom-nav-safe-inset);
     background: var(--surface-raised);
     border-top: 1px solid var(--edge-default);
@@ -681,7 +717,8 @@
   }
   .app-navigation-items,
   .app-navigation-grid {
-    height: 100%;
+    /* Keep normal dock geometry while allowing translated/zoomed labels to grow. */
+    min-height: calc(var(--bottom-nav-base-height) - 1px);
   }
   .app-navigation-grid {
     padding-right: calc(8px + var(--app-navigation-safe-right, 0px));
@@ -740,7 +777,7 @@
     }
   }
   .bottom-nav-surface {
-    height: 100%;
+    height: auto;
   }
   .bottom-nav-surface,
   .app-connection-status {
@@ -866,7 +903,8 @@
     flex-direction: column;
     gap: 1.25rem;
   }
-  .zap-controls,
+  .zap-session,
+  .zap-supporting,
   .zap-remote-slot {
     display: contents;
   }
@@ -899,6 +937,46 @@
     height: 5rem;
   }
   @media (min-width: 760px) {
+    .page-frame-content-wide-header .page-frame-scroll-with-header {
+      padding-top: calc(
+        var(--page-content-safe-top, var(--page-scroll-safe-top, 0px)) + 1rem
+      );
+    }
+    .page-frame-content-wide-header .page-header-shell {
+      position: static;
+      padding: 0;
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+    }
+    .page-frame-content-wide-header .page-header-surface {
+      max-width: none;
+      min-height: 3rem;
+      margin: 0 0 1rem;
+      background: transparent;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    .page-frame-content-wide-header .page-header-content {
+      padding: 0;
+    }
+    .page-frame-content-wide-header:not(.page-frame-workspace)
+      .page-header-surface {
+      max-width: 42rem;
+      margin-inline: auto;
+    }
+    .page-header-content-row {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+    .page-header-leading {
+      display: none;
+    }
+    .page-header-parent {
+      display: block;
+    }
+    .page-frame-content-wide-header .page-header-title-inset {
+      padding-left: 0;
+    }
     .page-frame-phone-header .page-header-shell {
       display: none;
     }
@@ -906,6 +984,23 @@
       padding-top: calc(
         var(--page-content-safe-top, var(--page-scroll-safe-top, 0px)) + 1rem
       );
+    }
+    .zap-scan-actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 12rem));
+      gap: 1rem;
+      align-items: stretch;
+    }
+    .zap-scan-actions .wui-reader-button-shell,
+    .zap-scan-actions .wui-button.w-full {
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      margin-inline: 0;
+    }
+    .zap-scan-tile {
+      min-height: 10rem;
+      aspect-ratio: 1;
     }
     .zap-playback {
       order: 0;
@@ -924,48 +1019,40 @@
     .zap-workspace {
       display: grid;
       max-width: none;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
       grid-template-areas:
-        "playback remote"
-        "tools readers"
+        "session supporting"
         "collections collections";
       align-items: start;
       gap: 1.5rem;
     }
-    .zap-workspace[data-reader-tools="false"] {
-      grid-template-areas:
-        "playback remote"
-        "readers readers"
-        "collections collections";
+    .zap-session,
+    .zap-supporting {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      gap: 1.5rem;
     }
-    .zap-workspace[data-remote-available="false"] {
-      grid-template-areas:
-        "playback playback"
-        "tools readers"
-        "collections collections";
+    .zap-session {
+      grid-area: session;
     }
-    .zap-workspace[data-reader-tools="false"][data-remote-available="false"] {
-      grid-template-areas:
-        "playback playback"
-        "readers readers"
-        "collections collections";
-    }
-    .zap-playback {
-      grid-area: playback;
+    .zap-supporting {
+      grid-area: supporting;
     }
     .zap-collections {
       grid-area: collections;
     }
-    .zap-reader-tools {
-      grid-area: tools;
-    }
-    .zap-readers {
-      grid-area: readers;
-    }
     .zap-remote-slot {
       display: block;
       min-width: 0;
-      grid-area: remote;
+    }
+    /* The action bank owns width, including nested reader/recovery wrappers. */
+    .zap-reader-tools .wui-button.w-full,
+    .zap-reader-tools .wui-reader-button-shell,
+    .zap-reader-tools .wui-reader-actions {
+      width: 100%;
+      max-width: none;
+      margin-inline: 0;
     }
     .zap-workspace[data-remote-available="false"] .zap-remote-slot {
       display: contents;
@@ -1194,6 +1281,383 @@
     }
     .page-frame-with-pane {
       --library-detail-width: calc(340px + var(--app-safe-right, 0px));
+    }
+  }
+  .library-collections {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .library-collection-links {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    min-width: 0;
+  }
+  .library-decks,
+  .library-decks-toolbar {
+    min-width: 0;
+  }
+  .library-decks-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  @media (min-width: 760px) {
+    .library-decks-toolbar {
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+    .library-decks-toolbar > :first-child {
+      min-width: 0;
+      flex: 2 1 min(100%, 14rem);
+    }
+    .library-decks-toolbar > .wui-button {
+      flex: 1 1 min(100%, 10rem);
+      margin-inline: 0;
+    }
+  }
+  @media (min-width: 1024px) {
+    .library-collections-with-decks {
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 1.5rem;
+    }
+    .library-collection-links {
+      flex: 1 1 20rem;
+      max-width: 42rem;
+    }
+    .library-collections:not(.library-collections-with-decks)
+      .library-collection-links {
+      width: 100%;
+      margin-inline: auto;
+    }
+    .library-decks {
+      flex: 3 1 30rem;
+    }
+  }
+  .library-search-workspace,
+  .deck-workspace {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .library-search-filters {
+    width: 100%;
+    max-width: 42rem;
+    align-self: center;
+  }
+  .library-search-results,
+  .deck-context,
+  .deck-items {
+    min-width: 0;
+  }
+  .library-search-filter-selectors {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .deck-workspace {
+    gap: 1rem;
+  }
+  .deck-edit-form,
+  .deck-description {
+    width: 100%;
+    max-width: 42rem;
+  }
+  .deck-context,
+  .deck-items {
+    display: contents;
+  }
+  @media (min-width: 768px) {
+    .library-search-filter-selectors {
+      flex-direction: row;
+    }
+  }
+  @media (min-width: 1024px) {
+    .library-search-workspace,
+    .deck-workspace {
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 1.5rem;
+    }
+    .library-search-filters,
+    .deck-context {
+      flex: 1 1 20rem;
+      max-width: 42rem;
+      align-self: auto;
+    }
+    .library-search-results,
+    .deck-items {
+      flex: 3 1 30rem;
+    }
+    .library-search-filter-selectors {
+      flex-direction: column;
+    }
+    .deck-context,
+    .deck-items {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+  }
+  .zapscript-input .wui-button {
+    max-width: 100%;
+    flex-wrap: wrap;
+    overflow-wrap: anywhere;
+  }
+  .playtime-status > div > div {
+    flex-wrap: wrap;
+    column-gap: 0.5rem;
+  }
+  .playtime-status > div > div > span {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+  .settings-play-main fieldset {
+    min-width: 0;
+  }
+  .settings-play-main fieldset :is(label, legend),
+  .settings-play-main h2 {
+    overflow-wrap: anywhere;
+  }
+  .media-search-workspace {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+  }
+  .media-search-filters {
+    width: 100%;
+    min-width: 0;
+    max-width: 42rem;
+    margin-inline: auto;
+  }
+  .media-search-results {
+    min-width: 0;
+    min-height: 0;
+    flex: 1;
+  }
+  .commands-workspace {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .commands-workspace > * {
+    min-width: 0;
+  }
+  @media (min-width: 760px) {
+    .commands-workspace {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+      align-items: start;
+    }
+  }
+  @media (min-width: 1024px) {
+    .media-search-workspace {
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 1.5rem;
+    }
+    .media-search-filters {
+      flex: 1 1 20rem;
+      margin-inline: 0;
+    }
+    .media-search-results {
+      flex: 3 1 30rem;
+    }
+  }
+  .create-destinations,
+  .create-search-workspace,
+  .nfc-workspace {
+    display: flex;
+    width: 100%;
+    max-width: 672px;
+    margin-inline: auto;
+    flex-direction: column;
+  }
+  .create-destinations,
+  .mapping-list-toolbar {
+    gap: 0.75rem;
+  }
+  .create-destinations > *,
+  .create-search-filters,
+  .create-search-results {
+    min-width: 0;
+  }
+  .create-search-filter-selectors {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .mapping-list-toolbar {
+    display: flex;
+    flex-direction: column;
+  }
+  .nfc-read-grid,
+  .nfc-tools-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  @media (min-width: 768px) {
+    .create-search-filter-selectors {
+      flex-direction: row;
+    }
+  }
+  @media (min-width: 760px) {
+    .create-overview-page .page-header-surface,
+    .create-search-page .page-header-surface,
+    .nfc-workspace-page .page-header-surface {
+      max-width: 672px;
+      margin-inline: auto;
+    }
+    .mapping-list-toolbar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+      align-items: end;
+    }
+    .mapping-list-toolbar .wui-button.w-full {
+      margin-inline: 0;
+    }
+  }
+  @media (min-width: 1024px) {
+    .create-overview-page .page-header-surface,
+    .create-search-page .page-header-surface,
+    .nfc-workspace-page .page-header-surface {
+      max-width: none;
+    }
+    .create-destinations {
+      display: grid;
+      max-width: none;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .create-destinations > a > .wui-card {
+      height: 100%;
+    }
+    .create-search-workspace {
+      display: grid;
+      max-width: none;
+      grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
+      align-items: start;
+      gap: 1.5rem;
+    }
+    .create-search-filter-selectors {
+      flex-direction: column;
+    }
+    .nfc-workspace {
+      max-width: none;
+    }
+    .nfc-read-grid,
+    .nfc-tools-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: start;
+      gap: 1.25rem;
+    }
+    .nfc-read-action {
+      grid-column: 1 / -1;
+    }
+  }
+  .settings-panel-stack,
+  .settings-panel-layout {
+    display: flex;
+    width: 100%;
+    max-width: 672px;
+    margin-inline: auto;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  .settings-play-main,
+  .settings-online-device,
+  .settings-online-account {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  .settings-play-profiles {
+    min-width: 0;
+  }
+  .settings-play-panels[data-profiles-available="false"]
+    .settings-play-profiles {
+    display: none;
+  }
+  .settings-overview {
+    display: flex;
+    width: 100%;
+    max-width: 672px;
+    margin-inline: auto;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  .settings-overview-context,
+  .settings-overview-destinations {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  @media (min-width: 760px) {
+    .settings-overview-page .page-header-surface,
+    .settings-panel-page .page-header-surface {
+      max-width: 672px;
+      margin-inline: auto;
+    }
+  }
+  @media (min-width: 1024px) {
+    .settings-overview-page .page-header-surface,
+    .settings-panel-page .page-header-surface {
+      max-width: none;
+    }
+    .settings-panel-stack {
+      max-width: none;
+    }
+    .settings-panel-layout {
+      display: grid;
+      max-width: none;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: start;
+      gap: 1.5rem;
+    }
+    .settings-reader-panels,
+    .settings-play-panels,
+    .settings-online-panels {
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    }
+    .settings-reader-controls,
+    .settings-play-main {
+      grid-column: 1;
+      grid-row: 1;
+    }
+    .settings-reader-status,
+    .settings-play-profiles {
+      grid-column: 2;
+      grid-row: 1;
+    }
+    .settings-play-panels[data-profiles-available="false"] .settings-play-main {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: start;
+    }
+    .settings-overview {
+      display: grid;
+      max-width: none;
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+      align-items: start;
+      gap: 1.5rem;
+    }
+    .settings-overview-destinations {
+      grid-column: 1;
+      grid-row: 1;
+    }
+    .settings-overview-context {
+      grid-column: 2;
+      grid-row: 1;
     }
   }
   .settings-navigation-grid {

@@ -57,6 +57,7 @@ import { useNfcWriteAvailable } from "@/hooks/useNfcWriteAvailable";
 import { useAccessibleLists } from "@/hooks/useAccessibleLists";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { PageFrame } from "@/components/PageFrame";
+import { PageParentLink } from "@/components/PageParentLink";
 import { SlideModal } from "@/components/SlideModal";
 import { MediaSearchModal } from "@/components/MediaSearchModal";
 import { DeckMarkdown } from "@/components/library/DeckMarkdown";
@@ -305,6 +306,11 @@ export function DeckDetails() {
   return (
     <>
       <PageFrame
+        layout="workspace"
+        headerMode="content-wide"
+        headerParent={
+          <PageParentLink to="/library" label={t("library.title")} />
+        }
         scrollRef={pageScrollRef}
         onSwipeBack={goBack}
         headerLeft={
@@ -384,234 +390,242 @@ export function DeckDetails() {
             }
           />
         ) : (
-          <div className="flex flex-col gap-4">
-            {editing && editable ? (
-              <div className="flex flex-col gap-4">
-                <TextInput
-                  ref={editNameRef}
-                  label={t("decks.name")}
-                  value={name}
-                  setValue={setName}
-                  maxLength={100}
-                  required
-                />
-                <DeckDescriptionInput
-                  value={description}
-                  onChange={setDescription}
-                />
-              </div>
-            ) : deck.description ? (
-              <DeckMarkdown>{deck.description}</DeckMarkdown>
-            ) : null}
-            {!editing && (
-              <ModalActionRail
-                aria-label={t("decks.actions")}
-                readerAction
-                status={
-                  writeActivity.state === "attention" ||
-                  writeActivity.state === "error" ? (
-                    <ReaderActivityStatus
-                      state={writeActivity.state}
-                      onCancel={() => void writeActivity.cancel()}
-                    />
-                  ) : undefined
-                }
-                actions={
-                  <>
-                    <Button
-                      label={t("decks.open")}
-                      icon={<ListIcon size={20} />}
-                      variant="text"
-                      layout="responsive"
-                      className="whitespace-nowrap"
-                      disabled={opening || playing || items.length === 0}
-                      disabledAppearance={
-                        opening || playing ? "busy" : "unavailable"
-                      }
-                      onClick={() => void openDeck()}
-                    />
-                    <Button
-                      label={t("decks.play")}
-                      icon={<PlayIcon size="20" />}
-                      variant="text"
-                      layout="responsive"
-                      intent="primary"
-                      className="whitespace-nowrap"
-                      disabled={opening || playing || items.length === 0}
-                      disabledAppearance={
-                        opening || playing ? "busy" : "unavailable"
-                      }
-                      onClick={() => void playDeck()}
-                    />
-                    <ReaderActivityAction
-                      state={writeActivity.state}
-                      label={t("library.writeAction")}
-                      busy={opening || playing}
-                      disabled={
-                        !writeAvailable ||
-                        opening ||
-                        playing ||
-                        writeActivity.externalWriteActive
-                      }
-                      onStart={writeDeck}
-                      onCancel={() => void writeActivity.cancel()}
-                      onRetry={() => void writeActivity.retry()}
-                    />
-                    <Button
-                      label={t("decks.share")}
-                      icon={<ShareIcon size={20} />}
-                      variant="text"
-                      layout="responsive"
-                      className="whitespace-nowrap"
-                      onClick={() => setShareOpen(true)}
-                    />
-                  </>
-                }
-              />
-            )}
-            {items.length === 0 ? (
-              <EmptyState size="compact" title={t("decks.noItems")} />
-            ) : (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                accessibility={{
-                  screenReaderInstructions: {
-                    draggable: t("decks.dragInstructions"),
-                  },
-                  announcements: {
-                    onDragStart: ({ active }) =>
-                      dragAnnouncement("dragStart", active.id),
-                    onDragOver: ({ active, over }) =>
-                      over
-                        ? dragAnnouncement("dragOver", active.id, over.id)
-                        : undefined,
-                    onDragEnd: ({ active, over }) =>
-                      dragAnnouncement(
-                        over ? "dragEnd" : "dragCancel",
-                        active.id,
-                        over?.id,
-                      ),
-                    onDragCancel: ({ active }) =>
-                      dragAnnouncement("dragCancel", active.id),
-                  },
-                }}
-                onDragStart={({ active }) => setActiveDragId(Number(active.id))}
-                onDragEnd={handleDragEnd}
-                onDragCancel={() => setActiveDragId(null)}
-              >
-                <SortableContext
-                  items={items.map(({ id }) => id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <ol className="flex flex-col">
-                    {items.map((item, index) => (
-                      <SortableDeckItemRow
-                        key={item.id}
-                        item={item}
-                        index={index}
-                        count={items.length}
-                        editable={editable && editing}
-                        busy={busy}
-                        accessibleLists={accessibleLists}
-                        onSelect={(selected) => {
-                          setSelectedItemId(selected.id);
-                          setItemDetailsOpen(true);
-                        }}
-                        onMove={moveItem}
+          <div className="deck-workspace">
+            <div className="deck-context">
+              {editing && editable ? (
+                <div className="deck-edit-form flex flex-col gap-4">
+                  <TextInput
+                    ref={editNameRef}
+                    label={t("decks.name")}
+                    value={name}
+                    setValue={setName}
+                    maxLength={100}
+                    required
+                  />
+                  <DeckDescriptionInput
+                    value={description}
+                    onChange={setDescription}
+                  />
+                </div>
+              ) : deck.description ? (
+                <div className="deck-description">
+                  <DeckMarkdown>{deck.description}</DeckMarkdown>
+                </div>
+              ) : null}
+              {!editing && (
+                <ModalActionRail
+                  aria-label={t("decks.actions")}
+                  readerAction
+                  status={
+                    writeActivity.state === "attention" ||
+                    writeActivity.state === "error" ? (
+                      <ReaderActivityStatus
+                        state={writeActivity.state}
+                        onCancel={() => void writeActivity.cancel()}
                       />
-                    ))}
-                  </ol>
-                </SortableContext>
-                <DragOverlay zIndex={40}>
-                  {activeDragItem ? (
-                    <div
-                      aria-hidden="true"
-                      className="bg-surface-raised flex min-h-14 items-center gap-1 px-1 py-3 sm:gap-2"
-                    >
-                      <span className="text-muted-foreground flex h-12 w-10 shrink-0 items-center justify-center">
-                        <GripVerticalIcon size={20} />
-                      </span>
-                      <span className="flex min-w-0 flex-1 items-center gap-3">
-                        <DeckArtwork item={activeDragItem} />
-                        <span className="min-w-0 font-medium break-words">
-                          {activeDragItem.name ||
-                            activeDragItem.cardId ||
-                            t("decks.unnamedItem")}
-                        </span>
-                      </span>
-                    </div>
-                  ) : null}
-                </DragOverlay>
-              </DndContext>
-            )}
-            {editable && !editing && items.length < MAX_DECK_ITEMS && (
-              <Button
-                label={t("decks.addMedia")}
-                icon={<PlusIcon size={20} />}
-                intent="primary"
-                className="w-full"
-                disabled={busy}
-                disabledAppearance="busy"
-                onClick={() => setMediaSearchOpen(true)}
-              />
-            )}
-            {!editing && (
-              <p className="text-muted-foreground text-sm">
-                {t("decks.items", { count: items.length })}
-              </p>
-            )}
-            {editing && editable && (
-              <div className="flex flex-col gap-2">
-                <Button
-                  label={t("save")}
-                  intent="primary"
-                  className="w-full"
-                  disabled={!name.trim() || busy}
-                  disabledAppearance={busy ? "busy" : "unavailable"}
-                  onClick={() =>
-                    void update({
-                      name: name.trim(),
-                      description: description.trim(),
-                      ...(pendingOrder?.deckId === deckId
-                        ? { items: items.map(({ id }) => ({ id })) }
-                        : {}),
-                    })
+                    ) : undefined
+                  }
+                  actions={
+                    <>
+                      <Button
+                        label={t("decks.open")}
+                        icon={<ListIcon size={20} />}
+                        variant="text"
+                        layout="responsive"
+                        className="whitespace-nowrap"
+                        disabled={opening || playing || items.length === 0}
+                        disabledAppearance={
+                          opening || playing ? "busy" : "unavailable"
+                        }
+                        onClick={() => void openDeck()}
+                      />
+                      <Button
+                        label={t("decks.play")}
+                        icon={<PlayIcon size="20" />}
+                        variant="text"
+                        layout="responsive"
+                        intent="primary"
+                        className="whitespace-nowrap"
+                        disabled={opening || playing || items.length === 0}
+                        disabledAppearance={
+                          opening || playing ? "busy" : "unavailable"
+                        }
+                        onClick={() => void playDeck()}
+                      />
+                      <ReaderActivityAction
+                        state={writeActivity.state}
+                        label={t("library.writeAction")}
+                        busy={opening || playing}
+                        disabled={
+                          !writeAvailable ||
+                          opening ||
+                          playing ||
+                          writeActivity.externalWriteActive
+                        }
+                        onStart={writeDeck}
+                        onCancel={() => void writeActivity.cancel()}
+                        onRetry={() => void writeActivity.retry()}
+                      />
+                      <Button
+                        label={t("decks.share")}
+                        icon={<ShareIcon size={20} />}
+                        variant="text"
+                        layout="responsive"
+                        className="whitespace-nowrap"
+                        onClick={() => setShareOpen(true)}
+                      />
+                    </>
                   }
                 />
-                <div className="flex gap-2">
+              )}
+            </div>
+            <div className="deck-items">
+              {items.length === 0 ? (
+                <EmptyState size="compact" title={t("decks.noItems")} />
+              ) : (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  accessibility={{
+                    screenReaderInstructions: {
+                      draggable: t("decks.dragInstructions"),
+                    },
+                    announcements: {
+                      onDragStart: ({ active }) =>
+                        dragAnnouncement("dragStart", active.id),
+                      onDragOver: ({ active, over }) =>
+                        over
+                          ? dragAnnouncement("dragOver", active.id, over.id)
+                          : undefined,
+                      onDragEnd: ({ active, over }) =>
+                        dragAnnouncement(
+                          over ? "dragEnd" : "dragCancel",
+                          active.id,
+                          over?.id,
+                        ),
+                      onDragCancel: ({ active }) =>
+                        dragAnnouncement("dragCancel", active.id),
+                    },
+                  }}
+                  onDragStart={({ active }) =>
+                    setActiveDragId(Number(active.id))
+                  }
+                  onDragEnd={handleDragEnd}
+                  onDragCancel={() => setActiveDragId(null)}
+                >
+                  <SortableContext
+                    items={items.map(({ id }) => id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <ol className="flex flex-col">
+                      {items.map((item, index) => (
+                        <SortableDeckItemRow
+                          key={item.id}
+                          item={item}
+                          index={index}
+                          count={items.length}
+                          editable={editable && editing}
+                          busy={busy}
+                          accessibleLists={accessibleLists}
+                          onSelect={(selected) => {
+                            setSelectedItemId(selected.id);
+                            setItemDetailsOpen(true);
+                          }}
+                          onMove={moveItem}
+                        />
+                      ))}
+                    </ol>
+                  </SortableContext>
+                  <DragOverlay zIndex={40}>
+                    {activeDragItem ? (
+                      <div
+                        aria-hidden="true"
+                        className="bg-surface-raised flex min-h-14 items-center gap-1 px-1 py-3 sm:gap-2"
+                      >
+                        <span className="text-muted-foreground flex h-12 w-10 shrink-0 items-center justify-center">
+                          <GripVerticalIcon size={20} />
+                        </span>
+                        <span className="flex min-w-0 flex-1 items-center gap-3">
+                          <DeckArtwork item={activeDragItem} />
+                          <span className="min-w-0 font-medium break-words">
+                            {activeDragItem.name ||
+                              activeDragItem.cardId ||
+                              t("decks.unnamedItem")}
+                          </span>
+                        </span>
+                      </div>
+                    ) : null}
+                  </DragOverlay>
+                </DndContext>
+              )}
+              {editable && !editing && items.length < MAX_DECK_ITEMS && (
+                <Button
+                  label={t("decks.addMedia")}
+                  icon={<PlusIcon size={20} />}
+                  intent="primary"
+                  className="w-full"
+                  disabled={busy}
+                  disabledAppearance="busy"
+                  onClick={() => setMediaSearchOpen(true)}
+                />
+              )}
+              {!editing && (
+                <p className="text-muted-foreground text-sm">
+                  {t("decks.items", { count: items.length })}
+                </p>
+              )}
+              {editing && editable && (
+                <div className="flex flex-col gap-2">
                   <Button
-                    label={t("nav.cancel")}
-                    variant="secondary"
-                    className="flex-1"
-                    disabled={busy}
-                    disabledAppearance="busy"
-                    onClick={cancelEdit}
+                    label={t("save")}
+                    intent="primary"
+                    className="w-full"
+                    disabled={!name.trim() || busy}
+                    disabledAppearance={busy ? "busy" : "unavailable"}
+                    onClick={() =>
+                      void update({
+                        name: name.trim(),
+                        description: description.trim(),
+                        ...(pendingOrder?.deckId === deckId
+                          ? { items: items.map(({ id }) => ({ id })) }
+                          : {}),
+                      })
+                    }
                   />
+                  <div className="flex gap-2">
+                    <Button
+                      label={t("nav.cancel")}
+                      variant="secondary"
+                      className="flex-1"
+                      disabled={busy}
+                      disabledAppearance="busy"
+                      onClick={cancelEdit}
+                    />
+                    <Button
+                      label={t("decks.delete")}
+                      icon={<Trash2Icon size={20} />}
+                      variant="outline"
+                      intent="destructive"
+                      className="flex-1"
+                      disabled={busy}
+                      disabledAppearance="busy"
+                      onClick={() => setConfirmDelete(true)}
+                    />
+                  </div>
+                </div>
+              )}
+              {!deck.owned && !deck.locked && (
+                <div className="mt-6">
                   <Button
                     label={t("decks.delete")}
-                    icon={<Trash2Icon size={20} />}
                     variant="outline"
                     intent="destructive"
-                    className="flex-1"
-                    disabled={busy}
-                    disabledAppearance="busy"
+                    className="w-full"
                     onClick={() => setConfirmDelete(true)}
                   />
                 </div>
-              </div>
-            )}
-            {!deck.owned && !deck.locked && (
-              <div className="mt-6">
-                <Button
-                  label={t("decks.delete")}
-                  variant="outline"
-                  intent="destructive"
-                  className="w-full"
-                  onClick={() => setConfirmDelete(true)}
-                />
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
       </PageFrame>

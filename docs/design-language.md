@@ -80,7 +80,7 @@ Use `PageFrame` for pages. It owns:
 
 - full-height page layout, with an opt-in supporting pane for Library
 - safe-area padding from the root-owned inset variables
-- sticky top header
+- default pinned header chrome; opt-in `headerMode="content-wide"` keeps the same heading/actions mounted inside the page scroll owner and presents them as an unframed, scrolling content row from 760px
 - primary page scroll element, retaining `page-scroll` restoration identity through resize
 - `ResponsiveContainer`
 
@@ -104,7 +104,7 @@ Common page content stacks:
   - Mapping editor, Help, Online auth flows.
 - About page: `flex flex-col gap-8` with smaller inner `gap-2` / `gap-3` groups.
 - Search form groups: `space-y-3`, with nested `flex flex-col gap-3 md:flex-row` where filters become columns on desktop.
-- NFC tabs: tab content uses `space-y-4 px-2 pt-4/pt-6`; inner NFC panels use rounded background blocks, not WUI Card.
+- NFC tabs: tab content uses `gap-4 px-2 pt-4/pt-6`; inner NFC panels use rounded background blocks, not WUI Card.
 - Modal content: `SlideModal` owns the horizontal gutter and compact title-to-body gap; selector/search body wrappers do not add another shell-level padding. Confirmation modals vary between `py-4` and `p-4` based on the existing modal being matched.
 
 Use the nearest screen’s spacing. Do not mix gap systems inside one section unless sibling code does.
@@ -121,11 +121,16 @@ Subpages use:
 
 Root tab pages can omit the back button and use a left-aligned title or existing branded content. Visible header controls use the same 8px mobile chrome inset as bottom navigation rather than the 16px page-content gutter. On phone Home, keep the compact logo left and group the content-sized device status control directly beside History on the right. Both controls use the same header-button face; the status control must not grow to consume remaining header space. Wide Home omits this duplicate header. Sidebar/tablet chrome owns branding; navigation exposes Devices under Settings and separate scan/play history destinations under Zap. The page heading remains mounted for route focus and announcements.
 
+Zap Scan history and Play history use content-wide scrolling titles/actions
+with a quiet real parent link to Zap. Phone retains pinned Back/Refresh controls.
+Chronological play sessions remain distinct from deduplicated phone Played and
+Library Recently played collections.
+
 ### Adaptive navigation and floating app chrome
 
 `BottomNav` retains phone tab-return/reselect behavior; `AdaptiveNavigation` and `SidebarNavigation` provide a purpose-built hierarchy for wider contexts, inspired by zaparoo.com's mobile disclosure navigation:
 
-- below 760 CSS px: existing 64px bottom dock plus bottom safe inset, with four destinations, uppercase 12px labels, and recessed active tab
+- below 760 CSS px: 64px-minimum bottom dock plus bottom safe inset, with four destinations, uppercase 12px labels, and recessed active tab. Normal-size geometry stays 64px; translated/enlarged captions may grow the dock, with measured page clearance following its actual height
 - 760–1279 CSS px: compact top bar with menu control and branding; the menu opens the same labeled hierarchy in a side drawer rather than a phone-style icon rail
 - from 1280 CSS px: persistent 256px sidebar plus left safe inset
 - parent labels link to section roots. Independent chevrons expand/collapse child destinations without navigating. The current branch opens on navigation; other expanded branches stay as chosen
@@ -261,6 +266,8 @@ Real use:
 - Device rows/history entries via `DeviceRow`
 - Core outdated notice with warning border/background overrides
 
+Long translated headings/labels wrap within their panel. Connection/device rows and Create destinations wrap according to available width and text size; do not shrink targets or hide meaningful text to force a single line.
+
 Settings forms use one shared raised Card per functional section, not per control. Headings, related status, fields, toggles, and section actions belong inside the same panel; do not nest raised Cards. Simple forms such as Accessibility, Language & Region, Advanced, and Device Detail use one panel without inventing an extra heading. Readers separates reader status from controls; Play Controls preserves its named groups; Manage Media has Database and Metadata scraper panels; Online groups account, connected-device, features, and Warp sections, including the signed-out account entry.
 
 ### ToggleSwitch
@@ -269,7 +276,7 @@ Use `ToggleSwitch` for boolean settings.
 
 Pattern:
 
-- row: label left, switch right
+- row: label left, switch right when space permits. Opt into `reflow` for narrow/enlarged-text panels so label/help and switch can wrap without clipping or shrinking targets
 - grouped rows live on a raised settings panel; no individual card wrapper
 - 48px hit region around a 44×24 track and a 20px physical thumb; the raised cap lifts above the track while its lower 3D edge stays inside, with equal end clearance in either state. A semantic thumb border supplies contrast in light mode only; geometry scales with text zoom
 - label can include `SettingHelp`
@@ -387,7 +394,21 @@ Examples:
 - `settings.readers.tsx`: reader status and controls in separate panels, `gap-5` between panels
 - `settings.play-controls.tsx`: grouped settings; inner field groups must match within page
 
+### Adaptive Settings pages
+
+All Settings forms and related Devices, device detail, Logs, Help, About, and Licenses use `headerMode="content-wide"`. From 760px their title and actions scroll with content; a quiet translated `PageParentLink` sits above the title instead of the phone back icon. Device detail links to Devices; other Settings pages link to Settings. Phone keeps the existing back button and swipe behavior. Links preserve parent scroll intent and embedded `/app/` routing. Title/actions/dialogs are not duplicated or remounted on resize.
+
+- Accessibility, Language & Region, Advanced, device detail, Help, About, Licenses, and signed-out Online remain bounded forms/reference pages. Do not stretch controls or document text across the whole workspace.
+- Manage Media uses two independent equal-width panels from 1024px: database and scraper. Existing warning remains above both panels.
+- Readers places controls in the main column and connected-reader status in the supporting column from 1024px (3:2). Phone retains reader status before controls. Native capability and purchase gates are unchanged.
+- Play Controls stacks limits and launch guard in the main column, with Profiles alongside in the supporting column from 1024px (3:2). Phone retains Profiles before limits/guard. Without Profiles support, limits/guard use equal columns. Profile editor, selection, PIN, and confirmation dialogs retain their existing owners.
+- Signed-in Online groups device/link/features in the main column and Warp/account panels in the supporting column from 1024px (3:2). Phone preserves existing order; signed-out entry and authentication remain bounded. Account actions, MFA, entitlement and linkage behavior are unchanged.
+- Logs opts into the workspace width for dense diagnostic lines; its filters, page actions, scrolling and exports retain existing behavior. Devices keeps its existing connection/management workspace.
+- All panels retain natural heights and functional grouping without additional shells. Stable wrappers own presentation only; resizing does not create mutations, reset drafts, or restart query/reader owners.
+
 ### Settings navigation rows
+
+Settings landing uses `PageFrame layout="workspace" headerMode="content-wide"` with a bounded 672px phone/tablet stack. Its title and Inbox scroll with page content from 760px, without a raised header bar; phone retains the pinned header. Sidebar owns navigation, and tablet menu chrome remains the drawer entry point. The same heading/action nodes survive width changes, preserving focus and Inbox ownership. From 1024px, existing App/Device/Support navigation groups occupy the main column and device/database/purchase context occupies the supporting column in a 3:2 split. Columns stack independently, without forced matching heights or extra enclosing cards. Phone order stays context before destinations; resizing changes only presentation and preserves the shared device sheet, manual drafts, and route focus. Simple settings forms retain the default bounded PageFrame; this overview does not globally widen every settings page.
 
 The Settings index is a grid of outline-button tiles in `settings-navigation-grid`: each tile is a `site-button site-button-outline` with a muted leading icon and label, and status tiles span the full row. Do not turn the index back into a list of rows.
 
@@ -487,7 +508,7 @@ Selector modal pattern:
 - category tabs/accordion where relevant
 - search and category controls participate in normal modal scrolling rather
   than sticking over list content
-- virtualized list rows
+- existing list controls; preserve accessible-list fallback in virtualized tag search
 - footer for multi-select apply/clear count
 - `BackToTop` for long lists
 
@@ -506,11 +527,12 @@ Use `SlideModal` as the default modal for app flows: bottom sheets, selectors, a
 Visual behavior:
 
 - black overlay `bg-black/60`, no blur
-- bottom sheet on mobile, centered max width on desktop
-- content-sized by default and capped at 80% of viewport height
-- fixed-height selector/search requests are still capped at 80%
+- bottom sheet below 760 CSS px; centered floating dialog from 760px, with a 16px gutter inside all safe viewport edges
+- default dialogs remain bounded to 42rem (672px at default text size); only media search and command chooser opt into `layout="workspace"` for up to 60rem
+- content-sized by default and capped at 80% of viewport height and available safe viewport space; keyboard/notch insets participate in floating-dialog bounds and centering
+- fixed-height selector/search requests cannot exceed those caps
 - opaque raised surface with semantic border and a material highlight
-- 8px upper corners; 16px shell gutter matching page content. Modal body
+- 8px upper corners on sheets, 8px corners on floating dialogs; 16px shell gutter matching page content. Modal body
   wrappers do not add a second horizontal gutter; padding inside rows, cards,
   and fields remains component-owned
 - header, scrollable body, and persistent footer form distinct zones
@@ -518,8 +540,17 @@ Visual behavior:
 - `text-lg font-semibold` title, centered on mobile and left-aligned from `sm`;
   compact 8px title-to-body spacing, drag handle, and desktop close action;
   the drag handle and close button keep 48px hit areas around their smaller visuals, and focus uses the `ring` outline
-- safe-area bottom padding
+- safe-area bottom padding on edge-attached sheets; floating dialogs sit inside safe edges rather than repeating that edge padding
 - focus trap and Android back handling
+- one mounted title/body/footer tree across sheet/dialog resize; wide mode cancels any in-flight sheet drag without dismissal, and floating dialog content does not drag-to-dismiss
+
+Workspace bodies reuse existing controls and scrolling ownership. Media search
+uses intrinsic 20rem/30rem filter/result stacks from 1024px; actual available
+width and enlarged text determine wrapping. Command categories use intrinsic
+24rem tracks from 760px. Phone order, query/filter drafts, selected details,
+pending work, editor cursor and nested-selector ownership remain unchanged.
+Forms, confirmations, Profiles, pairing, and system/tag selectors stay bounded;
+do not widen them just because viewport space is available.
 
 Persistent footer behavior:
 
@@ -547,6 +578,12 @@ Do not implement one-off bottom-sheet shells.
 
 Library preserves Systems/Collections, system/folder browsing, searches, tagged collections, history, and decks. Broad browse pages use the workspace layout; forms remain bounded.
 
+- root, browse, collection, search, deck detail and deck-item editor use `headerMode="content-wide"`: title/actions scroll from 760px; phone retains pinned back/header/swipe behavior
+- quiet parent links lead to Library; deck-item editor links to its parameterized deck, preserving `/app/` base path and parent scroll intent. Folder ascent and leaving embedded search are quiet buttons, not fake route links: they retain existing session navigation, selection cleanup and Back ownership. Modified parent-link clicks do not clear current selection
+- Collections separates existing collection links and Decks into independently sized, intrinsically wrapping supporting/main stacks from 1024px. Deck filter/New deck toolbar wraps from 760px; phone ordering and unsupported-feature behavior remain
+- Library search separates bounded filters and flexible results from 1024px using 20rem/30rem flex bases. Available width, including space consumed by details pane and enlarged text, decides whether stacks fit side by side; neither column is squeezed merely because viewport is wide
+- deck detail uses the same independent context/items composition from 1024px, retaining original phone order, one drag/edit owner and existing contextual write/action rail. Metadata fields and description stay bounded to 42rem; standalone deck-item editor keeps the default form bound
+- both browse and shared search virtualizers measure list origin within the actual page scroller, including preceding headers/filters. Local row transforms subtract that origin; letter jumps honor measured scroll padding. Accessible browse jumps retain header clearance. Search retains its original 8px leading row space separately from page origin. Resize observers include preceding content, not only list dimensions
 - from 1100 CSS px, selected-media details occupy a separate 320px supporting pane (340px beside full sidebar); smaller windows retain the existing sheet
 - one mounted details feature and presentation host survive resize, including carousel state, contextual NFC work, and child-dialog drafts
 - pane is a labeled nonmodal region, with its own detail scroll; no backdrop, focus trap, inert background, swipe-dismiss, or modal-priority Back registration
@@ -673,9 +710,11 @@ Patterns:
 ### Adaptive Zap
 
 - Phone keeps the order above. From 760 CSS px playback leads, with reader tools/status before secondary cover rows.
-- From 1024px playback/background slots and Controls occupy equal top columns. Scan tools and Readers occupy the next row; Readers spans both columns when no scan tools exist. Without supported remote input, playback spans both columns. Covers span the workspace below. Short windows scroll; controls never shrink to fit height.
+- From 1024px use independent main/supporting stacks in a 3:2 column split: playback/background slots then scan actions in the main column; Controls then Readers in the supporting column. Shared grid rows do not push scan actions down to match the remote's height. Covers span the workspace below. Keep section heights natural, with no extra enclosing cards. Short windows scroll; controls never shrink to fit height.
+- Main/supporting wrappers stay mounted at every width and become `display: contents` below the two-column threshold so phone order stays reader-first. Layout ownership stays separate from feature/session ownership; customization editor, visibility preferences, drag handles, and arbitrary resizing are not implemented.
 - Now playing, Controls, and Readers use the same outside-card Home heading. Docked Controls owns its body material, not its section heading. Omit the Controls launcher while the pane is visible.
-- Wide scan/write controls use full-width inline captions and at least 72px height rather than the tall phone scan pad. Playback artwork expands to 96×128 CSS px at default text size, with a full-width transport bank and 64px minimum key height. Remote D-pad and secondary keys retain 64px targets; their horizontal grouping wraps when width or text size requires it.
+- From 760px scan actions form a row of equal square-ish tiles with icons above captions, matching 24px icons, and a 10rem minimum height. Tracks grow from 10rem to 12rem and wrap when space or text sizing requires it; a single capability stays one tile rather than stretching across the column. Aspect ratio is a preference, not a fixed height: translated labels and active status can grow the row. NFC retains its primary material and camera its neutral secondary material; activity feedback stays within the existing mounted control. Phone scan geometry remains unchanged.
+- The scan bank opts nested reader wrappers out of the ordinary 20rem desktop cap, not just the outer button. Queued/deep-link writes still replace scanning with the existing full-width contextual reader control and retry/cancel recovery bank; wide write controls retain inline captions and at least 72px height. Playback artwork expands to 96×128 CSS px at default text size, with a full-width transport bank and 64px minimum key height. Remote D-pad and secondary keys retain 64px targets; their horizontal grouping wraps when width or text size requires it.
 - Scan history and Play history are real Zap child routes, accessible directly at any width. Scan history shares row/copy/replay presentation with the phone History sheet. Play history lists chronological sessions, including repeated games, with cursor pagination; Library Recently played remains a deduplicated collection. Page queries are device-scoped and expose loading, offline, error/retry and unsupported-Core states. Replay requires a live target, and stale target errors are ignored.
 - Devices combines the shared connection/discovery/manual-entry flow with saved-device management and direct connection actions. At wide widths these occupy separate columns; narrow widths stack. The phone DeviceSheet hosts the same connection feature with its existing footer/focus behavior. Width changes do not restart discovery or clear address drafts.
 - One Home/session tree and one Controls controller remain mounted. Controls use the existing nonmodal pane on wide screens and the existing phone modal intent below the threshold; width alone does not open a previously closed phone modal.
@@ -687,9 +726,11 @@ Do not copy Home heading style into Settings; it is home/status-specific.
 
 ## Create, Search, and NFC flows
 
+Create destinations and shared new-deck editor use `PageFrame headerMode="content-wide"`: one title/action tree scrolls with content from 760px, while phone pinned headers/back/swipe remain. Create subpages have quiet parent links to Create; mapping editors link to Mappings. New-deck parent follows entry context (Create or Library). Preserve drafts, selected results, reader sessions and modal ownership across resizing; layout changes never start, cancel or repeat operations.
+
 ### Create landing
 
-Create index uses stacked `Card` rows:
+Create index uses bounded stacked `Card` rows below 1024px and a two-column destination grid from 1024px. Card content retains its menu-row geometry:
 
 - `flex flex-row items-center gap-3`
 - neutral inset square icon tile (decorative, not a fake blue button)
@@ -709,7 +750,7 @@ Search result rows are list rows, not cards:
 - metadata `text-sm`, muted filename when needed
 - `NextIcon` right
 
-Do not wrap search results in new cards.
+Do not wrap search results in new cards. Create search keeps its bounded filter/results stack below 1024px; from 1024px, filters occupy a 20rem supporting column alongside flexible results. Both use the same page scroll owner. Selection retains the write-focused detail modal rather than introducing another details owner.
 
 ### Recent searches
 
@@ -755,11 +796,11 @@ Mapping editor uses a plain `flex flex-col gap-4` form stack:
 - command palette uses existing `Button variant="outline"` grid/flex rows, localized category headings, and `BackToTop` for its long command list
 - clear action uses `ConfirmClearModal`
 
-Do not replace ZapScript editing with a plain `TextInput`.
+Do not replace ZapScript editing with a plain `TextInput`. Custom text, mapping and shared new-deck forms stay bounded to 672px; extra width is not a reason to split dependent fields or expand attached editing controls.
 
 ### NFC tabs
 
-NFC utilities use `TabBar` (`role="tab"`) for Read/Tools.
+NFC utilities use `TabBar` (`role="tab"`) for Read/Tools. Content stays bounded and stacked below 1024px. From 1024px, Read and Tools use two-column panel grids with natural panel heights; Read's scan/cancel control spans both columns. Same mounted controls and tab/session owner serve every width.
 
 NFC content panels use custom rounded blocks, not WUI `Card`:
 
@@ -783,6 +824,8 @@ Remote Keyboard keeps its specialized D-pad and virtual-key geometry. Remote con
 Do not copy WUI Card styling into NFC tab panels; match the NFC panel pattern.
 
 ### Mapping rows
+
+Mappings list uses workspace width. Filter and New mapping action share an intrinsically wrapping toolbar from 760px; phone retains their stacked order. List remains unframed.
 
 Mapping rows use:
 

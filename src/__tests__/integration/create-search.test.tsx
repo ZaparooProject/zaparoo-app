@@ -35,6 +35,9 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
+    Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
+      <a href={to}>{children}</a>
+    ),
     useRouter: vi.fn(() => ({ navigate: vi.fn() })),
     getRouteApi: vi.fn(() => ({
       useLoaderData: () => mockLoaderData,

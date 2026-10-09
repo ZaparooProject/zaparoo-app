@@ -47,17 +47,18 @@ export function ReadTab({ result, onScan, scanControl }: ReadTabProps) {
   const { tag, rawTag } = result?.info || { tag: null, rawTag: null };
 
   return (
-    <div className="space-y-4 px-2 pt-6">
+    <div className="nfc-read-grid px-2 pt-6">
       {/* Scan Button */}
-      {scanControl ?? (
-        <Button
-          onClick={onScan}
-          icon={<NfcIcon size={20} />}
-          label={t("create.nfc.readTab.scanTag")}
-          className="w-full"
-        />
-      )}
-
+      <div className="nfc-read-action">
+        {scanControl ?? (
+          <Button
+            onClick={onScan}
+            icon={<NfcIcon size={20} />}
+            label={t("create.nfc.readTab.scanTag")}
+            className="w-full"
+          />
+        )}
+      </div>
       {/* Basic Information Card */}
       <div className="bg-surface-raised space-y-4 rounded-lg p-4">
         <div className="flex items-center justify-between">

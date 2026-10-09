@@ -5,9 +5,14 @@ import { SettingHelp } from "@/components/wui/SettingHelp";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
 
 describe("SettingHelp", () => {
-  it.each([false, true])(
-    "does not activate a containing setting when help opens or closes (disabled: %s)",
-    async (disabled) => {
+  it.each([
+    { disabled: false, reflow: false },
+    { disabled: true, reflow: false },
+    { disabled: false, reflow: true },
+    { disabled: true, reflow: true },
+  ])(
+    "does not activate a containing setting when help opens or closes (disabled: $disabled, reflow: $reflow)",
+    async ({ disabled, reflow }) => {
       const user = userEvent.setup();
       const setValue = vi.fn();
       const onDisabledClick = vi.fn();
@@ -17,6 +22,7 @@ describe("SettingHelp", () => {
           help={<SettingHelp title="Remote control" description="Help text" />}
           value={false}
           setValue={setValue}
+          reflow={reflow}
           disabled={disabled}
           onDisabledClick={onDisabledClick}
         />,
@@ -47,36 +53,40 @@ describe("SettingHelp", () => {
       }
     },
   );
-  it("allows Escape dismissal without activating a disabled row", async () => {
-    const user = userEvent.setup();
-    const onDisabledClick = vi.fn();
-    const setValue = vi.fn();
-    render(
-      <ToggleSwitch
-        label="Reader mode"
-        value={false}
-        setValue={setValue}
-        disabled
-        onDisabledClick={onDisabledClick}
-        help={<SettingHelp title="Reader mode" description="Help text" />}
-      />,
-    );
-    const trigger = screen.getByRole("button", {
-      name: "Help for Reader mode",
-    });
-    trigger.focus();
-    await user.keyboard("{Enter}");
-    expect(screen.getByRole("dialog", { name: "Reader mode" })).toBeVisible();
-    await user.keyboard("{Escape}");
-    await waitFor(() =>
-      expect(
-        screen.queryByRole("dialog", { name: "Reader mode" }),
-      ).not.toBeInTheDocument(),
-    );
-    await waitFor(() => expect(trigger).toHaveFocus());
-    expect(onDisabledClick).not.toHaveBeenCalled();
-    expect(setValue).not.toHaveBeenCalled();
-  });
+  it.each([false, true])(
+    "allows Escape dismissal without activating a disabled row (reflow: %s)",
+    async (reflow) => {
+      const user = userEvent.setup();
+      const onDisabledClick = vi.fn();
+      const setValue = vi.fn();
+      render(
+        <ToggleSwitch
+          label="Reader mode"
+          value={false}
+          setValue={setValue}
+          disabled
+          reflow={reflow}
+          onDisabledClick={onDisabledClick}
+          help={<SettingHelp title="Reader mode" description="Help text" />}
+        />,
+      );
+      const trigger = screen.getByRole("button", {
+        name: "Help for Reader mode",
+      });
+      trigger.focus();
+      await user.keyboard("{Enter}");
+      expect(screen.getByRole("dialog", { name: "Reader mode" })).toBeVisible();
+      await user.keyboard("{Escape}");
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("dialog", { name: "Reader mode" }),
+        ).not.toBeInTheDocument(),
+      );
+      await waitFor(() => expect(trigger).toHaveFocus());
+      expect(onDisabledClick).not.toHaveBeenCalled();
+      expect(setValue).not.toHaveBeenCalled();
+    },
+  );
 
   it("should open formatted help in a slide modal and restore trigger focus", async () => {
     const user = userEvent.setup();

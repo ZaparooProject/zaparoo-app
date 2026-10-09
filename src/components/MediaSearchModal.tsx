@@ -106,6 +106,7 @@ export function MediaSearchModal(props: MediaSearchModalProps) {
         title={t("create.search.title")}
         scrollRef={scrollContainerRef}
         fixedHeight="90vh"
+        layout="workspace"
         footer={
           props.onAddCustom ? (
             <Button
@@ -117,8 +118,8 @@ export function MediaSearchModal(props: MediaSearchModalProps) {
           ) : undefined
         }
       >
-        <div className="flex min-h-0 flex-col">
-          <div className="flex flex-col gap-3">
+        <div className="media-search-workspace">
+          <div className="media-search-filters flex flex-col gap-3">
             <TextInput
               ref={inputRef}
               label={t("create.search.gameInput")}
@@ -180,7 +181,7 @@ export function MediaSearchModal(props: MediaSearchModalProps) {
             />
           </div>
 
-          <div className="min-h-0 flex-1">
+          <div className="media-search-results">
             <VirtualSearchResults
               compactEmptyState
               query={searchParams?.query || ""}

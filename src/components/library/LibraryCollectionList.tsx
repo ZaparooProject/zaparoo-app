@@ -93,11 +93,17 @@ export function LibraryCollectionList({
   );
 
   return (
-    <div className="flex flex-col gap-3">
+    <div
+      className={
+        decksFeature.available
+          ? "library-collections library-collections-with-decks"
+          : "library-collections"
+      }
+    >
       {visible.length > 0 && (
         <nav
           aria-label={t("library.collections")}
-          className="grid grid-cols-2 gap-2"
+          className="library-collection-links"
         >
           {visible.map(({ to, label, Icon, scope }) => (
             <LibraryLinkButton
@@ -113,23 +119,28 @@ export function LibraryCollectionList({
         </nav>
       )}
       {decksFeature.available && (
-        <section aria-label={t("decks.title")} className="flex flex-col gap-2">
+        <section
+          aria-label={t("decks.title")}
+          className="library-decks flex flex-col gap-2"
+        >
           <h2 className="text-lg font-semibold">{t("decks.title")}</h2>
-          <TextInput
-            type="search"
-            aria-label={t("decks.search")}
-            placeholder={t("decks.search")}
-            value={query}
-            setValue={setQuery}
-            clearable
-          />
-          <LibraryLinkButton
-            to="/library/decks/new"
-            variant="fill"
-            icon={<PlusIcon size={20} />}
-            label={t("decks.new")}
-            className="w-full"
-          />
+          <div className="library-decks-toolbar">
+            <TextInput
+              type="search"
+              aria-label={t("decks.search")}
+              placeholder={t("decks.search")}
+              value={query}
+              setValue={setQuery}
+              clearable
+            />
+            <LibraryLinkButton
+              to="/library/decks/new"
+              variant="fill"
+              icon={<PlusIcon size={20} />}
+              label={t("decks.new")}
+              className="w-full"
+            />
+          </div>
           {decksQuery.isError ? (
             <EmptyState
               size="compact"

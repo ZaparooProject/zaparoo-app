@@ -16,6 +16,9 @@ import { AddDeckItem } from "@/routes/library.decks.$deckId_.add";
 const { navigate } = vi.hoisted(() => ({ navigate: vi.fn() }));
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
+  Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
+    <a href={to}>{children}</a>
+  ),
   createFileRoute: () => (options: object) => ({
     ...options,
     useParams: () => ({ deckId: "0k3v9x2rq7bm" }),

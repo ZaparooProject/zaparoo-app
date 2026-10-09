@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Card } from "@/components/wui/Card";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { PageFrame } from "@/components/PageFrame";
+import { PageParentLink } from "@/components/PageParentLink";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import i18n from "@/i18n";
 import { BackIcon } from "@/lib/images";
@@ -70,6 +71,10 @@ export function LanguageRegionSettings() {
 
   return (
     <PageFrame
+      headerMode="content-wide"
+      headerParent={
+        <PageParentLink to="/settings" label={t("settings.title")} />
+      }
       onSwipeBack={goBack}
       headerLeft={
         <HeaderButton

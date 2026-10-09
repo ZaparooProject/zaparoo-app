@@ -22,6 +22,7 @@ import { DelayedLoading } from "@/components/DelayedLoading.tsx";
 import { Button } from "@/components/wui/Button.tsx";
 import { EmptyState } from "@/components/wui/EmptyState.tsx";
 import { useInitialPageScrollOffset } from "@/lib/pageScrollContext";
+import { useVirtualListScrollMargin } from "@/hooks/useVirtualListScrollMargin";
 import { useVirtualInfiniteSearch } from "@/hooks/useVirtualInfiniteSearch";
 import { TagList } from "@/components/TagList.tsx";
 import { useSystemNameResolver } from "@/hooks/useSystemName";
@@ -111,14 +112,26 @@ export function VirtualSearchResults({
   );
 
   const initialScrollOffset = useInitialPageScrollOffset();
+  const { listRef, scrollMargin, scrollPaddingStart } =
+    useVirtualListScrollMargin(scrollContainerRef);
+  const setAccessibleListRef = useCallback(
+    (element: HTMLDivElement | null) => {
+      accessibleResultsRef.current = element;
+      listRef(element);
+    },
+    [listRef],
+  );
   // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: totalCount + (hasNextPage ? 1 : 0), // +1 for loading sentinel
     getScrollElement: () => scrollContainerRef?.current || null,
     estimateSize,
     overscan: 5,
-    scrollMargin: 8,
+    scrollMargin,
+    scrollPaddingStart,
     initialOffset: initialScrollOffset,
+    // Leading row space belongs to the list, not its page-scroll origin.
+    paddingStart: 8,
     gap: 8,
   });
 
@@ -308,7 +321,7 @@ export function VirtualSearchResults({
       </div>
 
       {accessibleLists ? (
-        <div ref={accessibleResultsRef} data-testid="search-results">
+        <div ref={setAccessibleListRef} data-testid="search-results">
           <div role="list" aria-label={t("create.search.resultsLabel")}>
             {allItems.map((game, index) => (
               <div
@@ -353,6 +366,7 @@ export function VirtualSearchResults({
         </div>
       ) : (
         <div
+          ref={listRef}
           role="list"
           aria-label={t("create.search.resultsLabel")}
           style={{
@@ -374,7 +388,7 @@ export function VirtualSearchResults({
                   style={{
                     position: "absolute",
                     width: "100%",
-                    transform: `translateY(${virtualItem.start}px)`,
+                    transform: `translateY(${virtualItem.start - scrollMargin}px)`,
                   }}
                 >
                   <DelayedLoading delayMs={loadingDelayMs}>
@@ -405,7 +419,7 @@ export function VirtualSearchResults({
                   top: 0,
                   left: 0,
                   width: "100%",
-                  transform: `translateY(${virtualItem.start}px)`,
+                  transform: `translateY(${virtualItem.start - scrollMargin}px)`,
                 }}
               >
                 <SearchResultItem

@@ -17,10 +17,18 @@ import { useSlideModalManager } from "@/hooks/useSlideModalManager";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useScreenReaderEnabled } from "@/hooks/useScreenReaderEnabled";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { SkipLink } from "@/components/SkipLink";
 
 const OPEN_TRANSFORM = "translate3d(0, 0, 0)";
 const CLOSED_TRANSFORM = "translate3d(0, 100%, 0)";
+
+// Individual CSS translate is unavailable in Core's legacy browser targets.
+function modalTransform(open: boolean, wide: boolean): string {
+  if (!wide) return open ? OPEN_TRANSFORM : CLOSED_TRANSFORM;
+  return open ? "translate3d(-50%, -50%, 0)" : "translate3d(-50%, 50%, 0)";
+}
+
 const DRAG_TRANSITION = "transform 0.2s ease-in-out";
 const DRAG_START_THRESHOLD_PX = 8;
 const DRAG_CLOSE_THRESHOLD = 0.25;
@@ -100,6 +108,8 @@ export function SlideModal(props: {
   /** Whether overlay, Escape, back, close buttons, and drag may dismiss the modal. */
   dismissible?: boolean;
   fixedHeight?: string;
+  /** Complex search/chooser workspaces can use more width; forms stay bounded. */
+  layout?: "default" | "workspace";
   scrollClassName?: string;
   /** Opt-in nonmodal supporting region; feature content stays mounted through resize. */
   presentation?: "modal" | "pane";
@@ -120,6 +130,7 @@ export function SlideModal(props: {
   const wasOpenRef = useRef(props.isOpen);
   const dismissible = props.dismissible ?? true;
   const isPane = props.presentation === "pane";
+  const wideDialog = useMediaQuery("(min-width: 760px)");
   const isSection = isPane && props.paneLayout === "section";
   const subscribe = useCallback(
     (listener: () => void) => modalManager.subscribe?.(listener) ?? (() => {}),
@@ -179,10 +190,10 @@ export function SlideModal(props: {
       return;
     }
 
-    if (!surfaceOpen || screenReaderEnabled || !dismissible) {
+    if (!surfaceOpen || screenReaderEnabled || !dismissible || wideDialog) {
       modal.removeAttribute("data-dragging");
       modal.style.transition = DRAG_TRANSITION;
-      modal.style.transform = surfaceOpen ? OPEN_TRANSFORM : CLOSED_TRANSFORM;
+      modal.style.transform = modalTransform(surfaceOpen, wideDialog);
       return;
     }
 
@@ -333,7 +344,14 @@ export function SlideModal(props: {
       modal.removeEventListener("touchend", handleTouchEnd);
       modal.removeEventListener("touchcancel", handleTouchCancel);
     };
-  }, [surfaceOpen, isPane, screenReaderEnabled, dismissible, impact]);
+  }, [
+    surfaceOpen,
+    isPane,
+    screenReaderEnabled,
+    dismissible,
+    wideDialog,
+    impact,
+  ]);
 
   // Handle Android back button
   useBackButtonHandler(
@@ -373,7 +391,11 @@ export function SlideModal(props: {
   const safeInsets = useStatusStore((state) => state.safeInsets) ?? {
     top: "0px",
     bottom: "0px",
+    left: "0px",
+    right: "0px",
   };
+  const safeLeft = safeInsets.left ?? "0px";
+  const safeRight = safeInsets.right ?? "0px";
 
   return (
     <>
@@ -430,16 +452,16 @@ export function SlideModal(props: {
                 "z-50",
                 "left-0", // Mobile: align to left edge
                 "sm:left-1/2", // Desktop: center horizontally
-                "sm:-translate-x-1/2", // Desktop: translate back to center
+                { "sm:-translate-x-1/2": !wideDialog }, // Floating dialogs center through transform.
                 "w-full",
                 "max-w-none", // Mobile: full width
                 "sm:max-w-2xl", // Desktop: responsive width (672px)
                 "flex",
                 "flex-col",
-                "rounded-t-lg",
+                wideDialog ? "rounded-lg" : "rounded-t-lg",
                 "shadow-[0_-8px_32px_var(--material-shadow),inset_0_1px_0_var(--material-highlight)]",
                 "border",
-                "border-b-0",
+                { "border-b-0": !wideDialog },
                 "border-solid",
                 "border-border",
                 "bg-surface-raised",
@@ -457,14 +479,33 @@ export function SlideModal(props: {
                 transition: "none",
               }
             : {
-                bottom: 0,
-                transform: surfaceOpen ? OPEN_TRANSFORM : CLOSED_TRANSFORM,
+                bottom: wideDialog ? undefined : 0,
+                top: wideDialog
+                  ? `calc((100% + ${safeInsets.top} - ${safeInsets.bottom}) / 2)`
+                  : undefined,
+                left: wideDialog
+                  ? `calc((100% + ${safeLeft} - ${safeRight}) / 2)`
+                  : undefined,
+                width: wideDialog
+                  ? `calc(100% - ${safeLeft} - ${safeRight} - 2rem)`
+                  : undefined,
+                maxWidth:
+                  wideDialog && props.layout === "workspace"
+                    ? "60rem"
+                    : undefined,
+                // Closed floating dialogs cannot rely on translating below the viewport.
+                visibility: wideDialog && !surfaceOpen ? "hidden" : undefined,
+                transform: modalTransform(surfaceOpen, wideDialog),
                 transition: DRAG_TRANSITION,
                 willChange: surfaceOpen ? "transform" : "auto",
                 pointerEvents: surfaceOpen ? "auto" : "none",
                 boxShadow: surfaceOpen ? undefined : "none",
-                paddingBottom: `calc(${safeInsets.bottom} + 1rem)`,
-                maxHeight: `min(80vh, calc(100vh - ${safeInsets.top} - 75px))`,
+                paddingBottom: wideDialog
+                  ? "1rem"
+                  : `calc(${safeInsets.bottom} + 1rem)`,
+                maxHeight: wideDialog
+                  ? `min(80vh, calc(100vh - ${safeInsets.top} - ${safeInsets.bottom} - 2rem))`
+                  : `min(80vh, calc(100vh - ${safeInsets.top} - 75px))`,
                 ...(props.fixedHeight ? { height: props.fixedHeight } : {}),
               }
         }
@@ -496,8 +537,8 @@ export function SlideModal(props: {
               tabIndex={-1}
               className={
                 isSection
-                  ? "text-muted-foreground mb-2 font-bold capitalize outline-none"
-                  : "text-center text-lg leading-snug font-semibold tracking-tight outline-none sm:pr-10 sm:text-left"
+                  ? "text-muted-foreground mb-2 font-bold wrap-anywhere capitalize outline-none"
+                  : "text-center text-lg leading-snug font-semibold tracking-tight wrap-anywhere outline-none sm:pr-10 sm:text-left"
               }
             >
               {props.title}

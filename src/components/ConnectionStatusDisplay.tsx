@@ -134,7 +134,7 @@ export function ConnectionStatusDisplay({
   const showUnlock = uiState === "connected" && encryptionState === "plaintext";
 
   return (
-    <div className={`flex items-center gap-3 ${className || ""}`}>
+    <div className={`flex flex-wrap items-center gap-3 ${className || ""}`}>
       {/* Icon */}
       <div
         className={`shrink-0 px-1.5 ${config.iconColorClass}`}
@@ -144,7 +144,7 @@ export function ConnectionStatusDisplay({
       </div>
 
       {/* Text content */}
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-[1_1_8rem] wrap-anywhere">
         <h2
           id={headingId}
           className="flex flex-wrap items-center gap-x-1.5 font-medium"

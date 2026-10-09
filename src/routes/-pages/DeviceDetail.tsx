@@ -17,6 +17,7 @@ import {
 } from "@/lib/devices/deviceRegistry";
 import { invalidateLibraryImageCache } from "@/lib/libraryImageCache";
 import { PageFrame } from "@/components/PageFrame";
+import { PageParentLink } from "@/components/PageParentLink";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { Card } from "@/components/wui/Card";
 import { Button } from "@/components/wui/Button";
@@ -128,6 +129,13 @@ export function DeviceDetail() {
 
   return (
     <PageFrame
+      headerMode="content-wide"
+      headerParent={
+        <PageParentLink
+          to="/settings/devices"
+          label={t("scan.deviceSheetAllDevices")}
+        />
+      }
       onSwipeBack={goBack}
       headerLeft={
         <HeaderButton

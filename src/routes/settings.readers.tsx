@@ -7,6 +7,7 @@ import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
 import { SettingHelp } from "@/components/wui/SettingHelp";
 import { useStatusStore, ConnectionState } from "@/lib/store";
 import { PageFrame } from "@/components/PageFrame";
+import { PageParentLink } from "@/components/PageParentLink";
 import {
   usePreferencesStore,
   selectAppSettings,
@@ -131,6 +132,12 @@ export function ReadersSettings() {
 
   return (
     <PageFrame
+      layout="workspace"
+      className="settings-panel-page wrap-anywhere"
+      headerMode="content-wide"
+      headerParent={
+        <PageParentLink to="/settings" label={t("settings.title")} />
+      }
       onSwipeBack={goBack}
       headerLeft={
         <HeaderButton
@@ -145,10 +152,10 @@ export function ReadersSettings() {
         </h1>
       }
     >
-      <div className="flex flex-col gap-5">
+      <div className="settings-panel-layout settings-reader-panels">
         {/* Readers List */}
         <GatedFeature featureId="readers">
-          <Card>
+          <Card className="settings-reader-status">
             <h2 className="text-foreground text-lg font-semibold">
               {t("settings.readers.connectedReaders")}
             </h2>
@@ -160,6 +167,7 @@ export function ReadersSettings() {
               ) : readersData?.readers && readersData.readers.length > 0 ? (
                 sortReaders(readersData.readers).map((reader) => (
                   <ReaderStatusRow
+                    reflow
                     key={reader.readerId ?? reader.id}
                     name={reader.info || reader.id}
                     connected={reader.connected}
@@ -175,10 +183,10 @@ export function ReadersSettings() {
           </Card>
         </GatedFeature>
 
-        <Card className="flex flex-col gap-4">
+        <Card className="settings-reader-controls flex flex-col gap-4">
           {/* Scan Mode - from Core */}
           <div className="py-2">
-            <span className="mb-2 flex items-center text-sm font-medium">
+            <span className="mb-2 flex flex-wrap items-center text-sm font-medium">
               <span id="scan-mode-label">{t("settings.readers.scanMode")}</span>
               <SettingHelp
                 title={t("settings.readers.scanMode")}
@@ -211,6 +219,7 @@ export function ReadersSettings() {
 
           {/* Continuous Scan - from App (always shown) */}
           <ToggleSwitch
+            reflow
             label={t("settings.readers.continuousScan")}
             help={
               <SettingHelp
@@ -225,6 +234,7 @@ export function ReadersSettings() {
           {/* Keep Screen On - from App (native only) */}
           {appUi.enabled && (
             <ToggleSwitch
+              reflow
               label={t("settings.readers.keepScreenAwake")}
               help={
                 <SettingHelp
@@ -240,6 +250,7 @@ export function ReadersSettings() {
           {/* Launch On Scan - from App (native only, Pro feature) */}
           {appUi.enabled && connected && (
             <ToggleSwitch
+              reflow
               label={t("settings.readers.launchOnScan")}
               help={
                 <SettingHelp
@@ -261,6 +272,7 @@ export function ReadersSettings() {
           {/* Prefer External Reader - from App (native + NFC) */}
           {appUi.nfc && (
             <ToggleSwitch
+              reflow
               label={t("settings.readers.preferExternalReader")}
               help={
                 <SettingHelp
@@ -276,6 +288,7 @@ export function ReadersSettings() {
           {/* Shake to Launch - from App (native + accelerometer, Pro feature) */}
           {appUi.accelerometer && (
             <ToggleSwitch
+              reflow
               label={t("settings.readers.shakeToLaunch")}
               help={
                 <SettingHelp
@@ -354,6 +367,7 @@ export function ReadersSettings() {
 
           {/* Audio Feedback - from Core */}
           <ToggleSwitch
+            reflow
             label={t("settings.readers.audioFeedback")}
             help={
               <SettingHelp
@@ -369,6 +383,7 @@ export function ReadersSettings() {
 
           {/* Auto Detect Readers - from Core */}
           <ToggleSwitch
+            reflow
             label={t("settings.readers.autoDetectReaders")}
             help={
               <SettingHelp
