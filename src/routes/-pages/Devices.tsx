@@ -22,7 +22,6 @@ import { invalidateLibraryImageCache } from "@/lib/libraryImageCache";
 import { logger } from "@/lib/logger";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 import { PageFrame } from "@/components/PageFrame";
-import { PageParentLink } from "@/components/PageParentLink";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
@@ -247,9 +246,7 @@ export function Devices() {
     <PageFrame
       className="wrap-anywhere"
       headerMode="content-wide"
-      headerParent={
-        <PageParentLink to="/settings" label={t("settings.title")} />
-      }
+      breadcrumbs={[{ to: "/settings", label: t("settings.title") }]}
       layout="workspace"
       onSwipeBack={goBack}
       headerLeft={

@@ -1,5 +1,11 @@
 import { create } from "zustand";
 
+declare module "@tanstack/history" {
+  interface HistoryState {
+    appNavigationSource?: "desktop-sidebar";
+  }
+}
+
 export type BottomTabId = "zap" | "library" | "create" | "settings";
 
 export interface SessionSearchParams {

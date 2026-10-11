@@ -123,7 +123,7 @@ export function ModalActionRail({
         )}
       </div>
       {primaryAction && (
-        <div className="min-w-0 [&>*]:min-h-12 [&>*]:w-full [&>*]:max-w-none">
+        <div className="min-w-0 [&>*]:min-h-12 [&>*]:w-full md:[&>*]:mx-auto md:[&>*]:max-w-[20rem]">
           {primaryAction}
         </div>
       )}

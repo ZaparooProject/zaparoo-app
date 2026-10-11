@@ -275,10 +275,14 @@ describe("LibraryMediaDetailsModal", () => {
     const success = vi.spyOn(toast, "success");
     renderModal({ entry: { ...ENTRY, zapScript: "@SNES/Super Game" } });
     const user = userEvent.setup();
+    const overlay = screen.getByTestId("modal-overlay");
+    expect(overlay.style.opacity).toBe("1");
     await user.click(
       await screen.findByRole("button", { name: "decks.addAction" }),
     );
     let picker = screen.getByRole("dialog", { name: "decks.addAction" });
+    expect(screen.getByTestId("modal-overlay")).toBe(overlay);
+    expect(overlay.style.opacity).toBe("1");
     expect(
       within(picker).queryByRole("textbox", { name: "decks.name" }),
     ).not.toBeInTheDocument();
@@ -291,11 +295,15 @@ describe("LibraryMediaDetailsModal", () => {
     ).toBeInTheDocument();
     await user.click(within(picker).getByRole("button", { name: "decks.new" }));
     let form = screen.getByRole("dialog", { name: "decks.new" });
+    expect(screen.getByTestId("modal-overlay")).toBe(overlay);
+    expect(overlay.style.opacity).toBe("1");
     expect(
       within(form).getByRole("button", { name: "decks.createAndAdd" }),
     ).toBeDisabled();
     await user.click(within(form).getByRole("button", { name: "nav.cancel" }));
     picker = screen.getByRole("dialog", { name: "decks.addAction" });
+    expect(screen.getByTestId("modal-overlay")).toBe(overlay);
+    expect(overlay.style.opacity).toBe("1");
     expect(
       within(picker).getByRole("searchbox", { name: "decks.search" }),
     ).toHaveValue("Weekend");
@@ -325,10 +333,22 @@ describe("LibraryMediaDetailsModal", () => {
       screen.getByRole("dialog", { name: "Super Game" }),
     ).toBeInTheDocument();
     expect(success).toHaveBeenCalledWith("decks.added");
+    expect(screen.getByTestId("modal-overlay")).toBe(overlay);
+    expect(overlay.style.opacity).toBe("1");
   });
 
   it("should render persistent actions and curated game metadata", async () => {
     const user = userEvent.setup();
+    vi.mocked(CoreAPI.mediaMeta).mockResolvedValue({
+      ...META_RESPONSE,
+      media: {
+        ...META_RESPONSE.media,
+        tags: [
+          ...(META_RESPONSE.media.tags ?? []),
+          { type: "lang", tag: "en" },
+        ],
+      },
+    });
     renderModal();
 
     expect(
@@ -340,11 +360,13 @@ describe("LibraryMediaDetailsModal", () => {
     expect(
       await screen.findByText("A platform adventure."),
     ).toBeInTheDocument();
-    expect(screen.getByText("SNES • 1994 • library.playerCount")).toBeVisible();
+    expect(screen.getByText("SNES")).toBeVisible();
+    expect(screen.getByText("1994")).toBeVisible();
+    expect(screen.getByText("library.playerCount")).toBeVisible();
     expect(screen.getByText("library.developer")).toBeVisible();
     expect(screen.getByText("Studio")).toBeVisible();
     expect(
-      screen.getByText("Special Edition").closest("[aria-label]"),
+      screen.getByText("edition:Special Edition").closest("[aria-label]"),
     ).toHaveAttribute("aria-label", "edition special");
     expect(screen.getByText("library.publisher")).toBeVisible();
     expect(screen.getByText("Publisher")).toBeVisible();
@@ -354,6 +376,10 @@ describe("LibraryMediaDetailsModal", () => {
     expect(screen.getByText("0.8")).toBeVisible();
     expect(screen.getByText("library.tags")).toBeVisible();
     expect(screen.getAllByLabelText("region us")).toHaveLength(1);
+    expect(
+      screen.getByText("region:library.tagValues.region.us"),
+    ).toBeVisible();
+    expect(screen.getByText("lang:library.tagValues.lang.en")).toBeVisible();
     expect(screen.queryByText("super-game-alt")).not.toBeInTheDocument();
     expect(screen.queryByText("/roms/SNES")).not.toBeInTheDocument();
     expect(

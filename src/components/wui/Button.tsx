@@ -113,7 +113,7 @@ export const Button = memo(
           {
             "flex-row gap-2": !props.readerStatus && layout === "inline",
             "flex-col gap-1": !!props.readerStatus || layout === "stacked",
-            "flex-col gap-1 sm:flex-row sm:gap-2":
+            "wui-button-responsive":
               !props.readerStatus && layout === "responsive",
             "cursor-pointer": !props.disabled && !props.decorative,
             "px-4 py-2": props.label && size === "sm" && layout === "inline",
@@ -143,8 +143,7 @@ export const Button = memo(
                 {
                   "flex-row gap-2": layout === "inline",
                   "flex-col gap-1": layout === "stacked",
-                  "flex-col gap-1 sm:flex-row sm:gap-2":
-                    layout === "responsive",
+                  "wui-button-responsive": layout === "responsive",
                 },
               )}
             >

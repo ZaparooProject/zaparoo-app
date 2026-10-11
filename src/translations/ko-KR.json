@@ -49,7 +49,8 @@
       "settingsWithNotifications_one": "설정, 알림 {{count}}개",
       "settingsWithNotifications_other": "설정, 알림 {{count}}개",
       "run": "실행",
-      "mainNavigation": "주 탐색"
+      "mainNavigation": "주 탐색",
+      "breadcrumbs": "탐색 경로"
     },
     "appBadge": {
       "title": "앱 아이콘 배지",
@@ -297,7 +298,61 @@
       "searchTitle": "게임 검색",
       "searchInput": "게임 제목",
       "searchPlaceholder": "게임 제목 입력",
-      "searchAction": "검색"
+      "searchAction": "검색",
+      "tagValues": {
+        "region": {
+          "world": "Worldwide",
+          "us": "United States",
+          "eu": "Europe",
+          "jp": "Japan",
+          "au": "Australia",
+          "kr": "South Korea",
+          "cn": "China",
+          "tw": "Taiwan",
+          "hk": "Hong Kong",
+          "br": "Brazil",
+          "ca": "Canada",
+          "uk": "United Kingdom",
+          "fr": "France",
+          "de": "Germany",
+          "it": "Italy",
+          "es": "Spain",
+          "scandinavia": "Scandinavia",
+          "asia": "Asia"
+        },
+        "lang": {
+          "en": "English",
+          "fr": "French",
+          "de": "German",
+          "es": "Spanish",
+          "it": "Italian",
+          "ja": "Japanese",
+          "ko": "Korean",
+          "zh": "Chinese",
+          "pt": "Portuguese",
+          "nl": "Dutch",
+          "sv": "Swedish",
+          "no": "Norwegian",
+          "da": "Danish",
+          "fi": "Finnish",
+          "pl": "Polish",
+          "ru": "Russian",
+          "ar": "Arabic",
+          "en-US": "English (US)",
+          "en-GB": "English (UK)"
+        },
+        "edition": {
+          "directorsCut": "Director's cut",
+          "collectors": "Collector's edition",
+          "limited": "Limited edition",
+          "special": "Special edition",
+          "deluxe": "Deluxe edition",
+          "ultimate": "Ultimate edition",
+          "anniversary": "Anniversary edition",
+          "remastered": "Remastered"
+        }
+      },
+      "revisionValue": "Revision {{value}}"
     },
     "spinner": {
       "deleting": "삭제하는 중...",

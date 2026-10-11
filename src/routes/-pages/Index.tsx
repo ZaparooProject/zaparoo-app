@@ -39,6 +39,7 @@ import { NowPlayingCard } from "@/components/home/NowPlayingCard";
 import { ReaderStrip } from "@/components/home/ReaderStrip";
 import { HistoryModal } from "@/components/home/HistoryModal";
 import { LibraryMediaDetailsModal } from "@/components/library/LibraryMediaDetailsModal";
+import { useMetadataDetailsReturn } from "@/hooks/useMetadataDetailsReturn";
 import { StopConfirmModal } from "@/components/home/StopConfirmModal";
 import { RemoteKeyboardModal } from "@/components/RemoteKeyboardModal";
 import { useScanOperations } from "@/hooks/useScanOperations";
@@ -120,8 +121,18 @@ export function Index() {
     setOpen: setDeviceSheetOpen,
     shared: sharedDeviceSheet,
   } = useDeviceSheetController();
-  const [selectedCoverEntry, setSelectedCoverEntry] =
-    useState<MediaBrowseEntry | null>(null);
+  const { entry: returnedCoverEntry, forget: forgetCoverReturn } =
+    useMetadataDetailsReturn("home-covers", deviceKey);
+  const [selectedCoverEntry, setCoverEntry] = useState<MediaBrowseEntry | null>(
+    () => returnedCoverEntry,
+  );
+  const setSelectedCoverEntry = useCallback(
+    (entry: MediaBrowseEntry | null) => {
+      forgetCoverReturn();
+      setCoverEntry(entry);
+    },
+    [forgetCoverReturn],
+  );
   const [stopTarget, setStopTarget] = useState<MediaSlot | null>(null);
   const [remoteKeyboardOpen, setRemoteKeyboardOpen] = useState(false);
   const [replayingLast, setReplayingLast] = useState(false);
@@ -578,6 +589,7 @@ export function Index() {
         entry={selectedCoverEntry}
         systemId={selectedCoverEntry ? entrySystemId(selectedCoverEntry) : ""}
         deviceKey={deviceKey}
+        returnOwner="home-covers"
       />
 
       {!sharedDeviceSheet && (

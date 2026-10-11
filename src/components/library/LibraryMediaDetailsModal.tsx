@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
@@ -8,6 +15,11 @@ import {
   ListPlusIcon,
   PlusIcon,
 } from "lucide-react";
+import {
+  LibraryMetadataLink,
+  type MetadataLinkTarget,
+} from "@/components/library/LibraryMetadataLink";
+import { libraryTagDisplayLabel } from "@/lib/libraryTagLabels";
 import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { CoreAPI, logRunFailure } from "@/lib/coreApi";
 import { logger } from "@/lib/logger";
@@ -64,10 +76,11 @@ import {
 
 export function DetailRow(props: {
   label: string;
-  value: string;
+  value?: string;
+  children?: ReactNode;
   mono?: boolean;
 }) {
-  if (!props.value) return null;
+  if (!props.value && !props.children) return null;
   return (
     <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-3">
       <span className="text-muted-foreground text-sm sm:min-w-[120px]">
@@ -76,7 +89,7 @@ export function DetailRow(props: {
       <span
         className={`flex-1 break-words ${props.mono ? "font-mono text-sm" : "font-medium"}`}
       >
-        {props.value}
+        {props.children ?? props.value}
       </span>
     </div>
   );
@@ -103,7 +116,13 @@ function metadataFactLabelKey(type: LibraryDetailFactType): string {
   }
 }
 
-function TagRow(props: { label: string; tags: TagInfo[] }) {
+function TagRow(props: {
+  label: string;
+  tags: TagInfo[];
+  target: MetadataLinkTarget;
+  enabled: boolean;
+}) {
+  const { t } = useTranslation();
   if (props.tags.length === 0) return null;
   return (
     <div className="library-media-tag-row">
@@ -112,12 +131,19 @@ function TagRow(props: { label: string; tags: TagInfo[] }) {
       </span>
       <span className="flex flex-1 flex-wrap gap-1.5">
         {props.tags.map((tag, index) => (
-          <TagBadge
+          <LibraryMetadataLink
             key={`${tag.type}:${tag.tag}:${index}`}
-            type={tag.type}
-            tag={tag.tag}
-            displayTag={tag.label || tag.tag}
-          />
+            {...props.target}
+            tag={tag}
+            enabled={props.enabled}
+            label={`${props.label}: ${tag.type}:${libraryTagDisplayLabel(tag, t)}`}
+          >
+            <TagBadge
+              type={tag.type}
+              tag={tag.tag}
+              displayTag={`${tag.type}:${libraryTagDisplayLabel(tag, t)}`}
+            />
+          </LibraryMetadataLink>
         ))}
       </span>
     </div>
@@ -131,11 +157,18 @@ export function LibraryMediaDetailsModal(props: {
   systemId: string;
   deviceKey: string;
   context?: "library" | "nowPlaying";
+  returnOwner?: string;
   docked?: boolean;
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const decksFeature = useCoreFeature("decks", { requireKnownSupport: true });
+  const metadataSearchFeature = useCoreFeature("mediaTags", {
+    requireKnownSupport: true,
+  });
+  const libraryFeature = useCoreFeature("mediaLibrary", {
+    requireKnownSupport: true,
+  });
   const [deckPickerOpen, setDeckPickerOpen] = useState(false);
   const [deckSaving, setDeckSaving] = useState(false);
   const [newDeckName, setNewDeckName] = useState("");
@@ -477,18 +510,14 @@ export function LibraryMediaDetailsModal(props: {
     }
   };
 
-  const detailTagView = organizeLibraryDetailTags(
-    mergeLibraryTags(
-      entry?.disambiguatingTags ?? [],
-      metadataView?.tags ?? [],
-      entry?.tags ?? [],
-    ),
+  const detailTags = mergeLibraryTags(
+    entry?.disambiguatingTags ?? [],
+    metadataView?.tags ?? [],
+    entry?.tags ?? [],
   );
-  const factValue = (type: LibraryDetailFactType) =>
-    detailTagView.facts.find((fact) => fact.type === type)?.values.join(", ") ??
-    "";
-  const year = factValue("year");
-  const players = factValue("players");
+  const detailTagView = organizeLibraryDetailTags(detailTags);
+  const factTags = (type: LibraryDetailFactType) =>
+    detailTags.filter((tag) => tag.type.trim().toLowerCase() === type);
   const detailFacts = detailTagView.facts.filter(
     (fact) => fact.type !== "year" && fact.type !== "players",
   );
@@ -496,15 +525,23 @@ export function LibraryMediaDetailsModal(props: {
     metadata?.title.system.id || systemId,
     metadata?.title.system.name || systemId,
   );
-  const numericPlayers = Number(players);
-  const playersSummary = players
-    ? Number.isInteger(numericPlayers) && numericPlayers >= 0
-      ? t("library.playerCount", { count: numericPlayers })
-      : t("library.playersValue", { value: players })
-    : "";
-  const summaryItems = [resolvedSystemName, year, playersSummary].filter(
-    Boolean,
-  );
+  const playerLabel = (tag: TagInfo) => {
+    const value = libraryTagDisplayLabel(tag, t);
+    const count = Number(value);
+    return Number.isInteger(count) && count >= 0
+      ? t("library.playerCount", { count })
+      : t("library.playersValue", { value });
+  };
+  const linkTarget: MetadataLinkTarget | null = entry
+    ? {
+        entry,
+        systemId: metadata?.title.system.id || systemId,
+        deviceKey: props.deviceKey,
+        owner: props.returnOwner,
+      }
+    : null;
+  const canExploreTags =
+    libraryFeature.available && metadataSearchFeature.available;
   const imageType = currentImageType ?? resolvedDefaultType ?? "artwork";
   const imageAlt = t("library.imageAlt", {
     title,
@@ -638,6 +675,7 @@ export function LibraryMediaDetailsModal(props: {
                   priority="detail"
                   imageTypes={currentImageType ? [currentImageType] : undefined}
                   className="h-full w-full object-contain"
+                  loadingClassName="mx-auto max-w-[21.333rem]"
                   alt={imageAlt}
                   onTypeTag={
                     currentImageType ? undefined : rememberResolvedType
@@ -676,9 +714,37 @@ export function LibraryMediaDetailsModal(props: {
             </div>
           )}
 
-          <p className="text-muted-foreground text-center text-sm">
-            {summaryItems.join(" • ")}
-          </p>
+          {linkTarget && (
+            <div className="text-muted-foreground flex flex-wrap items-center justify-center gap-x-2 text-center text-sm">
+              <LibraryMetadataLink
+                {...linkTarget}
+                enabled={libraryFeature.available}
+                label={`${t("library.system")}: ${resolvedSystemName}`}
+              >
+                {resolvedSystemName}
+              </LibraryMetadataLink>
+              {[...factTags("year"), ...factTags("players")].map(
+                (tag, index) => (
+                  <span
+                    key={`${tag.type}:${tag.tag}:${index}`}
+                    className="inline-flex items-center gap-2"
+                  >
+                    <span aria-hidden="true">•</span>
+                    <LibraryMetadataLink
+                      {...linkTarget}
+                      enabled={canExploreTags}
+                      tag={tag}
+                      label={`${t(metadataFactLabelKey(tag.type.trim().toLowerCase() as LibraryDetailFactType))}: ${tag.type.trim().toLowerCase() === "players" ? playerLabel(tag) : libraryTagDisplayLabel(tag, t)}`}
+                    >
+                      {tag.type.trim().toLowerCase() === "players"
+                        ? playerLabel(tag)
+                        : libraryTagDisplayLabel(tag, t)}
+                    </LibraryMetadataLink>
+                  </span>
+                ),
+              )}
+            </div>
+          )}
 
           {metadataQuery.isLoading && (
             <DelayedLoading>
@@ -718,10 +784,33 @@ export function LibraryMediaDetailsModal(props: {
                 <DetailRow
                   key={fact.type}
                   label={t(metadataFactLabelKey(fact.type))}
-                  value={fact.values.join(", ")}
-                />
+                >
+                  <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+                    {factTags(fact.type).map(
+                      (tag, index) =>
+                        linkTarget && (
+                          <LibraryMetadataLink
+                            key={`${tag.type}:${tag.tag}:${index}`}
+                            {...linkTarget}
+                            tag={tag}
+                            enabled={canExploreTags}
+                            label={`${t(metadataFactLabelKey(fact.type))}: ${libraryTagDisplayLabel(tag, t)}`}
+                          >
+                            {libraryTagDisplayLabel(tag, t)}
+                          </LibraryMetadataLink>
+                        ),
+                    )}
+                  </span>
+                </DetailRow>
               ))}
-              <TagRow label={t("library.tags")} tags={detailTagView.tags} />
+              {linkTarget && (
+                <TagRow
+                  label={t("library.tags")}
+                  tags={detailTagView.tags}
+                  target={linkTarget}
+                  enabled={canExploreTags}
+                />
+              )}
             </section>
           )}
 

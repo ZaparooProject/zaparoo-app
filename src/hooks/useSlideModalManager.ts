@@ -2,9 +2,13 @@ import { createContext, useContext } from "react";
 
 export interface SlideModalRegistrationOptions {
   blocking?: boolean;
+  /** Dialog scrim; other registered surfaces retain their own app chrome. */
+  overlay?: boolean;
 }
 
 export interface SlideModalManager {
+  /** Provider renders one backdrop across accepted modal handoffs. */
+  ownsOverlay?: boolean;
   registerModal: (
     id: string,
     closeFunction: () => void,

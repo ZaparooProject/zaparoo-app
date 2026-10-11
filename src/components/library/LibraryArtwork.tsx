@@ -59,6 +59,8 @@ export function LibraryArtwork(props: {
   imageTypes?: string[];
   enabled?: boolean;
   className?: string;
+  /** Loading-only geometry; loaded artwork keeps its requested dimensions. */
+  loadingClassName?: string;
   alt?: string;
   placeholderIcon?: ReactNode;
   onTypeTag?: (typeTag: string) => void;
@@ -113,7 +115,7 @@ export function LibraryArtwork(props: {
   if (enabled && imageQuery.isLoading) {
     return (
       <span
-        className={`${props.className ?? ""} bg-surface-highlight flex items-center justify-center overflow-hidden`}
+        className={`${props.className ?? ""} ${props.loadingClassName ?? ""} bg-surface-highlight flex items-center justify-center overflow-hidden`}
         aria-hidden="true"
       >
         <DelayedLoading>

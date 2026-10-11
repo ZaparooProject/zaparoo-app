@@ -6,12 +6,16 @@ import { useTranslation } from "react-i18next";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { CoreAPI } from "@/lib/coreApi";
 import { useStatusStore } from "@/lib/store";
-import { useLibrarySessionStore } from "@/lib/librarySessionStore";
+import {
+  librarySearchScrollKey,
+  useLibrarySessionStore,
+} from "@/lib/librarySessionStore";
+import type { SessionSearchParams } from "@/lib/tabSessionStore";
 import { BackIcon, SearchIcon } from "@/lib/images";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
+import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { PageFrame } from "@/components/PageFrame";
-import { PageParentLink } from "@/components/PageParentLink";
 import { VirtualSearchResults } from "@/components/VirtualSearchResults";
 import { BackToTop } from "@/components/BackToTop";
 import { DEFAULT_LOADING_DELAY_MS } from "@/components/DelayedLoading";
@@ -32,7 +36,9 @@ import {
 
 interface LibraryGameSearchProps {
   initialSystemId?: string;
+  initialSearch?: SessionSearchParams;
   onBack?: () => void;
+  historyBack?: () => void;
   embedded?: boolean;
   scrollRef?: RefObject<HTMLDivElement | null>;
   fixedTags?: string[];
@@ -64,7 +70,9 @@ function StandaloneLibraryGameSearch(props: LibraryGameSearchProps) {
 
 function LibraryGameSearchContent({
   initialSystemId,
+  initialSearch,
   onBack,
+  historyBack,
   embedded = false,
   scrollRef: externalScrollRef,
   fixedTags = [],
@@ -107,14 +115,24 @@ function LibraryGameSearchContent({
     enabled: connected && gamesIndex.exists,
     staleTime: 60 * 1000,
   });
-  const [query, setQuery] = useState(savedSearch?.query ?? "");
+  const seededSearch = savedSearch ?? initialSearch;
+  useLayoutEffect(() => {
+    if (
+      initialSearch &&
+      !savedSearch &&
+      useLibrarySessionStore.getState().deviceAddress === deviceKey
+    ) {
+      setSessionSearch(searchScope, initialSearch);
+    }
+  }, [deviceKey, initialSearch, savedSearch, searchScope, setSessionSearch]);
+  const [query, setQuery] = useState(seededSearch?.query ?? "");
   const [querySystem, setQuerySystem] = useState(
-    savedSearch?.system ?? initialSystemId ?? "all",
+    seededSearch?.system ?? initialSystemId ?? "all",
   );
   const [queryTags, setQueryTags] = useState<string[]>(
-    (savedSearch?.tags ?? []).filter((tag) => !fixedTags.includes(tag)),
+    (seededSearch?.tags ?? []).filter((tag) => !fixedTags.includes(tag)),
   );
-  const [searchParams, setSearchParams] = useState(savedSearch ?? null);
+  const [searchParams, setSearchParams] = useState(seededSearch ?? null);
   const [isSearching, setIsSearching] = useState(false);
   const [systemSelectorOpen, setSystemSelectorOpen] = useState(false);
   const [tagSelectorOpen, setTagSelectorOpen] = useState(false);
@@ -131,7 +149,19 @@ function LibraryGameSearchContent({
   const canSubmitSearch =
     canUseSearch && (browseAllSearchFeature.available || hasSearchConstraint);
   const goBack =
-    onBack ?? (() => navigate({ to: "/library", resetScroll: false }));
+    historyBack ??
+    onBack ??
+    (() => navigate({ to: "/library", resetScroll: false }));
+  useBackButtonHandler(
+    "metadata-search",
+    () => {
+      if (!historyBack) return false;
+      historyBack();
+      return true;
+    },
+    50,
+    Boolean(historyBack),
+  );
 
   const search = () => {
     if (!canSubmitSearch) return;
@@ -242,7 +272,10 @@ function LibraryGameSearchContent({
             selectedResult={selectedResult}
             setSelectedResult={setSelectedResult}
             selectionPresentation={selection.docked ? "pane" : "modal"}
-            hasSearched={searchParams !== null}
+            hasSearched={
+              searchParams !== null &&
+              (searchParams.tags.length === 0 || mediaTagsFeature.available)
+            }
             searchSystem={searchParams?.system ?? "all"}
             searchTags={searchParams?.tags ?? []}
             onClearFilters={clearFilters}
@@ -308,16 +341,15 @@ function LibraryGameSearchContent({
     <>
       <PageFrame
         headerMode="content-wide"
-        headerParent={
-          onBack ? (
-            <button type="button" className="page-parent-link" onClick={goBack}>
-              {t("library.title")}
-            </button>
-          ) : (
-            <PageParentLink to="/library" label={t("library.title")} />
-          )
-        }
+        breadcrumbs={[
+          onBack
+            ? { label: t("library.title"), onClick: goBack }
+            : { to: "/library", label: t("library.title") },
+        ]}
         layout="workspace"
+        sessionScrollKey={
+          initialSearch ? librarySearchScrollKey(searchScope) : undefined
+        }
         supportingPane={
           ownsDetails ? (
             <LibraryDetailsSurface

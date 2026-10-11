@@ -63,6 +63,13 @@ interface LibrarySessionState {
   searches: Record<string, SessionSearchParams>;
   browseWindows: Record<string, LibraryBrowseWindow>;
   selectedMedia: Record<string, LibraryMediaSelection>;
+  metadataReturns: Record<string, { owner: string; entry: MediaBrowseEntry }>;
+  rememberMetadataReturn: (
+    historyKey: string,
+    owner: string,
+    entry: MediaBrowseEntry,
+  ) => void;
+  forgetMetadataReturn: (historyKey: string, owner: string) => void;
   setSelectedMedia: (
     scope: string,
     selection: LibraryMediaSelection | null,
@@ -100,10 +107,25 @@ const initialLibrarySessionState = {
   searches: {},
   browseWindows: {},
   selectedMedia: {},
+  metadataReturns: {},
 };
 
 export const useLibrarySessionStore = create<LibrarySessionState>()((set) => ({
   ...initialLibrarySessionState,
+  rememberMetadataReturn: (historyKey, owner, entry) =>
+    set((state) => ({
+      metadataReturns: {
+        ...state.metadataReturns,
+        [historyKey]: { owner, entry },
+      },
+    })),
+  forgetMetadataReturn: (historyKey, owner) =>
+    set((state) => {
+      if (state.metadataReturns[historyKey]?.owner !== owner) return state;
+      const metadataReturns = { ...state.metadataReturns };
+      delete metadataReturns[historyKey];
+      return { metadataReturns };
+    }),
   setSelectedMedia: (scope, selection) =>
     set((state) => {
       const selectedMedia = { ...state.selectedMedia };
@@ -157,6 +179,7 @@ export const useLibrarySessionStore = create<LibrarySessionState>()((set) => ({
       searches: {},
       browseWindows: {},
       selectedMedia: {},
+      metadataReturns: {},
     }),
   activateDevice: (deviceAddress) =>
     set((state) =>

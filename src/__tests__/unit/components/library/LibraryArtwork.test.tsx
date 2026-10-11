@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen, waitFor } from "@/test-utils";
+import { render as renderWithWrapper } from "@testing-library/react";
+import {
+  act,
+  createProvidersWithQueryClient,
+  createTestQueryClient,
+  render,
+  screen,
+  waitFor,
+} from "@/test-utils";
 import { LibraryArtwork } from "@/components/library/LibraryArtwork";
 import { requestLibraryImage } from "@/lib/libraryImages";
 import { CoreAPI } from "@/lib/coreApi";
@@ -43,6 +51,65 @@ describe("LibraryArtwork", () => {
     act(() => vi.advanceTimersByTime(300));
 
     expect(container.querySelector("svg")).toBeInTheDocument();
+  });
+
+  it("keeps an in-flight image request and loaded artwork when loading-only sizing changes", async () => {
+    type ImageResult = Awaited<ReturnType<typeof requestLibraryImage>>;
+    let resolveImage!: (value: ImageResult) => void;
+    vi.mocked(requestLibraryImage).mockReturnValue(
+      new Promise<ImageResult>((resolve) => {
+        resolveImage = resolve;
+      }),
+    );
+    const wrapper = createProvidersWithQueryClient(createTestQueryClient());
+    const props = {
+      entry: {
+        mediaId: 42,
+        name: "Super Game",
+        path: "/roms/SNES/Super Game.sfc",
+        type: "media" as const,
+        systemId: "SNES",
+      },
+      systemId: "SNES",
+      deviceKey: "device-a",
+      maxSize: 512,
+      priority: "detail" as const,
+      alt: "Super Game artwork",
+      onAvailabilityChange: vi.fn(),
+      onTypeTag: vi.fn(),
+    };
+    const { rerender } = renderWithWrapper(
+      <LibraryArtwork {...props} loadingClassName="mx-auto" />,
+      { wrapper },
+    );
+    const signal = vi.mocked(requestLibraryImage).mock.calls[0]?.[2]?.signal;
+    expect(signal).toBeInstanceOf(AbortSignal);
+    rerender(
+      <LibraryArtwork
+        {...props}
+        loadingClassName="mx-auto max-w-[21.333rem]"
+      />,
+    );
+    expect(requestLibraryImage).toHaveBeenCalledTimes(1);
+    expect(signal?.aborted).toBe(false);
+    expect(
+      screen.queryByRole("img", { name: "Super Game artwork" }),
+    ).not.toBeInTheDocument();
+    await act(async () =>
+      resolveImage({
+        url: "data:image/png;base64,AAAA",
+        typeTag: "property:image-boxart",
+      }),
+    );
+    const image = await screen.findByRole("img", {
+      name: "Super Game artwork",
+    });
+    expect(image).toHaveAttribute("src", "data:image/png;base64,AAAA");
+    expect(props.onAvailabilityChange).toHaveBeenCalledWith(true);
+    expect(props.onTypeTag).toHaveBeenCalledWith("property:image-boxart");
+    rerender(<LibraryArtwork {...props} loadingClassName="mx-auto" />);
+    expect(screen.getByRole("img", { name: "Super Game artwork" })).toBe(image);
+    expect(requestLibraryImage).toHaveBeenCalledTimes(1);
   });
 
   it("should retain a skeleton for thumbnail artwork loading", () => {

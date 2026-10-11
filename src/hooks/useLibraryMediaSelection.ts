@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useMetadataDetailsReturn } from "@/hooks/useMetadataDetailsReturn";
 import { searchResultToBrowseEntry } from "@/lib/libraryMedia";
 import {
   useLibrarySessionStore,
@@ -19,15 +20,30 @@ export function useLibraryMediaSelection(scope: string, deviceKey: string) {
   }, [deviceKey]);
   // At these shell widths at least 1020px remains after the rail/sidebar.
   const docked = useMediaQuery("(min-width: 1100px)");
-  const selection = useLibrarySessionStore((state) =>
+  const { entry: returnedEntry, forget: forgetReturn } =
+    useMetadataDetailsReturn(`library:${scope}`, deviceKey);
+  const savedSelection = useLibrarySessionStore((state) =>
     state.deviceAddress === deviceKey
       ? (state.selectedMedia[scope] ?? null)
       : null,
   );
+  const selection: LibraryMediaSelection | null =
+    savedSelection ?? (returnedEntry ? { entry: returnedEntry } : null);
+  useLayoutEffect(() => {
+    if (
+      !savedSelection &&
+      returnedEntry &&
+      useLibrarySessionStore.getState().deviceAddress === deviceKey
+    ) {
+      useLibrarySessionStore
+        .getState()
+        .setSelectedMedia(scope, { entry: returnedEntry });
+    }
+  }, [deviceKey, scope, savedSelection, returnedEntry]);
   const contextKey = `${deviceKey}\u0001${scope}`;
   const [presentation, setPresentation] = useState({
     key: contextKey,
-    open: docked && selection !== null,
+    open: (docked || returnedEntry !== null) && selection !== null,
   });
   if (
     presentation.key !== contextKey ||
@@ -42,10 +58,11 @@ export function useLibraryMediaSelection(scope: string, deviceKey: string) {
     (next: LibraryMediaSelection | null) => {
       // Late callbacks from an old target cannot select media on its replacement.
       if (useLibrarySessionStore.getState().deviceAddress !== deviceKey) return;
+      forgetReturn();
       useLibrarySessionStore.getState().setSelectedMedia(scope, next);
       setPresentation({ key: contextKey, open: next !== null });
     },
-    [scope, deviceKey, contextKey],
+    [scope, deviceKey, contextKey, forgetReturn],
   );
   const selectEntry = useCallback(
     (entry: MediaBrowseEntry | null) => {
@@ -63,6 +80,7 @@ export function useLibraryMediaSelection(scope: string, deviceKey: string) {
   );
   const close = useCallback(() => select(null), [select]);
   return {
+    scope,
     docked,
     isOpen,
     entry: isOpen ? selection.entry : null,

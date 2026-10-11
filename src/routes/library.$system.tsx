@@ -49,7 +49,6 @@ import { useSystemName } from "@/hooks/useSystemName";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
 import { PageFrame } from "@/components/PageFrame";
-import { PageParentLink } from "@/components/PageParentLink";
 import { BackToTop } from "@/components/BackToTop";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { Button } from "@/components/wui/Button";
@@ -428,21 +427,36 @@ export function LibrarySystem() {
     <LibraryMediaSelectionContext.Provider value={selection}>
       <PageFrame
         headerMode="content-wide"
-        headerParent={
-          searchOpen ||
-          levels.length > 1 ||
-          (levels.length === 1 && !autoEnteredRoot) ? (
-            <button type="button" className="page-parent-link" onClick={goBack}>
-              {searchOpen ? heading : (levels.at(-2)?.name ?? systemName)}
-            </button>
-          ) : (
-            <PageParentLink
-              to="/library"
-              label={t("library.title")}
-              onNavigate={clearBrowseActions}
-            />
-          )
-        }
+        breadcrumbs={[
+          {
+            to: "/library",
+            label: t("library.title"),
+            onNavigate: clearBrowseActions,
+          },
+          ...((searchOpen && levels.length === 0) ||
+          (!autoEnteredRoot && levels.length > 0)
+            ? [
+                {
+                  label: systemName,
+                  onClick: () => {
+                    clearBrowseActions();
+                    if (searchOpen) closeSearch();
+                    setFolderLevels(systemId, []);
+                  },
+                },
+              ]
+            : []),
+          ...levels
+            .slice(0, searchOpen ? undefined : -1)
+            .map((level, index) => ({
+              label: level.name,
+              onClick: () => {
+                clearBrowseActions();
+                if (searchOpen) closeSearch();
+                setFolderLevels(systemId, levels.slice(0, index + 1));
+              },
+            })),
+        ]}
         layout="workspace"
         supportingPane={
           <LibraryDetailsSurface

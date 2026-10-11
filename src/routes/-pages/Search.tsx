@@ -27,7 +27,6 @@ import {
 } from "@/lib/tabSessionStore";
 import { TextInput } from "@/components/wui/TextInput";
 import { PageFrame } from "@/components/PageFrame";
-import { PageParentLink } from "@/components/PageParentLink";
 import {
   SystemSelector,
   SystemSelectorTrigger,
@@ -330,7 +329,7 @@ export function Search() {
         layout="workspace"
         className="create-search-page"
         headerMode="content-wide"
-        headerParent={<PageParentLink to="/create" label={t("create.title")} />}
+        breadcrumbs={[{ to: "/create", label: t("create.title") }]}
         onSwipeBack={goBack}
         headerLeft={
           <HeaderButton

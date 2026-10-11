@@ -4,7 +4,6 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { RefreshCwIcon } from "lucide-react";
 import { PageFrame } from "@/components/PageFrame";
-import { PageParentLink } from "@/components/PageParentLink";
 import { BackToTop } from "@/components/BackToTop";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { Button } from "@/components/wui/Button";
@@ -111,7 +110,7 @@ function ZapHistory({ kind }: { kind: "scans" | "played" }) {
   return (
     <PageFrame
       headerMode="content-wide"
-      headerParent={<PageParentLink to="/" label={t("nav.index")} />}
+      breadcrumbs={[{ to: "/", label: t("nav.index") }]}
       layout="workspace"
       scrollRef={scrollRef}
       sessionScrollKey={`zap:${kind}:${deviceKey}`}

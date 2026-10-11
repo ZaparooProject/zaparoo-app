@@ -26,7 +26,7 @@ const CLOSED_TRANSFORM = "translate3d(0, 100%, 0)";
 // Individual CSS translate is unavailable in Core's legacy browser targets.
 function modalTransform(open: boolean, wide: boolean): string {
   if (!wide) return open ? OPEN_TRANSFORM : CLOSED_TRANSFORM;
-  return open ? "translate3d(-50%, -50%, 0)" : "translate3d(-50%, 50%, 0)";
+  return "translate3d(-50%, -50%, 0)";
 }
 
 const DRAG_TRANSITION = "transform 0.2s ease-in-out";
@@ -192,7 +192,7 @@ export function SlideModal(props: {
 
     if (!surfaceOpen || screenReaderEnabled || !dismissible || wideDialog) {
       modal.removeAttribute("data-dragging");
-      modal.style.transition = DRAG_TRANSITION;
+      modal.style.transition = wideDialog ? "none" : DRAG_TRANSITION;
       modal.style.transform = modalTransform(surfaceOpen, wideDialog);
       return;
     }
@@ -378,6 +378,7 @@ export function SlideModal(props: {
 
       modalManager.registerModal(modalId, requestClose, {
         blocking: !dismissible,
+        overlay: true,
       });
 
       return () => {
@@ -399,18 +400,20 @@ export function SlideModal(props: {
 
   return (
     <>
-      {/* Overlay - click to dismiss, hidden from screen readers */}
-      <div
-        data-testid="modal-overlay"
-        data-focus-trap-exempt
-        className="fixed inset-0 z-40 bg-black/60 transition-opacity duration-200 ease-in-out"
-        style={{
-          opacity: modalOpen ? 1 : 0,
-          pointerEvents: modalOpen ? "auto" : "none",
-        }}
-        onClick={dismissible ? props.close : undefined}
-        aria-hidden="true"
-      />
+      {/* Standalone managers retain local backdrop ownership. */}
+      {!modalManager.ownsOverlay && (
+        <div
+          data-testid="modal-overlay"
+          data-focus-trap-exempt
+          className="fixed inset-0 z-40 bg-black/60 transition-opacity duration-200 ease-in-out"
+          style={{
+            opacity: modalOpen ? 1 : 0,
+            pointerEvents: modalOpen ? "auto" : "none",
+          }}
+          onClick={dismissible ? props.close : undefined}
+          aria-hidden="true"
+        />
+      )}
 
       {/* Modal */}
       <div
@@ -496,8 +499,8 @@ export function SlideModal(props: {
                 // Closed floating dialogs cannot rely on translating below the viewport.
                 visibility: wideDialog && !surfaceOpen ? "hidden" : undefined,
                 transform: modalTransform(surfaceOpen, wideDialog),
-                transition: DRAG_TRANSITION,
-                willChange: surfaceOpen ? "transform" : "auto",
+                transition: wideDialog ? "none" : DRAG_TRANSITION,
+                willChange: surfaceOpen && !wideDialog ? "transform" : "auto",
                 pointerEvents: surfaceOpen ? "auto" : "none",
                 boxShadow: surfaceOpen ? undefined : "none",
                 paddingBottom: wideDialog
@@ -535,6 +538,17 @@ export function SlideModal(props: {
               ref={titleRef}
               id={`${modalId}-title`}
               tabIndex={-1}
+              style={
+                !isPane && wideDialog
+                  ? {
+                      // Align title with the glyph, not the larger close target.
+                      paddingLeft: "calc(0.625rem - 7px)",
+                      minHeight: "calc(3rem - 14px)",
+                      display: "flex",
+                      alignItems: "center",
+                    }
+                  : undefined
+              }
               className={
                 isSection
                   ? "text-muted-foreground mb-2 font-bold wrap-anywhere capitalize outline-none"
@@ -548,6 +562,14 @@ export function SlideModal(props: {
                 type="button"
                 onClick={props.close}
                 className="hover:before:bg-foreground/10 focus-visible:outline-ring absolute top-[-7px] right-0 hidden h-12 w-12 items-center justify-center rounded-full opacity-70 transition-opacity before:absolute before:inset-0.5 before:rounded-full before:content-[''] hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-1 sm:flex"
+                style={
+                  !isPane && wideDialog
+                    ? {
+                        // Shell side padding exceeds top padding by 0.25rem.
+                        right: "calc(-0.25rem - 7px)",
+                      }
+                    : undefined
+                }
                 aria-label={t("nav.close")}
               >
                 <XIcon className="relative h-5 w-5" aria-hidden="true" />

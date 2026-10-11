@@ -11,7 +11,6 @@ import {
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { BackToTop } from "@/components/BackToTop";
 import { PageFrame } from "@/components/PageFrame";
-import { PageParentLink } from "@/components/PageParentLink";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { Button } from "@/components/wui/Button";
@@ -141,9 +140,7 @@ export function ThirdPartyLicenses() {
     <>
       <PageFrame
         headerMode="content-wide"
-        headerParent={
-          <PageParentLink to="/settings" label={t("settings.title")} />
-        }
+        breadcrumbs={[{ to: "/settings", label: t("settings.title") }]}
         onSwipeBack={goBack}
         scrollRef={scrollContainerRef}
         headerLeft={

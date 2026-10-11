@@ -11,7 +11,6 @@ import { SettingHelp } from "@/components/wui/SettingHelp";
 import { useStatusStore, ConnectionState } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { PageFrame } from "@/components/PageFrame";
-import { PageParentLink } from "@/components/PageParentLink";
 import { UpdateSettingsRequest } from "@/lib/models.ts";
 import { BackIcon, NextIcon } from "@/lib/images";
 import { HeaderButton } from "@/components/wui/HeaderButton";
@@ -109,9 +108,7 @@ export function AdvancedSettings() {
   return (
     <PageFrame
       headerMode="content-wide"
-      headerParent={
-        <PageParentLink to="/settings" label={t("settings.title")} />
-      }
+      breadcrumbs={[{ to: "/settings", label: t("settings.title") }]}
       onSwipeBack={goBack}
       headerLeft={
         <HeaderButton

@@ -20,7 +20,6 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { DelayedLoading } from "@/components/DelayedLoading";
 import { BackToTop } from "@/components/BackToTop";
 import { PageFrame } from "@/components/PageFrame";
-import { PageParentLink } from "@/components/PageParentLink";
 import { MappingRow } from "@/components/MappingRow";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
@@ -114,7 +113,7 @@ export function Mappings() {
     <PageFrame
       layout="workspace"
       headerMode="content-wide"
-      headerParent={<PageParentLink to="/create" label={t("create.title")} />}
+      breadcrumbs={[{ to: "/create", label: t("create.title") }]}
       onSwipeBack={goBack}
       headerLeft={
         <HeaderButton

@@ -18,7 +18,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useStatusStore } from "@/lib/store.ts";
 import { PageFrame } from "@/components/PageFrame.tsx";
-import { PageParentLink } from "@/components/PageParentLink";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { BackIcon, ExternalIcon, GoogleIcon, AppleIcon } from "@/lib/images";
 import { logger } from "@/lib/logger";
@@ -578,9 +577,7 @@ export function OnlinePage() {
   return (
     <PageFrame
       headerMode="content-wide"
-      headerParent={
-        <PageParentLink to="/settings" label={t("settings.title")} />
-      }
+      breadcrumbs={[{ to: "/settings", label: t("settings.title") }]}
       layout={loggedInUser !== null ? "workspace" : "default"}
       className={
         loggedInUser !== null

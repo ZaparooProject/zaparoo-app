@@ -630,7 +630,11 @@ describe("deck routes", () => {
     await userEvent
       .setup()
       .click(screen.getAllByRole("button", { name: "decks.moveDown" })[0]!);
-    expect(screen.getAllByRole("listitem")[0]).toHaveTextContent("Game");
+    expect(
+      within(screen.getByRole("list", { name: "decks.items" })).getAllByRole(
+        "listitem",
+      )[0],
+    ).toHaveTextContent("Game");
     await userEvent.setup().click(screen.getByRole("button", { name: "save" }));
     expect(
       screen.getAllByRole("button", { name: "nav.cancel" })[0],
@@ -639,7 +643,11 @@ describe("deck routes", () => {
     await waitFor(() =>
       expect(error).toHaveBeenCalledWith("decks.updateError"),
     );
-    expect(screen.getAllByRole("listitem")[0]).toHaveTextContent("Game");
+    expect(
+      within(screen.getByRole("list", { name: "decks.items" })).getAllByRole(
+        "listitem",
+      )[0],
+    ).toHaveTextContent("Game");
     expect(
       screen.getByRole("textbox", { name: "decks.name" }),
     ).toBeInTheDocument();
@@ -653,7 +661,11 @@ describe("deck routes", () => {
     await user.click(
       screen.getAllByRole("button", { name: "decks.moveDown" })[0]!,
     );
-    expect(screen.getAllByRole("listitem")[1]).toHaveTextContent("CARD0001");
+    expect(
+      within(screen.getByRole("list", { name: "decks.items" })).getAllByRole(
+        "listitem",
+      )[1],
+    ).toHaveTextContent("CARD0001");
     expect(
       screen.getAllByRole("button", { name: "decks.moveUp" })[1],
     ).toHaveFocus();
@@ -677,12 +689,20 @@ describe("deck routes", () => {
       await user.click(
         screen.getAllByRole("button", { name: "decks.moveDown" })[0]!,
       );
-      expect(screen.getAllByRole("listitem")[0]).toHaveTextContent("Game");
+      expect(
+        within(screen.getByRole("list", { name: "decks.items" })).getAllByRole(
+          "listitem",
+        )[0],
+      ).toHaveTextContent("Game");
       expect(update).not.toHaveBeenCalled();
       await user.click(
         screen.getAllByRole("button", { name: "nav.cancel" })[cancelIndex]!,
       );
-      expect(screen.getAllByRole("listitem")[0]).toHaveTextContent("CARD0001");
+      expect(
+        within(screen.getByRole("list", { name: "decks.items" })).getAllByRole(
+          "listitem",
+        )[0],
+      ).toHaveTextContent("CARD0001");
       expect(
         screen.getByRole("button", { name: "decks.addMedia" }),
       ).toBeInTheDocument();
@@ -873,9 +893,11 @@ describe("deck routes", () => {
           screen.getByRole("button", { name: "decks.addMedia" }),
         ).toBeEnabled(),
       );
-      expect(screen.getAllByRole("listitem").at(-1)).toHaveTextContent(
-        "Super Metroid",
-      );
+      expect(
+        within(screen.getByRole("list", { name: "decks.items" }))
+          .getAllByRole("listitem")
+          .at(-1),
+      ).toHaveTextContent("Super Metroid");
       expect(page.scrollTop).toBe(1600);
       expect(successToast).not.toHaveBeenCalled();
     },

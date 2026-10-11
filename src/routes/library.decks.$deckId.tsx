@@ -57,7 +57,6 @@ import { useNfcWriteAvailable } from "@/hooks/useNfcWriteAvailable";
 import { useAccessibleLists } from "@/hooks/useAccessibleLists";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { PageFrame } from "@/components/PageFrame";
-import { PageParentLink } from "@/components/PageParentLink";
 import { SlideModal } from "@/components/SlideModal";
 import { MediaSearchModal } from "@/components/MediaSearchModal";
 import { DeckMarkdown } from "@/components/library/DeckMarkdown";
@@ -308,9 +307,7 @@ export function DeckDetails() {
       <PageFrame
         layout="workspace"
         headerMode="content-wide"
-        headerParent={
-          <PageParentLink to="/library" label={t("library.title")} />
-        }
+        breadcrumbs={[{ to: "/library", label: t("library.title") }]}
         scrollRef={pageScrollRef}
         onSwipeBack={goBack}
         headerLeft={
@@ -517,7 +514,10 @@ export function DeckDetails() {
                     items={items.map(({ id }) => id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    <ol className="flex flex-col">
+                    <ol
+                      aria-label={t("decks.items", { count: items.length })}
+                      className="flex flex-col"
+                    >
                       {items.map((item, index) => (
                         <SortableDeckItemRow
                           key={item.id}

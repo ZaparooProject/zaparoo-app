@@ -16,6 +16,7 @@ export function PageParentLink({
       to={to}
       params={params}
       resetScroll={false}
+      activeOptions={{ exact: true }}
       className="page-parent-link"
       onClick={(event) => {
         if (

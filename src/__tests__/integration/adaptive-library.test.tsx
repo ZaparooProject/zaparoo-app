@@ -234,6 +234,64 @@ describe("Adaptive Library pages", () => {
   });
   afterEach(() => vi.restoreAllMocks());
 
+  it.each([
+    { path: "/library/favorites", title: "library.favorites" },
+    { path: "/library/recent", title: "library.recentlyPlayed" },
+    { path: "/library/top", title: "library.topPlayed" },
+  ])(
+    "uses standard wide breadcrumbs for $path without replacing the heading",
+    async ({ path, title }) => {
+      const resize = responsiveWindow(1440);
+      const user = userEvent.setup();
+      const { router, baseElement } = await renderLibrary(
+        `/app${path}`,
+        "/app",
+      );
+      const heading = await screen.findByRole("heading", {
+        name: title,
+        level: 1,
+      });
+      const breadcrumb = screen.getByRole("navigation", {
+        name: "nav.breadcrumbs",
+      });
+      const parent = within(breadcrumb).getByRole("link", {
+        name: "library.title",
+      });
+      expect(parent).toHaveAttribute("href", "/app/library");
+      expect(parent).not.toHaveAttribute("aria-current", "page");
+      expect(
+        within(breadcrumb).queryByRole("link", { name: title }),
+      ).not.toBeInTheDocument();
+      expect(
+        within(breadcrumb).getByRole("listitem", { current: "page" }),
+      ).toContainElement(heading);
+      heading.focus();
+      for (const width of [820, 390, 1440]) {
+        await resize(width);
+        expect(screen.getByRole("heading", { name: title, level: 1 })).toBe(
+          heading,
+        );
+        expect(heading).toHaveFocus();
+        if (width < 760) {
+          expect(
+            screen.queryByRole("navigation", { name: "nav.breadcrumbs" }),
+          ).not.toBeInTheDocument();
+        } else {
+          expect(
+            screen.getByRole("navigation", { name: "nav.breadcrumbs" }),
+          ).toBe(breadcrumb);
+          expect(
+            within(breadcrumb).getByRole("link", { name: "library.title" }),
+          ).toBe(parent);
+        }
+      }
+      expect(await findA11yViolations(baseElement)).toEqual([]);
+      await user.click(parent);
+      expect(router.state.location.pathname).toBe("/library");
+      expect(router.history.location.pathname).toBe("/app/library");
+    },
+  );
+
   it("keeps root title, actions and Systems/Collections choice through resize", async () => {
     const resize = responsiveWindow(1440);
     const user = userEvent.setup();
@@ -284,6 +342,41 @@ describe("Adaptive Library pages", () => {
       expect(CoreAPI.decks).toHaveBeenCalledTimes(deckRequests);
     }
     expect(await findA11yViolations(baseElement)).toEqual([]);
+  });
+
+  it("jumps to earlier folder breadcrumbs without changing route or heading owner", async () => {
+    responsiveWindow(1440);
+    const user = userEvent.setup();
+    useLibrarySessionStore.getState().activateDevice("device-a");
+    useLibrarySessionStore.getState().setFolderLevels("SNES", [
+      { name: "Action", path: "/roms/SNES/Action" },
+      { name: "Arcade", path: "/roms/SNES/Action/Arcade" },
+      { name: "Classics", path: "/roms/SNES/Action/Arcade/Classics" },
+    ]);
+    const { router } = await renderLibrary("/library/SNES");
+    const heading = await screen.findByRole("heading", {
+      name: "Classics",
+      level: 1,
+    });
+    const trail = screen.getByRole("navigation", { name: "nav.breadcrumbs" });
+    expect(
+      within(trail).getByRole("link", { name: "library.title" }),
+    ).toHaveAttribute("href", "/library");
+    expect(
+      within(trail).getByRole("button", { name: "Arcade" }),
+    ).toBeInTheDocument();
+    await user.click(within(trail).getByRole("button", { name: "Action" }));
+    expect(
+      await screen.findByRole("heading", { name: "Action", level: 1 }),
+    ).toBe(heading);
+    expect(useLibrarySessionStore.getState().folderLevels.SNES).toEqual([
+      { name: "Action", path: "/roms/SNES/Action" },
+    ]);
+    expect(router.state.location.pathname).toBe("/library/SNES");
+    expect(
+      within(trail).queryByRole("button", { name: "Arcade" }),
+    ).not.toBeInTheDocument();
+    expect(CoreAPI.run).not.toHaveBeenCalled();
   });
 
   it("keeps folder search draft and selected details; parent actions stay in same route", async () => {
@@ -490,7 +583,7 @@ describe("Adaptive Library pages", () => {
     });
     await user.clear(name);
     await user.type(name, "Edited weekend");
-    const list = within(scroll).getByRole("list");
+    const list = within(scroll).getByRole("list", { name: "decks.items" });
     await user.click(
       within(within(list).getAllByRole("listitem")[0]!).getByRole("button", {
         name: "decks.moveDown",

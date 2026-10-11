@@ -29,6 +29,7 @@ export function LibraryDetailsSurface({
           selection.result?.system.id || selection.entry?.systemId || systemId
         }
         deviceKey={deviceKey}
+        returnOwner={`library:${selection.scope}`}
         docked={selection.docked}
       />
     </>

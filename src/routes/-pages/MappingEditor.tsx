@@ -26,7 +26,6 @@ import { EmptyState } from "@/components/wui/EmptyState";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { DelayedLoading } from "@/components/DelayedLoading";
 import { PageFrame } from "@/components/PageFrame";
-import { PageParentLink } from "@/components/PageParentLink";
 import { SlideModal } from "@/components/SlideModal";
 import {
   isReaderActivityOpen,
@@ -301,12 +300,10 @@ export function MappingEditor({ id }: MappingEditorProps) {
     <>
       <PageFrame
         headerMode="content-wide"
-        headerParent={
-          <PageParentLink
-            to="/create/mappings"
-            label={t("create.mappings.title")}
-          />
-        }
+        breadcrumbs={[
+          { to: "/create", label: t("create.title") },
+          { to: "/create/mappings", label: t("create.mappings.title") },
+        ]}
         onSwipeBack={goBack}
         headerLeft={
           <HeaderButton

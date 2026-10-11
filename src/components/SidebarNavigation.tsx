@@ -1,3 +1,4 @@
+import { type MouseEvent } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import {
@@ -13,12 +14,15 @@ import { useHaptics } from "@/hooks/useHaptics";
 import { bottomTabForPath, type BottomTabId } from "@/lib/tabSessionStore";
 import { useStatusStore } from "@/lib/store";
 import { NotificationBadge } from "@/components/NotificationBadge";
+import { PAGE_SCROLL_RESTORATION_SELECTOR } from "@/components/PageFrame";
 
 export function SidebarNavigation({
+  desktop = false,
   expanded,
   onToggle,
   onNavigate,
 }: {
+  desktop?: boolean;
   expanded: Partial<Record<BottomTabId, boolean>>;
   onToggle: (group: BottomTabId) => void;
   onNavigate: () => void;
@@ -120,6 +124,29 @@ export function SidebarNavigation({
   ] as const;
   const activeGroup = bottomTabForPath(pathname);
   const normalized = pathname.replace(/\/$/, "") || "/";
+  const navigateDestination = (
+    event: MouseEvent<HTMLAnchorElement>,
+    to: string,
+  ) => {
+    impact("light");
+    if (
+      desktop &&
+      normalized === to &&
+      !event.defaultPrevented &&
+      event.button === 0 &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.shiftKey &&
+      !event.altKey
+    ) {
+      const scroll = document.querySelector(PAGE_SCROLL_RESTORATION_SELECTOR);
+      if (scroll instanceof HTMLElement) {
+        scroll.scrollLeft = 0;
+        scroll.scrollTop = 0;
+      }
+    }
+    onNavigate();
+  };
 
   return (
     <ul className="sidebar-groups">
@@ -142,7 +169,13 @@ export function SidebarNavigation({
               <Link
                 id={`sidebar-${id}-link`}
                 to={to}
-                resetScroll={false}
+                resetScroll={desktop}
+                replace={desktop && current}
+                state={
+                  desktop
+                    ? { appNavigationSource: "desktop-sidebar" }
+                    : undefined
+                }
                 className="sidebar-root-link"
                 aria-current={current ? "page" : undefined}
                 aria-label={
@@ -150,10 +183,7 @@ export function SidebarNavigation({
                     ? t("nav.settingsWithNotifications", { count })
                     : undefined
                 }
-                onClick={() => {
-                  impact("light");
-                  onNavigate();
-                }}
+                onClick={(event) => navigateDestination(event, to)}
               >
                 <span className="relative shrink-0" aria-hidden="true">
                   <Icon size={22} className="sidebar-root-icon" />
@@ -192,7 +222,13 @@ export function SidebarNavigation({
                 <li key={child.to}>
                   <Link
                     to={child.to}
-                    resetScroll={false}
+                    resetScroll={desktop}
+                    replace={desktop && normalized === child.to}
+                    state={
+                      desktop
+                        ? { appNavigationSource: "desktop-sidebar" }
+                        : undefined
+                    }
                     className="sidebar-child-link"
                     aria-current={
                       normalized === child.to ||
@@ -200,10 +236,7 @@ export function SidebarNavigation({
                         ? "page"
                         : undefined
                     }
-                    onClick={() => {
-                      impact("light");
-                      onNavigate();
-                    }}
+                    onClick={(event) => navigateDestination(event, child.to)}
                   >
                     {t(child.label)}
                   </Link>

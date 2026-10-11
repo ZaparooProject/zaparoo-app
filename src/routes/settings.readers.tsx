@@ -7,7 +7,6 @@ import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
 import { SettingHelp } from "@/components/wui/SettingHelp";
 import { useStatusStore, ConnectionState } from "@/lib/store";
 import { PageFrame } from "@/components/PageFrame";
-import { PageParentLink } from "@/components/PageParentLink";
 import {
   usePreferencesStore,
   selectAppSettings,
@@ -135,9 +134,7 @@ export function ReadersSettings() {
       layout="workspace"
       className="settings-panel-page wrap-anywhere"
       headerMode="content-wide"
-      headerParent={
-        <PageParentLink to="/settings" label={t("settings.title")} />
-      }
+      breadcrumbs={[{ to: "/settings", label: t("settings.title") }]}
       onSwipeBack={goBack}
       headerLeft={
         <HeaderButton

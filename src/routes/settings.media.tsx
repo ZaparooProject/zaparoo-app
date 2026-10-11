@@ -4,7 +4,6 @@ import { MediaDatabaseCard } from "@/components/MediaDatabaseCard";
 import { MediaScrapeCard } from "@/components/MediaScrapeCard";
 import { CoreOutdatedNotice } from "@/components/CoreOutdatedNotice";
 import { PageFrame } from "@/components/PageFrame";
-import { PageParentLink } from "@/components/PageParentLink";
 import { Card } from "@/components/wui/Card";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { BackIcon } from "@/lib/images";
@@ -29,9 +28,7 @@ export function MediaSettings() {
       layout="workspace"
       className="settings-panel-page wrap-anywhere"
       headerMode="content-wide"
-      headerParent={
-        <PageParentLink to="/settings" label={t("settings.title")} />
-      }
+      breadcrumbs={[{ to: "/settings", label: t("settings.title") }]}
       onSwipeBack={goBack}
       headerLeft={
         <HeaderButton

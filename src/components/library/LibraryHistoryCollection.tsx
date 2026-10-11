@@ -21,7 +21,6 @@ import type { MediaBrowseEntry } from "@/lib/models";
 import { useStatusStore } from "@/lib/store";
 import { BackIcon } from "@/lib/images";
 import { PageFrame } from "@/components/PageFrame";
-import { PageParentLink } from "@/components/PageParentLink";
 import { BackToTop } from "@/components/BackToTop";
 import { DelayedLoading } from "@/components/DelayedLoading";
 import { EmptyState } from "@/components/wui/EmptyState";
@@ -217,13 +216,13 @@ export function LibraryHistoryCollection({
     <>
       <PageFrame
         headerMode="content-wide"
-        headerParent={
-          <PageParentLink
-            to="/library"
-            label={t("library.title")}
-            onNavigate={() => setSelectedEntry(null)}
-          />
-        }
+        breadcrumbs={[
+          {
+            to: "/library",
+            label: t("library.title"),
+            onNavigate: () => setSelectedEntry(null),
+          },
+        ]}
         layout="workspace"
         supportingPane={
           <LibraryDetailsSurface

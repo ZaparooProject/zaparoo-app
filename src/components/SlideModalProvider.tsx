@@ -1,4 +1,10 @@
-import { useRef, useCallback, useMemo, ReactNode } from "react";
+import {
+  useRef,
+  useCallback,
+  useMemo,
+  useSyncExternalStore,
+  ReactNode,
+} from "react";
 import {
   SlideModalContext,
   SlideModalManager,
@@ -7,7 +13,10 @@ import {
 
 export const SlideModalProvider = ({ children }: { children: ReactNode }) => {
   const modals = useRef<
-    Map<string, { closeFunction: () => void; blocking: boolean }>
+    Map<
+      string,
+      { closeFunction: () => void; blocking: boolean; overlay: boolean }
+    >
   >(new Map());
 
   const listeners = useRef(new Set<() => void>());
@@ -20,6 +29,18 @@ export const SlideModalProvider = ({ children }: { children: ReactNode }) => {
       listeners.current.delete(listener);
     };
   }, []);
+  const getOverlayOwnerId = useCallback(() => {
+    let ownerId: string | null = null;
+    modals.current.forEach((modal, id) => {
+      if (modal.overlay) ownerId = id;
+    });
+    return ownerId;
+  }, []);
+  const activeModalId = useSyncExternalStore(
+    subscribe,
+    getOverlayOwnerId,
+    () => null,
+  );
   const hasOpenModalExcept = useCallback(
     (exceptId: string) =>
       Array.from(modals.current.keys()).some((id) => id !== exceptId),
@@ -35,6 +56,7 @@ export const SlideModalProvider = ({ children }: { children: ReactNode }) => {
       modals.current.set(id, {
         closeFunction,
         blocking: options?.blocking === true,
+        overlay: options?.overlay === true,
       });
       notify();
     },
@@ -62,6 +84,7 @@ export const SlideModalProvider = ({ children }: { children: ReactNode }) => {
 
   const manager: SlideModalManager = useMemo(
     () => ({
+      ownsOverlay: true,
       registerModal,
       unregisterModal,
       closeAllExcept,
@@ -80,6 +103,22 @@ export const SlideModalProvider = ({ children }: { children: ReactNode }) => {
   return (
     <SlideModalContext.Provider value={manager}>
       {children}
+      <div
+        data-testid="modal-overlay"
+        data-focus-trap-exempt
+        className="fixed inset-0 z-40 bg-black/60 transition-opacity duration-200 ease-in-out"
+        style={{
+          opacity: activeModalId === null ? 0 : 1,
+          pointerEvents: activeModalId === null ? "none" : "auto",
+        }}
+        onClick={() => {
+          const ownerId = getOverlayOwnerId();
+          const owner =
+            ownerId === null ? undefined : modals.current.get(ownerId);
+          if (owner && !owner.blocking) owner.closeFunction();
+        }}
+        aria-hidden="true"
+      />
     </SlideModalContext.Provider>
   );
 };

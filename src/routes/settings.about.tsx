@@ -2,7 +2,6 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { Browser } from "@capacitor/browser";
 import { PageFrame } from "@/components/PageFrame";
-import { PageParentLink } from "@/components/PageParentLink";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { Button } from "@/components/wui/Button.tsx";
 import { BackIcon, ExternalIcon, NextIcon } from "@/lib/images";
@@ -30,9 +29,7 @@ export function About() {
   return (
     <PageFrame
       headerMode="content-wide"
-      headerParent={
-        <PageParentLink to="/settings" label={t("settings.title")} />
-      }
+      breadcrumbs={[{ to: "/settings", label: t("settings.title") }]}
       onSwipeBack={goBack}
       headerLeft={
         <HeaderButton

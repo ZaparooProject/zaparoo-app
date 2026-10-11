@@ -617,6 +617,17 @@ describe("Adaptive Zap", () => {
       name: "scan.nowPlayingHeading",
     });
     expect(within(primary).getByText("scan.nowPlayingIdle")).toBeVisible();
+    const controls = screen.getByRole("region", {
+      name: "remoteKeyboard.title",
+    });
+    expect(
+      within(controls).queryByText("remoteKeyboard.disconnected"),
+    ).not.toBeInTheDocument();
+    expect(
+      within(controls).getByRole("button", {
+        name: "remoteKeyboard.screenshotAction",
+      }),
+    ).toBeDisabled();
     expect(
       within(primary).getByRole("button", {
         name: "scan.playLastPlayedUnavailable",

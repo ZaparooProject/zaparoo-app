@@ -11,6 +11,7 @@ import {
 import {
   act,
   findA11yViolations,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -18,6 +19,7 @@ import {
 } from "@/test-utils";
 import { RootLayout } from "@/routes/__root";
 import { InboxModal } from "@/components/InboxModal";
+import { PAGE_SCROLL_RESTORATION_SELECTOR } from "@/components/PageFrame";
 import { Library } from "@/routes/library.index";
 import { Create } from "@/routes/create.index";
 import { Settings } from "@/routes/settings.index";
@@ -58,7 +60,12 @@ function responsiveWindow(initialWidth: number) {
   };
 }
 
-async function renderShell(initialPath = "/library", withInbox = false) {
+async function renderShell(
+  initialPath = "/library",
+  withInbox = false,
+  scrollRestoration = false,
+  basepath = "/",
+) {
   const root = createRootRoute({ component: RootLayout });
   const routes = [
     createRoute({
@@ -85,6 +92,9 @@ async function renderShell(initialPath = "/library", withInbox = false) {
   const router = createRouter({
     routeTree: root.addChildren(routes),
     history: createMemoryHistory({ initialEntries: [initialPath] }),
+    scrollRestoration,
+    scrollToTopSelectors: [PAGE_SCROLL_RESTORATION_SELECTOR],
+    basepath,
   });
   await router.load();
   return {
@@ -173,6 +183,163 @@ describe("Adaptive application shell", () => {
     await seedActiveDevice({ address: "192.168.1.100", name: "Living room" });
   });
   afterEach(() => vi.restoreAllMocks());
+
+  it.each([
+    { width: 1440, path: "/library", top: 0, base: "/" },
+    { width: 1440, path: "/library", top: 0, base: "/app" },
+    { width: 820, path: "/library", top: 450, base: "/" },
+    { width: 390, path: "/library/favorites", top: 620, base: "/" },
+  ])(
+    "opens $path at $top from navigation at $width ($base)",
+    async ({ width, path, top, base }) => {
+      const resize = responsiveWindow(width === 390 ? 1440 : width);
+      await enableLibrary();
+      const user = userEvent.setup();
+      useTabSessionStore
+        .getState()
+        .rememberLocation("/library/favorites", "/library/favorites");
+      useTabSessionStore.getState().rememberScroll("/library", 0, 450);
+      useTabSessionStore
+        .getState()
+        .rememberScroll("library:favorites:list", 0, 620);
+      const draft = { query: "draft", system: "SNES", tags: [] };
+      useTabSessionStore.getState().setCreateSearch(draft);
+      const { router } = await renderShell(
+        `${base === "/" ? "" : base}/create`,
+        false,
+        true,
+        base,
+      );
+      if (width === 390) {
+        const desktopNav = within(
+          await screen.findByRole("navigation", { name: "nav.mainNavigation" }),
+        );
+        await user.click(desktopNav.getByRole("link", { name: "nav.create" }));
+        expect(router.state.location.state.appNavigationSource).toBe(
+          "desktop-sidebar",
+        );
+        await resize(390);
+      }
+      if (width === 820)
+        await user.click(
+          await screen.findByRole("button", { name: "navigation.openMenu" }),
+        );
+      const navigation = await screen.findByRole("navigation", {
+        name: "nav.mainNavigation",
+      });
+      const link = within(navigation).getByRole("link", {
+        name: "nav.library",
+      });
+      expect(link).toHaveAttribute(
+        "href",
+        `${base === "/" ? "" : base}${width === 390 ? "/library/favorites" : "/library"}`,
+      );
+      await user.click(link);
+      await waitFor(() => {
+        expect(router.state.location.pathname).toBe(path);
+        expect(
+          document.querySelector(PAGE_SCROLL_RESTORATION_SELECTOR),
+        ).toHaveProperty("scrollTop", top);
+      });
+      expect(useTabSessionStore.getState().createSearch).toEqual(draft);
+    },
+  );
+
+  it("restores desktop history per entry, starts sidebar children at top, and leaves modified clicks alone", async () => {
+    const resize = responsiveWindow(1440);
+    await enableLibrary();
+    const user = userEvent.setup();
+    useTabSessionStore
+      .getState()
+      .rememberScroll("library:favorites:list", 0, 620);
+    const { router } = await renderShell("/create", false, true);
+    const nav = within(
+      await screen.findByRole("navigation", { name: "nav.mainNavigation" }),
+    );
+    const group = nav.getByRole("link", { name: "nav.library" }).closest("li")!;
+    await user.click(
+      within(group).getByRole("button", { name: "navigation.expandSection" }),
+    );
+    let favorites = nav.getByRole("link", {
+      name: "library.favorites",
+    });
+    const setScroll = (top: number) => {
+      const scroll = document.querySelector<HTMLElement>(
+        PAGE_SCROLL_RESTORATION_SELECTOR,
+      )!;
+      scroll.scrollTop = top;
+      fireEvent.scroll(scroll);
+      return scroll;
+    };
+    setScroll(160);
+    const initialHistoryLength = router.history.length;
+    await user.click(nav.getByRole("link", { name: "nav.create" }));
+    await waitFor(() =>
+      expect(
+        document.querySelector(PAGE_SCROLL_RESTORATION_SELECTOR),
+      ).toHaveProperty("scrollTop", 0),
+    );
+    expect(router.history.length).toBe(initialHistoryLength);
+    await user.click(favorites);
+    await waitFor(() =>
+      expect(
+        document.querySelector(PAGE_SCROLL_RESTORATION_SELECTOR),
+      ).toHaveProperty("scrollTop", 0),
+    );
+    setScroll(250);
+    await user.click(nav.getByRole("link", { name: "nav.create" }));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/create"));
+    setScroll(440);
+    await user.click(favorites);
+    await waitFor(() =>
+      expect(
+        document.querySelector(PAGE_SCROLL_RESTORATION_SELECTOR),
+      ).toHaveProperty("scrollTop", 0),
+    );
+    const current = setScroll(90);
+    await resize(390);
+    expect(router.state.location.pathname).toBe("/library/favorites");
+    expect(document.querySelector(PAGE_SCROLL_RESTORATION_SELECTOR)).toBe(
+      current,
+    );
+    expect(current.scrollTop).toBe(90);
+    await resize(1440);
+    expect(current.scrollTop).toBe(90);
+    favorites = nav.getByRole("link", { name: "library.favorites" });
+    fireEvent.click(favorites, { ctrlKey: true });
+    expect(current.scrollTop).toBe(90);
+    act(() => router.history.back());
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/create");
+      expect(
+        document.querySelector(PAGE_SCROLL_RESTORATION_SELECTOR),
+      ).toHaveProperty("scrollTop", 440);
+    });
+    act(() => router.history.back());
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/library/favorites");
+      expect(
+        document.querySelector(PAGE_SCROLL_RESTORATION_SELECTOR),
+      ).toHaveProperty("scrollTop", 250);
+    });
+    act(() => router.history.forward());
+    await waitFor(() => expect(router.state.location.pathname).toBe("/create"));
+    act(() => router.history.forward());
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/library/favorites");
+      expect(
+        document.querySelector(PAGE_SCROLL_RESTORATION_SELECTOR),
+      ).toHaveProperty("scrollTop", 90);
+    });
+    const historyLength = router.history.length;
+    await user.click(favorites);
+    await waitFor(() =>
+      expect(
+        document.querySelector(PAGE_SCROLL_RESTORATION_SELECTOR),
+      ).toHaveProperty("scrollTop", 0),
+    );
+    expect(router.history.length).toBe(historyLength);
+  });
 
   it("should keep one navigation and page instance across phone, drawer and sidebar widths", async () => {
     const resize = responsiveWindow(390);
@@ -503,6 +670,10 @@ describe("Adaptive application shell", () => {
     await user.click(toggle);
     const drawer = screen.getByRole("dialog", { name: "nav.mainNavigation" });
     expect(drawer).toHaveFocus();
+    expect(screen.getByTestId("modal-overlay")).toHaveStyle({
+      opacity: "0",
+      pointerEvents: "none",
+    });
     expect(screen.getByRole("main")).toHaveAttribute("inert");
     await user.keyboard("{Escape}");
     expect(

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Card } from "@/components/wui/Card";
 import { LibraryArtworkFrame } from "@/components/library/LibraryArtworkFrame";
 import { LibraryMediaDetailsModal } from "@/components/library/LibraryMediaDetailsModal";
+import { useMetadataDetailsReturn } from "@/hooks/useMetadataDetailsReturn";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { useHapticPress } from "@/hooks/useHapticPress";
@@ -64,7 +65,11 @@ export function NowPlayingCard({
   const displaySystemName = useSystemName(media.systemId, media.systemName);
   const artwork = useNowPlayingArtwork(media);
   const handleHapticPress = useHapticPress();
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  const returnOwner = `now-playing:${media.systemId}:${media.mediaPath}`;
+  const detailsReturn = useMetadataDetailsReturn(returnOwner, deviceKey);
+  const [detailsOpen, setDetailsOpen] = useState(
+    () => detailsReturn.entry !== null,
+  );
   const gamesIndexExists = useStatusStore((state) => state.gamesIndex.exists);
   const favoritesFeature = useCoreFeature("mediaFavorites", {
     requireKnownSupport: true,
@@ -231,11 +236,15 @@ export function NowPlayingCard({
       {hasDetails && (
         <LibraryMediaDetailsModal
           isOpen={detailsOpen}
-          close={() => setDetailsOpen(false)}
+          close={() => {
+            detailsReturn.forget();
+            setDetailsOpen(false);
+          }}
           entry={detailsOpen ? artwork : null}
           systemId={media.systemId}
           deviceKey={deviceKey}
           context="nowPlaying"
+          returnOwner={returnOwner}
         />
       )}
     </section>

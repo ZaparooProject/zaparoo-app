@@ -212,6 +212,12 @@ describe("Adaptive dialogs", () => {
         command,
       );
       expect(command).toHaveFocus();
+      expect(dialog.style.transform).toBe(
+        width >= 760 ? "translate3d(-50%, -50%, 0)" : "translate3d(0, 0, 0)",
+      );
+      expect(dialog.style.transition).toBe(
+        width >= 760 ? "none" : "transform 0.2s ease-in-out",
+      );
       expect(editor).toHaveValue("A|B");
     }
     expect(await findA11yViolations(baseElement)).toEqual([]);
@@ -221,6 +227,9 @@ describe("Adaptive dialogs", () => {
     expect(editor.selectionStart).toBe("A**stop".length);
     expect(editor.selectionEnd).toBe(editor.selectionStart);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(dialog.style.transform).toBe("translate3d(-50%, -50%, 0)");
+    expect(dialog.style.transition).toBe("none");
+    expect(dialog.style.visibility).toBe("hidden");
     expect(CoreAPI.run).not.toHaveBeenCalled();
   });
 

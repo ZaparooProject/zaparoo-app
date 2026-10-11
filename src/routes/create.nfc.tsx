@@ -19,7 +19,6 @@ import {
 } from "@/lib/writeNfcHook";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { PageFrame } from "@/components/PageFrame";
-import { PageParentLink } from "@/components/PageParentLink";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { BackIcon } from "@/lib/images";
 import { TabBar } from "@/components/wui/TabBar";
@@ -147,7 +146,7 @@ export function NfcUtils() {
         layout="workspace"
         className="nfc-workspace-page"
         headerMode="content-wide"
-        headerParent={<PageParentLink to="/create" label={t("create.title")} />}
+        breadcrumbs={[{ to: "/create", label: t("create.title") }]}
         onSwipeBack={goBack}
         scrollRef={scrollContainerRef}
         headerLeft={

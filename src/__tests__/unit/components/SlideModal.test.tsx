@@ -254,6 +254,20 @@ describe("SlideModal", () => {
     expect(closeMock).toHaveBeenCalled();
   });
 
+  it("keeps one shared backdrop and invokes the current close callback after rerender", () => {
+    const oldClose = vi.fn();
+    const currentClose = vi.fn();
+    const { rerender } = render(
+      <SlideModal {...mockProps} isOpen close={oldClose} />,
+    );
+    const overlay = screen.getByTestId("modal-overlay");
+    rerender(<SlideModal {...mockProps} isOpen close={currentClose} />);
+    expect(screen.getByTestId("modal-overlay")).toBe(overlay);
+    fireEvent.click(overlay);
+    expect(currentClose).toHaveBeenCalledOnce();
+    expect(oldClose).not.toHaveBeenCalled();
+  });
+
   it("keeps a blocking modal active when a later modal is requested", async () => {
     const user = userEvent.setup();
     render(<BlockingModalHarness />);

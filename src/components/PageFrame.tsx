@@ -4,16 +4,36 @@ import {
   useElementScrollRestoration,
   useRouter,
   useRouterState,
+  type LinkProps,
 } from "@tanstack/react-router";
+import { useTranslation } from "react-i18next";
 import { ResponsiveContainer } from "@/components/ResponsiveContainer";
 import { SwipeBackIndicator } from "@/components/SwipeBackIndicator";
 import { useStatusStore } from "@/lib/store";
 import { useTabSessionStore } from "@/lib/tabSessionStore";
 import { InitialPageScrollOffsetContext } from "@/lib/pageScrollContext";
 import { useSwipeBack } from "@/hooks/useSwipeBack";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { PageParentLink } from "@/components/PageParentLink";
 
 export const PAGE_SCROLL_RESTORATION_ID = "page-scroll";
 export const PAGE_SCROLL_RESTORATION_SELECTOR = `[data-scroll-restoration-id="${PAGE_SCROLL_RESTORATION_ID}"]`;
+
+export type PageBreadcrumb =
+  | {
+      label: string;
+      to: NonNullable<LinkProps["to"]>;
+      params?: LinkProps["params"];
+      onNavigate?: () => void;
+      onClick?: never;
+    }
+  | {
+      label: string;
+      onClick: () => void;
+      to?: never;
+      params?: never;
+      onNavigate?: never;
+    };
 
 interface PageFrameProps extends React.HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
@@ -25,8 +45,8 @@ interface PageFrameProps extends React.HTMLAttributes<HTMLDivElement> {
   header?: ReactNode;
   /** Phone chrome can be omitted or become a scrolling content row on wider screens. */
   headerMode?: "always" | "phone" | "content-wide";
-  /** Quiet parent destination above a content-wide title; hidden on phones. */
-  headerParent?: ReactNode;
+  /** Ancestors inline with the current heading on tablet/desktop; hidden on phones. */
+  breadcrumbs?: readonly PageBreadcrumb[];
   /** Leading header content, such as a back button. */
   headerLeft?: ReactNode;
   /** Left-aligned title content that uses all remaining header width. */
@@ -45,6 +65,7 @@ interface PageHeaderProps {
   title?: ReactNode;
   actions?: ReactNode;
   contentWide?: boolean;
+  breadcrumbs?: readonly PageBreadcrumb[];
 }
 
 export function PageHeader({
@@ -52,7 +73,11 @@ export function PageHeader({
   title,
   actions,
   contentWide = false,
+  breadcrumbs = [],
 }: PageHeaderProps) {
+  const { t } = useTranslation();
+  const wide = useMediaQuery("(min-width: 760px)");
+  const hasBreadcrumbs = breadcrumbs.length > 0;
   return (
     <div
       className={classNames("grid min-h-14 items-center", {
@@ -71,14 +96,62 @@ export function PageHeader({
       </div>
       <div
         className={classNames(
-          "page-header-title min-w-0 text-left [&>h1]:text-xl [&>h1]:leading-tight [&>h1]:font-semibold [&>h1]:tracking-tight [&>h1]:break-words [&>h1]:outline-none",
+          "page-header-title min-w-0 text-left [&_h1]:text-xl [&_h1]:leading-tight [&_h1]:font-semibold [&_h1]:tracking-tight [&_h1]:break-words [&_h1]:outline-none",
           {
             "pl-[4px]": !left && !contentWide,
             "page-header-title-inset": !left && contentWide,
           },
         )}
       >
-        {title}
+        {hasBreadcrumbs ? (
+          <div
+            role={wide ? "navigation" : undefined}
+            aria-label={wide ? t("nav.breadcrumbs") : undefined}
+          >
+            <ol
+              className="page-header-breadcrumbs"
+              role={wide ? "list" : "presentation"}
+            >
+              {breadcrumbs.map((crumb, index) => (
+                <li
+                  className="page-header-ancestor"
+                  key={index}
+                  role={wide ? undefined : "presentation"}
+                >
+                  {crumb.to !== undefined ? (
+                    <PageParentLink
+                      to={crumb.to}
+                      label={crumb.label}
+                      params={crumb.params}
+                      onNavigate={crumb.onNavigate}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      className="page-parent-link"
+                      onClick={crumb.onClick}
+                    >
+                      {crumb.label}
+                    </button>
+                  )}
+                  <span className="page-header-separator" aria-hidden="true">
+                    ›
+                  </span>
+                </li>
+              ))}
+              <li
+                key="current"
+                className="page-header-current"
+                role={wide ? undefined : "presentation"}
+                aria-current={wide ? "page" : undefined}
+              >
+                {title}
+              </li>
+            </ol>
+          </div>
+        ) : (
+          title
+        )}
       </div>
       <div
         className={classNames("flex shrink-0 justify-end", {
@@ -97,6 +170,7 @@ interface PageFrameLayoutProps extends PageFrameProps {
     scrollY: number;
   };
   restorationKey?: string;
+  restoreSessionScroll?: boolean;
 }
 
 export function PageFrame(props: PageFrameProps) {
@@ -114,11 +188,14 @@ function RoutedPageFrame(props: PageFrameProps) {
   const restorationEntry = useElementScrollRestoration({
     id: PAGE_SCROLL_RESTORATION_ID,
   });
-  const { restorationKey, routeHref } = useRouterState({
+  const { restorationKey, routeHref, restoreSessionScroll } = useRouterState({
     select: (state) => ({
       restorationKey:
         state.location.state.__TSR_key || state.location.href || "",
       routeHref: state.location.href,
+      // Sidebar entries use per-history restoration, not phone tab memory.
+      restoreSessionScroll:
+        state.location.state.appNavigationSource !== "desktop-sidebar",
     }),
   });
 
@@ -127,6 +204,7 @@ function RoutedPageFrame(props: PageFrameProps) {
       {...props}
       restorationEntry={restorationEntry}
       restorationKey={restorationKey}
+      restoreSessionScroll={restoreSessionScroll}
       sessionScrollKey={props.sessionScrollKey ?? routeHref}
     />
   );
@@ -148,7 +226,7 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
     supportingPane,
     header,
     headerMode = "always",
-    headerParent,
+    breadcrumbs,
     headerLeft,
     headerCenter,
     headerRight,
@@ -156,6 +234,7 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
     sessionScrollKey,
     restorationEntry,
     restorationKey,
+    restoreSessionScroll = true,
     onSwipeBack,
     onMouseDown,
     onTouchCancel,
@@ -180,10 +259,11 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
   const hasHeaderContent = Boolean(
     header || headerLeft || headerCenter || headerRight,
   );
-  const initialScrollOffset = sessionScrollKey
-    ? (useTabSessionStore.getState().scrollPositions[sessionScrollKey]
-        ?.scrollY ?? 0)
-    : (restorationEntry?.scrollY ?? 0);
+  const initialScrollOffset =
+    restoreSessionScroll && sessionScrollKey
+      ? (useTabSessionStore.getState().scrollPositions[sessionScrollKey]
+          ?.scrollY ?? 0)
+      : (restorationEntry?.scrollY ?? 0);
 
   useLayoutEffect(() => {
     const entryKey = `${restorationKey ?? ""}\u0001${sessionScrollKey ?? ""}`;
@@ -201,9 +281,10 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
       scrollContainer.scrollTop = scrollY;
     };
 
-    const sessionPosition = sessionScrollKey
-      ? useTabSessionStore.getState().scrollPositions[sessionScrollKey]
-      : undefined;
+    const sessionPosition =
+      restoreSessionScroll && sessionScrollKey
+        ? useTabSessionStore.getState().scrollPositions[sessionScrollKey]
+        : undefined;
     if (sessionPosition) {
       if (!hasRestoredScroll.current) {
         hasRestoredScroll.current = true;
@@ -225,7 +306,13 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
     if (hasRestoredScroll.current) return;
     hasRestoredScroll.current = true;
     restoreScroll(0, 0);
-  }, [activeScrollRef, restorationEntry, restorationKey, sessionScrollKey]);
+  }, [
+    activeScrollRef,
+    restorationEntry,
+    restorationKey,
+    restoreSessionScroll,
+    sessionScrollKey,
+  ]);
 
   useLayoutEffect(() => {
     const headerElement = headerRef.current;
@@ -288,9 +375,6 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
       {hasHeaderContent && (
         <div className="page-header-surface">
           <ResponsiveContainer maxWidth="full" className="page-header-content">
-            {headerMode === "content-wide" && headerParent && (
-              <div className="page-header-parent">{headerParent}</div>
-            )}
             {header ? (
               header
             ) : (
@@ -299,6 +383,7 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
                 title={headerCenter}
                 actions={headerRight}
                 contentWide={headerMode === "content-wide"}
+                breadcrumbs={breadcrumbs}
               />
             )}
           </ResponsiveContainer>

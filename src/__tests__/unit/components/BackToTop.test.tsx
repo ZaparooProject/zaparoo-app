@@ -2,6 +2,7 @@ import { render, screen, fireEvent, waitFor } from "../../../test-utils";
 import { useRef } from "react";
 import { afterEach, vi, describe, it, expect } from "vitest";
 import { BackToTop } from "@/components/BackToTop";
+import { measurePageRightGap } from "@/components/BackToTop.geometry";
 
 // Mock lodash debounce
 vi.mock("lodash", () => ({
@@ -266,6 +267,25 @@ describe("BackToTop", () => {
     // Clicking should not throw even without a scroll container
     fireEvent.click(button);
     expect(button).toBeInTheDocument();
+  });
+
+  it("measures the page client edge with classic or overlay scrollbars and borders", () => {
+    const container = document.createElement("div");
+    vi.spyOn(container, "getBoundingClientRect").mockReturnValue(
+      new DOMRect(256, 0, 844, 900),
+    );
+    let clientWidth = 829;
+    let clientLeft = 0;
+    Object.defineProperties(container, {
+      clientWidth: { get: () => clientWidth },
+      clientLeft: { get: () => clientLeft },
+    });
+    expect(measurePageRightGap(container, 1440)).toBe(355);
+    clientWidth = 844;
+    expect(measurePageRightGap(container, 1440)).toBe(340);
+    clientLeft = 2;
+    clientWidth = 827;
+    expect(measurePageRightGap(container, 1440)).toBe(355);
   });
 
   it("keeps an equal margin above the end of a dialog's scroll area", () => {

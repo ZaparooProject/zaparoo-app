@@ -2,6 +2,7 @@ import { useId, type ReactNode } from "react";
 import classNames from "classnames";
 import { FileCode, Folder, Tag } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Badge } from "@/components/wui/Badge";
 import { TagBadge } from "@/components/TagBadge";
 import { useHaptics } from "@/hooks/useHaptics";
 import type {
@@ -131,11 +132,7 @@ export function MediaWriteTargetSelector(props: {
                   aria-label={`${tag.type} ${displayTag}`}
                   aria-pressed={selected}
                   className={classNames(
-                    "focus-visible:ring-ring relative rounded-full transition-opacity after:absolute after:inset-x-0 after:-inset-y-3 after:content-[''] focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed",
-                    {
-                      "wui-disabled-inset": tagsDisabled,
-                      "opacity-40": !tagsDisabled && !selected,
-                    },
+                    "focus-visible:ring-ring relative rounded-sm transition-opacity after:absolute after:inset-x-0 after:-inset-y-3 after:content-[''] focus-visible:ring-2 focus-visible:outline-none enabled:cursor-pointer enabled:hover:opacity-80 disabled:cursor-not-allowed",
                   )}
                   disabled={tagsDisabled}
                   onClick={() => {
@@ -143,20 +140,33 @@ export function MediaWriteTargetSelector(props: {
                     props.target.toggleTag(tag);
                   }}
                 >
-                  <span aria-hidden="true">
-                    <TagBadge
-                      type={tag.type}
-                      tag={tag.tag}
-                      displayTag={displayTag}
-                    />
-                  </span>
+                  {tagsDisabled ? (
+                    <span aria-hidden="true">
+                      <TagBadge
+                        type={tag.type}
+                        tag={tag.tag}
+                        displayTag={`${tag.type}:${displayTag}`}
+                      />
+                    </span>
+                  ) : (
+                    <Badge aria-hidden={true} className="gap-1.5 pl-1">
+                      <span
+                        data-testid="tag-selection-indicator"
+                        className={classNames(
+                          "border-muted-foreground h-3.5 w-3.5 shrink-0 rounded-xs border",
+                          { "bg-muted-foreground": selected },
+                        )}
+                      />
+                      <span>{`${tag.type}:${displayTag}`}</span>
+                    </Badge>
+                  )}
                 </button>
               ) : (
                 <TagBadge
                   key={`${key}:${index}`}
                   type={tag.type}
                   tag={tag.tag}
-                  displayTag={displayTag}
+                  displayTag={`${tag.type}:${displayTag}`}
                 />
               );
             })}

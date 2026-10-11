@@ -100,13 +100,15 @@ describe("MediaDetailsModal", () => {
     expect(screen.queryByLabelText("user playlater")).not.toBeInTheDocument();
   });
 
-  it("should show labels for interactive media tags", () => {
+  it("should show type prefixes and friendly labels for interactive media tags", () => {
     renderModal({
       media: {
         ...mediaWithZapScript,
         tags: [
           ...mediaWithZapScript.tags,
           { type: "edition", tag: "special", label: "Special Edition" },
+          { type: "region", tag: "eu" },
+          { type: "lang", tag: "en" },
         ],
       },
     });
@@ -114,11 +116,13 @@ describe("MediaDetailsModal", () => {
     expect(
       screen.getByRole("button", { name: "edition Special Edition" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Special Edition")).toBeInTheDocument();
+    expect(screen.getByText("edition:Special Edition")).toBeInTheDocument();
+    expect(screen.getByText("region:eu")).toBeInTheDocument();
+    expect(screen.getByText("lang:en")).toBeInTheDocument();
     expect(screen.queryByText("edition:special")).not.toBeInTheDocument();
   });
 
-  it("should show labels for read-only media tags", () => {
+  it("should show type prefixes and friendly labels for read-only media tags", () => {
     renderModal({
       media: {
         ...mediaWithZapScript,
@@ -130,7 +134,7 @@ describe("MediaDetailsModal", () => {
       },
     });
 
-    expect(screen.getByText("Special Edition")).toBeInTheDocument();
+    expect(screen.getByText("edition:Special Edition")).toBeInTheDocument();
     expect(screen.queryByText("edition:special")).not.toBeInTheDocument();
   });
 
@@ -299,11 +303,26 @@ describe("MediaDetailsModal", () => {
 
     const tag = screen.getByRole("button", { name: "genre platformer" });
     expect(tag).toBeEnabled();
+    expect(
+      within(tag).getByTestId("tag-selection-indicator"),
+    ).toBeInTheDocument();
+    await user.click(tag);
+    expect(tag).toHaveAttribute("aria-pressed", "true");
 
     await user.click(
       screen.getByRole("radio", { name: /create\.search\.pathLabel/i }),
     );
     expect(tag).toBeDisabled();
+    expect(
+      within(tag).queryByTestId("tag-selection-indicator"),
+    ).not.toBeInTheDocument();
+    const otherTag = screen.getByRole("button", { name: "year 1990" });
+    expect(
+      within(otherTag).queryByTestId("tag-selection-indicator"),
+    ).not.toBeInTheDocument();
+    expect(within(tag).getByText("genre:platformer")).toBeInTheDocument();
+    await user.click(tag);
+    expect(tag).toHaveAttribute("aria-pressed", "true");
 
     await user.click(
       screen.getByRole("radio", {
@@ -311,6 +330,15 @@ describe("MediaDetailsModal", () => {
       }),
     );
     expect(tag).toBeEnabled();
+    expect(
+      within(tag).getByTestId("tag-selection-indicator"),
+    ).toBeInTheDocument();
+    expect(tag).toHaveAttribute("aria-pressed", "true");
+    tag.focus();
+    await user.keyboard(" ");
+    expect(tag).toHaveAttribute("aria-pressed", "false");
+    await user.keyboard("{Enter}");
+    expect(tag).toHaveAttribute("aria-pressed", "true");
   });
 
   it("should select and remove Core ZapScript tags", async () => {

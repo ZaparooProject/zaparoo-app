@@ -398,7 +398,7 @@ export function RemoteKeyboardModal(props: {
             : "flex flex-col gap-3 pb-2"
         }
       >
-        {!connected && (
+        {!connected && !props.docked && (
           <p role="status" className="text-error text-sm">
             {t("remoteKeyboard.disconnected")}
           </p>

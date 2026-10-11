@@ -94,6 +94,22 @@
       0 6px 10px var(--material-shadow),
       inset 0 1px 0 var(--button-highlight);
   }
+  .wui-button-responsive {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  @media (min-width: 640px) {
+    .wui-button-responsive {
+      flex-direction: row;
+      gap: 0.5rem;
+    }
+  }
+  @media (min-width: 760px) {
+    .wui-button-responsive {
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+  }
   .wui-button:is([data-variant="text"], [data-variant="ghost"]) {
     color: var(--text-secondary);
     background: transparent;
@@ -601,15 +617,36 @@
     display: flex;
     flex-shrink: 0;
   }
-  .page-header-parent {
+  .page-header-breadcrumbs {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 0.5rem;
+    font-size: 1.25rem;
+    line-height: 1.25;
+  }
+  .page-header-current {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .page-header-ancestor {
     display: none;
+    min-width: 0;
+    max-width: 100%;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .page-header-separator {
+    color: var(--text-secondary);
   }
   .page-parent-link {
     display: inline-flex;
     min-height: 3rem;
     align-items: center;
     color: var(--text-secondary);
-    font-size: 0.875rem;
+    min-width: 0;
+    font-size: inherit;
     font-weight: 500;
     overflow-wrap: anywhere;
     cursor: pointer;
@@ -755,6 +792,12 @@
       flex-direction: row;
       align-items: flex-start;
       gap: 0.75rem;
+    }
+  }
+  @media (min-width: 760px) {
+    .wui-modal-action-rail-primary {
+      display: flex;
+      flex-direction: column;
     }
   }
   /* Content clears app chrome by one section gap, not the page side gutter. */
@@ -971,8 +1014,8 @@
     .page-header-leading {
       display: none;
     }
-    .page-header-parent {
-      display: block;
+    .page-header-ancestor {
+      display: flex;
     }
     .page-frame-content-wide-header .page-header-title-inset {
       padding-left: 0;

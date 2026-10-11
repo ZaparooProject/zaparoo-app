@@ -8,7 +8,6 @@ import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
 import { SettingHelp } from "@/components/wui/SettingHelp";
 import { useStatusStore, ConnectionState } from "@/lib/store";
 import { PageFrame } from "@/components/PageFrame";
-import { PageParentLink } from "@/components/PageParentLink";
 import { BackIcon } from "@/lib/images";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { TextInput } from "@/components/wui/TextInput";
@@ -317,9 +316,7 @@ export function PlayControlsSettings() {
       layout="workspace"
       className="settings-panel-page"
       headerMode="content-wide"
-      headerParent={
-        <PageParentLink to="/settings" label={t("settings.title")} />
-      }
+      breadcrumbs={[{ to: "/settings", label: t("settings.title") }]}
       onSwipeBack={goBack}
       headerLeft={
         <HeaderButton

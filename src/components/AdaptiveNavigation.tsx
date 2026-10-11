@@ -170,6 +170,7 @@ export function AdaptiveNavigation({ children }: { children: ReactNode }) {
         >
           {wide ? (
             <SidebarNavigation
+              desktop={desktop}
               expanded={navigation.expanded}
               onToggle={(group) =>
                 setNavigation((current) => ({

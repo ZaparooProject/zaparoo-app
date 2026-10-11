@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { useDebouncedCallback } from "use-debounce";
 import { useStatusStore } from "@/lib/store";
 import { useTactilePress } from "@/hooks/useTactilePress";
+import { measurePageRightGap } from "@/components/BackToTop.geometry";
 
 /** Inset from the right and bottom edges, so the button sits evenly in its corner. */
 const EDGE_MARGIN = "1rem";
@@ -98,10 +99,7 @@ export function BackToTop({
     const wrapper = wrapperRef.current;
     if (!container || !wrapper || bottomOffset !== undefined) return;
     if (!container.closest('[role="dialog"]')) {
-      const bounds = container.getBoundingClientRect();
-      setPageRightGap(
-        bounds.width > 0 ? Math.max(0, window.innerWidth - bounds.right) : 0,
-      );
+      setPageRightGap(measurePageRightGap(container, window.innerWidth));
       setDialogGap(null);
       return;
     }
