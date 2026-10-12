@@ -1,18 +1,20 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  CheckCircle2,
-  AlertCircle,
-  AlertTriangle,
-  WifiOff,
-  Loader2,
-  Lock,
-  LockOpen,
+  CheckCircle2Icon,
+  AlertCircleIcon,
+  AlertTriangleIcon,
+  WifiOffIcon,
+  Loader2Icon,
+  LockIcon,
+  LockOpenIcon,
 } from "lucide-react";
 import {
   useConnectionUiState,
   type ConnectionUIState,
+  connectionStateLabelKey,
 } from "@/hooks/useDevicePresentation";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface ConnectionStatusConfig {
   icon: ReactNode;
@@ -64,61 +66,61 @@ export function ConnectionStatusDisplay({
   const stateConfig: Record<ConnectionUIState, ConnectionStatusConfig> = {
     connecting: {
       icon: (
-        <Loader2 className="h-6 w-6 animate-spin motion-reduce:animate-none" />
+        <Loader2Icon className="h-6 w-6 animate-spin motion-reduce:animate-none" />
       ),
       iconColorClass: "text-primary",
-      title: t("connection.connectingToCore"),
+      title: t(connectionStateLabelKey("connecting")),
       subtitle: addressOrPlaceholder,
       subtitleColorClass: "text-muted-foreground",
     },
     reconnecting: {
       icon: (
-        <Loader2 className="h-6 w-6 animate-spin motion-reduce:animate-none" />
+        <Loader2Icon className="h-6 w-6 animate-spin motion-reduce:animate-none" />
       ),
       iconColorClass: "text-primary",
-      title: t("connection.reconnectingToCore"),
+      title: t(connectionStateLabelKey("reconnecting")),
       subtitle: addressOrPlaceholder,
       subtitleColorClass: "text-muted-foreground",
     },
     connected: {
-      icon: <CheckCircle2 className="h-6 w-6" />,
+      icon: <CheckCircle2Icon className="h-6 w-6" />,
       iconColorClass: "text-success",
-      title: t("scan.connectedHeading"),
+      title: t(connectionStateLabelKey("connected")),
       subtitle: connectedSubtitle || addressOrPlaceholder,
       subtitleColorClass: "text-muted-foreground",
     },
     unavailable: {
-      icon: <AlertTriangle className="h-6 w-6" />,
+      icon: <AlertTriangleIcon className="h-6 w-6" />,
       iconColorClass: "text-warning",
-      title: t("connection.coreUnavailable"),
+      title: t(connectionStateLabelKey("unavailable")),
       subtitle: addressOrPlaceholder,
       subtitleColorClass: "text-muted-foreground",
     },
     networkUnavailable: {
-      icon: <WifiOff className="h-6 w-6" />,
+      icon: <WifiOffIcon className="h-6 w-6" />,
       iconColorClass: "text-warning",
-      title: t("connection.networkUnavailable"),
+      title: t(connectionStateLabelKey("networkUnavailable")),
       subtitle: addressOrPlaceholder,
       subtitleColorClass: "text-muted-foreground",
     },
     error: {
-      icon: <AlertCircle className="h-6 w-6" />,
+      icon: <AlertCircleIcon className="h-6 w-6" />,
       iconColorClass: "text-error",
-      title: t("scan.connectionError"),
+      title: t(connectionStateLabelKey("error")),
       subtitle: connectionError || t("settings.connectionFailed"),
       subtitleColorClass: "text-error",
     },
     disconnected: {
-      icon: <WifiOff className="h-6 w-6" />,
+      icon: <WifiOffIcon className="h-6 w-6" />,
       iconColorClass: "text-error",
-      title: t("settings.notConnected"),
+      title: t(connectionStateLabelKey("disconnected")),
       subtitle: addressOrPlaceholder,
       subtitleColorClass: "text-muted-foreground",
     },
     pairingRequired: {
-      icon: <AlertTriangle className="h-6 w-6" />,
+      icon: <AlertTriangleIcon className="h-6 w-6" />,
       iconColorClass: "text-warning",
-      title: t("connection.pairingRequired"),
+      title: t(connectionStateLabelKey("pairingRequired")),
       subtitle: addressOrPlaceholder,
       subtitleColorClass: "text-muted-foreground",
     },
@@ -151,13 +153,13 @@ export function ConnectionStatusDisplay({
         >
           {config.title}
           {showLock && (
-            <Lock
+            <LockIcon
               className="text-success h-4 w-4 shrink-0"
               aria-label={t("connection.encrypted")}
             />
           )}
           {showUnlock && (
-            <LockOpen
+            <LockOpenIcon
               className="text-muted-foreground h-4 w-4 shrink-0"
               aria-label={t("connection.unencrypted")}
             />
@@ -169,7 +171,7 @@ export function ConnectionStatusDisplay({
           )}
         </h2>
         {showSkeleton ? (
-          <div className="bg-muted mt-1 h-4 w-32 animate-pulse rounded" />
+          <Skeleton className="mt-1 h-4 w-32" />
         ) : (
           config.subtitle && (
             <p className={`text-sm break-words ${config.subtitleColorClass}`}>

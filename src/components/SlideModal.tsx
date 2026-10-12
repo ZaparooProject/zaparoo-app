@@ -146,10 +146,13 @@ export function SlideModal(props: {
   const covered = useSyncExternalStore(subscribe, getCovered, () => false);
   const surfaceOpen = props.isOpen && (isPane || !covered);
   const modalOpen = surfaceOpen && !isPane;
-  const requestedOpen = modalOpen;
-  const requestClose = props.close;
+  // Sheets below 760px dismiss through their drag handle; floating dialogs
+  // and docked panes show the close button instead.
+  const hasCloseButton = isPane || wideDialog;
 
-  useEffect(() => {
+  // Registration and Back handling read the latest close callback through a
+  // ref, so an inline `close` prop does not re-register an open modal.
+  useLayoutEffect(() => {
     closeRef.current = props.close;
   }, [props.close]);
 
@@ -358,7 +361,7 @@ export function SlideModal(props: {
     "slide-modal",
     () => {
       if (modalOpen) {
-        if (dismissible) props.close();
+        if (dismissible) closeRef.current();
         return true; // Consume the event
       }
       return false; // Let other handlers process it
@@ -369,14 +372,14 @@ export function SlideModal(props: {
 
   // Register before paint so a blocking modal can reject later sheets without a visible or focusable flash.
   useLayoutEffect(() => {
-    if (requestedOpen) {
+    if (modalOpen) {
       const accepted = modalManager.closeAllExcept(modalId);
       if (!accepted) {
-        requestClose();
+        closeRef.current();
         return;
       }
 
-      modalManager.registerModal(modalId, requestClose, {
+      modalManager.registerModal(modalId, () => closeRef.current(), {
         blocking: !dismissible,
         overlay: true,
       });
@@ -387,7 +390,7 @@ export function SlideModal(props: {
     }
 
     modalManager.unregisterModal(modalId);
-  }, [requestedOpen, requestClose, modalId, modalManager, dismissible]);
+  }, [modalOpen, modalId, modalManager, dismissible]);
 
   const safeInsets = useStatusStore((state) => state.safeInsets) ?? {
     top: "0px",
@@ -453,18 +456,15 @@ export function SlideModal(props: {
             : classNames(
                 "fixed",
                 "z-50",
-                "left-0", // Mobile: align to left edge
-                "sm:left-1/2", // Desktop: center horizontally
-                { "sm:-translate-x-1/2": !wideDialog }, // Floating dialogs center through transform.
-                "w-full",
-                "max-w-none", // Mobile: full width
-                "sm:max-w-2xl", // Desktop: responsive width (672px)
                 "flex",
                 "flex-col",
-                wideDialog ? "rounded-lg" : "rounded-t-lg",
+                "max-w-2xl", // Bounded to 42rem; workspace dialogs widen inline.
+                // Sheets center through auto margins, so no transform is needed.
+                wideDialog
+                  ? "rounded-lg"
+                  : "inset-x-0 mx-auto w-full rounded-t-lg border-b-0",
                 "shadow-[0_-8px_32px_var(--material-shadow),inset_0_1px_0_var(--material-highlight)]",
                 "border",
-                { "border-b-0": !wideDialog },
                 "border-solid",
                 "border-border",
                 "bg-surface-raised",
@@ -516,8 +516,8 @@ export function SlideModal(props: {
         {/* Swipeable handle and title area */}
         <div style={{ touchAction: "pan-x pinch-zoom" }}>
           {/* Mobile drag handle */}
-          {dismissible && !isPane && (
-            <div className="-mt-3 sm:hidden">
+          {dismissible && !isPane && !wideDialog && (
+            <div className="-mt-3">
               <button
                 type="button"
                 onClick={props.close}
@@ -533,7 +533,12 @@ export function SlideModal(props: {
             </div>
           )}
           {/* Shared visible title and desktop close action */}
-          <div className={isSection ? "relative" : "relative pb-2 sm:min-h-11"}>
+          <div
+            className={classNames("relative", {
+              "pb-2": !isSection,
+              "min-h-11": !isSection && hasCloseButton,
+            })}
+          >
             <h2
               ref={titleRef}
               id={`${modalId}-title`}
@@ -552,16 +557,19 @@ export function SlideModal(props: {
               className={
                 isSection
                   ? "text-muted-foreground mb-2 font-bold wrap-anywhere capitalize outline-none"
-                  : "text-center text-lg leading-snug font-semibold tracking-tight wrap-anywhere outline-none sm:pr-10 sm:text-left"
+                  : classNames(
+                      "text-lg leading-snug font-semibold tracking-tight wrap-anywhere outline-none",
+                      hasCloseButton ? "pr-10 text-left" : "text-center",
+                    )
               }
             >
               {props.title}
             </h2>
-            {dismissible && (
+            {dismissible && hasCloseButton && (
               <button
                 type="button"
                 onClick={props.close}
-                className="hover:before:bg-foreground/10 focus-visible:outline-ring absolute top-[-7px] right-0 hidden h-12 w-12 items-center justify-center rounded-full opacity-70 transition-opacity before:absolute before:inset-0.5 before:rounded-full before:content-[''] hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-1 sm:flex"
+                className="hover:before:bg-foreground/10 focus-visible:outline-ring absolute top-[-7px] right-0 flex h-12 w-12 items-center justify-center rounded-full opacity-70 transition-opacity before:absolute before:inset-0.5 before:rounded-full before:content-[''] hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-1"
                 style={
                   !isPane && wideDialog
                     ? {

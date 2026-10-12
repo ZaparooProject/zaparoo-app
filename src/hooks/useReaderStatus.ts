@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { CoreAPI } from "@/lib/coreApi";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { useStatusStore } from "@/lib/store";
 import type { ReaderInfo } from "@/lib/models";
@@ -10,7 +11,6 @@ export interface ReaderStatus {
   /** Reader responsible for the running media, where Core reports one. */
   holdOwnerReaderId?: string;
   isPending: boolean;
-  available: boolean;
 }
 
 /**
@@ -20,10 +20,12 @@ export interface ReaderStatus {
  */
 export function useReaderStatus(): ReaderStatus {
   const connected = useStatusStore((state) => state.connected);
+  const deviceKey = useActiveDeviceKey();
   const readersFeature = useCoreFeature("readers");
 
   const query = useQuery({
-    queryKey: ["readers"],
+    // Device-scoped: another Core's readers must never show for this one.
+    queryKey: ["readers", deviceKey],
     queryFn: () => CoreAPI.readers(),
     enabled: connected && readersFeature.available,
     staleTime: 30_000,
@@ -33,6 +35,5 @@ export function useReaderStatus(): ReaderStatus {
     readers: sortReaders(query.data?.readers ?? []),
     holdOwnerReaderId: query.data?.holdOwnerReaderId,
     isPending: query.isPending,
-    available: readersFeature.available,
   };
 }

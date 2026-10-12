@@ -8,28 +8,13 @@ import { ConnectionState, useStatusStore } from "@/lib/store";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { SlideModal } from "@/components/SlideModal";
 import { Button } from "@/components/wui/Button";
-import { ModalActionRail } from "@/components/wui/ModalActionRail";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { PlayIcon } from "@/lib/images";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { useContextualNfcWrite } from "@/hooks/useContextualNfcWrite";
 import {
-  ReaderActivityAction,
-  ReaderActivityStatus,
-} from "@/components/ReaderActivityAction";
+  ContextualWriteRail,
+  LaunchButton,
+} from "@/components/library/ContextualWriteRail";
 import { DeckArtwork } from "@/components/library/DeckArtwork";
-
-function cardRenderedUrl(item: DeckItem | null): string | null {
-  if (item?.kind !== "card") return null;
-  const image = item.metadata?.rendered_url;
-  if (typeof image !== "string") return null;
-  try {
-    const url = new URL(image);
-    return url.protocol === "https:" ? url.href : null;
-  } catch {
-    return null;
-  }
-}
 
 export function DeckItemDetailsModal({
   item,
@@ -60,7 +45,6 @@ export function DeckItemDetailsModal({
       ? `https://zpr.au/c$${item.cardId.trim()}`
       : launchText;
   const displayText = launchText ?? playText;
-  const imageUrl = cardRenderedUrl(item);
   const deviceKey = useActiveDeviceKey();
   const writeActivity = useContextualNfcWrite(
     JSON.stringify([deviceKey, deckId, item?.id, launchText]),
@@ -92,95 +76,50 @@ export function DeckItemDetailsModal({
       isOpen={isOpen}
       close={closeDetails}
       title={title}
+      footerSkipLabel={t("accessibility.skipToActions")}
       footer={
-        <ModalActionRail
+        <ContextualWriteRail
           aria-label={t("decks.itemActions")}
-          readerAction
-          status={
-            writeActivity.state === "attention" ||
-            writeActivity.state === "error" ? (
-              <ReaderActivityStatus
-                state={writeActivity.state}
-                onCancel={() => void writeActivity.cancel()}
-              />
-            ) : undefined
-          }
-          actions={
-            <>
-              {canRemove && (
-                <Button
-                  label={t("decks.remove")}
-                  icon={<Trash2Icon size={20} />}
-                  variant="text"
-                  layout="responsive"
-                  intent="destructive"
-                  className="whitespace-nowrap"
-                  disabled={!item || launching || writeActivity.active}
-                  disabledAppearance={
-                    launching || writeActivity.active ? "busy" : "unavailable"
-                  }
-                  onClick={() => {
-                    if (!item) return;
-                    closeDetails();
-                    onRemove(item);
-                  }}
-                />
-              )}
-              <ReaderActivityAction
-                state={writeActivity.state}
-                label={t("library.writeAction")}
-                busy={launching}
-                disabled={
-                  !launchText ||
-                  !writeAvailable ||
-                  launching ||
-                  writeActivity.externalWriteActive
-                }
-                onStart={() => {
-                  if (launchText) void writeActivity.start(launchText);
-                }}
-                onCancel={() => void writeActivity.cancel()}
-                onRetry={() => void writeActivity.retry()}
-              />
-            </>
-          }
+          activity={writeActivity}
+          writeDisabled={!launchText || !writeAvailable}
+          busy={launching}
+          onWrite={() => {
+            if (launchText) void writeActivity.start(launchText);
+          }}
           primaryAction={
-            <Button
+            <LaunchButton
               label={t("decks.play")}
-              aria-label={launching ? t("library.launching") : t("decks.play")}
-              icon={
-                launching ? (
-                  <LoadingSpinner size={20} decorative />
-                ) : (
-                  <PlayIcon size="20" />
-                )
-              }
-              intent="primary"
-              disabled={
-                !playText || !liveConnected || launching || writeActivity.active
-              }
+              launching={launching}
+              unavailable={!playText || !liveConnected}
+              busy={writeActivity.active}
+              onLaunch={() => void launch()}
+            />
+          }
+        >
+          {canRemove && (
+            <Button
+              label={t("decks.remove")}
+              icon={<Trash2Icon size={20} />}
+              variant="text"
+              layout="responsive"
+              intent="destructive"
+              className="whitespace-nowrap"
+              disabled={!item || launching || writeActivity.active}
               disabledAppearance={
                 launching || writeActivity.active ? "busy" : "unavailable"
               }
-              onClick={() => void launch()}
+              onClick={() => {
+                if (!item) return;
+                closeDetails();
+                onRemove(item);
+              }}
             />
-          }
-        />
+          )}
+        </ContextualWriteRail>
       }
     >
       <div className="flex flex-col gap-3 py-2">
-        {imageUrl && (
-          <img
-            src={imageUrl}
-            alt={t("library.imageAlt", {
-              title,
-              type: t("library.imageTypes.artwork"),
-            })}
-            loading="lazy"
-            className="h-64 w-full object-contain"
-          />
-        )}
-        {item?.kind === "script" && (
+        {item && (
           <DeckArtwork
             item={item}
             detail

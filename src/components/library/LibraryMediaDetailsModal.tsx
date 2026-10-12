@@ -1,33 +1,24 @@
 import {
-  useCallback,
+  Fragment,
   useEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import toast from "react-hot-toast";
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  ListPlusIcon,
-  PlusIcon,
-} from "lucide-react";
+import { ChevronRightIcon, ListPlusIcon } from "lucide-react";
 import {
   LibraryMetadataLink,
   type MetadataLinkTarget,
 } from "@/components/library/LibraryMetadataLink";
 import { libraryTagDisplayLabel } from "@/lib/libraryTagLabels";
-import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { CoreAPI, logRunFailure } from "@/lib/coreApi";
 import { logger } from "@/lib/logger";
 import {
   collectLibraryMetadata,
-  deriveLibraryImageTypes,
   fetchLibraryMediaMeta,
-  imageTypeFromTypeTag,
   LIBRARY_QUERY_KEYS,
   libraryEntryDisplayName,
   mediaRefKey,
@@ -43,29 +34,21 @@ import { ConnectionState, useStatusStore } from "@/lib/store";
 import { useSystemNameResolver } from "@/hooks/useSystemName";
 import { useNfcWriteAvailable } from "@/hooks/useNfcWriteAvailable";
 import { useContextualNfcWrite } from "@/hooks/useContextualNfcWrite";
-import {
-  ReaderActivityAction,
-  ReaderActivityStatus,
-} from "@/components/ReaderActivityAction";
-import { useHapticPress } from "@/hooks/useHapticPress";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
-import {
-  canEditDeck,
-  MAX_DECK_ITEMS,
-  mediaDeckItem,
-  refreshDecks,
-} from "@/lib/decks";
-import { TextInput } from "@/components/wui/TextInput";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { SlideModal } from "@/components/SlideModal";
 import { TagBadge } from "@/components/TagBadge";
 import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
-import { ModalActionRail } from "@/components/wui/ModalActionRail";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { DelayedLoading } from "@/components/DelayedLoading";
-import { NextIcon, PlayIcon } from "@/lib/images";
-import { LibraryArtwork } from "@/components/library/LibraryArtwork";
+import { InlineLoading } from "@/components/InlineLoading";
+import {
+  ContextualWriteRail,
+  LaunchButton,
+} from "@/components/library/ContextualWriteRail";
+import { LibraryAddToDeckModals } from "@/components/library/LibraryAddToDeck";
+import { useLibraryAddToDeck } from "@/components/library/useLibraryAddToDeck";
+import { LibraryDetailArtwork } from "@/components/library/LibraryDetailArtwork";
 import { MediaPreferenceActions } from "@/components/library/MediaPreferenceActions";
 import { MediaWriteTargetModal } from "@/components/MediaWriteTargetModal";
 import {
@@ -74,6 +57,7 @@ import {
   shouldSelectMediaWriteTarget,
 } from "@/lib/mediaWriteTarget";
 
+/** Label/value row; stacks on phones and inside the docked details pane. */
 export function DetailRow(props: {
   label: string;
   value?: string;
@@ -82,12 +66,12 @@ export function DetailRow(props: {
 }) {
   if (!props.value && !props.children) return null;
   return (
-    <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-3">
+    <div className="library-detail-row">
       <span className="text-muted-foreground text-sm sm:min-w-[120px]">
         {props.label}
       </span>
       <span
-        className={`flex-1 break-words ${props.mono ? "font-mono text-sm" : "font-medium"}`}
+        className={`min-w-0 flex-1 break-words ${props.mono ? "font-mono text-sm" : "font-medium"}`}
       >
         {props.children ?? props.value}
       </span>
@@ -116,39 +100,10 @@ function metadataFactLabelKey(type: LibraryDetailFactType): string {
   }
 }
 
-function TagRow(props: {
-  label: string;
-  tags: TagInfo[];
-  target: MetadataLinkTarget;
-  enabled: boolean;
-}) {
-  const { t } = useTranslation();
-  if (props.tags.length === 0) return null;
-  return (
-    <div className="library-media-tag-row">
-      <span className="text-muted-foreground text-sm sm:min-w-[120px]">
-        {props.label}
-      </span>
-      <span className="flex flex-1 flex-wrap gap-1.5">
-        {props.tags.map((tag, index) => (
-          <LibraryMetadataLink
-            key={`${tag.type}:${tag.tag}:${index}`}
-            {...props.target}
-            tag={tag}
-            enabled={props.enabled}
-            label={`${props.label}: ${tag.type}:${libraryTagDisplayLabel(tag, t)}`}
-          >
-            <TagBadge
-              type={tag.type}
-              tag={tag.tag}
-              displayTag={`${tag.type}:${libraryTagDisplayLabel(tag, t)}`}
-            />
-          </LibraryMetadataLink>
-        ))}
-      </span>
-    </div>
-  );
-}
+const SUMMARY_FACT_TYPES: readonly LibraryDetailFactType[] = [
+  "year",
+  "players",
+];
 
 export function LibraryMediaDetailsModal(props: {
   isOpen: boolean;
@@ -161,29 +116,12 @@ export function LibraryMediaDetailsModal(props: {
   docked?: boolean;
 }) {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
-  const decksFeature = useCoreFeature("decks", { requireKnownSupport: true });
   const metadataSearchFeature = useCoreFeature("mediaTags", {
     requireKnownSupport: true,
   });
   const libraryFeature = useCoreFeature("mediaLibrary", {
     requireKnownSupport: true,
   });
-  const [deckPickerOpen, setDeckPickerOpen] = useState(false);
-  const [deckSaving, setDeckSaving] = useState(false);
-  const [newDeckName, setNewDeckName] = useState("");
-  const [creatingDeck, setCreatingDeck] = useState(false);
-  const [deckSearch, setDeckSearch] = useState("");
-  const handleDeckPress = useHapticPress();
-  useEffect(() => {
-    if (!props.isOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- External dismissal must not reopen a stale deck picker with the next media selection.
-      setDeckPickerOpen(false);
-      setCreatingDeck(false);
-      setDeckSearch("");
-      setNewDeckName("");
-    }
-  }, [props.isOpen]);
   const showFilenames = usePreferencesStore((state) => state.showFilenames);
   const resolveSystemName = useSystemNameResolver();
   // `connected` stays true while reconnecting so cached data remains usable.
@@ -191,18 +129,6 @@ export function LibraryMediaDetailsModal(props: {
   const liveConnected = useStatusStore(
     (state) => state.connectionState === ConnectionState.CONNECTED,
   );
-  const [imageIndex, setImageIndex] = useState(0);
-  // The artwork reports its cover from an effect, which runs before this
-  // component's effects. A cached cover is reported on the first render for a
-  // new entry, so a reset effect would discard it. Tie each report to its media.
-  const [defaultImageReport, setDefaultImageReport] = useState<{
-    mediaKey: string;
-    type: string | null;
-  } | null>(null);
-  const [availabilityReport, setAvailabilityReport] = useState<{
-    mediaKey: string;
-    available: boolean;
-  } | null>(null);
   const [launching, setLaunching] = useState(false);
   const [preparingWrite, setPreparingWrite] = useState(false);
   const [writeOptionsOpen, setWriteOptionsOpen] = useState(false);
@@ -211,8 +137,6 @@ export function LibraryMediaDetailsModal(props: {
   );
   const launchControllerRef = useRef<AbortController | null>(null);
   const writeControllerRef = useRef<AbortController | null>(null);
-  const previousImageButtonRef = useRef<HTMLButtonElement>(null);
-  const nextImageButtonRef = useRef<HTMLButtonElement>(null);
   const [retainedSelection, setRetainedSelection] = useState<{
     entry: MediaBrowseEntry;
     systemId: string;
@@ -227,14 +151,13 @@ export function LibraryMediaDetailsModal(props: {
     ? JSON.stringify([props.deviceKey, ...mediaRefKey(entry, systemId)])
     : null;
   const writeActivity = useContextualNfcWrite(mediaKey, props.isOpen);
-  const resolvedDefaultType =
-    defaultImageReport?.mediaKey === mediaKey ? defaultImageReport.type : null;
-  const imageAvailable =
-    availabilityReport?.mediaKey === mediaKey
-      ? availabilityReport.available
-      : entry?.hasCover === false
-        ? false
-        : null;
+  const deckFlow = useLibraryAddToDeck({
+    entry,
+    systemId,
+    deviceKey: props.deviceKey,
+    mediaKey,
+    detailsOpen: props.isOpen,
+  });
 
   useEffect(() => {
     if (!props.entry) return;
@@ -258,48 +181,6 @@ export function LibraryMediaDetailsModal(props: {
     retry: false,
   });
   const writeAvailable = useNfcWriteAvailable(props.deviceKey, props.isOpen);
-  const deckList = useQuery({
-    queryKey: [LIBRARY_QUERY_KEYS.decks, props.deviceKey],
-    queryFn: ({ signal }) => CoreAPI.decks(signal),
-    enabled:
-      deckPickerOpen &&
-      liveConnected &&
-      decksFeature.available &&
-      Boolean(props.deviceKey),
-  });
-  const addToDeck = async (deckId?: string) => {
-    if (
-      !entry ||
-      !systemId ||
-      (!entry.path && entry.mediaId === undefined) ||
-      !liveConnected ||
-      (!deckId && !newDeckName.trim()) ||
-      deckSaving
-    )
-      return;
-    setDeckSaving(true);
-    if (deckId) setDeckPickerOpen(false);
-    try {
-      const media = mediaDeckItem(entry, showFilenames);
-      const updated = deckId
-        ? await CoreAPI.deckUpdate({ deckId, addItems: [media] })
-        : await CoreAPI.deckNew({ name: newDeckName.trim(), items: [media] });
-      await refreshDecks(queryClient, props.deviceKey, updated);
-      setNewDeckName("");
-      setCreatingDeck(false);
-      setDeckPickerOpen(false);
-      toast.success(t("decks.added"));
-    } catch (error) {
-      logger.error("Failed to add media to deck", error, {
-        category: "api",
-        action: "deckAddMedia",
-      });
-      setDeckPickerOpen(true);
-      toast.error(t("decks.addError"));
-    } finally {
-      setDeckSaving(false);
-    }
-  };
   const metadata = metadataQuery.data?.media;
   const metadataWritePath =
     entry?.type !== "media" && metadata?.path !== entry?.path
@@ -328,14 +209,6 @@ export function LibraryMediaDetailsModal(props: {
     () => (metadata ? collectLibraryMetadata(metadata) : null),
     [metadata],
   );
-  const imageTypes = useMemo(() => {
-    if (!metadata) return [];
-    return deriveLibraryImageTypes(metadata).filter(
-      (type) => type !== resolvedDefaultType,
-    );
-  }, [metadata, resolvedDefaultType]);
-  const imageOptions = [null, ...imageTypes] as Array<string | null>;
-  const currentImageType = imageOptions[imageIndex] ?? null;
   const fallbackTitle = entry
     ? libraryEntryDisplayName(entry, showFilenames)
     : "";
@@ -343,8 +216,7 @@ export function LibraryMediaDetailsModal(props: {
   const description = metadataView?.description || entry?.description || "";
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- A new external media selection starts a fresh carousel/action state.
-    setImageIndex(0);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- A new external media selection starts a fresh action state.
     setLaunching(false);
     setPreparingWrite(false);
     setWriteOptionsOpen(false);
@@ -373,39 +245,8 @@ export function LibraryMediaDetailsModal(props: {
     [],
   );
 
-  useEffect(() => {
-    if (imageIndex >= imageOptions.length) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Metadata can remove a duplicate resolved cover type from carousel.
-      setImageIndex(Math.max(0, imageOptions.length - 1));
-    }
-  }, [imageIndex, imageOptions.length]);
-
-  const rememberResolvedType = useCallback(
-    (typeTag: string) => {
-      if (mediaKey === null) return;
-      const type = imageTypeFromTypeTag(typeTag);
-      setDefaultImageReport((current) =>
-        current?.mediaKey === mediaKey && current.type === type
-          ? current
-          : { mediaKey, type },
-      );
-    },
-    [mediaKey],
-  );
-  const rememberImageAvailability = useCallback(
-    (available: boolean) => {
-      if (mediaKey === null) return;
-      setAvailabilityReport((current) =>
-        current?.mediaKey === mediaKey && current.available === available
-          ? current
-          : { mediaKey, available },
-      );
-    },
-    [mediaKey],
-  );
-
   const closeModal = () => {
-    setDeckPickerOpen(false);
+    deckFlow.closePicker();
     launchControllerRef.current?.abort();
     launchControllerRef.current = null;
     writeControllerRef.current?.abort();
@@ -510,23 +351,26 @@ export function LibraryMediaDetailsModal(props: {
     }
   };
 
-  const detailTags = mergeLibraryTags(
-    entry?.disambiguatingTags ?? [],
-    metadataView?.tags ?? [],
-    entry?.tags ?? [],
+  const detailTagView = organizeLibraryDetailTags(
+    mergeLibraryTags(
+      entry?.disambiguatingTags ?? [],
+      metadataView?.tags ?? [],
+      entry?.tags ?? [],
+    ),
   );
-  const detailTagView = organizeLibraryDetailTags(detailTags);
-  const factTags = (type: LibraryDetailFactType) =>
-    detailTags.filter((tag) => tag.type.trim().toLowerCase() === type);
+  const summaryFacts = detailTagView.facts.filter((fact) =>
+    SUMMARY_FACT_TYPES.includes(fact.type),
+  );
   const detailFacts = detailTagView.facts.filter(
-    (fact) => fact.type !== "year" && fact.type !== "players",
+    (fact) => !SUMMARY_FACT_TYPES.includes(fact.type),
   );
   const resolvedSystemName = resolveSystemName(
     metadata?.title.system.id || systemId,
     metadata?.title.system.name || systemId,
   );
-  const playerLabel = (tag: TagInfo) => {
+  const factValueLabel = (type: LibraryDetailFactType, tag: TagInfo) => {
     const value = libraryTagDisplayLabel(tag, t);
+    if (type !== "players") return value;
     const count = Number(value);
     return Number.isInteger(count) && count >= 0
       ? t("library.playerCount", { count })
@@ -542,179 +386,98 @@ export function LibraryMediaDetailsModal(props: {
     : null;
   const canExploreTags =
     libraryFeature.available && metadataSearchFeature.available;
-  const imageType = currentImageType ?? resolvedDefaultType ?? "artwork";
-  const imageAlt = t("library.imageAlt", {
-    title,
-    type: t(`library.imageTypes.${imageType}`),
-  });
-  const showPreviousImage = () => {
-    const nextIndex = Math.max(0, imageIndex - 1);
-    setImageIndex(nextIndex);
-    if (nextIndex === 0) {
-      requestAnimationFrame(() => {
-        nextImageButtonRef.current?.focus({ preventScroll: true });
-      });
-    }
-  };
-  const showNextImage = () => {
-    const nextIndex = Math.min(imageOptions.length - 1, imageIndex + 1);
-    setImageIndex(nextIndex);
-    if (nextIndex === imageOptions.length - 1) {
-      requestAnimationFrame(() => {
-        previousImageButtonRef.current?.focus({ preventScroll: true });
-      });
-    }
-  };
+  const factLinks = (
+    target: MetadataLinkTarget,
+    type: LibraryDetailFactType,
+    tags: readonly TagInfo[],
+  ) =>
+    tags.map((tag, index) => {
+      const value = factValueLabel(type, tag);
+      return {
+        key: `${tag.type}:${tag.tag}:${index}`,
+        link: (
+          <LibraryMetadataLink
+            {...target}
+            tag={tag}
+            enabled={canExploreTags}
+            label={`${t(metadataFactLabelKey(type))}: ${value}`}
+          >
+            {value}
+          </LibraryMetadataLink>
+        ),
+      };
+    });
   const footer = entry ? (
-    <ModalActionRail
+    <ContextualWriteRail
       aria-label={t("library.mediaActions")}
-      readerAction
-      status={
-        writeActivity.state === "attention" ||
-        writeActivity.state === "error" ? (
-          <ReaderActivityStatus
-            state={writeActivity.state}
-            onCancel={() => void writeActivity.cancel()}
-          />
-        ) : undefined
-      }
-      actions={
-        <>
-          <MediaPreferenceActions
-            key={mediaKey}
-            entry={entry}
-            fallbackSystemId={systemId}
-            deviceKey={props.deviceKey}
-            metadataTags={metadata?.tags}
-            context="modal"
-          />
-          {decksFeature.available &&
-            entry.type === "media" &&
-            (entry.mediaId !== undefined || (systemId && entry.path)) && (
-              <Button
-                label={t("decks.addAction")}
-                icon={<ListPlusIcon size={20} />}
-                variant="text"
-                layout="responsive"
-                className="whitespace-nowrap"
-                disabled={!liveConnected || deckSaving || writeActivity.active}
-                onClick={() => setDeckPickerOpen(true)}
-              />
-            )}
-          <ReaderActivityAction
-            state={writeActivity.state}
-            label={t("library.writeAction")}
-            idleAriaLabel={t("library.write")}
-            preparing={preparingWrite}
-            preparingLabel={t("library.preparingWrite")}
-            busy={launching}
-            disabled={
-              !writeAvailable || launching || writeActivity.externalWriteActive
-            }
-            onStart={() => void write()}
-            onCancel={() => void writeActivity.cancel()}
-            onRetry={() => void writeActivity.retry()}
-          />
-        </>
-      }
+      activity={writeActivity}
+      writeDisabled={!writeAvailable}
+      busy={launching}
+      preparing={preparingWrite}
+      preparingLabel={t("library.preparingWrite")}
+      onWrite={() => void write()}
       primaryAction={
         props.context !== "nowPlaying" ? (
-          <Button
+          <LaunchButton
             label={t("library.launch")}
-            aria-label={
-              launching ? t("library.launching") : t("library.launch")
-            }
-            icon={
-              launching ? (
-                <LoadingSpinner size={20} decorative />
-              ) : (
-                <PlayIcon size="20" />
-              )
-            }
-            intent="primary"
-            disabled={
-              !liveConnected ||
-              launching ||
-              preparingWrite ||
-              writeActivity.active
-            }
-            disabledAppearance={
-              launching || preparingWrite || writeActivity.active
-                ? "busy"
-                : "unavailable"
-            }
-            onClick={() => void launch()}
+            launching={launching}
+            unavailable={!liveConnected}
+            busy={preparingWrite || writeActivity.active}
+            onLaunch={() => void launch()}
           />
         ) : undefined
       }
-    />
+    >
+      <MediaPreferenceActions
+        key={mediaKey}
+        entry={entry}
+        fallbackSystemId={systemId}
+        deviceKey={props.deviceKey}
+        metadataTags={metadata?.tags}
+        context="modal"
+      />
+      {deckFlow.available && (
+        <Button
+          label={t("decks.addAction")}
+          icon={<ListPlusIcon size={20} />}
+          variant="text"
+          layout="responsive"
+          className="whitespace-nowrap"
+          disabled={!liveConnected || deckFlow.saving || writeActivity.active}
+          disabledAppearance={deckFlow.saving ? "busy" : "unavailable"}
+          onClick={deckFlow.openPicker}
+        />
+      )}
+    </ContextualWriteRail>
   ) : undefined;
 
-  const detailsModal = (
-    <SlideModal
-      isOpen={
-        props.isOpen && (props.docked || (!writeOptionsOpen && !deckPickerOpen))
-      }
-      presentation={props.docked ? "pane" : "modal"}
-      suspendWhenCovered
-      close={closeModal}
-      title={title}
-      footer={footer}
-      footerSkipLabel={t("accessibility.skipToActions")}
-    >
-      {entry && (
-        <div className="flex flex-col gap-4 py-2">
-          {imageAvailable !== false && (
-            <div className="flex flex-col gap-2">
-              <div className="relative h-64 w-full">
-                <LibraryArtwork
-                  entry={entry}
-                  systemId={systemId}
-                  deviceKey={props.deviceKey}
-                  maxSize={512}
-                  priority="detail"
-                  imageTypes={currentImageType ? [currentImageType] : undefined}
-                  className="h-full w-full object-contain"
-                  loadingClassName="mx-auto max-w-[21.333rem]"
-                  alt={imageAlt}
-                  onTypeTag={
-                    currentImageType ? undefined : rememberResolvedType
-                  }
-                  onAvailabilityChange={
-                    currentImageType ? undefined : rememberImageAvailability
-                  }
-                />
-              </div>
-              {imageOptions.length > 1 && (
-                <div className="flex items-center justify-center gap-3">
-                  <Button
-                    ref={previousImageButtonRef}
-                    icon={<ChevronLeftIcon size={20} />}
-                    variant="text"
-                    aria-label={t("library.previousImage")}
-                    disabled={imageIndex === 0}
-                    onClick={showPreviousImage}
-                  />
-                  <span className="text-muted-foreground text-sm">
-                    {t("library.imagePosition", {
-                      current: imageIndex + 1,
-                      total: imageOptions.length,
-                    })}
-                  </span>
-                  <Button
-                    ref={nextImageButtonRef}
-                    icon={<ChevronRightIcon size={20} />}
-                    variant="text"
-                    aria-label={t("library.nextImage")}
-                    disabled={imageIndex === imageOptions.length - 1}
-                    onClick={showNextImage}
-                  />
-                </div>
-              )}
-            </div>
-          )}
+  const writeOptionsModalOpen = props.isOpen && writeOptionsOpen;
 
-          {linkTarget && (
+  return (
+    <>
+      <SlideModal
+        isOpen={
+          props.isOpen &&
+          (props.docked || (!writeOptionsOpen && !deckFlow.pickerOpen))
+        }
+        presentation={props.docked ? "pane" : "modal"}
+        suspendWhenCovered
+        close={closeModal}
+        title={title}
+        footer={footer}
+        footerSkipLabel={t("accessibility.skipToActions")}
+      >
+        {entry && linkTarget && (
+          <div className="flex flex-col gap-4 py-2">
+            <LibraryDetailArtwork
+              key={mediaKey}
+              entry={entry}
+              systemId={systemId}
+              deviceKey={props.deviceKey}
+              title={title}
+              metadata={metadata}
+            />
+
             <div className="text-muted-foreground flex flex-wrap items-center justify-center gap-x-2 text-center text-sm">
               <LibraryMetadataLink
                 {...linkTarget}
@@ -723,267 +486,121 @@ export function LibraryMediaDetailsModal(props: {
               >
                 {resolvedSystemName}
               </LibraryMetadataLink>
-              {[...factTags("year"), ...factTags("players")].map(
-                (tag, index) => (
-                  <span
-                    key={`${tag.type}:${tag.tag}:${index}`}
-                    className="inline-flex items-center gap-2"
-                  >
-                    <span aria-hidden="true">•</span>
-                    <LibraryMetadataLink
-                      {...linkTarget}
-                      enabled={canExploreTags}
-                      tag={tag}
-                      label={`${t(metadataFactLabelKey(tag.type.trim().toLowerCase() as LibraryDetailFactType))}: ${tag.type.trim().toLowerCase() === "players" ? playerLabel(tag) : libraryTagDisplayLabel(tag, t)}`}
-                    >
-                      {tag.type.trim().toLowerCase() === "players"
-                        ? playerLabel(tag)
-                        : libraryTagDisplayLabel(tag, t)}
-                    </LibraryMetadataLink>
-                  </span>
+              {summaryFacts.flatMap((fact) =>
+                factLinks(linkTarget, fact.type, fact.tags).map(
+                  ({ key, link }) => (
+                    <span key={key} className="inline-flex items-center gap-2">
+                      <span aria-hidden="true">•</span>
+                      {link}
+                    </span>
+                  ),
                 ),
               )}
             </div>
-          )}
 
-          {metadataQuery.isLoading && (
-            <DelayedLoading>
-              <div
-                className="text-muted-foreground flex items-center justify-center gap-2"
-                role="status"
-              >
-                <LoadingSpinner size={16} className="text-primary" decorative />
-                <span>{t("library.loadingMetadata")}</span>
-              </div>
-            </DelayedLoading>
-          )}
-          {metadataQuery.isError && (
-            <div className="flex flex-col items-center gap-2">
-              <span className="text-muted-foreground text-sm" role="alert">
-                {t("library.metadataError")}
-              </span>
-              <Button
-                label={t("library.tryAgain")}
-                variant="outline"
-                size="sm"
-                onClick={() => void metadataQuery.refetch()}
+            {metadataQuery.isLoading && (
+              <DelayedLoading>
+                <InlineLoading
+                  label={t("library.loadingMetadata")}
+                  className="py-0"
+                />
+              </DelayedLoading>
+            )}
+            {metadataQuery.isError && (
+              <EmptyState
+                size="compact"
+                title={t("library.metadataError")}
+                action={
+                  <Button
+                    label={t("library.tryAgain")}
+                    variant="outline"
+                    onClick={() => void metadataQuery.refetch()}
+                  />
+                }
               />
-            </div>
-          )}
+            )}
 
-          {description && (
-            <p className="text-foreground text-sm whitespace-pre-wrap">
-              {description}
-            </p>
-          )}
+            {description && (
+              <p className="text-foreground text-sm whitespace-pre-wrap">
+                {description}
+              </p>
+            )}
 
-          {(detailFacts.length > 0 || detailTagView.tags.length > 0) && (
-            <section className="flex flex-col gap-3">
-              <h2 className="text-lg font-semibold">{t("library.details")}</h2>
-              {detailFacts.map((fact) => (
-                <DetailRow
-                  key={fact.type}
-                  label={t(metadataFactLabelKey(fact.type))}
-                >
-                  <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
-                    {factTags(fact.type).map(
-                      (tag, index) =>
-                        linkTarget && (
+            {(detailFacts.length > 0 || detailTagView.tags.length > 0) && (
+              <section className="flex flex-col gap-3">
+                <h2 className="text-lg font-semibold">
+                  {t("library.details")}
+                </h2>
+                {detailFacts.map((fact) => (
+                  <DetailRow
+                    key={fact.type}
+                    label={t(metadataFactLabelKey(fact.type))}
+                  >
+                    <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+                      {factLinks(linkTarget, fact.type, fact.tags).map(
+                        ({ key, link }) => (
+                          <Fragment key={key}>{link}</Fragment>
+                        ),
+                      )}
+                    </span>
+                  </DetailRow>
+                ))}
+                {detailTagView.tags.length > 0 && (
+                  <DetailRow label={t("library.tags")}>
+                    <span className="flex flex-wrap gap-1.5">
+                      {detailTagView.tags.map((tag, index) => {
+                        const displayTag = `${tag.type}:${libraryTagDisplayLabel(tag, t)}`;
+                        return (
                           <LibraryMetadataLink
                             key={`${tag.type}:${tag.tag}:${index}`}
                             {...linkTarget}
                             tag={tag}
                             enabled={canExploreTags}
-                            label={`${t(metadataFactLabelKey(fact.type))}: ${libraryTagDisplayLabel(tag, t)}`}
+                            label={`${t("library.tags")}: ${displayTag}`}
                           >
-                            {libraryTagDisplayLabel(tag, t)}
+                            <TagBadge
+                              type={tag.type}
+                              tag={tag.tag}
+                              displayTag={displayTag}
+                            />
                           </LibraryMetadataLink>
-                        ),
-                    )}
-                  </span>
-                </DetailRow>
-              ))}
-              {linkTarget && (
-                <TagRow
-                  label={t("library.tags")}
-                  tags={detailTagView.tags}
-                  target={linkTarget}
-                  enabled={canExploreTags}
-                />
-              )}
-            </section>
-          )}
-
-          <details className="group border-border border-t pt-2">
-            <summary className="focus-visible:ring-ring flex min-h-12 cursor-pointer list-none items-center justify-between rounded-md px-1 focus-visible:ring-2 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
-              <span className="font-medium">
-                {t("library.technicalDetails")}
-              </span>
-              <ChevronRightIcon
-                size={20}
-                className="text-muted-foreground transition-transform group-open:rotate-90"
-                aria-hidden="true"
-              />
-            </summary>
-            <div className="flex flex-col gap-3 px-1 pt-2">
-              <DetailRow
-                label={t("library.path")}
-                value={metadata?.path || entry.path}
-                mono
-              />
-              {metadata?.launcherOverride && (
-                <DetailRow
-                  label={t("library.launcher")}
-                  value={metadata.launcherOverride}
-                />
-              )}
-            </div>
-          </details>
-        </div>
-      )}
-    </SlideModal>
-  );
-
-  const writeOptionsModalOpen = props.isOpen && writeOptionsOpen;
-  const editableDecks = (deckList.data?.decks ?? []).filter(canEditDeck);
-  const matchingDecks = editableDecks.filter((deck) =>
-    deck.name.toLowerCase().includes(deckSearch.trim().toLowerCase()),
-  );
-
-  return (
-    <>
-      {detailsModal}
-      <SlideModal
-        isOpen={props.isOpen && deckPickerOpen && !creatingDeck}
-        close={() => setDeckPickerOpen(false)}
-        title={t("decks.addAction")}
-        footer={
-          <Button
-            label={t("decks.new")}
-            icon={<PlusIcon size={20} />}
-            variant="outline"
-            className="w-full"
-            disabled={deckSaving || !liveConnected}
-            disabledAppearance={deckSaving ? "busy" : "unavailable"}
-            onClick={() => setCreatingDeck(true)}
-          />
-        }
-      >
-        <div className="flex flex-col gap-3 py-2">
-          <TextInput
-            type="search"
-            aria-label={t("decks.search")}
-            placeholder={t("decks.search")}
-            value={deckSearch}
-            setValue={setDeckSearch}
-            clearable
-          />
-          {deckList.isLoading ? (
-            <DelayedLoading>
-              <div
-                className="text-muted-foreground flex items-center justify-center gap-2 py-6"
-                role="status"
-              >
-                <LoadingSpinner size={16} className="text-primary" decorative />
-                <span>{t("decks.loading")}</span>
-              </div>
-            </DelayedLoading>
-          ) : deckList.isError ? (
-            <EmptyState
-              size="compact"
-              title={t("decks.loadError")}
-              action={
-                <Button
-                  label={t("library.tryAgain")}
-                  variant="outline"
-                  onClick={() => void deckList.refetch()}
-                />
-              }
-            />
-          ) : matchingDecks.length > 0 ? (
-            <div
-              role="group"
-              aria-label={t("decks.title")}
-              className="flex flex-col"
-            >
-              {matchingDecks.map((deck) => (
-                <button
-                  key={deck.deckId}
-                  type="button"
-                  className="border-border focus-visible:ring-ring flex min-h-14 w-full items-center justify-between gap-3 border-b px-1 py-3 text-left last:border-b-0 focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                  disabled={
-                    deckSaving ||
-                    !liveConnected ||
-                    deck.itemCount >= MAX_DECK_ITEMS
-                  }
-                  onPointerUp={handleDeckPress}
-                  onClick={() => void addToDeck(deck.deckId)}
-                >
-                  <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="font-medium break-words">{deck.name}</span>
-                    <span className="text-muted-foreground text-sm">
-                      {t("library.itemCount", { count: deck.itemCount })}
+                        );
+                      })}
                     </span>
-                  </span>
-                  <span
-                    aria-hidden="true"
-                    className="text-muted-foreground shrink-0"
-                  >
-                    <NextIcon size="20" />
-                  </span>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              size="compact"
-              title={t(deckSearch.trim() ? "decks.noMatching" : "decks.empty")}
-            />
-          )}
-        </div>
+                  </DetailRow>
+                )}
+              </section>
+            )}
+
+            <details className="group border-border border-t pt-2">
+              <summary className="focus-visible:ring-ring flex min-h-12 cursor-pointer list-none items-center justify-between rounded-md px-1 focus-visible:ring-2 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+                <span className="font-medium">
+                  {t("library.technicalDetails")}
+                </span>
+                <ChevronRightIcon
+                  size={20}
+                  className="text-muted-foreground transition-transform group-open:rotate-90"
+                  aria-hidden="true"
+                />
+              </summary>
+              <div className="flex flex-col gap-3 px-1 pt-2">
+                <DetailRow
+                  label={t("library.path")}
+                  value={metadata?.path || entry.path}
+                  mono
+                />
+                {metadata?.launcherOverride && (
+                  <DetailRow
+                    label={t("library.launcher")}
+                    value={metadata.launcherOverride}
+                  />
+                )}
+              </div>
+            </details>
+          </div>
+        )}
       </SlideModal>
-      <SlideModal
-        isOpen={props.isOpen && deckPickerOpen && creatingDeck}
-        close={() => setCreatingDeck(false)}
-        dismissible={!deckSaving}
-        title={t("decks.new")}
-        footer={
-          <ModalActionBar
-            secondaryAction={
-              <Button
-                label={t("nav.cancel")}
-                variant="secondary"
-                disabled={deckSaving}
-                disabledAppearance="busy"
-                onClick={() => setCreatingDeck(false)}
-              />
-            }
-            primaryAction={
-              <Button
-                label={t("decks.createAndAdd")}
-                intent="primary"
-                disabled={!newDeckName.trim() || deckSaving || !liveConnected}
-                disabledAppearance={deckSaving ? "busy" : "unavailable"}
-                onClick={() => void addToDeck()}
-              />
-            }
-          />
-        }
-      >
-        <div className="py-2">
-          <TextInput
-            label={t("decks.name")}
-            value={newDeckName}
-            setValue={setNewDeckName}
-            maxLength={100}
-            disabled={deckSaving}
-            required
-            onKeyUp={(event) => {
-              if (event.key === "Enter") void addToDeck();
-            }}
-          />
-        </div>
-      </SlideModal>
+      <LibraryAddToDeckModals flow={deckFlow} />
       {writeOptionsModalOpen && (
         <MediaWriteTargetModal
           isOpen={writeOptionsModalOpen}

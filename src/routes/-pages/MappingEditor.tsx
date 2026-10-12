@@ -1,7 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CameraIcon, NfcIcon, Trash2Icon } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
 import { BarcodeScanner } from "@capacitor-mlkit/barcode-scanning";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
@@ -9,7 +9,7 @@ import { TextInput } from "@/components/wui/TextInput.tsx";
 import { ZapScriptInput } from "@/components/ZapScriptInput.tsx";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch.tsx";
 import { RadioGroup } from "@/components/wui/RadioGroup.tsx";
-import { BackIcon } from "@/lib/images.tsx";
+import { BackIcon, CameraIcon, NfcIcon } from "@/lib/images.tsx";
 import { HeaderButton } from "@/components/wui/HeaderButton.tsx";
 import { CoreAPI } from "@/lib/coreApi";
 import { useStatusStore } from "@/lib/store.ts";
@@ -23,17 +23,13 @@ import {
 import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { InlineLoading } from "@/components/InlineLoading";
 import { DelayedLoading } from "@/components/DelayedLoading";
 import { PageFrame } from "@/components/PageFrame";
 import { SlideModal } from "@/components/SlideModal";
-import {
-  isReaderActivityOpen,
-  useNfcWriter,
-  WriteAction,
-  WriteMethod,
-} from "@/lib/writeNfcHook";
-import { usePreferencesStore } from "@/lib/preferencesStore";
+import { WriteAction } from "@/lib/writeNfcHook";
+import { useAppUi } from "@/hooks/useAppUi";
+import { useContextualNfcWrite } from "@/hooks/useContextualNfcWrite";
 import { ReaderActivityControl } from "@/components/ReaderActivityControl";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
@@ -117,13 +113,7 @@ export function MappingEditor({ id }: MappingEditorProps) {
 
   const connected = useStatusStore((state) => state.connected);
   const queryClient = useQueryClient();
-  const preferRemoteWriter = usePreferencesStore(
-    (state) => state.preferRemoteWriter,
-  );
-  const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
-  const [writeIntent, setWriteIntent] = useState(false);
-  const writeOpen = isReaderActivityOpen(writeIntent, nfcWriter);
-  const prevStatusRef = useRef(nfcWriter.status);
+  const appUi = useAppUi();
 
   const mappings = useQuery({
     queryKey: ["mappings"],
@@ -147,6 +137,8 @@ export function MappingEditor({ id }: MappingEditorProps) {
   const [saving, setSaving] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  // Tag capture only fills an ID pattern, so leaving the ID type ends it.
+  const capture = useContextualNfcWrite("mapping-capture", type === "uid");
 
   useEffect(() => {
     if (!isEditing || hydrated) return;
@@ -178,32 +170,14 @@ export function MappingEditor({ id }: MappingEditorProps) {
     t,
   ]);
 
+  const capturedUid = capture.result?.info.tag?.uid;
   useEffect(() => {
-    const justCompleted =
-      prevStatusRef.current === null && nfcWriter.status !== null;
-    prevStatusRef.current = nfcWriter.status;
-    if (justCompleted && nfcWriter.result?.info.tag?.uid) {
-      setPattern(nfcWriter.result.info.tag.uid);
-    }
-  }, [nfcWriter.result, nfcWriter.status]);
-
-  const cancelReaderActivity = async () => {
-    setWriteIntent(false);
-    await nfcWriter.end();
-  };
-
-  const startNfcScan = () => {
-    nfcWriter.write(WriteAction.Read).catch((e) => {
-      logger.error("NFC read failed:", e, {
-        category: "nfc",
-        action: "mappingNfcScan",
-        severity: "error",
-      });
-    });
-    setWriteIntent(true);
-  };
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Fill the pattern once from the external tag read.
+    if (capturedUid) setPattern(capturedUid);
+  }, [capture.result, capturedUid]);
 
   const startBarcodeScan = () => {
+    if (!Capacitor.isNativePlatform()) return;
     BarcodeScanner.scan()
       .then((res) => {
         if (res.barcodes.length < 1) return;
@@ -331,13 +305,7 @@ export function MappingEditor({ id }: MappingEditorProps) {
           />
         ) : isEditing && !hydrated ? (
           <DelayedLoading>
-            <div
-              className="text-muted-foreground flex items-center justify-center gap-2 py-6"
-              role="status"
-            >
-              <LoadingSpinner size={16} className="text-primary" decorative />
-              <span>{t("loading")}</span>
-            </div>
+            <InlineLoading />
           </DelayedLoading>
         ) : (
           <div className="flex flex-col gap-4">
@@ -382,51 +350,34 @@ export function MappingEditor({ id }: MappingEditorProps) {
                     : undefined
                 }
               />
-              {type === "uid" &&
-                (writeOpen ? (
-                  <ReaderActivityControl
-                    state={
-                      nfcWriter.verifyError
-                        ? "error"
-                        : nfcWriter.retapRequired
-                          ? "attention"
-                          : "waiting"
-                    }
-                    idleLabel={t("scan.nfcMode")}
-                    activeLabel={
-                      nfcWriter.retapRequired
-                        ? t("spinner.retapTag")
-                        : t("spinner.holdTagReader")
-                    }
-                    errorMessage={
-                      nfcWriter.verifyError
-                        ? t("spinner.verifyFailedRetry")
-                        : undefined
-                    }
-                    icon={<NfcIcon size="20" />}
-                    buttonClassName="w-full"
-                    onStart={startNfcScan}
-                    onCancel={() => void cancelReaderActivity()}
-                    onRetry={() => void nfcWriter.retry()}
-                  />
-                ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      className="w-full"
-                      variant="outline"
+              {type === "uid" && (appUi.nfc || appUi.camera) && (
+                <div className="wui-action-grid">
+                  {appUi.nfc && (
+                    <ReaderActivityControl
+                      state={capture.state}
+                      idleLabel={t("scan.nfcMode")}
+                      activeLabel={capture.activeLabel}
                       icon={<NfcIcon size="20" />}
-                      onClick={startNfcScan}
-                      label={t("scan.nfcMode")}
+                      variant="outline"
+                      intent="default"
+                      buttonClassName="w-full"
+                      disabled={capture.externalWriteActive}
+                      onStart={() => void capture.start("", WriteAction.Read)}
+                      onCancel={capture.onCancel}
                     />
+                  )}
+                  {appUi.camera && (
                     <Button
-                      className="w-full"
+                      className="min-h-18 w-full"
                       variant="outline"
                       icon={<CameraIcon size="20" />}
                       onClick={startBarcodeScan}
+                      disabled={capture.active}
                       label={t("scan.cameraMode")}
                     />
-                  </div>
-                ))}
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col">
@@ -466,7 +417,6 @@ export function MappingEditor({ id }: MappingEditorProps) {
               <Button
                 variant="outline"
                 intent="destructive"
-                icon={<Trash2Icon size="20" />}
                 label={t("create.mappings.editor.delete")}
                 disabled={!connected || saving || deleting}
                 disabledAppearance={saving || deleting ? "busy" : "unavailable"}
@@ -506,7 +456,7 @@ export function MappingEditor({ id }: MappingEditorProps) {
           />
         }
       >
-        <p className="text-muted-foreground py-4">
+        <p className="py-4 text-center">
           {t("create.mappings.editor.deleteConfirmBody")}
         </p>
       </SlideModal>

@@ -1,8 +1,7 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { PlusIcon, Trash2Icon } from "lucide-react";
-import classNames from "classnames";
+import { PlusIcon } from "lucide-react";
 import toast from "react-hot-toast";
 import { CoreAPI } from "@/lib/coreApi";
 import { logger } from "@/lib/logger";
@@ -25,17 +24,23 @@ import { Card } from "@/components/wui/Card";
 import { SlideModal } from "@/components/SlideModal";
 import { NextIcon } from "@/lib/images";
 import { formatDuration, parseDuration } from "@/lib/utils";
+import { formatAppDate } from "@/lib/formatDate";
+import { SettingsFieldGroup } from "@/components/SettingsFieldGroup";
 import { useHapticPress } from "@/hooks/useHapticPress";
 
 const PROFILE_QUERY_KEY = ["profiles"];
 const ACTIVE_PROFILE_QUERY_KEY = ["profiles", "active"];
 const PIN_PATTERN = /^\d{4,8}$/;
+// Radio value for the shared profile; never a Core profile id.
+const SHARED_PROFILE = "__shared__";
 
 type LimitsMode = "inherit" | "on" | "off";
 type PinMode = "keep" | "change" | "remove";
 type EditorAction = "create" | "edit";
 
 interface EditorState {
+  /** Set by the first edit, so a new form does not open full of errors. */
+  touched: boolean;
   action: EditorAction;
   profile: Profile | null;
   name: string;
@@ -54,6 +59,7 @@ function editorState(
   firstProfile: boolean,
 ): EditorState {
   return {
+    touched: false,
     action: profile ? "edit" : "create",
     profile,
     name: profile?.name ?? "",
@@ -97,9 +103,7 @@ function editorDuration(hours: string, minutes: string): string {
 
 function formatLastUsed(timestamp: number | undefined, never: string): string {
   if (!timestamp) return never;
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
-    new Date(timestamp * 1000),
-  );
+  return formatAppDate(timestamp * 1000) ?? never;
 }
 
 function ProfileRow(props: {
@@ -160,9 +164,8 @@ export function ProfileManager(props: {
   const queryClient = useQueryClient();
   const setWriteQueue = useStatusStore((state) => state.setWriteQueue);
   const [editor, setEditor] = useState<EditorState | null>(null);
-  const [switchProfile, setSwitchProfile] = useState<Profile | "shared" | null>(
-    null,
-  );
+  // Radio value of the profile chosen in the switch sheet; null while closed.
+  const [switchTarget, setSwitchTarget] = useState<string | null>(null);
   const [switchPin, setSwitchPin] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Profile | null>(null);
   const [resetCardTarget, setResetCardTarget] = useState<Profile | null>(null);
@@ -284,16 +287,19 @@ export function ProfileManager(props: {
 
   const switchMutation = useMutation({
     mutationFn: () => {
-      if (switchProfile === "shared") return CoreAPI.switchProfile();
-      if (!switchProfile) return Promise.resolve(null);
+      if (switchTarget === SHARED_PROFILE) return CoreAPI.switchProfile();
+      const target = profiles.find(
+        (profile) => profile.profileId === switchTarget,
+      );
+      if (!target) return Promise.resolve(null);
       return CoreAPI.switchProfile({
-        profileId: switchProfile.profileId,
-        ...(switchProfile.hasPin ? { pin: switchPin } : {}),
+        profileId: target.profileId,
+        ...(target.hasPin ? { pin: switchPin } : {}),
       });
     },
     onSuccess: async () => {
       toast.success(t("settings.core.profiles.switched"));
-      selectSwitchProfile(null);
+      selectSwitchTarget(null);
       await refresh();
     },
     onError: (error) => {
@@ -306,43 +312,27 @@ export function ProfileManager(props: {
     },
   });
 
-  const selectSwitchProfile = (profile: Profile | "shared" | null) => {
+  const selectSwitchTarget = (target: string | null) => {
     setSwitchPin("");
-    setSwitchProfile(profile);
+    setSwitchTarget(target);
   };
 
-  const validationError = useMemo(() => {
-    if (!editor) return null;
-    if (!editor.name.trim()) return t("settings.core.profiles.nameRequired");
-    if (editor.pin && !PIN_PATTERN.test(editor.pin)) {
-      return t("settings.core.profiles.pinInvalid");
-    }
-    const adminNeedsPin =
-      editor.role === "admin" &&
-      !editor.pin &&
-      (editor.action === "create" ||
-        !editor.profile?.hasPin ||
-        editor.pinMode !== "keep");
-    if (adminNeedsPin) return t("settings.core.profiles.adminPinRequired");
-    if (
-      !isValidDurationPart(editor.dailyHours) ||
-      !isValidDurationPart(editor.dailyMinutes, 59) ||
-      !isValidDurationPart(editor.sessionHours) ||
-      !isValidDurationPart(editor.sessionMinutes, 59)
-    ) {
-      return t("settings.core.profiles.durationInvalid");
-    }
-    return null;
-  }, [editor, t]);
-
   if (!props.available) return null;
+
+  // Undefined while unknown, null when the shared profile is active.
+  const activeProfileId = activeQuery.data?.profileId;
+  const activeTarget =
+    activeQuery.data === undefined ? null : (activeProfileId ?? SHARED_PROFILE);
 
   const openNew = () => setEditor(editorState(null, profiles.length === 0));
   const openEdit = (profile: Profile) => setEditor(editorState(profile, false));
   const setEditorValue = <K extends keyof EditorState>(
     key: K,
     value: EditorState[K],
-  ) => setEditor((current) => (current ? { ...current, [key]: value } : null));
+  ) =>
+    setEditor((current) =>
+      current ? { ...current, [key]: value, touched: true } : null,
+    );
   const soleAdmin =
     editor?.action === "edit" &&
     editor.profile?.role === "admin" &&
@@ -356,21 +346,42 @@ export function ProfileManager(props: {
     editor?.action === "create" ||
     !editor?.profile?.hasPin ||
     editor?.pinMode === "change";
+
+  // Each problem is reported beside the field that can fix it.
+  const nameMissing = editor !== null && !editor.name.trim();
+  const pinInvalid =
+    editor !== null && editor.pin.length > 0 && !PIN_PATTERN.test(editor.pin);
+  const adminPinMissing =
+    editor !== null && editorPinRequired === true && !editor.pin;
+  const durationInvalid =
+    editor !== null &&
+    (!isValidDurationPart(editor.dailyHours) ||
+      !isValidDurationPart(editor.dailyMinutes, 59) ||
+      !isValidDurationPart(editor.sessionHours) ||
+      !isValidDurationPart(editor.sessionMinutes, 59));
+  const editorInvalid =
+    nameMissing || pinInvalid || adminPinMissing || durationInvalid;
+
+  const switchTargetProfile = profiles.find(
+    (profile) => profile.profileId === switchTarget,
+  );
+  // Choosing the profile that is already active is not a switch.
+  const switchTargetIsActive =
+    switchTarget !== null && switchTarget === activeTarget;
   const selectedSwitchNeedsPin =
-    switchProfile !== null &&
-    switchProfile !== "shared" &&
-    switchProfile.hasPin;
+    !switchTargetIsActive && switchTargetProfile?.hasPin === true;
   const canSubmitSwitch =
-    switchProfile !== null &&
+    switchTarget !== null &&
+    !switchTargetIsActive &&
     (!selectedSwitchNeedsPin || PIN_PATTERN.test(switchPin));
-  const selectedProfileId =
-    switchProfile !== null && switchProfile !== "shared"
-      ? switchProfile.profileId
-      : null;
+  const switchOptionLabel = (name: string, target: string) =>
+    target === activeTarget
+      ? t("settings.core.profiles.switchOptionActive", { name })
+      : name;
 
   return (
     <Card>
-      <section className="flex flex-col gap-3">
+      <section className="flex flex-col gap-4">
         <h2 className="text-foreground text-lg font-semibold">
           {t("settings.core.profiles.title")}
         </h2>
@@ -387,10 +398,15 @@ export function ProfileManager(props: {
           value={props.requireForLaunch}
           setValue={props.onRequireForLaunchChange}
           disabled={!props.canWriteSettings}
-          loading={props.settingsLoading || profilesQuery.isPending}
+          loading={
+            props.settingsLoading ||
+            (props.connected && profilesQuery.isPending)
+          }
         />
 
-        {profilesQuery.isPending ? null : profilesQuery.isError ? (
+        {!props.connected ? (
+          <EmptyState size="compact" title={t("settings.notConnected")} />
+        ) : profilesQuery.isPending ? null : profilesQuery.isError ? (
           <EmptyState
             size="compact"
             title={t("settings.core.profiles.loadFailed")}
@@ -424,22 +440,21 @@ export function ProfileManager(props: {
               <ProfileRow
                 key={profile.profileId}
                 profile={profile}
-                active={activeQuery.data?.profileId === profile.profileId}
+                active={activeProfileId === profile.profileId}
                 onOpen={() =>
                   props.canManage
                     ? openEdit(profile)
-                    : selectSwitchProfile(profile)
+                    : selectSwitchTarget(profile.profileId)
                 }
               />
             ))}
           </div>
         )}
 
-        {profiles.length > 0 && (
+        {props.connected && profiles.length > 0 && (
           <div className="flex gap-2">
             {props.canManage && (
               <Button
-                icon={<PlusIcon size={20} />}
                 label={t("settings.core.profiles.add")}
                 intent="primary"
                 className="flex-1"
@@ -450,12 +465,12 @@ export function ProfileManager(props: {
               label={t("settings.core.profiles.switch")}
               variant="outline"
               className="flex-1"
-              onClick={() => selectSwitchProfile("shared")}
+              onClick={() => selectSwitchTarget(activeTarget ?? SHARED_PROFILE)}
             />
           </div>
         )}
 
-        {!props.canManage && profiles.length > 0 && (
+        {props.connected && !props.canManage && profiles.length > 0 && (
           <p className="text-muted-foreground text-sm">
             {t("settings.core.profiles.adminRequired")}
           </p>
@@ -476,7 +491,6 @@ export function ProfileManager(props: {
                   editor.action === "edit" ? (
                     <Button
                       label={t("settings.core.profiles.delete")}
-                      icon={<Trash2Icon size={20} />}
                       variant="outline"
                       intent="destructive"
                       onClick={() => {
@@ -495,9 +509,7 @@ export function ProfileManager(props: {
                     label={t("save")}
                     intent="primary"
                     onClick={() => editor && saveMutation.mutate(editor)}
-                    disabled={
-                      validationError !== null || saveMutation.isPending
-                    }
+                    disabled={editorInvalid || saveMutation.isPending}
                     disabledAppearance={
                       saveMutation.isPending ? "busy" : "unavailable"
                     }
@@ -516,7 +528,7 @@ export function ProfileManager(props: {
                 maxLength={255}
                 required
                 error={
-                  editor.name.length > 0 && !editor.name.trim()
+                  editor.touched && nameMissing
                     ? t("settings.core.profiles.nameRequired")
                     : undefined
                 }
@@ -593,14 +605,14 @@ export function ProfileManager(props: {
                   type="password"
                   inputMode="numeric"
                   maxLength={8}
-                  min={1000}
-                  max={99999999}
                   required={editorPinRequired}
                   autoComplete="new-password"
                   error={
-                    editor.pin.length > 0 && !PIN_PATTERN.test(editor.pin)
+                    pinInvalid
                       ? t("settings.core.profiles.pinInvalid")
-                      : undefined
+                      : editor.touched && adminPinMissing
+                        ? t("settings.core.profiles.adminPinRequired")
+                        : undefined
                   }
                 />
               )}
@@ -625,70 +637,67 @@ export function ProfileManager(props: {
               />
               {editor.limitsMode === "on" && (
                 <div className="flex flex-col gap-3">
-                  <fieldset className="flex flex-col gap-2">
-                    <legend className="text-sm font-medium">
-                      {t("settings.core.profiles.dailyLimit")}
-                    </legend>
-                    <div className="flex gap-2">
-                      <TextInput
-                        label={t("settings.core.playtime.hours")}
-                        className="min-w-0 flex-1"
-                        value={editor.dailyHours}
-                        setValue={(value) =>
-                          setEditorValue("dailyHours", value)
-                        }
-                        type="number"
-                        inputMode="numeric"
-                        min={0}
-                        step={1}
-                      />
-                      <TextInput
-                        label={t("settings.core.playtime.minutes")}
-                        className="min-w-0 flex-1"
-                        value={editor.dailyMinutes}
-                        setValue={(value) =>
-                          setEditorValue("dailyMinutes", value)
-                        }
-                        type="number"
-                        inputMode="numeric"
-                        min={0}
-                        max={59}
-                        step={1}
-                      />
-                    </div>
-                  </fieldset>
-                  <fieldset className="flex flex-col gap-2">
-                    <legend className="text-sm font-medium">
-                      {t("settings.core.profiles.sessionLimit")}
-                    </legend>
-                    <div className="flex gap-2">
-                      <TextInput
-                        label={t("settings.core.playtime.hours")}
-                        className="min-w-0 flex-1"
-                        value={editor.sessionHours}
-                        setValue={(value) =>
-                          setEditorValue("sessionHours", value)
-                        }
-                        type="number"
-                        inputMode="numeric"
-                        min={0}
-                        step={1}
-                      />
-                      <TextInput
-                        label={t("settings.core.playtime.minutes")}
-                        className="min-w-0 flex-1"
-                        value={editor.sessionMinutes}
-                        setValue={(value) =>
-                          setEditorValue("sessionMinutes", value)
-                        }
-                        type="number"
-                        inputMode="numeric"
-                        min={0}
-                        max={59}
-                        step={1}
-                      />
-                    </div>
-                  </fieldset>
+                  <SettingsFieldGroup
+                    legend={t("settings.core.profiles.dailyLimit")}
+                  >
+                    <TextInput
+                      label={t("settings.core.playtime.hours")}
+                      className="min-w-0 flex-1"
+                      value={editor.dailyHours}
+                      setValue={(value) => setEditorValue("dailyHours", value)}
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      step={1}
+                    />
+                    <TextInput
+                      label={t("settings.core.playtime.minutes")}
+                      className="min-w-0 flex-1"
+                      value={editor.dailyMinutes}
+                      setValue={(value) =>
+                        setEditorValue("dailyMinutes", value)
+                      }
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      max={59}
+                      step={1}
+                    />
+                  </SettingsFieldGroup>
+                  <SettingsFieldGroup
+                    legend={t("settings.core.profiles.sessionLimit")}
+                  >
+                    <TextInput
+                      label={t("settings.core.playtime.hours")}
+                      className="min-w-0 flex-1"
+                      value={editor.sessionHours}
+                      setValue={(value) =>
+                        setEditorValue("sessionHours", value)
+                      }
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      step={1}
+                    />
+                    <TextInput
+                      label={t("settings.core.playtime.minutes")}
+                      className="min-w-0 flex-1"
+                      value={editor.sessionMinutes}
+                      setValue={(value) =>
+                        setEditorValue("sessionMinutes", value)
+                      }
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      max={59}
+                      step={1}
+                    />
+                  </SettingsFieldGroup>
+                  {durationInvalid && (
+                    <p className="text-error text-sm" role="alert">
+                      {t("settings.core.profiles.durationInvalid")}
+                    </p>
+                  )}
                   <p className="text-muted-foreground text-xs">
                     {t("settings.core.profiles.unlimitedHelp")}
                   </p>
@@ -818,8 +827,8 @@ export function ProfileManager(props: {
         </SlideModal>
 
         <SlideModal
-          isOpen={switchProfile !== null}
-          close={() => selectSwitchProfile(null)}
+          isOpen={switchTarget !== null}
+          close={() => selectSwitchTarget(null)}
           title={t("settings.core.profiles.switch")}
           footer={
             <Button
@@ -834,47 +843,26 @@ export function ProfileManager(props: {
             />
           }
         >
-          <div className="flex flex-col gap-3 py-4">
-            <div className="flex flex-col">
-              <button
-                type="button"
-                onClick={() => selectSwitchProfile("shared")}
-                aria-pressed={switchProfile === "shared"}
-                className={classNames(
-                  "border-border focus-visible:ring-ring flex min-h-12 items-center justify-between border-b border-solid px-1 text-left last:border-b-0 focus-visible:ring-2 focus-visible:outline-none",
-                  { "bg-foreground/10": switchProfile === "shared" },
-                )}
-              >
-                <span>{t("settings.core.profiles.shared")}</span>
-                {activeQuery.data === null && (
-                  <Badge variant="success">
-                    {t("settings.core.profiles.active")}
-                  </Badge>
-                )}
-              </button>
-              {profiles.map((profile) => (
-                <button
-                  type="button"
-                  key={profile.profileId}
-                  onClick={() => selectSwitchProfile(profile)}
-                  aria-pressed={selectedProfileId === profile.profileId}
-                  className={classNames(
-                    "border-border focus-visible:ring-ring flex min-h-12 items-center justify-between border-b border-solid px-1 text-left last:border-b-0 focus-visible:ring-2 focus-visible:outline-none",
-                    {
-                      "bg-foreground/10":
-                        selectedProfileId === profile.profileId,
-                    },
-                  )}
-                >
-                  <span>{profile.name}</span>
-                  {activeQuery.data?.profileId === profile.profileId && (
-                    <Badge variant="success">
-                      {t("settings.core.profiles.active")}
-                    </Badge>
-                  )}
-                </button>
-              ))}
-            </div>
+          <div className="flex flex-col gap-4 py-4">
+            <RadioGroup
+              label={t("settings.core.profiles.switch")}
+              labelHidden
+              options={[
+                {
+                  value: SHARED_PROFILE,
+                  label: switchOptionLabel(
+                    t("settings.core.profiles.shared"),
+                    SHARED_PROFILE,
+                  ),
+                },
+                ...profiles.map((profile) => ({
+                  value: profile.profileId,
+                  label: switchOptionLabel(profile.name, profile.profileId),
+                })),
+              ]}
+              value={switchTarget ?? ""}
+              onChange={selectSwitchTarget}
+            />
             {selectedSwitchNeedsPin && (
               <TextInput
                 label={t("settings.core.profiles.pin")}

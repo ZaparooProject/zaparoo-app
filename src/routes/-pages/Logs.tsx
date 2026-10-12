@@ -2,7 +2,12 @@ import { useRouter } from "@tanstack/react-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useState, useMemo, useRef } from "react";
-import { Download, CopyIcon, RefreshCwIcon, Upload } from "lucide-react";
+import {
+  DownloadIcon,
+  CopyIcon,
+  RefreshCwIcon,
+  UploadIcon,
+} from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { Clipboard } from "@capacitor/clipboard";
 import toast from "react-hot-toast";
@@ -26,6 +31,8 @@ import { uploadLogs } from "@/lib/logsApi";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
+import { InlineLoading } from "@/components/InlineLoading";
+import { formatAppDateTime } from "@/lib/formatDate";
 
 interface LogEntry {
   level: string;
@@ -44,7 +51,7 @@ export function Logs() {
   const goBack = () =>
     void router.navigate(appBackNavigationOptions("/settings"));
   const connected = useStatusStore((state) => state.connected);
-  const { impact } = useHaptics();
+  const { impact, notification } = useHaptics();
   const [searchTerm, setSearchTerm] = useState("");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const levelFilters = usePreferencesStore((s) => s.logLevelFilters);
@@ -142,30 +149,36 @@ export function Logs() {
         action: "downloadLog",
         severity: "warning",
       });
+      toast.error(t("settings.logs.downloadError"));
     }
   };
 
-  const writeToClipboard = async (value: string) => {
-    if (isNative) {
-      await Clipboard.write({ string: value });
-    } else {
-      await navigator.clipboard.writeText(value);
+  // Same outcome reporting as CopyButton: success is confirmed, and a failed
+  // copy says so instead of leaving the user with a stale clipboard.
+  const copyText = async (read: () => string, action: string) => {
+    try {
+      const value = read();
+      if (isNative) {
+        await Clipboard.write({ string: value });
+      } else {
+        await navigator.clipboard.writeText(value);
+      }
+      void notification("success");
+      toast.success(t("copied"));
+    } catch (error) {
+      logger.warn("Failed to copy to clipboard:", error, {
+        category: "storage",
+        action,
+        severity: "warning",
+      });
+      toast.error(t("copyFailed"));
     }
   };
 
   const copyToClipboard = async () => {
-    if (!logsQuery.data) return;
-
-    try {
-      const decodedContent = atob(logsQuery.data.content);
-      await writeToClipboard(decodedContent);
-    } catch (error) {
-      logger.warn("Failed to copy to clipboard:", error, {
-        category: "storage",
-        action: "copyLog",
-        severity: "warning",
-      });
-    }
+    const data = logsQuery.data;
+    if (!data) return;
+    await copyText(() => atob(data.content), "copyLog");
   };
 
   const uploadMutation = useMutation({
@@ -179,27 +192,13 @@ export function Logs() {
   });
 
   const copyUploadUrl = async () => {
-    if (!uploadMutation.data) return;
-
-    try {
-      await writeToClipboard(uploadMutation.data);
-    } catch (error) {
-      logger.error("Failed to copy log URL:", error, {
-        category: "storage",
-        action: "copyUploadUrl",
-        severity: "warning",
-      });
-    }
+    const url = uploadMutation.data;
+    if (!url) return;
+    await copyText(() => url, "copyUploadUrl");
   };
 
-  const formatTimestamp = (timeStr: string) => {
-    try {
-      const date = new Date(timeStr);
-      return date.toLocaleString();
-    } catch {
-      return timeStr;
-    }
-  };
+  const formatTimestamp = (timeStr: string) =>
+    formatAppDateTime(timeStr) ?? timeStr;
 
   const getLevelVariant = (level: string): BadgeVariant => {
     switch (level.toLowerCase()) {
@@ -287,7 +286,7 @@ export function Logs() {
                         {
                           id: "download",
                           label: t("settings.logs.download"),
-                          icon: <Download size={20} />,
+                          icon: <DownloadIcon size={20} />,
                           onClick: downloadFile,
                         },
                       ]
@@ -316,7 +315,7 @@ export function Logs() {
                     uploadMutation.isPending ? (
                       <LoadingSpinner size={20} decorative />
                     ) : (
-                      <Upload size="20" />
+                      <UploadIcon size="20" />
                     )
                   }
                   disabled={uploadMutation.isPending}
@@ -503,6 +502,8 @@ export function Logs() {
               </div>
             </div>
           )}
+
+          {connected && logsQuery.isLoading && <InlineLoading />}
 
           {!connected && <EmptyState title={t("notConnected")} />}
 

@@ -56,6 +56,16 @@ export function useScanOperations({
   // stop its own restarted session - but a launch that fails late (e.g. a
   // 30s request timeout) can't tear down a scan the user started afterwards.
   const scanGenerationRef = useRef(0);
+  // True only while a readTag() this hook started is waiting on the reader, so
+  // unmount never cancels a write session another owner started.
+  const ownsSessionRef = useRef(false);
+  // A continuous scan restarts from inside its own promise chain, long after
+  // the render that started it. Read launch conditions from here so a tap made
+  // after connecting or unlocking Pro uses the current state.
+  const launchStateRef = useRef({ connected, hasData, launcherAccess });
+  useEffect(() => {
+    launchStateRef.current = { connected, hasData, launcherAccess };
+  }, [connected, hasData, launcherAccess]);
 
   const scheduleStatusReset = useCallback(() => {
     if (statusResetTimerRef.current) {
@@ -79,15 +89,27 @@ export function useScanOperations({
         clearTimeout(statusResetTimerRef.current);
         statusResetTimerRef.current = null;
       }
+      if (ownsSessionRef.current) {
+        ownsSessionRef.current = false;
+        cancelSession().catch((error) => {
+          logger.error("Failed to cancel NFC session on unmount", error, {
+            category: "nfc",
+            action: "cancelSession",
+            severity: "warning",
+          });
+        });
+      }
     };
   }, []);
 
   const doScan = useCallback(() => {
     const generation = scanGenerationRef.current;
     setScanSession(true);
+    ownsSessionRef.current = true;
 
     readTag()
       .then((result) => {
+        ownsSessionRef.current = false;
         if (result.status === Status.Cancelled) {
           // A cancelled scan is not a success - no announcement, no restart
           setScanStatus(ScanResult.Default);
@@ -102,18 +124,19 @@ export function useScanOperations({
         setLastScanMode("nfc");
 
         if (result.info.tag) {
+          const launchState = launchStateRef.current;
           // Only queue commands if we were previously connected (reconnecting scenario)
           // If never connected (proper offline), just store the token without queueing
           runToken(
             result.info.tag.uid,
             result.info.tag.text,
-            launcherAccess,
-            connected,
+            launchState.launcherAccess,
+            launchState.connected,
             setLastToken,
             setProPurchaseModalOpen,
             false, // unsafe
             false, // override
-            hasData, // canQueueCommands - only queue if we had a prior connection
+            launchState.hasData, // canQueueCommands - only queue if we had a prior connection
           ).then((ok) => {
             if (!ok && scanGenerationRef.current === generation) {
               // Launch was blocked (e.g. Pro gate opened the purchase modal):
@@ -150,6 +173,7 @@ export function useScanOperations({
         setScanSession(false);
       })
       .catch((error) => {
+        ownsSessionRef.current = false;
         setScanStatus(ScanResult.Error);
         setScanSession(false);
         if (isExpectedNfcError(error)) {
@@ -164,9 +188,6 @@ export function useScanOperations({
         scheduleStatusReset();
       });
   }, [
-    connected,
-    hasData,
-    launcherAccess,
     setLastToken,
     setLastScanMode,
     setProPurchaseModalOpen,
@@ -193,6 +214,10 @@ export function useScanOperations({
   }, [scanSession, doScan]);
 
   const handleCameraScan = useCallback(async () => {
+    // App preview shows the camera action in a browser, where there is no
+    // scanner plugin to open.
+    if (!Capacitor.isNativePlatform()) return;
+
     await BarcodeScanner.scan()
       .then((res) => {
         if (res.barcodes.length < 1) {
@@ -291,7 +316,6 @@ export function useScanOperations({
       handleScanButton,
       handleCameraScan,
       handleStopConfirm,
-      runToken,
     }),
     [
       scanSession,

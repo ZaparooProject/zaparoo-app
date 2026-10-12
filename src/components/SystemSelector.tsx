@@ -1,9 +1,7 @@
 import { useState, useMemo, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { Check } from "lucide-react";
 import { useDebounce } from "use-debounce";
-import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi";
 import type { System } from "@/lib/models";
 import {
@@ -17,12 +15,14 @@ import { useHapticPress } from "@/hooks/useHapticPress";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { SystemFilterControls } from "@/components/SystemFilterControls";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { DelayedLoading } from "@/components/DelayedLoading";
 import { useAnnouncer } from "./A11yAnnouncer";
 import { SlideModal } from "./SlideModal";
 import { Button } from "./wui/Button";
 import { BackToTop } from "./BackToTop";
+import { SelectionIndicator, SelectorTrigger } from "./SelectorParts";
+import { selectorOptionClassName } from "./selectorOptionClassName";
+import { InlineLoading } from "./InlineLoading";
 
 export type { System } from "@/lib/models";
 
@@ -168,11 +168,7 @@ export function SystemSelector({
   ) => (
     <button
       key={id}
-      className={classNames(
-        "focus-visible:ring-ring flex min-h-12 w-full items-center justify-between gap-3 rounded-md px-2 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset",
-        "hover:bg-foreground/10 focus-visible:bg-foreground/10",
-        { "bg-foreground/10": isSelected },
-      )}
+      className={selectorOptionClassName(isSelected)}
       onPointerUp={handleHapticPress}
       onClick={() => handleSystemSelect(id)}
       type="button"
@@ -181,26 +177,15 @@ export function SystemSelector({
       aria-label={name}
       tabIndex={tabIndex}
     >
+      {mode !== "insert" && (
+        <SelectionIndicator
+          selected={isSelected}
+          shape={mode === "multi" ? "checkbox" : "radio"}
+        />
+      )}
       <span className="text-foreground min-w-0 font-medium" aria-hidden="true">
         {name}
       </span>
-      {mode !== "insert" && (
-        <span
-          aria-hidden="true"
-          className={classNames(
-            "border-input flex size-5 shrink-0 items-center justify-center border-2",
-            mode === "multi" ? "rounded" : "rounded-full",
-            { "bg-primary border-primary": isSelected },
-          )}
-        >
-          {isSelected &&
-            (mode === "multi" ? (
-              <Check className="text-primary-foreground size-3" />
-            ) : (
-              <span className="bg-background size-2 rounded-full" />
-            ))}
-        </span>
-      )}
     </button>
   );
 
@@ -211,19 +196,14 @@ export function SystemSelector({
           <Button
             label={t("systemSelector.clear")}
             aria-label={t("systemSelector.clearAll")}
-            variant="text"
-            size="sm"
+            variant="secondary"
             onClick={handleClearAll}
             disabled={selectedSystems.length === 0}
           />
         }
         primaryAction={
-          <Button
-            label={t("systemSelector.done")}
-            size="sm"
-            onClick={onClose}
-            disabled={selectedSystems.length === 0 && !includeAllOption}
-          />
+          // Stays enabled after Clear so an empty selection can be confirmed.
+          <Button label={t("systemSelector.done")} onClick={onClose} />
         }
       />
     ) : undefined;
@@ -234,6 +214,7 @@ export function SystemSelector({
       close={onClose}
       title={title || t("systemSelector.title")}
       footer={footer}
+      footerSkipLabel={t("accessibility.skipToActions")}
       scrollRef={slideModalScrollRef}
       fixedHeight="90vh"
     >
@@ -256,13 +237,7 @@ export function SystemSelector({
       </div>
       {isLoading ? (
         <DelayedLoading>
-          <div
-            className="text-muted-foreground flex h-32 items-center justify-center gap-2"
-            role="status"
-          >
-            <LoadingSpinner size={16} className="text-primary" decorative />
-            <span>{t("loading")}</span>
-          </div>
+          <InlineLoading />
         </DelayedLoading>
       ) : isError ? (
         <EmptyState
@@ -395,52 +370,15 @@ export function SystemSelectorTrigger({
     t,
   ]);
 
-  const isDisabled = disabled;
-
-  const handleClick = () => {
-    if (isDisabled) return;
-    onClick();
-  };
-
   return (
-    <button
-      onClick={handleClick}
-      className={classNames(
-        "wui-input border-input text-foreground flex min-h-12 w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors",
-        {
-          "hover:border-foreground-hint": !isDisabled,
-          "cursor-not-allowed opacity-50": isDisabled,
-        },
-        className,
-      )}
-      style={{ backgroundColor: "var(--surface-inset)" }}
-      disabled={isDisabled}
-      type="button"
+    <SelectorTrigger
+      text={displayText ?? placeholderText}
+      placeholder={selectedSystems.length === 0}
+      onClick={onClick}
+      disabled={disabled}
+      className={className}
       aria-label={ariaLabel}
       aria-labelledby={ariaLabelledBy}
-    >
-      <span
-        className={classNames({
-          "text-muted-foreground": selectedSystems.length === 0,
-        })}
-      >
-        {displayText}
-      </span>
-      <div aria-hidden="true" className="ml-2 size-4 shrink-0">
-        <svg
-          className="h-4 w-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 9l-7 7-7-7"
-          />
-        </svg>
-      </div>
-    </button>
+    />
   );
 }

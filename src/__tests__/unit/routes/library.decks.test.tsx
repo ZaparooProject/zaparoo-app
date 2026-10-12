@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import toast from "react-hot-toast";
 import { Capacitor } from "@capacitor/core";
 import { Clipboard } from "@capacitor/clipboard";
-import { render, screen, waitFor, within } from "@/test-utils";
+import { act, render, screen, waitFor, within } from "@/test-utils";
 import { seedActiveDevice } from "@/test-utils/deviceRegistry";
 import { CoreAPI, CoreApiError } from "@/lib/coreApi";
 import { ConnectionState, useStatusStore } from "@/lib/store";
@@ -147,7 +147,7 @@ describe("deck routes", () => {
     ).toBeDisabled();
     await waitFor(() =>
       expect(
-        within(actions).getByRole("button", { name: "library.writeAction" }),
+        within(actions).getByRole("button", { name: "library.write" }),
       ).toBeEnabled(),
     );
   });
@@ -214,12 +214,7 @@ describe("deck routes", () => {
       within(actions)
         .getAllByRole("button")
         .map((button) => button.getAttribute("aria-label")),
-    ).toEqual([
-      "decks.open",
-      "decks.play",
-      "library.writeAction",
-      "decks.share",
-    ]);
+    ).toEqual(["decks.open", "decks.play", "library.write", "decks.share"]);
     await userEvent
       .setup()
       .click(within(actions).getByRole("button", { name: "decks.open" }));
@@ -294,6 +289,75 @@ describe("deck routes", () => {
     expect(success).not.toHaveBeenCalledWith("decks.linkCopied");
   });
 
+  it("locks Open and Play while the deck write waits for a tag", async () => {
+    usePreferencesStore.setState({ nfcAvailable: true });
+    vi.spyOn(CoreAPI, "write").mockReturnValue(new Promise(() => {}));
+    render(<DeckDetails />);
+    const actions = await screen.findByRole("group", { name: "decks.actions" });
+    const open = within(actions).getByRole("button", { name: "decks.open" });
+    const play = within(actions).getByRole("button", { name: "decks.play" });
+    expect(open).toBeEnabled();
+    expect(play).toBeEnabled();
+
+    await userEvent
+      .setup()
+      .click(within(actions).getByRole("button", { name: "library.write" }));
+
+    await waitFor(() => expect(open).toBeDisabled());
+    expect(play).toBeDisabled();
+  });
+
+  it("names a linked item's system from the catalog instead of its id", async () => {
+    vi.spyOn(CoreAPI, "systems").mockResolvedValue({
+      systems: [{ id: "Vectron", name: "Vectron Arcade", category: "Console" }],
+    });
+    vi.spyOn(CoreAPI, "deckGet").mockResolvedValue({
+      ...deck,
+      itemCount: 1,
+      items: [
+        {
+          id: 9,
+          position: 1,
+          kind: "script",
+          name: "Linked Game",
+          zapscript: "@Vectron/Linked Game",
+          media: {
+            system: "Vectron",
+            path: "/roms/Vectron/Linked Game.bin",
+            name: "Linked Game",
+            available: true,
+          },
+        },
+      ],
+    });
+    render(<DeckDetails />);
+
+    const row = await screen.findByRole("button", { name: /Linked Game/ });
+    expect(await within(row).findByText("Vectron Arcade")).toBeVisible();
+  });
+
+  it("drops an unsaved edit draft when the active device changes", async () => {
+    const user = userEvent.setup();
+    const update = vi.spyOn(CoreAPI, "deckUpdate");
+    render(<DeckDetails />);
+    await user.click(await screen.findByRole("button", { name: "decks.edit" }));
+    const name = screen.getByRole("textbox", { name: "decks.name" });
+    await user.clear(name);
+    await user.type(name, "Draft from device A");
+
+    await act(async () => {
+      await seedActiveDevice({ recordId: "device-b" });
+    });
+
+    expect(
+      await screen.findByRole("button", { name: "decks.edit" }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("textbox", { name: "decks.name" }),
+    ).not.toBeInTheDocument();
+    expect(update).not.toHaveBeenCalled();
+  });
+
   it("writes a Play deck tag so scanning starts playback", async () => {
     usePreferencesStore.setState({ nfcAvailable: true });
     const write = vi.spyOn(CoreAPI, "write").mockResolvedValue();
@@ -301,9 +365,7 @@ describe("deck routes", () => {
     const actions = await screen.findByRole("group", { name: "decks.actions" });
     await userEvent
       .setup()
-      .click(
-        within(actions).getByRole("button", { name: "library.writeAction" }),
-      );
+      .click(within(actions).getByRole("button", { name: "library.write" }));
     await waitFor(() =>
       expect(write).toHaveBeenCalledWith(
         { text: `**playlist.play:deck://${deck.deckId}` },
@@ -338,7 +400,7 @@ describe("deck routes", () => {
       expect(run).toHaveBeenCalledWith({ text: "https://zpr.au/c$CARD0001" }),
     );
     expect(
-      within(details).getByRole("button", { name: "library.writeAction" }),
+      within(details).getByRole("button", { name: "library.write" }),
     ).toBeDisabled();
     await userEvent
       .setup()
@@ -777,9 +839,7 @@ describe("deck routes", () => {
     const details = screen.getByRole("dialog", { name: "Game" });
     await userEvent
       .setup()
-      .click(
-        within(details).getByRole("button", { name: "library.writeAction" }),
-      );
+      .click(within(details).getByRole("button", { name: "library.write" }));
     await waitFor(() =>
       expect(write).toHaveBeenCalledWith(
         { text: "**launch.title:NES/Game" },
@@ -1242,9 +1302,7 @@ describe("deck routes", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "decks.open" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "decks.share" })).toBeEnabled();
-    expect(
-      screen.getByRole("button", { name: "library.writeAction" }),
-    ).toBeEnabled();
+    expect(screen.getByRole("button", { name: "library.write" })).toBeEnabled();
     expect(
       screen.queryByRole("button", { name: "decks.edit" }),
     ).not.toBeInTheDocument();

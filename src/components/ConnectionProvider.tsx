@@ -21,10 +21,10 @@ import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  Clock,
-  AlertTriangle,
-  OctagonAlert,
-  TriangleAlert,
+  ClockIcon,
+  AlertTriangleIcon,
+  OctagonAlertIcon,
+  TriangleAlertIcon,
 } from "lucide-react";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import {
@@ -915,7 +915,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
                 ariaProps: { role: "alert", "aria-live": "assertive" },
                 icon: (
                   <span className="text-warning pr-1 pl-1" aria-hidden="true">
-                    <Clock size={20} />
+                    <ClockIcon size={20} />
                   </span>
                 ),
                 duration: 5000,
@@ -935,11 +935,11 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
               const severityIconNode =
                 inboxMessage.severity === InboxSeverity.Error ? (
                   <span className="text-error pr-1 pl-1" aria-hidden="true">
-                    <OctagonAlert size={20} />
+                    <OctagonAlertIcon size={20} />
                   </span>
                 ) : (
                   <span className="text-warning pr-1 pl-1" aria-hidden="true">
-                    <TriangleAlert size={20} />
+                    <TriangleAlertIcon size={20} />
                   </span>
                 );
               toast(
@@ -989,7 +989,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
                 ariaProps: { role: "alert", "aria-live": "assertive" },
                 icon: (
                   <span className="text-error pr-1 pl-1" aria-hidden="true">
-                    <AlertTriangle size={20} />
+                    <AlertTriangleIcon size={20} />
                   </span>
                 ),
                 duration: 6000,

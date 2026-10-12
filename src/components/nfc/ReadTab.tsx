@@ -1,5 +1,5 @@
 import { type ReactNode, useState } from "react";
-import { EyeIcon, EyeOffIcon, ShareIcon, NfcIcon } from "lucide-react";
+import { EyeIcon, EyeOffIcon, ShareIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Share } from "@capacitor/share";
 import toast from "react-hot-toast";
@@ -12,11 +12,11 @@ import { logger } from "@/lib/logger";
 
 interface ReadTabProps {
   result: Result | null;
-  onScan: () => void;
-  scanControl?: ReactNode;
+  /** The scan/cancel reader control, owned by the page's reader session. */
+  scanControl: ReactNode;
 }
 
-export function ReadTab({ result, onScan, scanControl }: ReadTabProps) {
+export function ReadTab({ result, scanControl }: ReadTabProps) {
   const { t } = useTranslation();
   const [showRawData, setShowRawData] = useState(false);
 
@@ -49,16 +49,7 @@ export function ReadTab({ result, onScan, scanControl }: ReadTabProps) {
   return (
     <div className="nfc-read-grid px-2 pt-6">
       {/* Scan Button */}
-      <div className="nfc-read-action">
-        {scanControl ?? (
-          <Button
-            onClick={onScan}
-            icon={<NfcIcon size={20} />}
-            label={t("create.nfc.readTab.scanTag")}
-            className="w-full"
-          />
-        )}
-      </div>
+      <div className="nfc-read-action">{scanControl}</div>
       {/* Basic Information Card */}
       <div className="bg-surface-raised space-y-4 rounded-lg p-4">
         <div className="flex items-center justify-between">
@@ -78,7 +69,7 @@ export function ReadTab({ result, onScan, scanControl }: ReadTabProps) {
 
         <div className="space-y-4">
           <div>
-            <Label htmlFor="uid">{t("create.nfc.readTab.uid")}</Label>
+            <Label>{t("create.nfc.readTab.uid")}</Label>
             <div className="bg-surface-inset mt-1 rounded-lg px-3 py-2 font-mono text-sm">
               {tag?.uid || "-"}
               {tag?.uid && <CopyButton text={tag.uid} className="ml-1" />}
@@ -86,7 +77,7 @@ export function ReadTab({ result, onScan, scanControl }: ReadTabProps) {
           </div>
 
           <div>
-            <Label htmlFor="content">{t("create.nfc.readTab.content")}</Label>
+            <Label>{t("create.nfc.readTab.content")}</Label>
             <div className="bg-surface-inset mt-1 rounded-lg px-3 py-2 text-sm break-all">
               {tag?.text || <span className="text-muted-foreground">-</span>}
               {tag?.text && <CopyButton text={tag.text} className="ml-1" />}

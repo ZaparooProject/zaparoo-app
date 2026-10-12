@@ -980,7 +980,7 @@ describe("Index Route Integration", () => {
         name: "scan.recentsHeading",
       });
       const favourites = screen.getByRole("region", {
-        name: "scan.favouritesHeading",
+        name: "scan.favoritesHeading",
       });
       expect(
         favourites.compareDocumentPosition(recents) &
@@ -1195,7 +1195,7 @@ describe("Index Route Integration", () => {
   });
 
   describe("History Modal", () => {
-    it("should visually disable history button when disconnected", () => {
+    it("should disable history button when disconnected", () => {
       useStatusStore.setState({ connected: false });
 
       render(
@@ -1208,7 +1208,6 @@ describe("Index Route Integration", () => {
         name: /scan.historyTitle/i,
       });
       expect(historyButton).toBeDisabled();
-      expect(historyButton).toHaveClass("cursor-not-allowed");
     });
 
     it("should open history modal when history button is clicked", async () => {

@@ -1,63 +1,20 @@
 /**
  * Safe Area Regression Tests
  *
- * These tests ensure that components properly use the store's safeInsets values
- * via inline styles rather than CSS env() values. This is critical for iOS where
- * the CSS env() values don't work properly in the webview, but the SafeArea plugin
- * correctly returns pixel values.
+ * iOS webviews do not resolve CSS env() safe-area values reliably, so the
+ * native insets are read into the store and handed to the page chrome as
+ * inline custom properties. These tests check that seeded insets reach those
+ * properties through the real PageFrame.
  *
- * Regression for: Safe area not working on iOS after refactor to Tailwind classes
+ * Navigation chrome (dock, sidebar, tablet bar) reads the shell-level insets;
+ * that contract is covered in integration/root-layout.test.tsx.
  */
-
 import { render, screen } from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { PageFrame } from "@/components/PageFrame";
+import { useStatusStore } from "@/lib/store";
 
-// Mock store with specific safe inset values to verify they're used
-const mockSafeInsets = {
-  top: "47px",
-  bottom: "34px",
-  left: "10px",
-  right: "10px",
-};
-
-vi.mock("@/lib/store", () => {
-  const useStatusStore: any = vi.fn((selector) => {
-    const mockState = {
-      safeInsets: mockSafeInsets,
-      inboxMessages: [],
-      coreVersion: null as string | null,
-      coreVersionPending: false,
-    };
-    if (typeof selector === "function") {
-      return selector(mockState);
-    }
-    return mockState;
-  });
-  useStatusStore.getState = () => ({
-    safeInsets: mockSafeInsets,
-    inboxMessages: [],
-    coreVersion: null,
-    coreVersionPending: false,
-  });
-  return { useStatusStore };
-});
-
-vi.mock("@/components/ResponsiveContainer", () => ({
-  ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="responsive-container">{children}</div>
-  ),
-}));
-
-vi.mock("@/hooks/useConnection", () => ({
-  useConnection: () => ({
-    showConnecting: false,
-    showReconnecting: true,
-    openPairingModal: () => {},
-  }),
-}));
-
-// Mocks for BottomNav - declared at top level for proper hoisting
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
     <a href={to}>{children}</a>
@@ -66,114 +23,77 @@ vi.mock("@tanstack/react-router", () => ({
   useRouter: () => undefined,
 }));
 
-vi.mock("@/hooks/useHaptics", () => ({
-  useHaptics: () => ({ impact: vi.fn() }),
-}));
+/** The nearest ancestor that publishes the given custom property inline. */
+function ancestorPublishing(element: HTMLElement, property: string) {
+  let current: HTMLElement | null = element;
+  while (current) {
+    if (current.style.getPropertyValue(property) !== "") return current;
+    current = current.parentElement;
+  }
+  throw new Error(`No ancestor publishes ${property}`);
+}
 
-describe("Safe Area Regression Tests", () => {
+describe("Safe area insets", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  describe("PageFrame", () => {
-    it("should apply safe insets via inline styles, not CSS classes", async () => {
-      const { PageFrame } = await import("@/components/PageFrame");
-
-      const { container } = render(
-        <PageFrame headerCenter={<h1>Title</h1>}>
-          <div>Content</div>
-        </PageFrame>,
-      );
-
-      const headerDiv = container.querySelector(".page-header-shell");
-      expect(headerDiv).toBeInTheDocument();
-
-      // Verify inline custom properties expose store values to responsive CSS.
-      const style = (headerDiv as HTMLElement).style;
-      expect(style.getPropertyValue("--page-header-safe-top")).toBe(
-        "var(--page-content-safe-top, 47px)",
-      );
-      expect(style.getPropertyValue("--page-header-safe-right")).toBe("10px");
-      expect(style.getPropertyValue("--page-header-safe-left")).toBe("10px");
-    });
-
-    it("should apply safe insets to scroll container via inline styles", async () => {
-      const { PageFrame } = await import("@/components/PageFrame");
-
-      const { container } = render(
-        <PageFrame>
-          <div>Content</div>
-        </PageFrame>,
-      );
-
-      const scrollContainer = container.querySelector(
-        ".flex-1.overflow-y-auto",
-      );
-      expect(scrollContainer).toBeInTheDocument();
-
-      const style = (scrollContainer as HTMLElement).style;
-      expect(style.getPropertyValue("--page-scroll-safe-right")).toBe("10px");
-      expect(style.getPropertyValue("--page-scroll-safe-left")).toBe("10px");
-      expect(style.getPropertyValue("--page-header-overlay-height")).toBe(
-        "calc(var(--page-content-safe-top, 47px) + max(56px, 3.5rem) + 1px)",
-      );
-      expect(style.getPropertyValue("--page-header-overlay-clearance")).toBe(
-        "calc(var(--page-content-safe-top, 47px) + 1.5rem + max(68px, 3.5rem))",
-      );
-    });
-
-    it("should keep headerless content keyboard-accessible with native insets", async () => {
-      const { PageFrame } = await import("@/components/PageFrame");
-      const user = userEvent.setup();
-      render(
-        <PageFrame>
-          <input aria-label="Address" />
-        </PageFrame>,
-      );
-      await user.tab();
-      const input = screen.getByRole("textbox", { name: "Address" });
-      expect(input).toHaveFocus();
-      await user.keyboard("device.local");
-      expect(input).toHaveValue("device.local");
+    useStatusStore.setState({
+      safeInsets: { top: "47px", bottom: "34px", left: "10px", right: "12px" },
     });
   });
 
-  describe("BottomNav", () => {
-    it("should expose safe insets to the full-width dock shell", async () => {
-      // Mocks are declared at top level for proper hoisting
-      const { BottomNav } = await import("@/components/BottomNav");
-
-      const { container } = render(<BottomNav />);
-
-      const nav = container.querySelector("nav");
-      expect(nav).toBeInTheDocument();
-
-      const style = (nav as HTMLElement).style;
-      expect(style.getPropertyValue("--bottom-nav-safe-inset")).toBe("34px");
-      expect(style.getPropertyValue("--app-navigation-safe-left")).toBe("10px");
-      expect(style.getPropertyValue("--app-navigation-safe-right")).toBe(
-        "10px",
-      );
-    });
-  });
-});
-
-describe("Safe Area Anti-Regression: No CSS env() in components", () => {
-  it("PageFrame should not use CSS env() for safe area", async () => {
-    const { PageFrame } = await import("@/components/PageFrame");
-
-    const { container } = render(
+  it("should publish seeded insets on the page header", () => {
+    render(
       <PageFrame headerCenter={<h1>Title</h1>}>
         <div>Content</div>
       </PageFrame>,
     );
 
-    // Get all inline styles
-    const allElements = container.querySelectorAll("*");
-    allElements.forEach((el) => {
-      const style = (el as HTMLElement).getAttribute("style") || "";
-      // Ensure no env() usage in inline styles
-      expect(style).not.toContain("env(safe-area-inset");
-    });
+    const heading = screen.getByRole("heading", { name: "Title" });
+    const header = ancestorPublishing(heading, "--page-header-safe-right");
+    expect(header.style.getPropertyValue("--page-header-safe-top")).toContain(
+      "47px",
+    );
+    expect(header.style.getPropertyValue("--page-header-safe-right")).toBe(
+      "12px",
+    );
+    expect(header.style.getPropertyValue("--page-header-safe-left")).toBe(
+      "10px",
+    );
+  });
+
+  it("should publish seeded insets on the page scroll container", () => {
+    render(
+      <PageFrame>
+        <div>Content</div>
+      </PageFrame>,
+    );
+
+    const scroller = ancestorPublishing(
+      screen.getByText("Content"),
+      "--page-scroll-safe-top",
+    );
+    expect(scroller.style.getPropertyValue("--page-scroll-safe-top")).toBe(
+      "47px",
+    );
+    expect(scroller.style.getPropertyValue("--page-scroll-safe-right")).toBe(
+      "12px",
+    );
+    expect(scroller.style.getPropertyValue("--page-scroll-safe-left")).toBe(
+      "10px",
+    );
+  });
+
+  it("should keep headerless content keyboard-accessible with native insets", async () => {
+    const user = userEvent.setup();
+    render(
+      <PageFrame>
+        <input aria-label="Address" />
+      </PageFrame>,
+    );
+
+    await user.tab();
+    const input = screen.getByRole("textbox", { name: "Address" });
+    expect(input).toHaveFocus();
+    await user.keyboard("device.local");
+    expect(input).toHaveValue("device.local");
   });
 });

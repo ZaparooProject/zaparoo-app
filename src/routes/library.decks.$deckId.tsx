@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
@@ -11,7 +11,6 @@ import {
   PlusIcon,
   ShareIcon,
   GripVerticalIcon,
-  Trash2Icon,
 } from "lucide-react";
 import {
   closestCenter,
@@ -65,18 +64,14 @@ import { DeckItemDetailsModal } from "@/components/library/DeckItemDetailsModal"
 import { DeckShareModal } from "@/components/library/DeckShareModal";
 import { SortableDeckItemRow } from "@/components/library/SortableDeckItemRow";
 import { DeckArtwork } from "@/components/library/DeckArtwork";
+import { ContextualWriteRail } from "@/components/library/ContextualWriteRail";
 import { HeaderButton } from "@/components/wui/HeaderButton";
-import { ModalActionRail } from "@/components/wui/ModalActionRail";
-import {
-  ReaderActivityAction,
-  ReaderActivityStatus,
-} from "@/components/ReaderActivityAction";
 import { TextInput } from "@/components/wui/TextInput";
 import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { ModalActionBar } from "@/components/wui/ModalActionBar";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { DelayedLoading } from "@/components/DelayedLoading";
+import { InlineLoading } from "@/components/InlineLoading";
 import { BackIcon, PlayIcon } from "@/lib/images";
 
 export const Route = createFileRoute("/library/decks/$deckId")({
@@ -84,6 +79,13 @@ export const Route = createFileRoute("/library/decks/$deckId")({
 });
 
 export function DeckDetails() {
+  const deviceKey = useActiveDeviceKey();
+  // Edit drafts, pending order and in-flight work belong to one device's copy
+  // of the deck, so another device starts from a clean page.
+  return <DeckDetailsContent key={deviceKey} deviceKey={deviceKey} />;
+}
+
+function DeckDetailsContent({ deviceKey }: { deviceKey: string }) {
   const { deckId } = Route.useParams();
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -95,7 +97,6 @@ export function DeckDetails() {
     }),
   );
   const queryClient = useQueryClient();
-  const deviceKey = useActiveDeviceKey();
   const connected = useStatusStore((state) => state.connected);
   const showFilenames = usePreferencesStore((state) => state.showFilenames);
   const writeAvailable = useNfcWriteAvailable(deviceKey, connected);
@@ -109,6 +110,23 @@ export function DeckDetails() {
       failureCount < 1 && isTransientApiConnectionError(error),
   });
   const deck = deckQuery.data;
+  // Deck items reference systems by id only; rows show the catalog name.
+  const systemsQuery = useQuery({
+    queryKey: ["systems", deviceKey, { all: false }],
+    queryFn: () => CoreAPI.systems(),
+    enabled: connected && Boolean(deviceKey) && feature.available,
+    staleTime: 60 * 1000,
+  });
+  const systemNames = useMemo(
+    () =>
+      new Map(
+        (systemsQuery.data?.systems ?? []).map((system) => [
+          system.id,
+          system.name,
+        ]),
+      ),
+    [systemsQuery.data?.systems],
+  );
   const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
     deck?.name ?? t("decks.title"),
   );
@@ -265,6 +283,9 @@ export function DeckDetails() {
   const selectedItem = items.find((item) => item.id === selectedItemId) ?? null;
   const activeDragItem = items.find((item) => item.id === activeDragId);
   const editable = Boolean(connected && deck && canEditDeck(deck));
+  const deviceBusy = opening || playing;
+  // A waiting contextual write owns the reader until it settles.
+  const launchLocked = deviceBusy || writeActivity.active;
   const moveItem = (from: number, to: number) => {
     if (
       !editable ||
@@ -367,13 +388,7 @@ export function DeckDetails() {
           />
         ) : deckQuery.isLoading ? (
           <DelayedLoading>
-            <div
-              className="text-muted-foreground flex items-center justify-center gap-2 py-6"
-              role="status"
-            >
-              <LoadingSpinner size={16} className="text-primary" decorative />
-              <span>{t("decks.loading")}</span>
-            </div>
+            <InlineLoading label={t("decks.loading")} />
           </DelayedLoading>
         ) : deckQuery.isError || !deck ? (
           <EmptyState
@@ -410,70 +425,45 @@ export function DeckDetails() {
                 </div>
               ) : null}
               {!editing && (
-                <ModalActionRail
+                <ContextualWriteRail
                   aria-label={t("decks.actions")}
-                  readerAction
-                  status={
-                    writeActivity.state === "attention" ||
-                    writeActivity.state === "error" ? (
-                      <ReaderActivityStatus
-                        state={writeActivity.state}
-                        onCancel={() => void writeActivity.cancel()}
-                      />
-                    ) : undefined
+                  activity={writeActivity}
+                  writeDisabled={!writeAvailable}
+                  busy={deviceBusy}
+                  onWrite={writeDeck}
+                  trailingActions={
+                    <Button
+                      label={t("decks.share")}
+                      icon={<ShareIcon size={20} />}
+                      variant="text"
+                      layout="responsive"
+                      className="whitespace-nowrap"
+                      onClick={() => setShareOpen(true)}
+                    />
                   }
-                  actions={
-                    <>
-                      <Button
-                        label={t("decks.open")}
-                        icon={<ListIcon size={20} />}
-                        variant="text"
-                        layout="responsive"
-                        className="whitespace-nowrap"
-                        disabled={opening || playing || items.length === 0}
-                        disabledAppearance={
-                          opening || playing ? "busy" : "unavailable"
-                        }
-                        onClick={() => void openDeck()}
-                      />
-                      <Button
-                        label={t("decks.play")}
-                        icon={<PlayIcon size="20" />}
-                        variant="text"
-                        layout="responsive"
-                        intent="primary"
-                        className="whitespace-nowrap"
-                        disabled={opening || playing || items.length === 0}
-                        disabledAppearance={
-                          opening || playing ? "busy" : "unavailable"
-                        }
-                        onClick={() => void playDeck()}
-                      />
-                      <ReaderActivityAction
-                        state={writeActivity.state}
-                        label={t("library.writeAction")}
-                        busy={opening || playing}
-                        disabled={
-                          !writeAvailable ||
-                          opening ||
-                          playing ||
-                          writeActivity.externalWriteActive
-                        }
-                        onStart={writeDeck}
-                        onCancel={() => void writeActivity.cancel()}
-                        onRetry={() => void writeActivity.retry()}
-                      />
-                      <Button
-                        label={t("decks.share")}
-                        icon={<ShareIcon size={20} />}
-                        variant="text"
-                        layout="responsive"
-                        className="whitespace-nowrap"
-                        onClick={() => setShareOpen(true)}
-                      />
-                    </>
-                  }
-                />
+                >
+                  <Button
+                    label={t("decks.open")}
+                    icon={<ListIcon size={20} />}
+                    variant="text"
+                    layout="responsive"
+                    className="whitespace-nowrap"
+                    disabled={launchLocked || items.length === 0}
+                    disabledAppearance={launchLocked ? "busy" : "unavailable"}
+                    onClick={() => void openDeck()}
+                  />
+                  <Button
+                    label={t("decks.play")}
+                    icon={<PlayIcon size="20" />}
+                    variant="text"
+                    layout="responsive"
+                    intent="primary"
+                    className="whitespace-nowrap"
+                    disabled={launchLocked || items.length === 0}
+                    disabledAppearance={launchLocked ? "busy" : "unavailable"}
+                    onClick={() => void playDeck()}
+                  />
+                </ContextualWriteRail>
               )}
             </div>
             <div className="deck-items">
@@ -522,6 +512,11 @@ export function DeckDetails() {
                         <SortableDeckItemRow
                           key={item.id}
                           item={item}
+                          systemName={
+                            item.media
+                              ? systemNames.get(item.media.system)
+                              : undefined
+                          }
                           index={index}
                           count={items.length}
                           editable={editable && editing}
@@ -603,7 +598,6 @@ export function DeckDetails() {
                     />
                     <Button
                       label={t("decks.delete")}
-                      icon={<Trash2Icon size={20} />}
                       variant="outline"
                       intent="destructive"
                       className="flex-1"
@@ -677,29 +671,22 @@ export function DeckDetails() {
                   intent="destructive"
                   disabled={busy}
                   disabledAppearance="busy"
-                  onClick={() => {
-                    if (editing) {
-                      setPendingOrder({
-                        deckId,
-                        items: items.filter(({ id }) => id !== removeItem.id),
-                      });
-                      setRemoveItem(null);
-                      return;
-                    }
+                  onClick={() =>
                     void update({ removeItemIds: [removeItem.id] }).then(
                       (success) => {
                         if (success) setRemoveItem(null);
                       },
-                    );
-                  }}
+                    )
+                  }
                 />
               }
             />
           }
         >
-          <p className="text-muted-foreground py-4">
+          <p className="py-4 text-center">
             {t("decks.confirmRemove", {
-              name: removeItem.name || removeItem.cardId,
+              name:
+                removeItem.name || removeItem.cardId || t("decks.unnamedItem"),
             })}
           </p>
         </SlideModal>
@@ -730,7 +717,7 @@ export function DeckDetails() {
           />
         }
       >
-        <p className="text-muted-foreground py-4">
+        <p className="py-4 text-center">
           {t("decks.confirmDelete", { name: deck?.name })}
         </p>
       </SlideModal>

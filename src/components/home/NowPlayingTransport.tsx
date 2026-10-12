@@ -1,5 +1,11 @@
 import { useTranslation } from "react-i18next";
-import { Pause, Play, SkipBack, SkipForward, Square } from "lucide-react";
+import {
+  PauseIcon,
+  PlayIcon,
+  SkipBackIcon,
+  SkipForwardIcon,
+  SquareIcon,
+} from "lucide-react";
 import { Button } from "@/components/wui/Button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { asMediaControlAction } from "@/lib/models";
@@ -82,20 +88,22 @@ export function NowPlayingTransport({
 
   return (
     <div
-      className="wui-transport-deck"
+      className="wui-transport-deck mt-3"
       role="group"
-      aria-label={t("scan.playlistControls", { section: sectionLabel })}
+      aria-label={t(playlist ? "scan.playlistControls" : "scan.mediaControls", {
+        section: sectionLabel,
+      })}
     >
       <Button
         {...keyProps}
-        icon={<SkipBack size={20} fill="currentColor" />}
+        icon={<SkipBackIcon size={20} fill="currentColor" />}
         disabled={!connected || !canStepPrevious}
         onClick={onPrevious}
         aria-label={t("scan.playlistPrevious")}
       />
       <Button
         {...keyProps}
-        icon={<Square size={20} fill="currentColor" />}
+        icon={<SquareIcon size={20} fill="currentColor" />}
         disabled={!connected || !hasMedia}
         onClick={onStop}
         aria-label={stopButtonLabel}
@@ -106,9 +114,9 @@ export function NowPlayingTransport({
           replayingLast ? (
             <LoadingSpinner size={20} decorative />
           ) : isPlaying ? (
-            <Pause size={20} fill="currentColor" />
+            <PauseIcon size={20} fill="currentColor" />
           ) : (
-            <Play size={20} fill="currentColor" />
+            <PlayIcon size={20} fill="currentColor" />
           )
         }
         disabled={
@@ -120,15 +128,21 @@ export function NowPlayingTransport({
         onClick={hasMedia ? onToggle : onReplayLast}
         aria-label={
           hasMedia
-            ? isPlaying
-              ? t("scan.playlistPause")
-              : t("scan.playlistPlay")
+            ? t(
+                playlist
+                  ? isPlaying
+                    ? "scan.playlistPause"
+                    : "scan.playlistPlay"
+                  : isPlaying
+                    ? "scan.mediaPause"
+                    : "scan.mediaResume",
+              )
             : replayLastLabel
         }
       />
       <Button
         {...keyProps}
-        icon={<SkipForward size={20} fill="currentColor" />}
+        icon={<SkipForwardIcon size={20} fill="currentColor" />}
         disabled={!connected || !canStepNext}
         onClick={onNext}
         aria-label={t("scan.playlistNext")}

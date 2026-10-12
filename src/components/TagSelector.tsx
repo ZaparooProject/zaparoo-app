@@ -2,9 +2,8 @@ import { useState, useMemo, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Check, ChevronUp, ChevronDown } from "lucide-react";
+import { ChevronUpIcon, ChevronDownIcon } from "lucide-react";
 import { useDebounce } from "use-debounce";
-import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { compareStrings } from "@/lib/utils";
@@ -12,15 +11,18 @@ import { TagInfo } from "@/lib/models";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { Badge } from "@/components/wui/Badge";
 import { TextInput } from "@/components/wui/TextInput";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { InlineLoading } from "@/components/InlineLoading";
 import { DelayedLoading } from "@/components/DelayedLoading";
 import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { useAccessibleLists } from "@/hooks/useAccessibleLists";
 import { useHapticPress } from "@/hooks/useHapticPress";
+import { useVirtualListScrollMargin } from "@/hooks/useVirtualListScrollMargin";
 import { useAnnouncer } from "./A11yAnnouncer";
 import { SlideModal } from "./SlideModal";
 import { Button } from "./wui/Button";
 import { BackToTop } from "./BackToTop";
+import { SelectionIndicator, SelectorTrigger } from "./SelectorParts";
+import { selectorOptionClassName } from "./selectorOptionClassName";
 import {
   Accordion,
   AccordionItem,
@@ -61,15 +63,10 @@ function TagSearchOption(props: {
 
   return (
     <button
-      className={classNames(
-        "flex min-h-16 w-full items-center justify-between px-4 py-3 text-left transition-colors",
-        "focus-visible:ring-ring rounded-md focus:outline-none focus-visible:ring-2",
-        "hover:bg-foreground/10 focus:bg-foreground/10",
-        {
-          "h-full": props.fillHeight,
-          "bg-foreground/10": props.selected,
-        },
-      )}
+      className={selectorOptionClassName(props.selected, {
+        twoLine: true,
+        fillHeight: props.fillHeight,
+      })}
       onPointerUp={handleHapticPress}
       onClick={props.onSelect}
       type="button"
@@ -77,21 +74,10 @@ function TagSearchOption(props: {
       aria-checked={props.selected}
       aria-label={`${props.tag.tag}, ${typeLabel}`}
     >
-      <span className="flex items-center space-x-3" aria-hidden="true">
-        <span
-          className={classNames(
-            "border-input flex h-5 w-5 items-center justify-center rounded border-2",
-            { "bg-primary border-primary": props.selected },
-          )}
-        >
-          {props.selected && (
-            <Check className="text-primary-foreground h-3 w-3" />
-          )}
-        </span>
-        <span className="flex flex-col">
-          <span className="text-foreground font-medium">{props.tag.tag}</span>
-          <span className="text-muted-foreground text-xs">{typeLabel}</span>
-        </span>
+      <SelectionIndicator selected={props.selected} shape="checkbox" />
+      <span className="flex min-w-0 flex-col" aria-hidden="true">
+        <span className="text-foreground font-medium">{props.tag.tag}</span>
+        <span className="text-muted-foreground text-xs">{typeLabel}</span>
       </span>
     </button>
   );
@@ -109,7 +95,6 @@ export function TagSelector({
   const { announce } = useAnnouncer();
   const accessibleLists = useAccessibleLists();
   const handleHapticPress = useHapticPress();
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const slideModalScrollRef = useRef<HTMLDivElement>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -253,41 +238,43 @@ export function TagSelector({
     [types.length],
   );
 
-  // Set up virtualizer for all tags (used when search is active)
+  // Search results are virtualized against the modal body, which is the
+  // only scroller; the list sits below the search controls inside it.
+  const { listRef, scrollMargin, scrollPaddingStart } =
+    useVirtualListScrollMargin(slideModalScrollRef);
   // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: allTags.length,
-    getScrollElement: () => scrollContainerRef.current,
+    getScrollElement: () => slideModalScrollRef.current,
     estimateSize: () => ITEM_HEIGHT,
     overscan: 5,
+    scrollMargin,
+    scrollPaddingStart,
   });
 
-  // Footer for multi-select mode
   const footer = (
-    <div className="pb-2">
-      <ModalActionBar
-        secondaryAction={
-          <Button
-            label={t("tagSelector.clearAll")}
-            variant="outline"
-            onClick={handleClearAll}
-            disabled={selectedTags.length === 0}
-          />
-        }
-        primaryAction={
-          <Button
-            label={
-              selectedTags.length > 0
-                ? t("tagSelector.applyCount", {
-                    count: selectedTags.length,
-                  })
-                : t("tagSelector.apply")
-            }
-            onClick={handleApply}
-          />
-        }
-      />
-    </div>
+    <ModalActionBar
+      secondaryAction={
+        <Button
+          label={t("tagSelector.clearAll")}
+          variant="secondary"
+          onClick={handleClearAll}
+          disabled={selectedTags.length === 0}
+        />
+      }
+      primaryAction={
+        <Button
+          label={
+            selectedTags.length > 0
+              ? t("tagSelector.applyCount", {
+                  count: selectedTags.length,
+                })
+              : t("tagSelector.apply")
+          }
+          onClick={handleApply}
+        />
+      }
+    />
   );
 
   return (
@@ -296,245 +283,209 @@ export function TagSelector({
       close={onClose}
       title={title || t("tagSelector.title")}
       footer={footer}
+      footerSkipLabel={t("accessibility.skipToActions")}
       scrollRef={slideModalScrollRef}
       fixedHeight="90vh"
     >
-      <div className="flex min-h-0 flex-col">
-        {/* Header with search */}
-        <div className="pb-2">
-          {/* Search bar */}
-          <TextInput
-            type="search"
-            inputMode="search"
-            className="mb-3"
-            aria-label={t("tagSelector.searchTags")}
-            placeholder={t("tagSelector.searchPlaceholder")}
-            value={searchQuery}
-            setValue={setSearchQuery}
-            clearable
-          />
+      {/* Search and expand controls scroll with the list */}
+      <div className="pb-2">
+        <TextInput
+          type="search"
+          inputMode="search"
+          className="mb-3"
+          aria-label={t("tagSelector.searchTags")}
+          placeholder={t("tagSelector.searchPlaceholder")}
+          value={searchQuery}
+          setValue={setSearchQuery}
+          clearable
+        />
 
-          {/* Expand/Collapse all button */}
-          {types.length > 0 && !debouncedSearchQuery && (
-            <Button
-              onClick={handleExpandCollapseAll}
-              variant="text"
-              size="sm"
-              icon={
-                allExpanded ? (
-                  <ChevronUp size={20} />
-                ) : (
-                  <ChevronDown size={20} />
-                )
-              }
-              label={
-                allExpanded
-                  ? t("tagSelector.collapseAll")
-                  : t("tagSelector.expandAll")
-              }
-            />
-          )}
-        </div>
-
-        {/* Content area */}
-        <div className="min-h-0 flex-1 overflow-hidden" tabIndex={-1}>
-          {isLoading ? (
-            <DelayedLoading>
-              <div
-                className="text-muted-foreground flex h-32 items-center justify-center gap-2"
-                role="status"
-              >
-                <LoadingSpinner size={16} className="text-primary" decorative />
-                <span>{t("loading")}</span>
-              </div>
-            </DelayedLoading>
-          ) : isError ? (
-            <EmptyState
-              className="h-32"
-              title={t("tagSelector.unavailable")}
-              action={
-                <Button
-                  label={t("library.tryAgain")}
-                  variant="outline"
-                  onClick={() => void refetch()}
-                />
-              }
-            />
-          ) : allTags.length === 0 ? (
-            debouncedSearchQuery ? (
-              <EmptyState
-                className="h-32"
-                title={t("tagSelector.noResults")}
-                description={t("tagSelector.noResultsHint")}
-              />
-            ) : (
-              <EmptyState className="h-32" title={t("tagSelector.noTags")} />
-            )
-          ) : debouncedSearchQuery ? (
-            <div
-              ref={scrollContainerRef}
-              className="h-full overflow-auto pb-4"
-              tabIndex={-1}
-            >
-              {accessibleLists ? (
-                <div role="list" aria-label={t("tagSelector.resultsLabel")}>
-                  {allTags.map((tag, index) => {
-                    const formattedTag = `${tag.type}:${tag.tag}`;
-                    return (
-                      <div
-                        key={formattedTag}
-                        role="listitem"
-                        aria-posinset={index + 1}
-                        aria-setsize={allTags.length}
-                      >
-                        <TagSearchOption
-                          tag={tag}
-                          selected={selectedTags.includes(formattedTag)}
-                          fillHeight={false}
-                          onSelect={() => handleTagSelect(tag)}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
+        {types.length > 0 && !debouncedSearchQuery && (
+          <Button
+            onClick={handleExpandCollapseAll}
+            variant="text"
+            size="sm"
+            icon={
+              allExpanded ? (
+                <ChevronUpIcon size={20} />
               ) : (
-                <div
-                  style={{
-                    height: `${virtualizer.getTotalSize()}px`,
-                    width: "100%",
-                    position: "relative",
-                  }}
-                  role="list"
-                  aria-label={t("tagSelector.resultsLabel")}
-                >
-                  {virtualizer.getVirtualItems().map((virtualItem) => {
-                    const tag = allTags[virtualItem.index];
-                    if (!tag) return null;
-                    const formattedTag = `${tag.type}:${tag.tag}`;
-                    return (
-                      <div
-                        key={virtualItem.key}
-                        role="listitem"
-                        aria-posinset={virtualItem.index + 1}
-                        aria-setsize={allTags.length}
-                        style={{
-                          position: "absolute",
-                          top: 0,
-                          left: 0,
-                          width: "100%",
-                          height: `${virtualItem.size}px`,
-                          transform: `translateY(${virtualItem.start}px)`,
-                          padding: "2px 0",
-                        }}
-                      >
-                        <TagSearchOption
-                          tag={tag}
-                          selected={selectedTags.includes(formattedTag)}
-                          fillHeight
-                          onSelect={() => handleTagSelect(tag)}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          ) : (
-            // Accordion view for organized categories
-            <div className="h-full overflow-auto pb-4">
-              <Accordion
-                type="multiple"
-                value={expandedSections}
-                onValueChange={handleAccordionChange}
-                className="space-y-2"
-              >
-                {types.map((type) => {
-                  const tagsInType = groupedTags[type] || [];
-                  const selectedInType = tagsInType.filter((tag) => {
-                    const formattedTag = `${tag.type}:${tag.tag}`;
-                    return selectedTags.includes(formattedTag);
-                  }).length;
-
-                  return (
-                    <AccordionItem
-                      key={type}
-                      value={type}
-                      className="border-border overflow-hidden rounded-lg border"
-                    >
-                      <AccordionTrigger className="bg-surface-inset hover:bg-surface-highlight px-4 py-3 hover:no-underline">
-                        <div className="flex w-full items-center justify-between">
-                          <span>
-                            {t(`tagSelector.type.${type}`, {
-                              defaultValue: type,
-                            })}{" "}
-                            ({tagsInType.length})
-                          </span>
-                          {selectedInType > 0 && (
-                            <Badge variant="info" className="mr-2">
-                              {selectedInType}
-                            </Badge>
-                          )}
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="px-4 pb-3">
-                        <div className="space-y-1">
-                          {tagsInType.map((tag) => {
-                            const formattedTag = `${tag.type}:${tag.tag}`;
-                            const isSelected =
-                              selectedTags.includes(formattedTag);
-
-                            return (
-                              <button
-                                key={tag.tag}
-                                className={classNames(
-                                  "flex w-full items-center justify-between px-3 py-3 text-left transition-colors",
-                                  "focus-visible:ring-ring rounded-md focus:outline-none focus-visible:ring-2",
-                                  "hover:bg-foreground/5 focus:bg-foreground/5",
-                                  { "bg-foreground/10": isSelected },
-                                )}
-                                onPointerUp={handleHapticPress}
-                                onClick={() => handleTagSelect(tag)}
-                                type="button"
-                                role="checkbox"
-                                aria-checked={isSelected}
-                                aria-label={tag.tag}
-                              >
-                                <div
-                                  className="flex items-center space-x-3"
-                                  aria-hidden="true"
-                                >
-                                  <div
-                                    className={classNames(
-                                      "border-input flex h-5 w-5 items-center justify-center rounded border-2",
-                                      {
-                                        "bg-primary border-primary": isSelected,
-                                      },
-                                    )}
-                                  >
-                                    {isSelected && (
-                                      <Check className="text-primary-foreground h-3 w-3" />
-                                    )}
-                                  </div>
-                                  <span className="text-foreground text-sm font-medium">
-                                    {tag.tag}
-                                  </span>
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  );
-                })}
-              </Accordion>
-            </div>
-          )}
-        </div>
-
-        {/* Scroll to top button */}
-        <BackToTop scrollContainerRef={slideModalScrollRef} threshold={200} />
+                <ChevronDownIcon size={20} />
+              )
+            }
+            label={
+              allExpanded
+                ? t("tagSelector.collapseAll")
+                : t("tagSelector.expandAll")
+            }
+          />
+        )}
       </div>
+
+      {isLoading ? (
+        <DelayedLoading>
+          <InlineLoading />
+        </DelayedLoading>
+      ) : isError ? (
+        <EmptyState
+          className="h-32"
+          title={t("tagSelector.unavailable")}
+          action={
+            <Button
+              label={t("library.tryAgain")}
+              variant="outline"
+              onClick={() => void refetch()}
+            />
+          }
+        />
+      ) : allTags.length === 0 ? (
+        debouncedSearchQuery ? (
+          <EmptyState
+            className="h-32"
+            title={t("tagSelector.noResults")}
+            description={t("tagSelector.noResultsHint")}
+          />
+        ) : (
+          <EmptyState className="h-32" title={t("tagSelector.noTags")} />
+        )
+      ) : debouncedSearchQuery ? (
+        accessibleLists ? (
+          <div role="list" aria-label={t("tagSelector.resultsLabel")}>
+            {allTags.map((tag, index) => {
+              const formattedTag = `${tag.type}:${tag.tag}`;
+              return (
+                <div
+                  key={formattedTag}
+                  role="listitem"
+                  aria-posinset={index + 1}
+                  aria-setsize={allTags.length}
+                >
+                  <TagSearchOption
+                    tag={tag}
+                    selected={selectedTags.includes(formattedTag)}
+                    fillHeight={false}
+                    onSelect={() => handleTagSelect(tag)}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div
+            ref={listRef}
+            style={{
+              height: `${virtualizer.getTotalSize()}px`,
+              width: "100%",
+              position: "relative",
+            }}
+            role="list"
+            aria-label={t("tagSelector.resultsLabel")}
+          >
+            {virtualizer.getVirtualItems().map((virtualItem) => {
+              const tag = allTags[virtualItem.index];
+              if (!tag) return null;
+              const formattedTag = `${tag.type}:${tag.tag}`;
+              return (
+                <div
+                  key={virtualItem.key}
+                  role="listitem"
+                  aria-posinset={virtualItem.index + 1}
+                  aria-setsize={allTags.length}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: `${virtualItem.size}px`,
+                    transform: `translateY(${virtualItem.start - scrollMargin}px)`,
+                    padding: "2px 0",
+                  }}
+                >
+                  <TagSearchOption
+                    tag={tag}
+                    selected={selectedTags.includes(formattedTag)}
+                    fillHeight
+                    onSelect={() => handleTagSelect(tag)}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )
+      ) : (
+        // Accordion view for organized categories
+        <Accordion
+          type="multiple"
+          value={expandedSections}
+          onValueChange={handleAccordionChange}
+          className="space-y-2 pb-4"
+        >
+          {types.map((type) => {
+            const tagsInType = groupedTags[type] || [];
+            const selectedInType = tagsInType.filter((tag) => {
+              const formattedTag = `${tag.type}:${tag.tag}`;
+              return selectedTags.includes(formattedTag);
+            }).length;
+
+            return (
+              <AccordionItem
+                key={type}
+                value={type}
+                className="border-border overflow-hidden rounded-lg border"
+              >
+                <AccordionTrigger className="bg-surface-inset hover:bg-surface-highlight px-4 py-3 hover:no-underline">
+                  <div className="flex w-full items-center justify-between">
+                    <span>
+                      {t(`tagSelector.type.${type}`, {
+                        defaultValue: type,
+                      })}{" "}
+                      ({tagsInType.length})
+                    </span>
+                    {selectedInType > 0 && (
+                      <Badge variant="info" className="mr-2">
+                        {selectedInType}
+                      </Badge>
+                    )}
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-2 pb-3">
+                  <div className="space-y-1">
+                    {tagsInType.map((tag) => {
+                      const formattedTag = `${tag.type}:${tag.tag}`;
+                      const isSelected = selectedTags.includes(formattedTag);
+
+                      return (
+                        <button
+                          key={tag.tag}
+                          className={selectorOptionClassName(isSelected)}
+                          onPointerUp={handleHapticPress}
+                          onClick={() => handleTagSelect(tag)}
+                          type="button"
+                          role="checkbox"
+                          aria-checked={isSelected}
+                          aria-label={tag.tag}
+                        >
+                          <SelectionIndicator
+                            selected={isSelected}
+                            shape="checkbox"
+                          />
+                          <span
+                            className="text-foreground min-w-0 text-sm font-medium"
+                            aria-hidden="true"
+                          >
+                            {tag.tag}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            );
+          })}
+        </Accordion>
+      )}
+
+      <BackToTop scrollContainerRef={slideModalScrollRef} threshold={200} />
     </SlideModal>
   );
 }
@@ -575,50 +526,15 @@ export function TagSelectorTrigger({
     });
   }, [selectedTags, placeholderText, t]);
 
-  const handleClick = () => {
-    if (disabled) return;
-    onClick();
-  };
-
   return (
-    <button
-      onClick={handleClick}
-      className={classNames(
-        "wui-input border-input text-foreground flex min-h-12 w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors",
-        {
-          "hover:border-foreground-hint": !disabled,
-          "cursor-not-allowed opacity-50": disabled,
-        },
-        className,
-      )}
-      style={{ backgroundColor: "var(--surface-inset)" }}
+    <SelectorTrigger
+      text={displayText}
+      placeholder={selectedTags.length === 0}
+      onClick={onClick}
       disabled={disabled}
-      type="button"
+      className={className}
       aria-label={ariaLabel}
       aria-labelledby={ariaLabelledBy}
-    >
-      <span
-        className={classNames({
-          "text-muted-foreground": selectedTags.length === 0,
-        })}
-      >
-        {displayText}
-      </span>
-      <div aria-hidden="true" className="ml-2 size-4 shrink-0">
-        <svg
-          className="h-4 w-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 9l-7 7-7-7"
-          />
-        </svg>
-      </div>
-    </button>
+    />
   );
 }

@@ -169,20 +169,6 @@ describe("SimpleSystemSelect", () => {
     expect(onSelect).toHaveBeenCalledWith("snes");
   });
 
-  it("displays placeholder option when provided", () => {
-    const onSelect = vi.fn();
-    render(
-      <SimpleSystemSelect
-        value=""
-        onSelect={onSelect}
-        placeholder="Select a system"
-      />,
-    );
-
-    const placeholder = screen.getByRole("option", { name: "Select a system" });
-    expect(placeholder).toBeInTheDocument();
-  });
-
   it("includes 'All Systems' option when includeAllOption is true", async () => {
     const onSelect = vi.fn();
     render(

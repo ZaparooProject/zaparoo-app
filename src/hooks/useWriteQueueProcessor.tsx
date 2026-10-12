@@ -16,6 +16,7 @@ import {
   sessionManager,
   waitForSessionRelease,
 } from "@/lib/nfc";
+import { nfcErrorMessageKey } from "@/lib/nfcErrorMessages";
 import { logger } from "@/lib/logger";
 import { NoWriteMethodAvailableError } from "@/lib/errors";
 
@@ -24,7 +25,6 @@ const RETRY_INTERVAL_MS = 500;
 
 export interface UseWriteQueueProcessorReturn {
   nfcWriter: WriteNfcHook;
-  reset: () => void;
 }
 
 export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
@@ -46,9 +46,6 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
 
   const isProcessingRef = useRef(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Monotonic operation id: a superseded operation (e.g. after reset()) must
-  // not close the modal or clear the processing flag owned by its successor.
-  const opIdRef = useRef(0);
   // Self-reference so finish() can chain to the next queued item
   const processNextRef = useRef<() => void>(() => {});
   const pendingVerificationCompletionRef = useRef<(() => void) | null>(null);
@@ -73,9 +70,6 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
 
     isProcessingRef.current = true;
     useStatusStore.getState().setWriteQueue("");
-
-    const opId = ++opIdRef.current;
-    const ownsProcessing = () => opIdRef.current === opId;
 
     let retryCount = 0;
 
@@ -136,26 +130,20 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
       // write() resolves when the operation completes (including tag errors,
       // which surface their own toast) and only rejects on setup failures.
       await writer.write(WriteAction.Write, currentWriteValue);
-      // On verification failure the modal stays open showing the retry UI;
-      // deferred completion closes it after retry or cancellation.
-      if (ownsProcessing() && writer.getVerifyError() === null) {
+      // On verification failure the reader activity stays up with its retry
+      // action; deferred completion ends it after retry or cancellation.
+      if (writer.getVerifyError() === null) {
         useStatusStore.getState().setWriteOpen(false);
       }
     };
 
     const finish = () => {
-      if (!ownsProcessing()) {
-        return;
-      }
       isProcessingRef.current = false;
       // Pick up a write that was queued while this one was processing
       processNextRef.current();
     };
 
     const completeDeferredVerification = () => {
-      if (!ownsProcessing()) {
-        return;
-      }
       useStatusStore.getState().setWriteOpen(false);
       finish();
     };
@@ -163,9 +151,6 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
     const run = () => {
       attempt()
         .then(() => {
-          if (!ownsProcessing()) {
-            return;
-          }
           if (nfcWriterRef.current.getVerifyError() !== null) {
             pendingVerificationCompletionRef.current =
               completeDeferredVerification;
@@ -174,9 +159,6 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
           finish();
         })
         .catch((e) => {
-          if (!ownsProcessing()) {
-            return;
-          }
           if (retryCount < MAX_RETRIES) {
             retryCount++;
             logger.log(
@@ -195,10 +177,18 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
                 maxRetries: MAX_RETRIES,
               });
             }
+            // NoWriteMethodAvailableError already carries translated text;
+            // other typed failures map to keys, raw text is the last resort.
+            const messageKey =
+              e instanceof NoWriteMethodAvailableError
+                ? null
+                : nfcErrorMessageKey(e);
             toast.error(
-              e instanceof Error && e.message
-                ? e.message
-                : tRef.current("write.noWriteMethodAvailable"),
+              messageKey
+                ? tRef.current(messageKey)
+                : e instanceof Error && e.message
+                  ? e.message
+                  : tRef.current("write.noWriteMethodAvailable"),
             );
             useStatusStore.getState().setWriteOpen(false);
             finish();
@@ -218,7 +208,8 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
       return;
     }
     // Consume the queue outside the synchronous effect body so state updates
-    // (clearing the queue, opening the modal) don't cascade renders mid-effect
+    // (clearing the queue, showing reader activity) don't cascade renders
+    // mid-effect
     queueMicrotask(() => {
       processNextRef.current();
     });
@@ -232,18 +223,6 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
         timeoutRef.current = null;
       }
     };
-  }, []);
-
-  const reset = useCallback(() => {
-    // Invalidate any in-flight operation so its late completion can't close
-    // the modal or clear the processing flag for a successor.
-    opIdRef.current++;
-    isProcessingRef.current = false;
-    pendingVerificationCompletionRef.current = null;
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
   }, []);
 
   const retry = useCallback(async () => {
@@ -266,5 +245,5 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
     [nfcWriter, retry, end],
   );
 
-  return { nfcWriter: guardedNfcWriter, reset };
+  return { nfcWriter: guardedNfcWriter };
 }

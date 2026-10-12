@@ -22,34 +22,8 @@ import {
   seedDeviceRegistry,
 } from "@/test-utils/deviceRegistry";
 import { __simulateDeviceDiscovered } from "../../../__mocks__/capacitor-zeroconf";
+import { responsiveWindow } from "@/test-utils/responsiveWindow";
 
-function responsiveWindow(initial: number) {
-  let width = initial;
-  const listeners = new Set<() => void>();
-  vi.spyOn(window, "matchMedia").mockImplementation((query) => ({
-    get matches() {
-      const minimum = /min-width:\s*(\d+)px/.exec(query);
-      return minimum ? width >= Number(minimum[1]) : false;
-    },
-    media: query,
-    onchange: null,
-    addEventListener: (_type: string, listener: unknown) => {
-      listeners.add(listener as () => void);
-    },
-    removeEventListener: (_type: string, listener: unknown) => {
-      listeners.delete(listener as () => void);
-    },
-    addListener: () => {},
-    removeListener: () => {},
-    dispatchEvent: () => true,
-  }));
-  return async (next: number) => {
-    await act(() => {
-      width = next;
-      listeners.forEach((listener) => listener());
-    });
-  };
-}
 async function renderDevices(initial = "/settings/devices", connected = false) {
   const root = createRootRoute({ component: RootLayout });
   const devices = createRoute({
@@ -112,7 +86,9 @@ describe("Adaptive Devices destination", () => {
       name: "nav.mainNavigation",
     });
     await user.click(
-      within(navigation).getByRole("link", { name: "navigation.devices" }),
+      within(navigation).getByRole("link", {
+        name: "scan.deviceSheetAllDevices",
+      }),
     );
     await screen.findByRole("heading", { name: "scan.deviceSheetAllDevices" });
     expect(router.state.location.pathname).toBe("/settings/devices");
@@ -126,7 +102,9 @@ describe("Adaptive Devices destination", () => {
       screen.getByRole("region", { name: "settings.savedDevices" }),
     ).toBeVisible();
     expect(
-      within(navigation).getByRole("link", { name: "navigation.devices" }),
+      within(navigation).getByRole("link", {
+        name: "scan.deviceSheetAllDevices",
+      }),
     ).toHaveAttribute("aria-current", "page");
     expect(
       screen.queryByRole("button", { name: "scan.devicePill" }),

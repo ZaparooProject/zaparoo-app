@@ -1,4 +1,4 @@
-import { SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontalIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { SearchIcon } from "@/lib/images";
 import { HeaderButton } from "@/components/wui/HeaderButton";
@@ -24,7 +24,7 @@ export function LibraryHeaderActions(props: {
       {props.showOptions !== false && (
         <HeaderButton
           onClick={props.onOpenOptions}
-          icon={<SlidersHorizontal size={24} />}
+          icon={<SlidersHorizontalIcon size={24} />}
           aria-label={t("library.optionsTitle")}
           disabled={props.optionsDisabled}
           active={props.optionsActive}

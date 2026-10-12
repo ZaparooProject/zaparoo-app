@@ -302,7 +302,7 @@ describe("useRecentSearches", () => {
         timestamp: 0,
       });
 
-      expect(text).toBe("System: nes");
+      expect(text).toBe("create.search.recentSystem");
     });
 
     it("should format tags-only search", async () => {
@@ -319,7 +319,7 @@ describe("useRecentSearches", () => {
         timestamp: 0,
       });
 
-      expect(text).toBe("Tags: action, rpg");
+      expect(text).toBe("create.search.recentTags");
     });
 
     it("should format combined search", async () => {
@@ -336,10 +336,12 @@ describe("useRecentSearches", () => {
         timestamp: 0,
       });
 
-      expect(text).toBe('"mario" • System: nes • Tags: platformer');
+      expect(text).toBe(
+        '"mario" • create.search.recentSystem • create.search.recentTags',
+      );
     });
 
-    it('should return "All Media" for empty search', async () => {
+    it("should return the all-media label for empty search", async () => {
       const { result } = renderHook(() => useRecentSearches());
 
       await waitFor(() => {
@@ -353,7 +355,7 @@ describe("useRecentSearches", () => {
         timestamp: 0,
       });
 
-      expect(text).toBe("All Media");
+      expect(text).toBe("create.search.recentAllMedia");
     });
   });
 

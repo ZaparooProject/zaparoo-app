@@ -1,5 +1,5 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
@@ -25,7 +25,12 @@ import { ProBadge } from "@/components/ProBadge";
 import { ZapScriptInput } from "@/components/ZapScriptInput";
 import { CoreAPI } from "@/lib/coreApi";
 import { sortReaders } from "@/lib/readers";
-import { ClientCapability, UpdateSettingsRequest } from "@/lib/models.ts";
+import { ClientCapability } from "@/lib/models.ts";
+import {
+  CORE_SETTINGS_QUERY_KEY,
+  useCoreSettingsUpdate,
+} from "@/hooks/useCoreSettingsUpdate";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { useAppUi } from "@/hooks/useAppUi";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { RadioGroup } from "@/components/wui/RadioGroup";
@@ -44,6 +49,7 @@ export function ReadersSettings() {
     t("settings.readers.title"),
   );
   const connected = useStatusStore((state) => state.connected);
+  const deviceKey = useActiveDeviceKey();
   const connectionState = useStatusStore((state) => state.connectionState);
   const canWriteCoreSettings = useClientCapability(
     ClientCapability.SettingsWrite,
@@ -60,28 +66,20 @@ export function ReadersSettings() {
   const appUi = useAppUi();
 
   // Core settings query
-  const {
-    data: coreSettings,
-    refetch,
-    isPending,
-  } = useQuery({
-    queryKey: ["settings"],
+  const { data: coreSettings, isPending } = useQuery({
+    queryKey: CORE_SETTINGS_QUERY_KEY,
     queryFn: () => CoreAPI.settings(),
   });
 
   // Connected readers query - polls every 5 seconds while page is open
   const { data: readersData, isPending: isReadersPending } = useQuery({
-    queryKey: ["readers"],
+    queryKey: ["readers", deviceKey],
     queryFn: () => CoreAPI.readers(),
     enabled: connected && readersAvailable,
     refetchInterval: 5000,
   });
 
-  const updateCoreSetting = useMutation({
-    mutationFn: (params: UpdateSettingsRequest) =>
-      CoreAPI.settingsUpdate(params),
-    onSuccess: () => refetch(),
-  });
+  const updateCoreSetting = useCoreSettingsUpdate();
 
   // Get app settings from store
   const {
@@ -152,13 +150,20 @@ export function ReadersSettings() {
       <div className="settings-panel-layout settings-reader-panels">
         {/* Readers List */}
         <GatedFeature featureId="readers">
-          <Card className="settings-reader-status">
+          <Card className="settings-reader-status flex flex-col gap-4">
             <h2 className="text-foreground text-lg font-semibold">
               {t("settings.readers.connectedReaders")}
             </h2>
-            <div className="mt-2 flex flex-col gap-2">
+            <div className="flex flex-col gap-2">
               {isReadersLoading ? (
-                <span className="text-muted-foreground">{t("loading")}</span>
+                <div
+                  className="flex flex-col gap-2"
+                  role="status"
+                  aria-label={t("loading")}
+                >
+                  <Skeleton className="h-6 w-full" />
+                  <Skeleton className="h-6 w-2/3" />
+                </div>
               ) : !connected ? (
                 <EmptyState size="compact" title={t("settings.notConnected")} />
               ) : readersData?.readers && readersData.readers.length > 0 ? (
@@ -182,37 +187,32 @@ export function ReadersSettings() {
 
         <Card className="settings-reader-controls flex flex-col gap-4">
           {/* Scan Mode - from Core */}
-          <div className="py-2">
-            <span className="mb-2 flex flex-wrap items-center text-sm font-medium">
-              <span id="scan-mode-label">{t("settings.readers.scanMode")}</span>
+          {/* Stays mounted while loading, unselected and unavailable, so the
+              label and help keep their place. */}
+          <RadioGroup
+            label={t("settings.readers.scanMode")}
+            help={
               <SettingHelp
                 title={t("settings.readers.scanMode")}
                 description={t("settings.readers.scanModeHelp")}
               />
-            </span>
-            {isLoading ? (
-              <div className="mt-2 flex flex-row">
-                <Skeleton className="h-12 w-full rounded-md" />
-                <Skeleton className="h-12 w-full rounded-md" />
-              </div>
-            ) : (
-              <RadioGroup
-                label={t("settings.readers.scanMode")}
-                labelHidden
-                layout="inline"
-                value={connected ? (coreSettings?.readersScanMode ?? "") : ""}
-                options={[
-                  { value: "tap", label: t("settings.tapMode") },
-                  { value: "hold", label: t("settings.insertMode") },
-                ]}
-                disabled={!canWriteCoreSettings}
-                onChange={(value) => {
-                  if (value === "tap" || value === "hold")
-                    updateCoreSetting.mutate({ readersScanMode: value });
-                }}
-              />
-            )}
-          </div>
+            }
+            layout="inline"
+            value={
+              connected && !isLoading
+                ? (coreSettings?.readersScanMode ?? "")
+                : ""
+            }
+            options={[
+              { value: "tap", label: t("settings.tapMode") },
+              { value: "hold", label: t("settings.insertMode") },
+            ]}
+            disabled={isLoading || !canWriteCoreSettings}
+            onChange={(value) => {
+              if (value === "tap" || value === "hold")
+                updateCoreSetting.mutate({ readersScanMode: value });
+            }}
+          />
 
           {/* Continuous Scan - from App (always shown) */}
           <ToggleSwitch
@@ -327,37 +327,31 @@ export function ReadersSettings() {
               />
 
               {shakeMode === "random" && (
-                <div>
-                  <div className="flex items-center justify-between gap-2">
-                    {shakeSystem ? (
-                      <span className="text-foreground">
-                        {shakeSystem === "all"
-                          ? t("systemSelector.allSystems")
-                          : shakeSystem}
-                      </span>
-                    ) : (
-                      <span className="text-foreground">-</span>
-                    )}
-                    <Button
-                      label={t("settings.app.shakeSelectSystem")}
-                      onClick={() => setSystemPickerOpen(true)}
-                      variant="outline"
-                      size="sm"
-                      disabled={!connected}
-                    />
-                  </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-foreground">
+                    {!shakeSystem
+                      ? "-"
+                      : shakeSystem === "all"
+                        ? t("systemSelector.allSystems")
+                        : shakeSystem}
+                  </span>
+                  <Button
+                    label={t("settings.app.shakeSelectSystem")}
+                    onClick={() => setSystemPickerOpen(true)}
+                    variant="outline"
+                    size="sm"
+                    disabled={!connected}
+                  />
                 </div>
               )}
 
               {shakeMode === "custom" && (
-                <div>
-                  <ZapScriptInput
-                    value={shakeZapscript}
-                    setValue={setShakeZapscript}
-                    showPalette={false}
-                    rows={2}
-                  />
-                </div>
+                <ZapScriptInput
+                  value={shakeZapscript}
+                  setValue={setShakeZapscript}
+                  showPalette={false}
+                  rows={2}
+                />
               )}
             </>
           )}

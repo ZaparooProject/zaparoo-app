@@ -60,6 +60,10 @@ export function PairingModal({
   // Tracks an in-flight pair attempt so onComplete doesn't fire twice if the
   // user is still mid-submit when the 6th digit lands.
   const pairingInFlight = useRef(false);
+  const fallbackName = truncateClientName(
+    t("pairing.defaultClientName", { platform: safePlatform() }),
+  );
+  const unknownName = t("pairing.unknownDeviceName");
 
   useEffect(() => {
     if (!isOpen) {
@@ -80,25 +84,21 @@ export function PairingModal({
       Device.getInfo()
         .then((info) => {
           if (cancelled) return;
-          const name = info.name || info.model || "Unknown";
+          const name = info.name || info.model || unknownName;
           const suggested = truncateClientName(name);
           setClientName((current) => (current ? current : suggested));
         })
         .catch(() => {
           if (cancelled) return;
-          setClientName((current) =>
-            current ? current : `Zaparoo App ${safePlatform()}`,
-          );
+          setClientName((current) => (current ? current : fallbackName));
         });
     } else {
-      setClientName((current) =>
-        current ? current : `Zaparoo App ${safePlatform()}`,
-      );
+      setClientName((current) => (current ? current : fallbackName));
     }
     return () => {
       cancelled = true;
     };
-  }, [isOpen]);
+  }, [isOpen, fallbackName, unknownName]);
 
   useEffect(() => {
     if (retryAt === null) return;
@@ -119,10 +119,8 @@ export function PairingModal({
   }, [retryAt]);
 
   const resolveClientName = useCallback(() => {
-    return truncateClientName(
-      clientName.trim() || `Zaparoo App ${safePlatform()}`,
-    );
-  }, [clientName]);
+    return truncateClientName(clientName.trim() || fallbackName);
+  }, [clientName, fallbackName]);
 
   const handlePair = async (pinOverride?: string) => {
     const submittedPin = pinOverride ?? pin;

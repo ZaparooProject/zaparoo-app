@@ -1,5 +1,5 @@
 {
-  "noticesFile": "thirdPartyLicenseNotices.edf1b38cb29b.json",
+  "noticesFile": "thirdPartyLicenseNotices.bed28e43c74e.json",
   "packages": [
     {
       "name": "@alloc/quick-lru",
@@ -2471,13 +2471,6 @@
       "license": "MIT",
       "repository": "https://github.com/tailwindlabs/tailwindcss",
       "noticeId": "fdd854c84f367147"
-    },
-    {
-      "name": "tailwindcss-animate",
-      "version": "1.0.7",
-      "license": "MIT",
-      "repository": "",
-      "noticeId": "d767856171a8d6f3"
     },
     {
       "name": "tapable",

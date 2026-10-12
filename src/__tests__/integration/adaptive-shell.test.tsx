@@ -31,34 +31,7 @@ import { usePreferencesStore } from "@/lib/preferencesStore";
 import { useLibrarySessionStore } from "@/lib/librarySessionStore";
 import { useTabSessionStore } from "@/lib/tabSessionStore";
 import { seedActiveDevice } from "@/test-utils/deviceRegistry";
-
-function responsiveWindow(initialWidth: number) {
-  let width = initialWidth;
-  const listeners = new Set<() => void>();
-  vi.spyOn(window, "matchMedia").mockImplementation((query) => ({
-    get matches() {
-      const minimum = /min-width:\s*(\d+)px/.exec(query);
-      return minimum ? width >= Number(minimum[1]) : false;
-    },
-    media: query,
-    onchange: null,
-    addEventListener: (_type: string, callback: unknown) => {
-      listeners.add(callback as () => void);
-    },
-    removeEventListener: (_type: string, callback: unknown) => {
-      listeners.delete(callback as () => void);
-    },
-    addListener: () => {},
-    removeListener: () => {},
-    dispatchEvent: () => true,
-  }));
-  return async (nextWidth: number) => {
-    await act(() => {
-      width = nextWidth;
-      listeners.forEach((listener) => listener());
-    });
-  };
-}
+import { responsiveWindow } from "@/test-utils/responsiveWindow";
 
 async function renderShell(
   initialPath = "/library",
@@ -222,7 +195,7 @@ describe("Adaptive application shell", () => {
       }
       if (width === 820)
         await user.click(
-          await screen.findByRole("button", { name: "navigation.openMenu" }),
+          await screen.findByRole("button", { name: "nav.openMenu" }),
         );
       const navigation = await screen.findByRole("navigation", {
         name: "nav.mainNavigation",
@@ -258,7 +231,7 @@ describe("Adaptive application shell", () => {
     );
     const group = nav.getByRole("link", { name: "nav.library" }).closest("li")!;
     await user.click(
-      within(group).getByRole("button", { name: "navigation.expandSection" }),
+      within(group).getByRole("button", { name: "nav.expandSection" }),
     );
     let favorites = nav.getByRole("link", {
       name: "library.favorites",
@@ -379,7 +352,7 @@ describe("Adaptive application shell", () => {
       name: "nav.create",
     });
     await user.click(
-      within(create).getByRole("button", { name: "navigation.expandSection" }),
+      within(create).getByRole("button", { name: "nav.expandSection" }),
     );
     expect(router.state.location.pathname).toBe("/library");
     expect(
@@ -391,7 +364,7 @@ describe("Adaptive application shell", () => {
     await screen.findByRole("heading", { name: "settings.title" });
     expect(
       within(create).getByRole("button", {
-        name: "navigation.collapseSection",
+        name: "nav.collapseSection",
       }),
     ).toHaveAttribute("aria-expanded", "true");
     const settings = within(navigation).getByRole("listitem", {
@@ -399,19 +372,21 @@ describe("Adaptive application shell", () => {
     });
     expect(
       within(settings).getByRole("button", {
-        name: "navigation.collapseSection",
+        name: "nav.collapseSection",
       }),
     ).toHaveAttribute("aria-expanded", "true");
     await user.click(
       within(create).getByRole("button", {
-        name: "navigation.collapseSection",
+        name: "nav.collapseSection",
       }),
     );
     expect(
       within(create).queryByRole("link", { name: "create.customHeading" }),
     ).not.toBeInTheDocument();
     expect(
-      within(settings).getByRole("link", { name: "navigation.devices" }),
+      within(settings).getByRole("link", {
+        name: "scan.deviceSheetAllDevices",
+      }),
     ).toBeVisible();
     expect(await findA11yViolations(baseElement)).toEqual([]);
   });
@@ -420,9 +395,9 @@ describe("Adaptive application shell", () => {
     const resize = responsiveWindow(820);
     const user = userEvent.setup();
     const { router } = await renderShell();
-    const toggle = screen.getByRole("button", { name: "navigation.openMenu" });
+    const toggle = screen.getByRole("button", { name: "nav.openMenu" });
     await user.click(toggle);
-    const drawer = screen.getByRole("dialog", { name: "nav.mainNavigation" });
+    const drawer = screen.getByRole("dialog", { name: "nav.menu" });
     await user.click(
       within(drawer).getByRole("link", { name: "nav.settings" }),
     );
@@ -432,7 +407,7 @@ describe("Adaptive application shell", () => {
     expect(heading).toHaveFocus();
     expect(router.state.location.pathname).toBe("/settings");
     expect(
-      screen.queryByRole("dialog", { name: "nav.mainNavigation" }),
+      screen.queryByRole("dialog", { name: "nav.menu" }),
     ).not.toBeInTheDocument();
     await user.click(toggle);
     const currentLink = screen.getByRole("link", { name: "nav.settings" });
@@ -445,19 +420,145 @@ describe("Adaptive application shell", () => {
     expect(currentLink).toHaveFocus();
     expect(screen.getByRole("main")).not.toHaveAttribute("inert");
     await resize(820);
-    expect(
-      screen.getByRole("button", { name: "navigation.openMenu" }),
-    ).toHaveFocus();
+    expect(screen.getByRole("button", { name: "nav.openMenu" })).toHaveFocus();
     expect(router.state.location.pathname).toBe("/settings");
+  });
+
+  it("should lead reading order with navigation from tablet width and keep the phone dock in the footer", async () => {
+    const resize = responsiveWindow(1440);
+    await renderShell();
+    const navigation = await screen.findByRole("navigation", {
+      name: "nav.mainNavigation",
+    });
+    const main = screen.getByRole("main");
+    const footer = screen.getByRole("contentinfo");
+    const precedesMain = () =>
+      Boolean(
+        navigation.compareDocumentPosition(main) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+
+    expect(precedesMain()).toBe(true);
+    expect(footer).not.toContainElement(navigation);
+
+    await resize(820);
+    expect(
+      screen.getByRole("button", { name: "nav.openMenu" }),
+    ).toBeInTheDocument();
+    expect(precedesMain()).toBe(true);
+    expect(footer).not.toContainElement(navigation);
+
+    await resize(390);
+    expect(precedesMain()).toBe(false);
+    expect(footer).toContainElement(navigation);
+  });
+
+  it("should name the tablet menu dialog separately from its navigation landmark", async () => {
+    responsiveWindow(820);
+    const user = userEvent.setup();
+    await renderShell();
+    await user.click(screen.getByRole("button", { name: "nav.openMenu" }));
+
+    const drawer = screen.getByRole("dialog", { name: "nav.menu" });
+    expect(
+      within(drawer).getByRole("navigation", { name: "nav.mainNavigation" }),
+    ).toBeInTheDocument();
+  });
+
+  it("should return focus to the menu button when the drawer reselects the current page", async () => {
+    responsiveWindow(820);
+    const user = userEvent.setup();
+    const { router } = await renderShell();
+    const toggle = screen.getByRole("button", { name: "nav.openMenu" });
+    await user.click(toggle);
+    const drawer = screen.getByRole("dialog", { name: "nav.menu" });
+
+    await user.click(within(drawer).getByRole("link", { name: "nav.library" }));
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "nav.menu" }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(router.state.location.pathname).toBe("/library");
+    expect(toggle).toHaveFocus();
+  });
+
+  it("should mark only the exact sidebar destination as the current page", async () => {
+    responsiveWindow(1440);
+    await enableLibrary();
+    await renderShell("/library/favorites");
+    const navigation = within(
+      await screen.findByRole("navigation", { name: "nav.mainNavigation" }),
+    );
+
+    expect(
+      navigation.getByRole("link", { name: "library.favorites" }),
+    ).toHaveAttribute("aria-current", "page");
+    expect(
+      navigation.getByRole("link", { name: "nav.library" }),
+    ).not.toHaveAttribute("aria-current");
+  });
+
+  it("should hide the Settings badge inside Settings on the sidebar as on the dock", async () => {
+    const resize = responsiveWindow(1440);
+    useStatusStore.setState({
+      connected: true,
+      connectionState: ConnectionState.CONNECTED,
+      coreVersion: "2.23.0",
+      coreVersionPending: false,
+      inboxMessages: [
+        { id: 1, title: "Notice", body: "", severity: 0, createdAt: "" },
+      ] as never,
+    });
+    const user = userEvent.setup();
+    await renderShell("/library");
+    const navigation = within(
+      await screen.findByRole("navigation", { name: "nav.mainNavigation" }),
+    );
+    const settings = navigation.getByRole("link", {
+      name: "nav.settingsWithNotifications",
+    });
+
+    await user.click(settings);
+    await screen.findByRole("heading", { name: "settings.title" });
+
+    expect(
+      navigation.getByRole("link", { name: "nav.settings" }),
+    ).toBeInTheDocument();
+    await resize(390);
+    expect(
+      within(
+        screen.getByRole("navigation", { name: "nav.mainNavigation" }),
+      ).getByRole("link", { name: "nav.settings" }),
+    ).toBeInTheDocument();
+  });
+
+  it("should list Create destinations as unavailable while disconnected like the landing cards", async () => {
+    responsiveWindow(1440);
+    await renderShell("/create");
+    const navigation = within(
+      await screen.findByRole("navigation", { name: "nav.mainNavigation" }),
+    );
+
+    // The disabled landing card and the sidebar entry share the same name.
+    for (const search of navigation.getAllByText("create.searchGameHeading")) {
+      expect(search.closest("a")).toHaveAttribute("aria-disabled", "true");
+    }
+    expect(navigation.getByText("create.mappingsHeading")).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    expect(
+      navigation.getByRole("link", { name: "create.customHeading" }),
+    ).not.toHaveAttribute("aria-disabled");
   });
 
   it("should consume app Back in the navigation drawer before navigating away", async () => {
     responsiveWindow(820);
     const user = userEvent.setup();
     const { router } = await renderShell();
-    await user.click(
-      screen.getByRole("button", { name: "navigation.openMenu" }),
-    );
+    await user.click(screen.getByRole("button", { name: "nav.openMenu" }));
     await waitFor(() =>
       expect(App.addListener).toHaveBeenCalledWith(
         "backButton",
@@ -472,12 +573,10 @@ describe("Adaptive application shell", () => {
       await callback?.({ canGoBack: true });
     });
     expect(
-      screen.queryByRole("dialog", { name: "nav.mainNavigation" }),
+      screen.queryByRole("dialog", { name: "nav.menu" }),
     ).not.toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/library");
-    expect(
-      screen.getByRole("button", { name: "navigation.openMenu" }),
-    ).toHaveFocus();
+    expect(screen.getByRole("button", { name: "nav.openMenu" })).toHaveFocus();
   });
 
   it("should preserve Settings overview navigation and heading through phone/tablet/desktop changes", async () => {
@@ -666,18 +765,14 @@ describe("Adaptive application shell", () => {
     await enableLibrary();
     await renderShell("/library/favorites");
     const pane = await selectGame(user);
-    const toggle = screen.getByRole("button", { name: "navigation.openMenu" });
+    const toggle = screen.getByRole("button", { name: "nav.openMenu" });
     await user.click(toggle);
-    const drawer = screen.getByRole("dialog", { name: "nav.mainNavigation" });
+    const drawer = screen.getByRole("dialog", { name: "nav.menu" });
     expect(drawer).toHaveFocus();
-    expect(screen.getByTestId("modal-overlay")).toHaveStyle({
-      opacity: "0",
-      pointerEvents: "none",
-    });
     expect(screen.getByRole("main")).toHaveAttribute("inert");
     await user.keyboard("{Escape}");
     expect(
-      screen.queryByRole("dialog", { name: "nav.mainNavigation" }),
+      screen.queryByRole("dialog", { name: "nav.menu" }),
     ).not.toBeInTheDocument();
     expect(toggle).toHaveFocus();
     expect(screen.getByRole("region", { name: "Super Game" })).toBe(pane);

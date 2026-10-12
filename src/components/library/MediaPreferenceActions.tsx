@@ -1,4 +1,9 @@
-import { Bookmark, Heart, ThumbsDown, ThumbsUp } from "lucide-react";
+import {
+  BookmarkIcon,
+  HeartIcon,
+  ThumbsDownIcon,
+  ThumbsUpIcon,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
@@ -11,7 +16,7 @@ import { useMediaPreferences } from "@/components/library/useMediaPreferences";
 const actions = [
   {
     id: "favorite",
-    Icon: Heart,
+    Icon: HeartIcon,
     label: "favorite",
     add: "addFavorite",
     remove: "removeFavorite",
@@ -19,7 +24,7 @@ const actions = [
   },
   {
     id: "liked",
-    Icon: ThumbsUp,
+    Icon: ThumbsUpIcon,
     label: "like",
     add: "addLike",
     remove: "removeLike",
@@ -27,7 +32,7 @@ const actions = [
   },
   {
     id: "disliked",
-    Icon: ThumbsDown,
+    Icon: ThumbsDownIcon,
     label: "dislike",
     add: "addDislike",
     remove: "removeDislike",
@@ -35,15 +40,16 @@ const actions = [
   },
   {
     id: "playlater",
-    Icon: Bookmark,
-    label: "playLater",
+    Icon: BookmarkIcon,
+    // The collection title keeps its casing; rail captions are sentence case.
+    label: "playLaterAction",
     add: "addPlayLater",
     remove: "removePlayLater",
     pending: "updatingPreference",
   },
 ] as const satisfies ReadonlyArray<{
   id: MediaPreference;
-  Icon: typeof Heart;
+  Icon: typeof HeartIcon;
   label: string;
   add: string;
   remove: string;

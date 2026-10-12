@@ -183,9 +183,11 @@ describe("LibraryBrowseList", () => {
 
   it("should permit measured row growth when text zoom is increased", () => {
     usePreferencesStore.setState({ textZoomLevel: 1.3 });
+    mockVirtualRows([0, 1]);
     renderList();
 
-    const item = screen.getByRole("listitem");
+    // The first row gives up its leading inset, so check a regular row.
+    const item = screen.getAllByRole("listitem")[1]!;
     expect(item).toHaveStyle({ minHeight: "115px" });
     expect(item).not.toHaveStyle({ height: "88px" });
     expect(mockMeasure).toHaveBeenCalled();

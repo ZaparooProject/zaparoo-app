@@ -1,6 +1,6 @@
 import { ReactElement, useState } from "react";
 import { createPortal } from "react-dom";
-import { Ellipsis } from "lucide-react";
+import { EllipsisIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { SlideModal } from "@/components/SlideModal";
 import { Button } from "@/components/wui/Button";
@@ -23,7 +23,7 @@ export function HeaderOverflowMenu(props: { actions: HeaderOverflowAction[] }) {
   return (
     <>
       <HeaderButton
-        icon={<Ellipsis size={24} />}
+        icon={<EllipsisIcon size={24} />}
         active={isOpen}
         onClick={() => setIsOpen(true)}
         title={t("nav.moreActions")}

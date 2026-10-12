@@ -264,6 +264,24 @@ describe("MediaDetailsModal", () => {
     });
   });
 
+  it("should offer a skip link from the details to their actions", () => {
+    renderModal();
+
+    expect(
+      screen.getByRole("link", { name: "accessibility.skipToActions" }),
+    ).toBeInTheDocument();
+  });
+
+  it("should not offer to write media that has nothing to write", () => {
+    renderModal({
+      media: { ...mediaWithZapScript, path: "", zapScript: undefined },
+    });
+
+    expect(
+      screen.getByRole("button", { name: "create.search.writeLabel" }),
+    ).toBeDisabled();
+  });
+
   it("should put ZapScript first and select it by default", () => {
     renderModal();
 

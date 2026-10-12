@@ -37,11 +37,9 @@ export function DeviceLinkButton({
 
   if (!supported) {
     return (
-      <Button
-        label={t("online.deviceLink.updateCore")}
-        disabled
-        className="w-full"
-      />
+      <p className="text-muted-foreground text-sm">
+        {t("online.deviceLink.updateCore")}
+      </p>
     );
   }
 
@@ -57,6 +55,7 @@ export function DeviceLinkButton({
         )}
         icon={<LoadingSpinner size={20} decorative />}
         disabled
+        disabledAppearance="busy"
         className="w-full"
       />
     );

@@ -16,8 +16,9 @@ import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 
 // Mock useMediaQuery
 let mockIsMobile = true;
-vi.mock("@uidotdev/usehooks", () => ({
-  useMediaQuery: vi.fn(() => mockIsMobile),
+const mockUseMediaQuery = vi.fn((_query: string) => mockIsMobile);
+vi.mock("@/hooks/useMediaQuery", () => ({
+  useMediaQuery: (query: string) => mockUseMediaQuery(query),
 }));
 
 // Mock useHaptics
@@ -351,6 +352,8 @@ describe("useSmartSwipe", () => {
 
       // Assert - trackMouse should be true for mobile
       expect(lastSwipeableConfig?.trackMouse).toBe(true);
+      // Mouse swipes follow the phone layout, which ends at the shell threshold.
+      expect(mockUseMediaQuery).toHaveBeenCalledWith("(max-width: 759px)");
     });
 
     it("should disable mouse tracking on desktop screens", () => {

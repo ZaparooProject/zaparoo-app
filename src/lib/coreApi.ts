@@ -1622,9 +1622,10 @@ class CoreApi {
       this.call(Method.History)
         .then((result) => {
           try {
-            const response = result as HistoryResponse;
+            const response = result as Partial<HistoryResponse> | null;
             logger.debug(response);
-            resolve(response);
+            // Core serialises an empty history as null, not an empty list.
+            resolve({ entries: response?.entries ?? [] });
           } catch (e) {
             logger.error("Error processing history response:", e);
             reject(

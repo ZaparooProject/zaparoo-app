@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { HelpCircleIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { SlideModal } from "@/components/SlideModal";
 
 /**
@@ -48,6 +49,7 @@ export function SettingHelp({
   description,
   ariaLabel,
 }: SettingHelpProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const formattedDescription = useMemo(
     () => parseFormattedText(description),
@@ -73,7 +75,7 @@ export function SettingHelp({
           setOpen(true);
         }}
         className="text-foreground-hint hover:text-muted-foreground focus-visible:text-muted-foreground focus-visible:ring-ring -my-2 ml-1 inline-flex items-center justify-center rounded-full p-2 transition-colors focus-visible:ring-2 focus-visible:outline-none"
-        aria-label={ariaLabel ?? `Help for ${title}`}
+        aria-label={ariaLabel ?? t("settingHelp.label", { title })}
       >
         <HelpCircleIcon size={18} />
       </button>

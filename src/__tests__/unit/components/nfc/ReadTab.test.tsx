@@ -37,6 +37,12 @@ vi.mock("@capacitor/share", () => ({
 
 describe("ReadTab", () => {
   const mockOnScan = vi.fn();
+  // The page owns the reader control; the tab only places it.
+  const scanControl = (
+    <button type="button" onClick={mockOnScan}>
+      create.nfc.readTab.scanTag
+    </button>
+  );
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -44,7 +50,7 @@ describe("ReadTab", () => {
 
   describe("rendering", () => {
     it("should render scan button", () => {
-      render(<ReadTab result={null} onScan={mockOnScan} />);
+      render(<ReadTab result={null} scanControl={scanControl} />);
 
       expect(
         screen.getByRole("button", { name: /scanTag/i }),
@@ -52,7 +58,7 @@ describe("ReadTab", () => {
     });
 
     it("should render tag information section", () => {
-      render(<ReadTab result={null} onScan={mockOnScan} />);
+      render(<ReadTab result={null} scanControl={scanControl} />);
 
       expect(
         screen.getByText("create.nfc.readTab.tagInformation"),
@@ -60,7 +66,7 @@ describe("ReadTab", () => {
     });
 
     it("should show empty state when no result", () => {
-      render(<ReadTab result={null} onScan={mockOnScan} />);
+      render(<ReadTab result={null} scanControl={scanControl} />);
 
       // Key sections should be rendered with placeholder values
       expect(
@@ -88,7 +94,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       expect(screen.getByText("04:12:34:56")).toBeInTheDocument();
       expect(screen.getByText("Hello World")).toBeInTheDocument();
@@ -96,8 +102,8 @@ describe("ReadTab", () => {
   });
 
   describe("interactions", () => {
-    it("should call onScan when scan button is clicked", () => {
-      render(<ReadTab result={null} onScan={mockOnScan} />);
+    it("should render the scan control it is given", () => {
+      render(<ReadTab result={null} scanControl={scanControl} />);
 
       fireEvent.click(screen.getByRole("button", { name: /scanTag/i }));
 
@@ -116,7 +122,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       // Share button should appear when tag data exists
       expect(
@@ -129,7 +135,7 @@ describe("ReadTab", () => {
     });
 
     it("should not render share button when no tag data", () => {
-      render(<ReadTab result={null} onScan={mockOnScan} />);
+      render(<ReadTab result={null} scanControl={scanControl} />);
 
       expect(
         screen.queryByRole("button", { name: /share/i }),
@@ -150,7 +156,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       // Should render the content with appropriate icon (URL in this case)
       expect(screen.getByText("https://example.com")).toBeInTheDocument();
@@ -170,7 +176,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       // Scan and share buttons should be present
       expect(
@@ -198,7 +204,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       // Find copy buttons by their accessible aria-label
       const copyButtons = screen.getAllByRole("button", {
@@ -226,7 +232,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       // Find copy buttons by their accessible aria-label
       const copyButtons = screen.getAllByRole("button", {
@@ -255,7 +261,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       // Find share button by its accessible aria-label
       const shareButton = screen.getByRole("button", {
@@ -291,7 +297,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       // Find share button by its accessible aria-label
       const shareButton = screen.getByRole("button", {
@@ -336,7 +342,7 @@ describe("ReadTab", () => {
           },
         };
 
-        render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+        render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
         expect(screen.getByText(text)).toBeInTheDocument();
       },
@@ -356,7 +362,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       // Low-level tag data section should be present
       expect(
@@ -390,7 +396,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       // Hex toggle button should appear when NDEF records exist
       expect(
@@ -401,7 +407,7 @@ describe("ReadTab", () => {
 
   describe("edge cases", () => {
     it("should handle null result gracefully", () => {
-      render(<ReadTab result={null} onScan={mockOnScan} />);
+      render(<ReadTab result={null} scanControl={scanControl} />);
 
       // All sections should render with placeholder values
       expect(
@@ -428,7 +434,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       // All sections should render
       expect(
@@ -457,7 +463,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       // UID should be displayed
       expect(screen.getByText("04:12:34:56")).toBeInTheDocument();
@@ -481,7 +487,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       // Scan button should be accessible
       expect(
@@ -506,7 +512,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       const buttons = screen.getAllByRole("button");
       buttons.forEach((button) => {
@@ -535,7 +541,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       // Should show "yes" for writable status
       expect(screen.getByText("create.nfc.readTab.yes")).toBeInTheDocument();
@@ -558,7 +564,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       const noElements = screen.getAllByText("create.nfc.readTab.no");
       expect(noElements.length).toBeGreaterThan(0);
@@ -578,7 +584,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       expect(screen.getByText(/504/)).toBeInTheDocument();
       expect(screen.getByText(/create.nfc.readTab.bytes/)).toBeInTheDocument();
@@ -598,7 +604,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       expect(screen.getByText("4")).toBeInTheDocument();
     });
@@ -623,7 +629,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       expect(screen.getByText(NfcTagTechType.NfcA)).toBeInTheDocument();
       expect(screen.getByText(NfcTagTechType.Ndef)).toBeInTheDocument();
@@ -653,7 +659,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       // Should show record count
       expect(
@@ -679,7 +685,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       // Should show record index
       expect(screen.getByText(/create.nfc.readTab.record/)).toBeInTheDocument();
@@ -706,7 +712,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       // Initially should show text (Hello)
       expect(screen.getByText("Hello")).toBeInTheDocument();
@@ -747,7 +753,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       // Tag ID should be displayed as hex
       expect(screen.getByText(/04123456/)).toBeInTheDocument();
@@ -767,7 +773,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       expect(screen.getByText(/0x4400/)).toBeInTheDocument();
     });
@@ -786,7 +792,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       expect(screen.getByText(/0x00/)).toBeInTheDocument();
     });
@@ -805,7 +811,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       expect(screen.getByText(/0x01020304/)).toBeInTheDocument();
     });
@@ -824,7 +830,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       expect(screen.getByText(/0x808182/)).toBeInTheDocument();
     });
@@ -843,7 +849,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       expect(screen.getByText(/0x01fe/)).toBeInTheDocument();
     });
@@ -862,7 +868,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       expect(screen.getByText(/0x88b0/)).toBeInTheDocument();
     });
@@ -887,7 +893,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       // Toggle to show raw hex with spaces
       const hexToggle = screen.getByRole("button", {
@@ -917,7 +923,7 @@ describe("ReadTab", () => {
         },
       };
 
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
+      render(<ReadTab result={mockResult} scanControl={scanControl} />);
 
       // Find copy buttons - there should be multiple
       const copyButtons = screen.getAllByRole("button", {

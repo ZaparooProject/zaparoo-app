@@ -88,20 +88,14 @@ export function TextInput(props: {
               "border-solid",
               "p-2",
               "px-3",
-              "disabled:border-foreground-disabled",
               "[&::-webkit-search-cancel-button]:appearance-none",
               {
-                "border-input": !props.disabled && !props.error,
-                "border-error": props.error,
-                "border-foreground-disabled": props.disabled,
-                "text-foreground-disabled": props.disabled,
                 "pr-10":
                   props.clearable &&
                   value &&
                   value.length > 0 &&
                   !props.disabled &&
                   !props.readOnly,
-                "rounded-md": true,
               },
             )}
             disabled={props.disabled}

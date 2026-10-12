@@ -1,5 +1,4 @@
 import { useTranslation } from "react-i18next";
-import classNames from "classnames";
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
@@ -13,7 +12,7 @@ import {
 } from "@/lib/coreApi";
 import { DatabaseIcon } from "@/lib/images";
 import { logger } from "@/lib/logger";
-import { isCoreFeatureAvailable } from "@/lib/featureGates";
+import { useKnownCoreFeature } from "@/hooks/useKnownCoreFeature";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { Card } from "./wui/Card";
 import { Button } from "./wui/Button";
@@ -21,6 +20,7 @@ import { ModalActionBar } from "./wui/ModalActionBar";
 import { SystemSelector, SystemSelectorTrigger } from "./SystemSelector";
 import { LoadingSpinner } from "./ui/loading-spinner";
 import { SlideModal } from "./SlideModal";
+import { ProgressBar } from "./ProgressBar";
 
 interface MediaDatabaseCardProps {
   showMaintenanceActions?: boolean;
@@ -41,10 +41,10 @@ export function MediaDatabaseCard({
   const connectionState = useStatusStore((state) => state.connectionState);
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const scrapingStatus = useStatusStore((state) => state.scrapingStatus);
-  const coreVersion = useStatusStore((state) => state.coreVersion);
-  const coreVersionPending = useStatusStore(
-    (state) => state.coreVersionPending,
-  );
+  const {
+    available: mediaGenerateAvailable,
+    unsupported: mediaGenerateUnsupported,
+  } = useKnownCoreFeature("mediaGenerate");
   const cleanOrphansFeature = useCoreFeature("mediaCleanOrphans");
   const isLiveConnected = connectionState === ConnectionState.CONNECTED;
   const [cancelRequested, setCancelRequested] = useState(false);
@@ -55,8 +55,6 @@ export function MediaDatabaseCard({
   const [cleanDeletedCount, setCleanDeletedCount] = useState<number | null>(
     null,
   );
-  const [cleanError, setCleanError] = useState<string | null>(null);
-  const [generateError, setGenerateError] = useState<string | null>(null);
   const [trackedDeviceKey, setTrackedDeviceKey] = useState(deviceKey);
 
   // System ids are only meaningful to the device that listed them, so a
@@ -70,12 +68,6 @@ export function MediaDatabaseCard({
   const isPaused = gamesIndex.paused === true;
   const isThrottled = gamesIndex.throttled === true && !isPaused;
   const isScraping = scrapingStatus?.scraping === true;
-  const mediaGenerateAvailable =
-    coreVersion !== null &&
-    !coreVersionPending &&
-    isCoreFeatureAvailable("mediaGenerate", coreVersion);
-  const mediaGenerateUnsupported =
-    coreVersion !== null && !coreVersionPending && !mediaGenerateAvailable;
 
   // Derive isCancelling: true only if we requested cancel AND indexing is still happening
   const isCancelling = cancelRequested && gamesIndex.indexing;
@@ -121,6 +113,24 @@ export function MediaDatabaseCard({
     enabled: connected,
   });
 
+  // Every failed database action is reported once, as a toast. Conditions the
+  // user is expected to hit are not also sent to error reporting.
+  const reportActionError = (error: unknown, logAction?: string) => {
+    const message = isMissingMediaDatabaseSetupError(error)
+      ? t("settings.updateDb.status.setupMissing")
+      : error instanceof Error
+        ? error.message
+        : t("settings.updateDb.startError");
+    showRateLimitedErrorToast(t("error", { msg: message }));
+    if (logAction && !isExpectedMediaDatabaseError(error)) {
+      logger.error(`Media database action failed: ${logAction}`, error, {
+        category: "api",
+        action: logAction,
+        severity: "warning",
+      });
+    }
+  };
+
   const handleUpdateDatabase = async () => {
     if (!mediaGenerateAvailable) return;
 
@@ -132,38 +142,17 @@ export function MediaDatabaseCard({
         ? undefined
         : selectedSystems;
 
-    setGenerateError(null);
     try {
       await CoreAPI.mediaGenerate(
         systemsToUpdate ? { systems: systemsToUpdate } : undefined,
       );
       queryClient.invalidateQueries({ queryKey: ["media"] });
     } catch (error) {
-      if (isMissingMediaDatabaseSetupError(error)) {
-        setGenerateError(t("settings.updateDb.status.setupMissing"));
-        return;
-      }
-
-      if (isExpectedMediaDatabaseError(error)) {
-        setGenerateError(
-          error instanceof Error
-            ? error.message
-            : t("settings.updateDb.startError"),
-        );
-        return;
-      }
-
-      const message =
-        error instanceof Error
-          ? error.message
-          : t("settings.updateDb.startError");
-      setGenerateError(message);
-      showRateLimitedErrorToast(t("error", { msg: message }));
+      reportActionError(error);
     }
   };
 
   const handleCancelUpdate = async () => {
-    setGenerateError(null);
     setCancelRequested(true);
     try {
       await CoreAPI.mediaGenerateCancel();
@@ -171,59 +160,18 @@ export function MediaDatabaseCard({
       // run has stopped, so the button doesn't flash back to Cancel.
       queryClient.invalidateQueries({ queryKey: ["media"] });
     } catch (error) {
-      if (isExpectedMediaDatabaseError(error)) {
-        setGenerateError(
-          error instanceof Error
-            ? error.message
-            : t("settings.updateDb.startError"),
-        );
-        setCancelRequested(false);
-        return;
-      }
-
-      const message =
-        error instanceof Error
-          ? error.message
-          : t("settings.updateDb.startError");
-      setGenerateError(message);
-      showRateLimitedErrorToast(t("error", { msg: message }));
-      logger.error("Failed to cancel media generation:", error, {
-        category: "api",
-        action: "mediaGenerateCancel",
-        severity: "warning",
-      });
+      reportActionError(error, "mediaGenerateCancel");
       setCancelRequested(false);
     }
   };
 
   const handleResumeUpdate = async () => {
-    setGenerateError(null);
     setResumeRequested(true);
     try {
       await CoreAPI.mediaGenerateResume();
       queryClient.invalidateQueries({ queryKey: ["media"] });
     } catch (error) {
-      if (isExpectedMediaDatabaseError(error)) {
-        setGenerateError(
-          error instanceof Error
-            ? error.message
-            : t("settings.updateDb.startError"),
-        );
-        setResumeRequested(false);
-        return;
-      }
-
-      const message =
-        error instanceof Error
-          ? error.message
-          : t("settings.updateDb.startError");
-      setGenerateError(message);
-      showRateLimitedErrorToast(t("error", { msg: message }));
-      logger.error("Failed to resume media generation:", error, {
-        category: "api",
-        action: "mediaGenerateResume",
-        severity: "warning",
-      });
+      reportActionError(error, "mediaGenerateResume");
       setResumeRequested(false);
     }
   };
@@ -266,7 +214,6 @@ export function MediaDatabaseCard({
     mutationFn: () => CoreAPI.mediaCleanOrphans(),
     onSuccess: (response) => {
       setCleanDeletedCount(response.deleted);
-      setCleanError(null);
       queryClient.invalidateQueries({ queryKey: ["media"] });
       queryClient.invalidateQueries({ queryKey: ["tags"] });
       queryClient.invalidateQueries({ queryKey: ["infiniteMediaSearch"] });
@@ -277,7 +224,7 @@ export function MediaDatabaseCard({
         : err instanceof Error
           ? err.message
           : t("settings.updateDb.cleanOrphansError");
-      setCleanError(message);
+      showRateLimitedErrorToast(t("error", { msg: message }));
       if (isExpectedMediaDatabaseError(err)) {
         return;
       }
@@ -286,7 +233,6 @@ export function MediaDatabaseCard({
         action: "mediaCleanOrphans",
         severity: "error",
       });
-      showRateLimitedErrorToast(t("error", { msg: message }));
     },
   });
 
@@ -299,7 +245,6 @@ export function MediaDatabaseCard({
   const handleCleanConfirm = () => {
     setCleanConfirmOpen(false);
     setCleanDeletedCount(null);
-    setCleanError(null);
     cleanMutation.mutate();
   };
 
@@ -315,23 +260,12 @@ export function MediaDatabaseCard({
     // Core gives indexing priority if operation signals ever overlap.
     if (isOptimizing && !isIndexing) {
       return (
-        <div className="mt-3 space-y-2">
+        <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between text-sm">
             <span>{t("settings.updateDb.status.optimizing")}</span>
             {/* No spinner for optimizing - only throbbing bar */}
           </div>
-          <div
-            role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label={t("settings.updateDb.status.optimizing")}
-            className="border-border bg-background h-[10px] w-full rounded-full border border-solid"
-          >
-            <div
-              className="border-background bg-primary h-[8px] animate-pulse rounded-full border border-solid"
-              style={{ width: "100%" }}
-            />
-          </div>
+          <ProgressBar label={t("settings.updateDb.status.optimizing")} pulse />
         </div>
       );
     }
@@ -350,8 +284,8 @@ export function MediaDatabaseCard({
         : 0;
 
       return (
-        <div className="mt-3 space-y-3">
-          <div className="space-y-2">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between text-sm">
               <span>{stepText}</span>
               {/* Only show spinner for system-specific steps (not phase steps) */}
@@ -366,36 +300,15 @@ export function MediaDatabaseCard({
                   : t("settings.updateDb.status.throttled")}
               </div>
             )}
-            <div
-              role="progressbar"
-              aria-valuenow={progressPercent}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-label={t("settings.updateDb.progressLabel")}
-              className="border-border bg-background h-[10px] w-full rounded-full border border-solid"
-            >
-              {/* Distinct nodes prevent iOS WebKit from retaining the solid system-progress layer when final-phase pulsing begins. */}
-              {hasDetailedProgress &&
-              currentStep === 0 ? null : isSystemStep ? (
-                <div
-                  key="determinate"
-                  className="border-background bg-primary h-[8px] rounded-full border border-solid"
-                  style={{
-                    width: `${((currentStep / totalSteps) * 100).toFixed(2)}%`,
-                  }}
-                />
-              ) : (
-                <div
-                  key="indeterminate"
-                  className={classNames(
-                    "border-background bg-primary h-[8px] w-full rounded-full border border-solid",
-                    {
-                      "animate-pulse": isLiveConnected && !isPaused,
-                    },
-                  )}
-                />
-              )}
-            </div>
+            <ProgressBar
+              label={t("settings.updateDb.progressLabel")}
+              valueNow={progressPercent}
+              percent={
+                isSystemStep ? (currentStep / totalSteps) * 100 : undefined
+              }
+              empty={hasDetailedProgress && currentStep === 0}
+              pulse={isLiveConnected && !isPaused}
+            />
           </div>
           {isPaused ? (
             <Button
@@ -414,7 +327,7 @@ export function MediaDatabaseCard({
     // Show connection status
     if (!connected) {
       return (
-        <div className="text-muted-foreground mt-3 text-sm">
+        <div className="text-muted-foreground text-sm">
           {t("settings.updateDb.status.noConnection")}
         </div>
       );
@@ -422,7 +335,7 @@ export function MediaDatabaseCard({
 
     if (mediaGenerateUnsupported) {
       return (
-        <div className="text-muted-foreground mt-3 text-sm">
+        <div className="text-muted-foreground text-sm">
           {t("settings.updateDb.status.unsupported")}
         </div>
       );
@@ -431,7 +344,7 @@ export function MediaDatabaseCard({
     // Show loading state while fetching database status
     if (isLoading) {
       return (
-        <div className="text-muted-foreground mt-3 text-sm">
+        <div className="text-muted-foreground text-sm">
           {t("settings.updateDb.status.checking")}
         </div>
       );
@@ -439,7 +352,7 @@ export function MediaDatabaseCard({
 
     if (isMissingMediaDatabaseSetupError(mediaStatusError)) {
       return (
-        <div className="text-muted-foreground mt-3 text-sm">
+        <div className="text-muted-foreground text-sm">
           {t("settings.updateDb.status.setupMissing")}
         </div>
       );
@@ -450,7 +363,7 @@ export function MediaDatabaseCard({
 
     if (!databaseExists && !gamesIndex.indexing && !isOptimizing) {
       return (
-        <div className="text-muted-foreground mt-3 text-sm">
+        <div className="text-muted-foreground text-sm">
           {t("settings.updateDb.status.noDatabase")}
         </div>
       );
@@ -462,7 +375,7 @@ export function MediaDatabaseCard({
       if (totalMedia !== undefined && totalMedia > 0) {
         const formattedCount = totalMedia.toLocaleString();
         return (
-          <div className="text-muted-foreground mt-3 text-sm">
+          <div className="text-muted-foreground text-sm">
             {t("settings.updateDb.status.mediaCount", {
               count: totalMedia,
               formattedCount,
@@ -471,7 +384,7 @@ export function MediaDatabaseCard({
         );
       } else {
         return (
-          <div className="text-muted-foreground mt-3 text-sm">
+          <div className="text-muted-foreground text-sm">
             {t("settings.updateDb.status.ready")}
           </div>
         );
@@ -482,37 +395,21 @@ export function MediaDatabaseCard({
   };
 
   const renderCompactScrapeStatus = () => (
-    <div className="space-y-3">
-      <div className="space-y-1">
-        <h2 className="text-sm font-medium">
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1">
+        <h3 className="text-sm font-medium">
           {t("settings.scrapeMedia.activeTitle")}
-        </h2>
+        </h3>
         <p className="text-sm">{scrapeStepText}</p>
       </div>
-      <div className="space-y-2">
-        <div
-          role="progressbar"
-          aria-valuenow={hasScrapeProgress ? roundedScrapeProgress : undefined}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label={t("settings.scrapeMedia.overallProgressLabel")}
-          className="border-border bg-background h-[10px] w-full rounded-full border border-solid"
-        >
-          <div
-            className={classNames(
-              "border-background bg-primary h-[8px] rounded-full border border-solid",
-              {
-                hidden: hasScrapeProgress && scrapeCurrentStep === 0,
-                "animate-pulse": !hasScrapeProgress,
-              },
-            )}
-            style={{
-              width: hasScrapeProgress
-                ? `${scrapeProgressPercent.toFixed(2)}%`
-                : "100%",
-            }}
-          />
-        </div>
+      <div className="flex flex-col gap-2">
+        <ProgressBar
+          label={t("settings.scrapeMedia.overallProgressLabel")}
+          valueNow={hasScrapeProgress ? roundedScrapeProgress : undefined}
+          percent={hasScrapeProgress ? scrapeProgressPercent : undefined}
+          empty={hasScrapeProgress && scrapeCurrentStep === 0}
+          pulse
+        />
         <div className="text-muted-foreground flex justify-between text-sm">
           <span>
             {hasScrapeProgress
@@ -563,7 +460,7 @@ export function MediaDatabaseCard({
   };
 
   const databaseContent = (
-    <div className="space-y-3">
+    <div className="flex flex-col gap-3">
       {/* System selector for choosing which systems to update */}
       <SystemSelectorTrigger
         aria-label={t("settings.updateDb.allSystems")}
@@ -604,14 +501,8 @@ export function MediaDatabaseCard({
 
       {renderStatus()}
 
-      {generateError ? (
-        <p className="text-error text-sm">
-          {t("error", { msg: generateError })}
-        </p>
-      ) : null}
-
       {showCleanAction ? (
-        <div className="space-y-2 pt-1">
+        <div className="flex flex-col gap-2">
           <Button
             label={
               isCleaning
@@ -630,11 +521,6 @@ export function MediaDatabaseCard({
               {t("settings.updateDb.cleanOrphansPendingStatus")}
             </p>
           ) : null}
-          {cleanError ? (
-            <p className="text-error text-sm">
-              {t("error", { msg: cleanError })}
-            </p>
-          ) : null}
           {cleanDeletedCount !== null ? (
             <p className="text-muted-foreground text-sm">
               {cleanDeletedCount > 0
@@ -649,18 +535,14 @@ export function MediaDatabaseCard({
 
       {/* Cancelling leaves a partial database, so keep it last and off the settings card. */}
       {showMaintenanceActions && isIndexing ? (
-        <div className="pt-1">
-          <Button
-            label={
-              isCancelling ? t("cancelling") : t("settings.updateDb.cancel")
-            }
-            variant="outline"
-            className="w-full"
-            disabled={!connected || !mediaGenerateAvailable || isCancelling}
-            disabledAppearance={isCancelling ? "busy" : "unavailable"}
-            onClick={handleCancelUpdate}
-          />
-        </div>
+        <Button
+          label={isCancelling ? t("cancelling") : t("settings.updateDb.cancel")}
+          variant="outline"
+          className="w-full"
+          disabled={!connected || !mediaGenerateAvailable || isCancelling}
+          disabledAppearance={isCancelling ? "busy" : "unavailable"}
+          onClick={handleCancelUpdate}
+        />
       ) : null}
     </div>
   );
@@ -708,7 +590,7 @@ export function MediaDatabaseCard({
           }
         >
           <div className="py-4">
-            <p className="text-muted-foreground text-sm">
+            <p className="text-center">
               {t("settings.updateDb.cleanOrphansConfirmDescription")}
             </p>
           </div>

@@ -25,6 +25,7 @@ import { ConnectionState, useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { seedActiveDevice } from "@/test-utils/deviceRegistry";
 import * as libraryImages from "@/lib/libraryImages";
+import { responsiveWindow } from "@/test-utils/responsiveWindow";
 
 const system = {
   id: "nes",
@@ -48,34 +49,6 @@ const deck: Deck = {
   createdAt: 1,
   updatedAt: 1,
 };
-
-function responsiveWindow(initialWidth: number) {
-  let width = initialWidth;
-  const listeners = new Set<() => void>();
-  vi.spyOn(window, "matchMedia").mockImplementation((query) => ({
-    get matches() {
-      const minimum = /min-width:\s*(\d+)px/.exec(query);
-      return minimum ? width >= Number(minimum[1]) : false;
-    },
-    media: query,
-    onchange: null,
-    addEventListener: (_type: string, listener: unknown) => {
-      listeners.add(listener as () => void);
-    },
-    removeEventListener: (_type: string, listener: unknown) => {
-      listeners.delete(listener as () => void);
-    },
-    addListener: () => {},
-    removeListener: () => {},
-    dispatchEvent: () => true,
-  }));
-  return async (next: number) => {
-    await act(() => {
-      width = next;
-      listeners.forEach((listener) => listener());
-    });
-  };
-}
 
 async function renderDialogs(path = "/create/custom") {
   const root = createRootRoute({ component: RootLayout });
@@ -212,12 +185,6 @@ describe("Adaptive dialogs", () => {
         command,
       );
       expect(command).toHaveFocus();
-      expect(dialog.style.transform).toBe(
-        width >= 760 ? "translate3d(-50%, -50%, 0)" : "translate3d(0, 0, 0)",
-      );
-      expect(dialog.style.transition).toBe(
-        width >= 760 ? "none" : "transform 0.2s ease-in-out",
-      );
       expect(editor).toHaveValue("A|B");
     }
     expect(await findA11yViolations(baseElement)).toEqual([]);
@@ -227,9 +194,6 @@ describe("Adaptive dialogs", () => {
     expect(editor.selectionStart).toBe("A**stop".length);
     expect(editor.selectionEnd).toBe(editor.selectionStart);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(dialog.style.transform).toBe("translate3d(-50%, -50%, 0)");
-    expect(dialog.style.transition).toBe("none");
-    expect(dialog.style.visibility).toBe("hidden");
     expect(CoreAPI.run).not.toHaveBeenCalled();
   });
 

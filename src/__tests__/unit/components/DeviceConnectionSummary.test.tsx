@@ -232,6 +232,34 @@ describe("DeviceConnectionSummary", () => {
     ).toHaveFocus();
   });
 
+  it("does not submit the address with the Enter press that opened manual entry", async () => {
+    const user = userEvent.setup();
+    const select = vi.spyOn(deviceRegistry, "selectAddress");
+    renderSummary();
+    await user.click(
+      screen.getByRole("button", { name: "settings.deviceHistory" }),
+    );
+    const sheet = within(
+      await screen.findByRole("dialog", { name: "scan.deviceSheetTitle" }),
+    );
+    sheet
+      .getByRole("button", { name: "settings.deviceSetup.addDeviceManually" })
+      .focus();
+
+    // One key press: keydown activates the row, keyup lands on the new input.
+    await user.keyboard("{Enter}");
+
+    const input = await screen.findByRole("textbox", {
+      name: "settings.device",
+    });
+    expect(input).toHaveFocus();
+    expect(input).toHaveValue("192.168.1.100");
+    expect(select).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("dialog", { name: "settings.deviceSetup.enterAddress" }),
+    ).toBeInTheDocument();
+  });
+
   it("reopens device selection rather than a discarded manual draft", async () => {
     const user = userEvent.setup();
     renderSummary();

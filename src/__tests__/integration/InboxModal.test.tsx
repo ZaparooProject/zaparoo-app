@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { formatAppDateTime } from "@/lib/formatDate";
 import userEvent from "@testing-library/user-event";
 import { render, screen, waitFor } from "../../test-utils";
 import { InboxModal } from "@/components/InboxModal";
@@ -45,7 +46,7 @@ describe("InboxModal", () => {
     render(<InboxModal />);
     expect(screen.getByText("Update available")).toBeInTheDocument();
     expect(
-      screen.getByText(new Date(message.createdAt).toLocaleString()),
+      screen.getByText(formatAppDateTime(message.createdAt)!),
     ).toBeInTheDocument();
   });
 

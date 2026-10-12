@@ -653,6 +653,13 @@ describe("CoreAPI API Contract", () => {
       expect(entry.text).toBe("**launch.system:snes");
       expect(entry.success).toBe(true);
     });
+
+    it("should return an empty list when Core reports no history as null", async () => {
+      const resultPromise = CoreAPI.history();
+      simulateResponse(mockSend, { entries: null });
+
+      await expect(resultPromise).resolves.toEqual({ entries: [] });
+    });
   });
 
   describe("Additional Method JSON-RPC Format", () => {

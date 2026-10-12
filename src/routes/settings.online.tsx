@@ -2,7 +2,6 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
-import { Purchases } from "@revenuecat/purchases-capacitor";
 import { Browser } from "@capacitor/browser";
 import toast from "react-hot-toast";
 import { Capacitor } from "@capacitor/core";
@@ -19,14 +18,21 @@ import { Label } from "@/components/ui/label";
 import { useStatusStore } from "@/lib/store.ts";
 import { PageFrame } from "@/components/PageFrame.tsx";
 import { HeaderButton } from "@/components/wui/HeaderButton";
-import { BackIcon, ExternalIcon, GoogleIcon, AppleIcon } from "@/lib/images";
+import {
+  BackIcon,
+  ExternalIcon,
+  GoogleIcon,
+  AppleIcon,
+  LockIcon,
+} from "@/lib/images";
+import { signOutOnline } from "@/lib/onlineSignOut";
+import { formatAppDate } from "@/lib/formatDate";
 import { logger } from "@/lib/logger";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import {
   collectErrorSearchStrings,
   isExpectedEmailAuthError,
-  isExpectedRevenueCatLogoutError,
 } from "@/lib/errors";
 import {
   updateRequirements,
@@ -41,6 +47,7 @@ import {
 } from "@/lib/mfaAuthentication";
 import { SlideModal } from "@/components/SlideModal";
 import {
+  getDisplayedWarpAccess,
   getPurchasePreviewState,
   usePurchasePreviewStore,
 } from "@/lib/purchasePreviewStore";
@@ -81,6 +88,39 @@ const EXPIRED_MFA_CHALLENGE_TOKENS = [
   "multi-factor-challenge-missing",
   "totp-challenge-timeout",
 ] as const;
+
+type OAuthProvider = "google" | "apple";
+
+const OAUTH_CANCEL_TOKENS = [
+  "cancel",
+  "popup_closed",
+  "user_denied",
+  "dismissed",
+] as const;
+
+const OAUTH_PROVIDERS = {
+  google: {
+    labelKey: "online.loginGoogle",
+    Icon: GoogleIcon,
+    signIn: () => MfaAuthentication.signInWithGoogle(),
+    action: "signInWithGoogle",
+    logMessage: "Firebase Google login failed:",
+    // SIGN_IN_CANCELLED from Android's legacy Google account picker, which
+    // rejects with only its status code.
+    cancelled: (message: string) => message.startsWith("12501:"),
+  },
+  apple: {
+    labelKey: "online.loginApple",
+    Icon: AppleIcon,
+    signIn: () => MfaAuthentication.signInWithApple(),
+    action: "signInWithApple",
+    logMessage: "Firebase Apple login failed:",
+    // ASAuthorizationError.canceled, which iOS rejects with only the
+    // localized error description.
+    cancelled: (message: string) =>
+      message.includes("authorizationerror error 1001"),
+  },
+} as const;
 
 function getExpectedSignupEmailAuthErrorToken(error: unknown): string | null {
   if (!isExpectedEmailAuthError(error)) return null;
@@ -141,16 +181,10 @@ export function OnlinePage() {
   const onlinePremiumAccess = usePreferencesStore(
     (state) => state.onlinePremiumAccess,
   );
-  const displayedWarpActive =
-    purchasePreview === "live"
-      ? onlinePremiumAccess
-      : purchasePreview === "warp"
-        ? true
-        : purchasePreview === "free" ||
-            purchasePreview === "checkout" ||
-            purchasePreview === "pro"
-          ? false
-          : null;
+  const displayedWarpActive = getDisplayedWarpAccess(
+    purchasePreview,
+    onlinePremiumAccess,
+  );
 
   useEffect(() => {
     mfaPendingRef.current = mfaPending;
@@ -363,62 +397,26 @@ export function OnlinePage() {
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleOAuthSignIn = async (provider: OAuthProvider) => {
+    const { signIn, action, logMessage, cancelled } = OAUTH_PROVIDERS[provider];
     setIsLoading(true);
     try {
-      const result = await MfaAuthentication.signInWithGoogle();
+      const result = await signIn();
       await handleFirstFactorResult(result);
     } catch (e) {
-      const error = e as Error;
-      // Check if user cancelled the login - don't show error toast
-      const msg = error.message.toLowerCase();
+      // A user-cancelled login is not an error to show.
+      const msg = e instanceof Error ? e.message.toLowerCase() : "";
       if (
-        msg.includes("cancel") ||
-        msg.includes("popup_closed") ||
-        msg.includes("user_denied") ||
-        msg.includes("dismissed") ||
-        // SIGN_IN_CANCELLED from Android's legacy Google account picker,
-        // which rejects with only its status code.
-        msg.startsWith("12501:")
-      ) {
-        return;
-      }
-      logger.error("Firebase Google login failed:", error, {
-        category: "api",
-        action: "signInWithGoogle",
-        severity: "warning",
-      });
-      toast.error(t("online.loginFail"));
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleAppleSignIn = async () => {
-    setIsLoading(true);
-    try {
-      const result = await MfaAuthentication.signInWithApple();
-      await handleFirstFactorResult(result);
-    } catch (e) {
-      const error = e as Error;
-      // Check if user cancelled the login - don't show error toast
-      const msg = error.message.toLowerCase();
-      if (
-        msg.includes("cancel") ||
-        msg.includes("popup_closed") ||
-        msg.includes("user_denied") ||
-        msg.includes("dismissed") ||
-        // ASAuthorizationError.canceled, which iOS rejects with only the
-        // localized error description.
-        msg.includes("authorizationerror error 1001")
+        OAUTH_CANCEL_TOKENS.some((token) => msg.includes(token)) ||
+        cancelled(msg)
       ) {
         return;
       }
       // Anything else, including ASAuthorizationError.unknown (1000) from a
       // device without an Apple Account, stays a warning.
-      logger.error("Firebase Apple login failed:", error, {
+      logger.error(logMessage, e, {
         category: "api",
-        action: "signInWithApple",
+        action,
         severity: "warning",
       });
       toast.error(t("online.loginFail"));
@@ -427,16 +425,8 @@ export function OnlinePage() {
     }
   };
 
-  const handleForgotPassword = () => {
-    if (!onlineEmail) {
-      setFormError(t("online.enterEmailFirst"));
-      return;
-    }
-
-    setFormError(null);
-    FirebaseAuthentication.sendPasswordResetEmail({
-      email: onlineEmail,
-    })
+  const sendPasswordReset = (email: string) => {
+    FirebaseAuthentication.sendPasswordResetEmail({ email })
       .then(() => {
         toast.success(t("online.resetEmailSent"));
       })
@@ -450,38 +440,29 @@ export function OnlinePage() {
       });
   };
 
-  const handleSignOut = async () => {
-    // Revert RevenueCat to anonymous before Firebase signOut (skip on web)
-    if (Capacitor.getPlatform() !== "web") {
-      try {
-        const { isAnonymous } = await Purchases.isAnonymous();
-        if (!isAnonymous) {
-          await Purchases.logOut();
-        }
-      } catch (e) {
-        if (!isExpectedRevenueCatLogoutError(e)) {
-          logger.error("RevenueCat logout failed:", e, {
-            category: "purchase",
-            action: "logOut",
-            severity: "warning",
-          });
-        }
-      }
+  const handleForgotPassword = () => {
+    if (!onlineEmail) {
+      setFormError(t("online.enterEmailFirst"));
+      return;
     }
 
-    FirebaseAuthentication.signOut()
-      .then(() => {
-        setLoggedInUser(null);
-        setOnlineEmail("");
-        setOnlinePassword("");
-      })
-      .catch((e) => {
-        logger.error("Firebase sign out failed:", e, {
-          category: "api",
-          action: "signOut",
-          severity: "warning",
-        });
+    setFormError(null);
+    sendPasswordReset(onlineEmail);
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOutOnline();
+      setOnlineEmail("");
+      setOnlinePassword("");
+    } catch (e) {
+      logger.error("Firebase sign out failed:", e, {
+        category: "api",
+        action: "signOut",
+        severity: "warning",
       });
+      toast.error(t("online.logoutFailed"));
+    }
   };
 
   const handleKeyUp = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -598,7 +579,7 @@ export function OnlinePage() {
         </h1>
       }
     >
-      <div className="flex flex-col gap-4">
+      <>
         {loggedInUser !== null ? (
           // Logged in state
           <div className="settings-panel-layout settings-online-panels">
@@ -616,7 +597,7 @@ export function OnlinePage() {
               {/* Account actions */}
               <Card>
                 <section
-                  className="flex w-full flex-col gap-3"
+                  className="flex w-full flex-col gap-4"
                   aria-labelledby="online-account-actions-title"
                 >
                   <h2
@@ -636,101 +617,82 @@ export function OnlinePage() {
                     </span>
                   </div>
 
-                  {/* Dashboard button */}
-                  <Button
-                    label={t("online.dashboard")}
-                    variant="outline"
-                    icon={<ExternalIcon size="20" />}
-                    onClick={() =>
-                      Browser.open({ url: "https://online.zaparoo.com" })
-                    }
-                    className="w-full"
-                  />
-
-                  {/* Change password - only for email/password users */}
-                  {hasPasswordProvider(loggedInUser.providerData) && (
+                  <div className="flex flex-col gap-3">
                     <Button
-                      label={t("online.changePassword")}
+                      label={t("online.dashboard")}
                       variant="outline"
-                      onClick={() => {
-                        if (loggedInUser.email) {
-                          FirebaseAuthentication.sendPasswordResetEmail({
-                            email: loggedInUser.email,
-                          })
-                            .then(() => {
-                              toast.success(t("online.resetEmailSent"));
-                            })
-                            .catch((e: Error) => {
-                              logger.error(
-                                "Firebase password reset failed:",
-                                e,
-                                {
-                                  category: "api",
-                                  action: "sendPasswordResetEmail",
-                                  severity: "warning",
-                                },
-                              );
-                              toast.error(t("online.resetEmailFailed"));
-                            });
-                        }
-                      }}
+                      icon={<ExternalIcon size="20" />}
+                      onClick={() =>
+                        Browser.open({ url: "https://online.zaparoo.com" })
+                      }
                       className="w-full"
                     />
-                  )}
 
-                  {/* Log out button */}
-                  <Button
-                    label={t("online.logout")}
-                    variant="outline"
-                    icon={<LogOutIcon size="20" />}
-                    onClick={handleSignOut}
-                    className="w-full"
-                  />
-
-                  {/* Delete account section */}
-                  {scheduledDeletion ? (
-                    <div className="border-error/30 bg-error-wash mt-2 rounded-lg border p-3">
-                      <p className="text-error text-sm font-medium">
-                        {t("online.deletionScheduledTitle")}
-                      </p>
-                      <p className="text-muted-foreground mt-1 text-xs">
-                        {t("online.deletionScheduledMessage", {
-                          date: new Date(
-                            scheduledDeletion,
-                          ).toLocaleDateString(),
-                        })}
-                      </p>
+                    {/* Change password - only for email/password users */}
+                    {hasPasswordProvider(loggedInUser.providerData) && (
                       <Button
-                        label={
-                          isCancelling
-                            ? t("spinner.cancelling")
-                            : t("online.cancelDeletion")
-                        }
+                        label={t("online.changePassword")}
                         variant="outline"
-                        onClick={handleCancelDeletion}
-                        disabled={isCancelling}
-                        disabledAppearance="busy"
-                        className="mt-3 w-full"
+                        icon={<LockIcon size="20" />}
+                        onClick={() => {
+                          if (loggedInUser.email) {
+                            sendPasswordReset(loggedInUser.email);
+                          }
+                        }}
+                        className="w-full"
                       />
-                    </div>
-                  ) : (
+                    )}
+
                     <Button
-                      label={t("online.deleteAccount")}
+                      label={t("online.logout")}
                       variant="outline"
-                      intent="destructive"
-                      icon={<Trash2Icon size="20" />}
-                      onClick={() => setDeleteModalOpen(true)}
-                      className="mt-2 w-full"
+                      icon={<LogOutIcon size="20" />}
+                      onClick={handleSignOut}
+                      className="w-full"
                     />
-                  )}
+
+                    {scheduledDeletion ? (
+                      <div className="border-error/30 bg-error-wash flex flex-col gap-3 rounded-lg border p-3">
+                        <div className="flex flex-col gap-1">
+                          <p className="text-error text-sm font-medium">
+                            {t("online.deletionScheduledTitle")}
+                          </p>
+                          <p className="text-muted-foreground text-xs">
+                            {t("online.deletionScheduledMessage", {
+                              date: formatAppDate(scheduledDeletion),
+                            })}
+                          </p>
+                        </div>
+                        <Button
+                          label={
+                            isCancelling
+                              ? t("spinner.cancelling")
+                              : t("online.cancelDeletion")
+                          }
+                          variant="outline"
+                          onClick={handleCancelDeletion}
+                          disabled={isCancelling}
+                          disabledAppearance="busy"
+                          className="w-full"
+                        />
+                      </div>
+                    ) : (
+                      <Button
+                        label={t("online.deleteAccount")}
+                        variant="outline"
+                        intent="destructive"
+                        icon={<Trash2Icon size="20" />}
+                        onClick={() => setDeleteModalOpen(true)}
+                        className="w-full"
+                      />
+                    )}
+                  </div>
                 </section>
               </Card>
             </div>
           </div>
         ) : purchasePreview !== "live" ? (
-          <div className="flex flex-col gap-5">
-            <WarpSubscription appUserID="purchase-preview" />
-          </div>
+          <WarpSubscription appUserID="purchase-preview" />
         ) : (
           <div className="flex flex-col gap-5">
             <Card>
@@ -765,7 +727,7 @@ export function OnlinePage() {
             />
           </div>
         )}
-      </div>
+      </>
 
       {loggedInUser === null && (
         <SlideModal
@@ -940,49 +902,24 @@ export function OnlinePage() {
                     </div>
 
                     {/* On iOS, show Apple first. On Android/other, show Google first */}
-                    {Capacitor.getPlatform() === "ios" ? (
-                      <>
+                    {(Capacitor.getPlatform() === "ios"
+                      ? (["apple", "google"] as const)
+                      : (["google", "apple"] as const)
+                    ).map((provider) => {
+                      const { labelKey, Icon } = OAUTH_PROVIDERS[provider];
+                      return (
                         <Button
-                          label={t("online.loginApple")}
+                          key={provider}
+                          label={t(labelKey)}
                           variant="outline"
-                          icon={<AppleIcon size="20" />}
-                          onClick={handleAppleSignIn}
+                          icon={<Icon size="20" />}
+                          onClick={() => void handleOAuthSignIn(provider)}
                           disabled={isLoading}
                           disabledAppearance="busy"
                           className="w-full"
                         />
-                        <Button
-                          label={t("online.loginGoogle")}
-                          variant="outline"
-                          icon={<GoogleIcon size="20" />}
-                          onClick={handleGoogleSignIn}
-                          disabled={isLoading}
-                          disabledAppearance="busy"
-                          className="w-full"
-                        />
-                      </>
-                    ) : (
-                      <>
-                        <Button
-                          label={t("online.loginGoogle")}
-                          variant="outline"
-                          icon={<GoogleIcon size="20" />}
-                          onClick={handleGoogleSignIn}
-                          disabled={isLoading}
-                          disabledAppearance="busy"
-                          className="w-full"
-                        />
-                        <Button
-                          label={t("online.loginApple")}
-                          variant="outline"
-                          icon={<AppleIcon size="20" />}
-                          onClick={handleAppleSignIn}
-                          disabled={isLoading}
-                          disabledAppearance="busy"
-                          className="w-full"
-                        />
-                      </>
-                    )}
+                      );
+                    })}
                   </>
                 )}
 

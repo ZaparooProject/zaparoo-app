@@ -2,12 +2,12 @@ import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
 import {
-  Bell,
-  ChevronDown,
-  Info,
-  OctagonAlert,
+  BellIcon,
+  ChevronDownIcon,
+  InfoIcon,
+  OctagonAlertIcon,
   Trash2Icon,
-  TriangleAlert,
+  TriangleAlertIcon,
 } from "lucide-react";
 import { useStatusStore } from "@/lib/store";
 import { CoreAPI } from "@/lib/coreApi";
@@ -20,20 +20,25 @@ import { EmptyState } from "@/components/wui/EmptyState";
 import { Card } from "@/components/wui/Card";
 import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { useHapticPress } from "@/hooks/useHapticPress";
+import { formatAppDateTime } from "@/lib/formatDate";
 
 function severityIcon(severity: InboxSeverity) {
   switch (severity) {
     case InboxSeverity.Error:
       return (
-        <OctagonAlert className="text-error" size={20} aria-hidden="true" />
+        <OctagonAlertIcon className="text-error" size={20} aria-hidden="true" />
       );
     case InboxSeverity.Warning:
       return (
-        <TriangleAlert className="text-warning" size={20} aria-hidden="true" />
+        <TriangleAlertIcon
+          className="text-warning"
+          size={20}
+          aria-hidden="true"
+        />
       );
     case InboxSeverity.Info:
     default:
-      return <Info className="text-primary" size={20} aria-hidden="true" />;
+      return <InfoIcon className="text-primary" size={20} aria-hidden="true" />;
   }
 }
 
@@ -50,8 +55,7 @@ function severityKey(severity: InboxSeverity): string {
 }
 
 function formatTimestamp(iso: string): string {
-  const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? iso : date.toLocaleString();
+  return formatAppDateTime(iso) ?? iso;
 }
 
 function InboxRow(props: { message: InboxMessage; onDelete: () => void }) {
@@ -88,7 +92,7 @@ function InboxRow(props: { message: InboxMessage; onDelete: () => void }) {
         </span>
       </span>
       {hasBody && (
-        <ChevronDown
+        <ChevronDownIcon
           size={18}
           aria-hidden="true"
           className={classNames(
@@ -155,7 +159,7 @@ export function InboxModal() {
           severity: "error",
         });
         showRateLimitedErrorToast(
-          t("error", { msg: err?.message || "Inbox delete failed" }),
+          t("error", { msg: err?.message || t("inbox.deleteFailed") }),
         );
       });
   };
@@ -173,7 +177,7 @@ export function InboxModal() {
           severity: "error",
         });
         showRateLimitedErrorToast(
-          t("error", { msg: err?.message || "Inbox clear failed" }),
+          t("error", { msg: err?.message || t("inbox.clearFailed") }),
         );
       });
   };
@@ -225,10 +229,11 @@ export function InboxModal() {
       close={close}
       title={t("inbox.title")}
       footer={footer}
+      footerSkipLabel={t("accessibility.skipToActions")}
     >
       {messages.length === 0 ? (
         <EmptyState
-          icon={<Bell size={32} aria-hidden="true" />}
+          icon={<BellIcon size={32} aria-hidden="true" />}
           title={t("inbox.empty")}
         />
       ) : (

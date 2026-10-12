@@ -35,9 +35,9 @@ interface NowPlayingCardProps {
   lastPlayed?: MediaBrowseEntry | null;
   replayingLast?: boolean;
   onStop: () => void;
-  onPlaylistPrevious: () => void;
-  onPlaylistToggle: () => void;
-  onPlaylistNext: () => void;
+  onPrevious: () => void;
+  onToggle: () => void;
+  onNext: () => void;
   onPlaylistSelect?: (index: number) => void;
   onReplayLast?: () => void;
 }
@@ -52,9 +52,9 @@ export function NowPlayingCard({
   lastPlayed = null,
   replayingLast = false,
   onStop,
-  onPlaylistPrevious,
-  onPlaylistToggle,
-  onPlaylistNext,
+  onPrevious,
+  onToggle,
+  onNext,
   onPlaylistSelect,
   onReplayLast,
 }: NowPlayingCardProps) {
@@ -67,9 +67,12 @@ export function NowPlayingCard({
   const handleHapticPress = useHapticPress();
   const returnOwner = `now-playing:${media.systemId}:${media.mediaPath}`;
   const detailsReturn = useMetadataDetailsReturn(returnOwner, deviceKey);
-  const [detailsOpen, setDetailsOpen] = useState(
-    () => detailsReturn.entry !== null,
+  // Details belong to the media they were opened for: when something else
+  // starts playing they are closed, not carried over to the new media.
+  const [detailsOwner, setDetailsOwner] = useState<string | null>(() =>
+    detailsReturn.entry !== null ? returnOwner : null,
   );
+  const detailsOpen = detailsOwner === returnOwner;
   const gamesIndexExists = useStatusStore((state) => state.gamesIndex.exists);
   const favoritesFeature = useCoreFeature("mediaFavorites", {
     requireKnownSupport: true,
@@ -121,7 +124,7 @@ export function NowPlayingCard({
     />
   );
   return (
-    <section className="now-playing-section" aria-labelledby={headingId}>
+    <section aria-labelledby={headingId}>
       <h2
         id={headingId}
         className="text-muted-foreground mb-2 font-bold capitalize"
@@ -144,29 +147,19 @@ export function NowPlayingCard({
             )}
           </div>
         ) : (
-          <div className="flex flex-row items-center gap-3">
-            {hasDetails ? (
-              <button
-                type="button"
-                className="focus-visible:ring-ring shrink-0 rounded-md focus-visible:ring-2 focus-visible:outline-none"
-                aria-label={`${t("library.details")}: ${t("library.imageAlt", { title: displayName, type: t("library.imageTypes.artwork") })}`}
-                onPointerUp={handleHapticPress}
-                onClick={() => setDetailsOpen(true)}
-              >
-                {artworkFrame}
-              </button>
-            ) : (
-              artworkFrame
-            )}
+          <div className="relative flex flex-row items-center gap-3">
+            {artworkFrame}
 
             <div className="flex min-w-0 grow flex-col gap-0.5">
               {hasDetails ? (
+                // One control for the whole summary: its hit area stretches
+                // over the artwork instead of adding a second tab stop.
                 <button
                   type="button"
-                  className="focus-visible:ring-ring -my-3 inline-flex max-w-full items-center gap-1 self-start rounded-md py-3 text-left focus-visible:ring-2 focus-visible:outline-none"
+                  className="focus-visible:ring-ring -my-3 inline-flex max-w-full items-center gap-1 self-start rounded-md py-3 text-left before:absolute before:inset-0 before:content-[''] focus-visible:ring-2 focus-visible:outline-none"
                   aria-label={`${t("library.details")}: ${displayName}`}
                   onPointerUp={handleHapticPress}
-                  onClick={() => setDetailsOpen(true)}
+                  onClick={() => setDetailsOwner(returnOwner)}
                 >
                   <span className="line-clamp-2 min-w-0 font-semibold">
                     {displayName}
@@ -201,29 +194,27 @@ export function NowPlayingCard({
           </div>
         )}
 
-        <div className="mt-3 flex flex-row items-center justify-between gap-2">
-          <NowPlayingTransport
-            media={media}
-            playlist={playlist}
-            connected={connected}
-            canPausePlaylist={canPausePlaylist}
-            sectionLabel={sectionLabel}
-            stopButtonLabel={stopButtonLabel ?? t("scan.stopPlayingButton")}
-            isPlaying={isPlaying}
-            canReplayLast={Boolean(lastPlayed)}
-            replayingLast={replayingLast}
-            replayLastLabel={
-              lastPlayed
-                ? t("scan.playLastPlayed", { media: lastPlayed.name })
-                : t("scan.playLastPlayedUnavailable")
-            }
-            onStop={onStop}
-            onPrevious={onPlaylistPrevious}
-            onToggle={onPlaylistToggle}
-            onNext={onPlaylistNext}
-            onReplayLast={onReplayLast}
-          />
-        </div>
+        <NowPlayingTransport
+          media={media}
+          playlist={playlist}
+          connected={connected}
+          canPausePlaylist={canPausePlaylist}
+          sectionLabel={sectionLabel}
+          stopButtonLabel={stopButtonLabel ?? t("scan.stopPlayingButton")}
+          isPlaying={isPlaying}
+          canReplayLast={Boolean(lastPlayed)}
+          replayingLast={replayingLast}
+          replayLastLabel={
+            lastPlayed
+              ? t("scan.playLastPlayed", { media: lastPlayed.name })
+              : t("scan.playLastPlayedUnavailable")
+          }
+          onStop={onStop}
+          onPrevious={onPrevious}
+          onToggle={onToggle}
+          onNext={onNext}
+          onReplayLast={onReplayLast}
+        />
 
         {playlist && playlist.items.length > 0 && onPlaylistSelect && (
           <PlaylistQueue
@@ -238,7 +229,7 @@ export function NowPlayingCard({
           isOpen={detailsOpen}
           close={() => {
             detailsReturn.forget();
-            setDetailsOpen(false);
+            setDetailsOwner(null);
           }}
           entry={detailsOpen ? artwork : null}
           systemId={media.systemId}

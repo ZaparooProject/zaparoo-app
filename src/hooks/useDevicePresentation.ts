@@ -29,6 +29,22 @@ export type ConnectionUIState =
   | "disconnected"
   | "pairingRequired";
 
+const CONNECTION_STATE_LABEL_KEYS: Record<ConnectionUIState, string> = {
+  connecting: "connection.connectingToCore",
+  reconnecting: "connection.reconnectingToCore",
+  connected: "scan.connectedHeading",
+  unavailable: "connection.coreUnavailable",
+  networkUnavailable: "connection.networkUnavailable",
+  error: "scan.connectionError",
+  disconnected: "settings.notConnected",
+  pairingRequired: "connection.pairingRequired",
+};
+
+/** One wording per connection state for every surface that names it. */
+export function connectionStateLabelKey(state: ConnectionUIState): string {
+  return CONNECTION_STATE_LABEL_KEYS[state];
+}
+
 /**
  * The single reading of how the connection is doing. Shared so the home page's
  * device pill and the settings device card can never disagree about it.
@@ -85,7 +101,6 @@ export interface ActiveDeviceSummary {
   /** The name the user gave this device, when they gave it one. */
   name: string | null;
   address: string;
-  versionLabel?: string;
   deviceDetails?: string;
   clientRoleLabel?: string;
 }
@@ -122,7 +137,6 @@ export function useActiveDeviceSummary(): ActiveDeviceSummary {
   return {
     name: name ?? null,
     address,
-    versionLabel,
     deviceDetails,
     clientRoleLabel,
   };

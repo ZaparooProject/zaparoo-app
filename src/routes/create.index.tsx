@@ -1,18 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { BookMarkedIcon, ListPlusIcon, NfcIcon } from "lucide-react";
+import { BookMarkedIcon, ListPlusIcon } from "lucide-react";
 import { useAppUi } from "@/hooks/useAppUi";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
-import { NextIcon, PlayIcon, SearchIcon, TextIcon } from "@/lib/images";
-import { useStatusStore } from "@/lib/store";
 import {
-  isReaderActivityOpen,
-  useNfcWriter,
-  WriteAction,
-  WriteMethod,
-} from "@/lib/writeNfcHook";
+  NextIcon,
+  NfcIcon,
+  PlayIcon,
+  SearchIcon,
+  TextIcon,
+} from "@/lib/images";
+import { useStatusStore } from "@/lib/store";
+import { useContextualNfcWrite } from "@/hooks/useContextualNfcWrite";
 import { CoreAPI } from "@/lib/coreApi";
 import { isCoreFeatureAvailable } from "@/lib/featureGates";
 import { logger } from "@/lib/logger";
@@ -21,17 +22,16 @@ import type { PlayingResponse, SearchResultGame } from "@/lib/models";
 import { MediaDetailsModal } from "@/components/MediaDetailsModal";
 import { Card } from "@/components/wui/Card";
 import { PageFrame } from "@/components/PageFrame";
-import { usePreferencesStore } from "@/lib/preferencesStore";
 
 export const Route = createFileRoute("/create/")({
   component: Create,
 });
 
-function CreateActionIcon(props: { icon: ReactNode; disabled?: boolean }) {
+function CreateActionIcon(props: { icon: ReactNode }) {
   return (
     <span
       aria-hidden="true"
-      className="border-border bg-surface-inset text-muted-foreground flex size-11 shrink-0 items-center justify-center rounded-lg border shadow-inner"
+      className="border-border bg-surface-inset text-muted-foreground inset-shadow-material flex size-11 shrink-0 items-center justify-center rounded-lg border"
     >
       {props.icon}
     </span>
@@ -65,23 +65,17 @@ export function Create() {
   );
   const nfcAvailable = useAppUi().nfc;
   const decksFeature = useCoreFeature("decks", { requireKnownSupport: true });
-  const preferRemoteWriter = usePreferencesStore(
-    (state) => state.preferRemoteWriter,
-  );
-  const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
   const [currentMediaDetails, setCurrentMediaDetails] =
     useState<SearchResultGame | null>(null);
-  // Track user intent to open modal; actual visibility derived from NFC status
-  const [writeIntent, setWriteIntent] = useState(false);
-  const writeOpen = isReaderActivityOpen(writeIntent, nfcWriter);
+  // Closing the details ends the write they own.
+  const writeActivity = useContextualNfcWrite(
+    currentMediaDetails?.path ?? null,
+    currentMediaDetails !== null,
+  );
   const activeMediaZapScriptAvailable =
     connected &&
     !coreVersionPending &&
     isCoreFeatureAvailable("activeMediaZapScript", coreVersion);
-  const cancelReaderActivity = async () => {
-    setWriteIntent(false);
-    await nfcWriter.end();
-  };
 
   const openCurrentMediaDetails = async () => {
     if (!connected || playing.mediaPath === "") {
@@ -135,10 +129,7 @@ export function Create() {
           >
             <Card disabled={!connected} pressable>
               <div className="flex flex-row flex-wrap items-center gap-3">
-                <CreateActionIcon
-                  disabled={!connected}
-                  icon={<SearchIcon size="20" />}
-                />
+                <CreateActionIcon icon={<SearchIcon size="20" />} />
                 <div className="flex min-w-0 grow basis-[8rem] flex-col gap-1">
                   <span className="font-semibold">
                     {t("create.searchGameHeading")}
@@ -163,10 +154,7 @@ export function Create() {
             onClick={() => void openCurrentMediaDetails()}
           >
             <div className="flex flex-row flex-wrap items-center gap-3">
-              <CreateActionIcon
-                icon={<PlayIcon size="26" />}
-                disabled={playing.mediaPath === "" && playing.mediaName === ""}
-              />
+              <CreateActionIcon icon={<PlayIcon size="26" />} />
               <div className="flex min-w-0 grow basis-[8rem] flex-col gap-1">
                 <span className="font-semibold">
                   {t("create.currentGameHeading")}
@@ -188,10 +176,7 @@ export function Create() {
             >
               <Card disabled={!connected} pressable>
                 <div className="flex flex-row flex-wrap items-center gap-3">
-                  <CreateActionIcon
-                    disabled={!connected}
-                    icon={<BookMarkedIcon size="20" />}
-                  />
+                  <CreateActionIcon icon={<BookMarkedIcon size="20" />} />
                   <div className="flex min-w-0 grow basis-[8rem] flex-col gap-1">
                     <span className="font-semibold">{t("decks.new")}</span>
                     <span className="text-muted-foreground text-sm leading-relaxed">
@@ -216,10 +201,7 @@ export function Create() {
           >
             <Card disabled={!connected} pressable>
               <div className="flex flex-row flex-wrap items-center gap-3">
-                <CreateActionIcon
-                  icon={<ListPlusIcon size="20" />}
-                  disabled={!connected}
-                />
+                <CreateActionIcon icon={<ListPlusIcon size="20" />} />
                 <div className="flex min-w-0 grow basis-[8rem] flex-col gap-1">
                   <span className="font-semibold">
                     {t("create.mappingsHeading")}
@@ -267,10 +249,7 @@ export function Create() {
           >
             <Card disabled={!nfcAvailable} pressable>
               <div className="flex flex-row flex-wrap items-center gap-3">
-                <CreateActionIcon
-                  icon={<NfcIcon size="24" />}
-                  disabled={!nfcAvailable}
-                />
+                <CreateActionIcon icon={<NfcIcon size="24" />} />
                 <div className="flex min-w-0 grow basis-[8rem] flex-col gap-1">
                   <span className="font-semibold">
                     {t("create.nfcHeading")}
@@ -292,38 +271,10 @@ export function Create() {
       </PageFrame>
       <MediaDetailsModal
         isOpen={currentMediaDetails !== null}
-        close={() => {
-          if (writeOpen) void cancelReaderActivity();
-          setCurrentMediaDetails(null);
-        }}
+        close={() => setCurrentMediaDetails(null)}
         media={currentMediaDetails}
-        onWrite={(value) => {
-          setWriteIntent(true);
-          return nfcWriter.write(WriteAction.Write, value).catch((error) => {
-            logger.error("NFC write failed:", error, {
-              category: "nfc",
-              action: "writeCurrentMedia",
-              severity: "error",
-            });
-          });
-        }}
-        readerActivity={{
-          state: nfcWriter.verifyError
-            ? "error"
-            : nfcWriter.retapRequired
-              ? "attention"
-              : writeOpen
-                ? "waiting"
-                : "idle",
-          activeLabel: nfcWriter.retapRequired
-            ? t("spinner.retapTag")
-            : t("spinner.holdTagReader"),
-          errorMessage: nfcWriter.verifyError
-            ? t("spinner.verifyFailedRetry")
-            : undefined,
-          onCancel: () => void cancelReaderActivity(),
-          onRetry: () => void nfcWriter.retry(),
-        }}
+        onWrite={(value) => writeActivity.start(value)}
+        readerActivity={writeActivity}
       />
     </>
   );

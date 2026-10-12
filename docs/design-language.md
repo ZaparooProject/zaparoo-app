@@ -12,14 +12,30 @@ Do not add decorative icons, new card styles, helper text, descriptions, badges,
 
 Use these before creating or changing UI:
 
-- App shell: `src/components/PageFrame.tsx`, `src/components/ResponsiveContainer.tsx`, `src/components/BottomNav.tsx`, `BackToTop.tsx`, `ConnectionStatusBar.tsx`
-- WUI primitives: `src/components/wui/Button.tsx`, `ModalActionBar.tsx`, `ModalActionRail.tsx`, `HeaderButton.tsx`, `CircleButton.tsx`, `StatusPill.tsx`, `TabBar.tsx`, `Card.tsx`, `ToggleSwitch.tsx`, `TextInput.tsx`, `PinInput.tsx`, `Badge.tsx`, `EmptyState.tsx`, `RadioGroup.tsx`, `ToggleChip.tsx`, `SettingHelp.tsx`; `src/components/HeaderOverflowMenu.tsx`
-- Modals: `src/components/SlideModal.tsx`, `ConfirmClearModal.tsx`, `PairingModal.tsx`, `RequirementsModal.tsx`, `ProPurchase.tsx`, `home/StopConfirmModal.tsx`, `home/StagedTokenModal.tsx`
-- Settings screens: `src/routes/settings.index.tsx`, `settings.readers.tsx`, `settings.advanced.tsx`, `settings.accessibility.tsx`, `settings.media.tsx`, `settings.play-controls.tsx`, `settings.about.tsx`, `settings.help.tsx`, `settings.online.tsx`, `src/routes/-pages/Devices.tsx`, `DeviceDetail.tsx`, `Logs.tsx`
+- App shell: `src/components/PageFrame.tsx`, `ResponsiveContainer.tsx`, `AdaptiveNavigation.tsx`, `SidebarNavigation.tsx`, `SidebarDeviceStatus.tsx`, `BottomNav.tsx`, `BackToTop.tsx`, `ConnectionStatusBar.tsx`, `src/lib/appSections.ts`
+- WUI primitives: `src/components/wui/Button.tsx`, `ModalActionBar.tsx`, `ModalActionRail.tsx`, `HeaderButton.tsx`, `StatusPill.tsx`, `TabBar.tsx`, `Card.tsx`, `ToggleSwitch.tsx`, `TextInput.tsx`, `Select.tsx`, `PinInput.tsx`, `Badge.tsx`, `EmptyState.tsx`, `RadioGroup.tsx`, `ToggleChip.tsx`, `SettingHelp.tsx`; `src/components/HeaderOverflowMenu.tsx`, `InlineLoading.tsx`
+- Modals: `src/components/SlideModal.tsx`, `SlideModalProvider.tsx`, `ConfirmClearModal.tsx`, `DeepLinkConfirmModal.tsx`, `PairingModal.tsx`, `RequirementsModal.tsx`, `ProPurchase.tsx`, `home/StopConfirmModal.tsx`, `home/StagedTokenModal.tsx`
+- Reader activity: `src/components/ReaderActivityControl.tsx`, `ReaderActivityAction.tsx`, `src/hooks/useContextualNfcWrite.ts`
+- Settings screens: `src/routes/settings.index.tsx`, `settings.readers.tsx`, `settings.advanced.tsx`, `settings.accessibility.tsx`, `settings.language-region.tsx`, `settings.media.tsx`, `settings.play-controls.tsx`, `settings.about.tsx`, `settings.licenses.tsx`, `settings.help.tsx`, `settings.online.tsx`, `src/routes/-pages/Devices.tsx`, `DeviceDetail.tsx`, `Logs.tsx`; `src/components/SettingsFieldGroup.tsx`, `StatRow.tsx`, `ProgressBar.tsx`
 - Create/search flows: `src/routes/create.index.tsx`, `create.custom.tsx`, `create.nfc.tsx`, `create.mappings.tsx`, `src/routes/-pages/Search.tsx`, `MappingEditor.tsx`, `ZapScriptInput.tsx`
-- Home: `src/routes/-pages/Index.tsx`, `src/components/home/*`
-- Lists/selectors: `MappingRow.tsx`, `VirtualSearchResults.tsx`, `SystemSelector.tsx`, `TagSelector.tsx`, `SimpleSystemSelect.tsx`, `DeviceRow.tsx`, `home/DeviceSheet.tsx`, `InboxModal.tsx`
-- Foundations: `src/styles/theme.css` (semantic palette), `src/styles/components.css` (materials), `src/index.css` (Tailwind aliases, tours, keyboard)
+- Zap: `src/routes/-pages/Index.tsx`, `ZapHistory.tsx`, `src/components/home/*`
+- Library: `src/components/library/*`
+- Lists/selectors: `MappingRow.tsx`, `VirtualSearchResults.tsx`, `SystemSelector.tsx`, `TagSelector.tsx`, `SelectorParts.tsx`, `SimpleSystemSelect.tsx`, `DeviceRow.tsx`, `home/DeviceSheet.tsx`, `InboxModal.tsx`
+- Foundations: `src/styles/theme.css` (semantic palette, tokens), `src/styles/components.css` (materials and layout classes), `src/index.css` (Tailwind aliases, tours, keyboard)
+
+## Breakpoints
+
+Widths are CSS px. Tailwind `md` is redefined to 760px (`--breakpoint-md: 47.5rem`); `sm` is 640px. Other sections name a breakpoint and refer here rather than restating what changes.
+
+| From   | Name | What changes                                                                                                                                                                                                                                                                                      |
+| ------ | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 640px  | `sm` | Default page content is bounded to 42rem and centered. Phone-sheet action rails use inline icon/caption and sit beside the primary action (640–759px only).                                                                                                                                       |
+| 760px  | `md` | Wide layout. Bottom dock gives way to the top bar and drawer; navigation precedes `<main>`. `content-wide` headers scroll with content and show breadcrumbs. Sheets become centered dialogs. Full-width buttons cap at 20rem. Zap leads with playback and scan tiles. Toolbars wrap side by side. |
+| 1024px | —    | Two-column compositions: `settings-panel-layout`, Settings overview, Zap main/supporting, Create destinations and search, Library collections and search, deck detail, NFC panel grids.                                                                                                           |
+| 1100px | —    | Selected Library media uses the docked 320px details pane instead of a sheet.                                                                                                                                                                                                                     |
+| 1280px | —    | Persistent 256px sidebar replaces the top bar and drawer; the details pane is 340px.                                                                                                                                                                                                              |
+
+"Phone" means below 760px, "tablet" 760–1279px, "desktop" from 1280px. Resizing only changes presentation: one route outlet and one mounted tree per feature survive every width, so drafts, focus, reader work, pending requests and scroll owners are never reset, restarted or duplicated by a width change.
 
 ## Visual foundations
 
@@ -31,18 +47,19 @@ Online, not the constrained Rust frontend, owns the visual direction: chunky arc
 
 Use semantic roles from `src/styles/theme.css` through existing Tailwind aliases:
 
-- background: `var(--color-background)` / `bg-background`
-- foreground: `text-foreground`; secondary copy: `text-muted-foreground`
-- muted text: `text-muted-foreground`
+- background: `bg-background`; foreground: `text-foreground`; secondary copy: `text-muted-foreground`
 - disabled text and borders: `text-foreground-disabled`, `border-foreground-disabled`
-- interaction: `text-primary`; filled button material comes from `Button`, not a utility class
+- interaction: `text-primary`; `text-primary-foreground` on a primary fill (white in light, near-black in dark)
 - status colors: `text-success`, `text-error`, `text-warning`; washes `bg-success-wash`, `bg-error-wash`, `bg-warning-wash`, `bg-primary-wash`
 - borders: `border-border` for dividers and panel edges, `border-input` for field edges; `border-error` for error state
-- surfaces: `bg-surface-raised`, `bg-surface-inset`, `bg-surface-highlight`; card gradients and button caps are owned by `.wui-card` and `.wui-button` in `components.css`
-- shadows: use `--material-shadow` and `--material-highlight` (for example `shadow-[0_-4px_12px_var(--material-shadow)]`); no hardcoded black shadows
-- focus: `ring-ring` or the `--interaction` outline; never a white ring
+- surfaces: `bg-surface-raised`, `bg-surface-inset`, `bg-surface-highlight`
+- shadows: `shadow-material` and `inset-shadow-material`, or `--material-shadow` / `--material-highlight` in an arbitrary value; no hardcoded black shadows
+- focus: `ring-ring` or the `--interaction` outline; never a white ring, and `ring-offset-*` needs `ring-offset-background`
+- bounds and caps: `--content-bound` (42rem) for bounded content; `--cap-*` for primary, pro and destructive button caps and their ink
 
-The legacy `bd-*`, `bg-button-pattern`, `bg-card-pattern` and `bg-wui-card` utilities still exist while call sites migrate. Do not use them in new code.
+The components layer (`components.css`) owns the border, typography, material and disabled treatment of `Button`, `Card` and inputs through `.wui-button`, `.wui-card` and `.wui-input`. Do not put color, border or font utilities on those primitives; call sites pass layout only. Disabled primitives fade to 50% opacity, except a Button's default recessed "unavailable" state (see Button).
+
+Selection is shown by a recessed face (`--surface-inset` plus the inset material shadow), weight or neutral contrast. There are no blue selection stripes anywhere.
 
 Do not hardcode new colors unless matching a nearby existing hardcoded pattern. Prefer app tokens and WUI components.
 
@@ -56,14 +73,14 @@ Common hierarchy:
 - Section headings and field labels use sentence case: `Media database`, `Metadata scraper`, `Playtime limits`, `Session reset timeout`.
 - Page titles are left-aligned Outfit, 20px (`text-xl`)/600, tight tracking and natural wrapping. `PageHeader` owns the typography; programmatic heading focus remains, without a decorative outline.
   - Seen across settings, create, search, logs, devices.
-- Slide modal title: `text-lg font-semibold`, centered on mobile and left-aligned from the `sm` breakpoint, above the body.
+- Slide modal title: `text-lg font-semibold`; alignment is described under SlideModal.
 - Home section labels: `text-muted-foreground font-bold capitalize`.
   - Used by `NowPlayingCard`, `ReaderStrip` and the home cover rows.
 - Card/list primary text: usually `font-semibold` or `font-medium` depending sibling row.
   - Create landing card titles use `font-semibold`.
   - Connection status title uses `font-medium`.
   - Mapping row primary label uses `font-medium`.
-- Settings field labels: match sibling label treatment exactly, commonly `text-sm font-medium`, `mb-1 block`, or `text-foreground` depending screen.
+- Settings field labels: `text-sm font-medium`, set by `TextInput`, `Select`, `RadioGroup` and `SettingsFieldGroup` rather than by the page.
 - Help page section labels use centered `text-lg font-semibold`.
 - About page has its own credits layout: centered `text-2xl font-bold` app title and centered `text-lg font-bold` credit headings.
 - NFC read/tools panels use `text-lg font-semibold` headings inside rounded panels.
@@ -94,18 +111,20 @@ Do not add page-level max widths or safe-area padding manually when `PageFrame` 
 
 ### Page stacks
 
-Common page content stacks:
+Settings pages get their stack from layout classes in `components.css`, not from utilities on the page:
 
-- Simple settings pages: `flex flex-col gap-5`
-  - Settings index, Advanced, Accessibility, Manage Media.
-- Dense settings/control pages: `flex flex-col gap-3`
-  - Readers, Play Controls, Create landing.
-- Form/editor pages: `flex flex-col gap-4`
-  - Mapping editor, Help, Online auth flows.
-- About page: `flex flex-col gap-8` with smaller inner `gap-2` / `gap-3` groups.
-- Search form groups: `space-y-3`, with nested `flex flex-col gap-3 md:flex-row` where filters become columns on desktop.
-- NFC tabs: tab content uses `gap-4 px-2 pt-4/pt-6`; inner NFC panels use rounded background blocks, not WUI Card.
-- Modal content: `SlideModal` owns the horizontal gutter and compact title-to-body gap; selector/search body wrappers do not add another shell-level padding. Confirmation modals vary between `py-4` and `p-4` based on the existing modal being matched.
+- `settings-panel-page` on the `PageFrame`: bounds the wide header to `--content-bound` until 1024px
+- `settings-panel-stack`: one bounded column of panels, 1.25rem (`gap-5`) apart
+- `settings-panel-layout`: the same column until 1024px, then a two-column grid with a 1.5rem gap; `settings-reader-panels`, `settings-play-panels` and `settings-online-panels` adjust its tracks
+- `settings-overview`: the Settings landing stack
+
+Inside a settings `Card` the form stack is `flex flex-col gap-4`. `gap-5` is only the distance between panels.
+
+Other stacks:
+
+- Help: `flex flex-col gap-4` page and sections. About: `flex flex-col gap-8` with inner `gap-2` / `gap-3` groups.
+- Create landing: `create-destinations`. NFC tabs: `nfc-workspace` with `nfc-read-grid` / `nfc-tools-grid`.
+- Modal content: `SlideModal` owns the horizontal gutter and title-to-body gap; body wrappers add no shell-level padding.
 
 Use the nearest screen’s spacing. Do not mix gap systems inside one section unless sibling code does.
 
@@ -116,12 +135,11 @@ Subpages use:
 - `HeaderButton` with `BackIcon size="24"` on left
 - left-aligned `<h1>` title, styled consistently by `PageHeader`
 - optional right `HeaderButton` or small group of `HeaderButton`s for page actions; grouped header controls have no wrapper gap, leaving 8px between their inset visible faces
-- header controls move face and content together when pressed; modal triggers expose `aria-expanded` and retain the active inset face while their modal is open
 - `useSmartSwipe({ onSwipeRight: goBack })` when nearby routes use swipe-back
 
-Root tab pages can omit the back button and use a left-aligned title or existing branded content. Visible header controls use the same 8px mobile chrome inset as bottom navigation rather than the 16px page-content gutter. On phone Home, keep the compact logo left and group the content-sized device status control directly beside History on the right. Both controls use the same header-button face; the status control must not grow to consume remaining header space. Wide Home omits this duplicate header. Sidebar/tablet chrome owns branding; navigation exposes Devices under Settings and separate scan/play history destinations under Zap. The page heading remains mounted for route focus and announcements.
+Root tab pages can omit the back button and use a left-aligned title or existing branded content. On phone, `.page-header-shell` has 12px side padding so the 4px-inset `HeaderButton` face, and a title with no back button, sit on the 16px content margin. On phone Home, keep the compact logo left and group the content-sized device status control directly beside History on the right. Both controls use the same header-button face; the status control must not grow to consume remaining header space. Wide Home omits this duplicate header. The page heading remains mounted for route focus and announcements.
 
-Tablet/desktop subpages use standard inline breadcrumbs in `PageHeader`, passed through `PageFrame breadcrumbs`. Ancestors and current heading share one row, with actions alongside: `Library › Favourites`. Do not add a separate parent/title line. Ancestors use real route links; in-place Library folder/search ancestors use session-owned buttons instead of invented URLs. Include section ancestors for nested editors. Current page is the existing focused `<h1>`, not a duplicate or link. The labeled breadcrumb navigation/current-page marker is wide-only; phone keeps its original Back/title and hides ancestors. Wrap naturally only when space is insufficient, preserving targets and long translated labels.
+Tablet/desktop subpages use standard inline breadcrumbs in `PageHeader`, passed through `PageFrame breadcrumbs`. Ancestors and current heading share one row, with actions alongside: `Library › Favorites`. Do not add a separate parent/title line. Ancestors use real route links; in-place Library folder/search ancestors use session-owned buttons instead of invented URLs. Include section ancestors for nested editors. Current page is the existing focused `<h1>`, not a duplicate or link. The labeled breadcrumb navigation is wide-only; phone keeps its original Back/title and hides ancestors. Wrap naturally only when space is insufficient, preserving targets and long translated labels.
 
 ```tsx
 <PageFrame
@@ -131,29 +149,32 @@ Tablet/desktop subpages use standard inline breadcrumbs in `PageHeader`, passed 
 />
 ```
 
-Zap Scan history and Play history use content-wide scrolling breadcrumb headers
-with a real Zap ancestor. Phone retains pinned Back/Refresh controls.
-Chronological play sessions remain distinct from deduplicated phone Played and
-Library Recently played collections.
-
 ### Adaptive navigation and floating app chrome
 
-`BottomNav` retains phone tab-return/reselect behavior; `AdaptiveNavigation` and `SidebarNavigation` provide a purpose-built hierarchy for wider contexts, inspired by zaparoo.com's mobile disclosure navigation:
+`src/lib/appSections.ts` is the single table of sections (Zap, Library, Create, Settings), their child destinations and the gates that hide or disable them. `BottomNav` renders `AdaptiveNavigation`, which presents that table as the phone dock or, through `SidebarNavigation`, as the tablet drawer and desktop sidebar.
 
-- below 760 CSS px: 64px-minimum bottom dock plus bottom safe inset, with four destinations, uppercase 12px labels, and recessed active tab. Normal-size geometry stays 64px; translated/enlarged captions may grow the dock, with measured page clearance following its actual height
-- 760–1279 CSS px: compact top bar with menu control and branding; the menu opens the same labeled hierarchy in a side drawer rather than a phone-style icon rail
-- from 1280 CSS px: persistent 256px sidebar plus left safe inset. Clicking a destination opens that exact route at the top; reselection does not add a duplicate history entry. It does not resume phone tab scroll memory. Sidebar-created history entries retain their own scroll positions for browser Back/Forward. Modified clicks do not reset the current page
-- phone tab-return/reselect memory and tablet drawer scroll restoration stay unchanged. Resize alone never resets location or scroll; filters, drafts and pending operations are not cleared by sidebar navigation
-- parent labels link to section roots. Independent chevrons expand/collapse child destinations without navigating. The current branch opens on navigation; other expanded branches stay as chosen
-- use consistent 48px-minimum navigation rows, not a mixture of WUI action-button variants. Parent labels are uppercase 14px/600; child links use 14px/500 source casing. Heading, chevron, and submenu form one full-width unframed group, without an inset surface, shadow, separate submenu box, or gap. Alignment, spacing, and indented child labels establish hierarchy rather than narrowing the group
-- active section icon uses primary interaction blue, including on child routes; expansion alone does not color the icon. Text stays neutral; current child uses brighter neutral text and 600 weight, not a filled row or dot. No blue selection stripe or glow. Link and chevron retain separate hit targets. Fine-pointer hover uses a faint neutral wash without shadow or travel; keyboard focus retains its explicit outline
-- parent branch treatment and `aria-expanded` describe hierarchy; `aria-current="page"` identifies the actual destination. Ordinary links and disclosure buttons, not an ARIA menu/tree or tab widget. Unread Settings counts retain `NotificationBadge`
-- Zap exposes Scan history and Play history; Library exposes existing search/collection destinations; Create exposes existing tools; Settings exposes existing sections and Devices. Feature/capability gates remain in force
-- passive device name, explicit connection state, and address form a separate context block near the bottom when space permits. It is not a button or modal launcher. Devices is the navigation destination for connecting/managing devices
-- the whole sidebar/drawer scrolls in short windows; controls do not shrink. Drawer owns focus trapping, Escape/app Back, and modal coordination. Navigation focuses the new page, while dismissal restores its trigger. Becoming a desktop sidebar releases modality without stealing focus
-- root owns one route outlet; resizing does not remount pages, reader work, or drafts, nor redirect History URLs. Phone sheets remain available and retain intent through resizing
-- tablet top chrome owns its top safe inset; pages do not add it again. Desktop sidebar owns left safe inset. Docked details own right safe inset without narrowing nominal content width
-- `RootLayout` publishes measured `--app-footer-overlay-height` and `--app-footer-overlay-clearance`. Wider layouts remove bottom-dock clearance while retaining connection-status strip and bottom safe inset. Global reader strip and `BackToTop` stay within the page workspace
+Layout:
+
+- phone: 64px-minimum bottom dock plus bottom safe inset, four destinations, uppercase 12px labels, recessed active tab. Translated or enlarged captions may grow the dock; page clearance follows its measured height. The dock lives in the footer slot
+- tablet: compact top bar with menu control and branding; the menu opens the labeled hierarchy in a side drawer, a dialog named by `nav.menu`, not an icon rail. The top bar owns its top safe inset
+- desktop: persistent 256px sidebar plus left safe inset
+- from 760px the navigation precedes `<main>` in DOM and tab order; the phone dock stays in the footer
+- parent labels are uppercase 14px/600 links to section roots; child links are 14px/500 in source casing. Heading, chevron and submenu form one unframed group: no inset surface, shadow, separate submenu box or filled row
+- the active section's icon uses interaction blue, including on child routes; text stays neutral, and the current child uses brighter text at 600 weight. Fine-pointer hover is a faint neutral wash; keyboard focus keeps its outline
+- a passive block near the bottom (`SidebarDeviceStatus`) shows device name, connection state and address. It is not a button; Devices is the destination for connecting and managing devices
+- the whole sidebar or drawer scrolls in short windows; controls do not shrink
+- docked details own the right safe inset without narrowing nominal content width
+
+Behaviour:
+
+- section labels navigate; independent chevrons expand or collapse children without navigating (`aria-expanded`). The current branch opens on navigation; other branches stay as chosen. Ordinary links and disclosure buttons, not an ARIA menu, tree or tab widget
+- `aria-current="page"` marks only the exact destination. A child link that is an ancestor of the current route, such as a list above its editor, carries `aria-current="true"`
+- gated children are omitted (`visibleWhen`) or, for Create tools that need a connection or NFC, listed but disabled (`enabledWhen`)
+- the Settings unread count uses `NotificationBadge` on dock and sidebar and hides while inside Settings, where Inbox has its own entry
+- desktop: clicking a destination opens that route at the top; reselecting adds no history entry and does not resume phone tab scroll memory. Sidebar-created entries keep their own scroll for Back/Forward. Modified clicks do not reset the current page
+- phone tab-return/reselect memory and tablet drawer scroll restoration are unchanged; sidebar navigation clears no filters, drafts or pending operations
+- the drawer owns focus trapping, Escape/app Back and modal coordination. Navigating focuses the new page; dismissal restores the menu button. Becoming a sidebar releases modality without stealing focus
+- `RootLayout` publishes the measured footer height as `--app-footer-overlay-height` and `--app-footer-overlay-clearance` (the same value; it already includes the bottom safe inset). Wide layouts drop the dock but keep the connection strip. The global reader strip and `BackToTop` stay within the page workspace
 
 Global connection status uses `ConnectionStatusBar`, an in-layout strip above bottom nav:
 
@@ -163,17 +184,7 @@ Global connection status uses `ConnectionStatusBar`, an in-layout strip above bo
 - Settings landing relies on its contextual connection summary instead of duplicating the visible strip; Home does not, because its device pill carries identity rather than connection state
 - restored status appears briefly only after a connection issue was presented
 
-`BackToTop` is the only floating page utility. Use it only on long,
-scrollable result or reference surfaces where returning to controls or the list
-start would otherwise require substantial reverse scrolling. It uses a flat
-48px square with 8px corners, a neutral `surface-raised` face, and a semantic
-border; no raised material, depth shadow, or press travel. Keep haptic feedback
-and a visible focus ring. It clears the measured footer
-(`--app-footer-overlay-clearance` plus 1rem by default), matching the right-edge
-margin. Footer measurement already includes the bottom safe inset; do not add
-it again. It respects reduced motion and returns keyboard focus with the viewport. Do not
-introduce additional floating actions or use primary action colour for this
-navigation utility.
+`BackToTop` is the only floating page utility. Use it only on long, scrollable result or reference surfaces where returning to controls or the list start would otherwise require substantial reverse scrolling. It is a flat 48px square with 8px corners, a neutral `surface-raised` face and a semantic border; no raised material, depth shadow or press travel. Keep haptic feedback and a visible focus ring. It sits 1rem above the measured footer clearance, matching its right-edge margin. It respects reduced motion and returns keyboard focus with the viewport. Do not introduce additional floating actions or use primary action colour for this utility.
 
 Do not use these styles for ordinary page content.
 
@@ -185,46 +196,37 @@ Use `src/components/wui/Button.tsx`.
 
 Variants:
 
-- `fill` default: primary gradient button, border, white text
+- `fill` default: primary gradient cap, white label
 - `secondary`: neutral raised cap for Cancel and supporting actions
-- `outline`: quieter inset face with a two-pixel edge for utility/alternative actions
+- `outline`: quieter inset face for utility/alternative actions
 - `ghost`: chrome-free icon utility with only a subtle hover/pressed wash; use for small inline refresh and similar affordances
 - `text`: unframed textual action without filled treatment
 
-Intents: `default`, `primary`, `destructive`, and `pro`. `destructive` supplies the red cap and red text/border; `pro` supplies the gold cap with a dark label, and gold text/border on non-filled variants. Reserve gold action styling for every paid-upgrade or paid-support call to action: Unlock Zaparoo Pro, Get Warp, subscribe, the final Pro purchase action, and Join the Patreon. Use `intent="pro"` for these; gold means “upgrade to premium,” not general emphasis or ordinary settings navigation. An active Pro state is a status (Badge or text), not a disabled button.
+Intents: `default`, `primary`, `destructive`, and `pro`. `destructive` supplies the red cap, or red text and border on non-fill variants; `pro` supplies the gold cap with a dark label, or gold text and border on non-fill variants. Use `intent="destructive"` alone; never add `border-error text-error` or similar classes. Cancel is `variant="secondary"`, not `outline`.
 
-`intent="destructive"` alone supplies the whole destructive treatment; do not add `border-error text-error` or similar classes. Cancel is `variant="secondary"`, not `outline`.
+Gold is reserved for every paid-upgrade or paid-support call to action: Unlock Zaparoo Pro, Get Warp, subscribe, the final Pro purchase action, and Join the Patreon. Gold means “upgrade to premium,” not general emphasis or ordinary settings navigation. An active Pro state is a status (Badge or text), not a disabled button.
 
-Sizes:
+Sizes: default; `sm` for a compact secondary action; `lg` for a rare large action.
 
-- default: normal app action
-- `sm`: compact secondary action
-- `lg`: rare large action
-
-Shape is owned by Button:
+Shape and material are owned by Button and `.wui-button`:
 
 - standalone icon-only buttons are round; `shape="square"` aligns Save and editor utility controls with rectangular fields
 - labeled buttons use 4px corners, bold uppercase Outfit labels, and 0.05em tracking
-- primary and secondary buttons have 4px opaque front edges and three-stop caps; outline has a 2px edge and half-distance travel
+- secondary, outline and non-fill destructive/pro buttons show their 1px border; fill caps do not need one
+- fill and secondary have a 4px opaque front edge; outline has a 2px edge and half-distance travel
 - pointer hover lowers caps by 2px; press lowers them by 4px, without scaling/fading
 - touch targets remain at least 48px; compact labels do not shrink the hit target
 - reduced-motion settings disable transitions, and disabled controls do not travel
 - disabled appearance communicates why the control is unavailable:
-  - `disabledAppearance="unavailable"` is the default recessed/sunken state. Use it when a prerequisite, capability, selection, connection, or current media state is absent. “Unavailable” can still change during the page lifetime; it means no automatic completion is currently restoring this control.
-  - `disabledAppearance="busy"` retains the normal raised material at 50% opacity. Use it while an in-flight action temporarily locks the control and it will automatically become available when that action settles, such as launching, saving, pairing, searching, or deleting.
-  - when both reasons are possible, select `busy` only while the in-flight flag is active; otherwise use `unavailable`. A loading label or spinner should continue to explain the active work.
-- haptics derive from `intent`: default light, primary and pro medium, destructive heavy; destructive and pro intents also supply visible colour treatment
-- geometry is owned by the component, materials live in the CSS components layer; call-site utilities must not have to fight unlayered overrides
+  - `disabledAppearance="unavailable"` is the default recessed/sunken state. Use it when a prerequisite, capability, selection, connection, or current media state is absent.
+  - `disabledAppearance="busy"` keeps the raised material at 50% opacity. Use it only while an in-flight action (launching, saving, pairing, searching, deleting) temporarily locks the control. A loading label or spinner should continue to explain the work.
+- haptics derive from `intent`: default light, primary and pro medium, destructive heavy
 
-Use `className="w-full"` for full-width primary page actions and complex-modal primary actions. Say it explicitly rather than relying on flex-column stretch: from the `md` breakpoint up, full-width buttons cap at 20rem and center, so a page action does not stretch across the desktop column. `ModalActionBar` and contextual `ModalActionRail` items opt out of that cap; the rail's separate primary action retains the 20rem cap and centering. Use `className="flex-1"` only for equal-width confirmation actions sharing one footer row.
+Width: use `className="w-full"` for full-width primary page actions and complex-modal primary actions, and say it explicitly rather than relying on flex-column stretch. From 760px a full-width button caps at 20rem and centers, so a page action does not stretch across a desktop column. A lone `ModalActionBar` action and `ReaderActivityControl` follow the same cap; `ModalActionBar` pairs and `ModalActionRail` items opt out. This is the only statement of the cap; other sections refer to it. Use `className="flex-1"` only for equal-width confirmation actions sharing one footer row.
 
-Button layout is inline by default. `layout="responsive"` is reserved for compact action-rail items: icon above caption below 640px and in centered layouts from 760px; only 640–759px phone sheets use inline icon/caption. Keep rail captions on one line. Standalone primary buttons retain their normal inline layout.
+Button layout is inline by default. `layout="responsive"` is reserved for compact action-rail items (see SlideModal). Standalone primary buttons keep their inline layout.
 
-Do not build custom buttons with raw `<button>` unless implementing a specialized primitive already present in the codebase, such as selector rows or segmented radio buttons.
-
-### CircleButton
-
-Use `src/components/wui/CircleButton.tsx` for raised circular icon actions. It mirrors Zaparoo Online's dedicated CircleButton material rather than approximating it with a rounded generic Button. Default controls retain a 48px touch target; variants are `primary`, `secondary`, `destructive` and `pro`. Use `variant="secondary"` for neutral contextual actions. `BackToTop` keeps its documented flat utility style instead.
+Do not build custom buttons with raw `<button>` unless implementing a specialized primitive already present in the codebase, such as selector rows.
 
 ### HeaderButton
 
@@ -233,9 +235,10 @@ Use `HeaderButton` only for header actions: back, history, reload, close-like he
 Pattern:
 
 - 48px square hit target with a 6px-radius raised face inset 4px inside it
-- icon-only
-- accessible name should come from `aria-label`; some existing log actions use `title`, but new icon-only header actions should include `aria-label`
-- active state interaction blue with accessible pressed state; disabled muted text
+- icon-only; the accessible name comes from `aria-label`, falling back to `title`. New header actions pass `aria-label`
+- face and content travel together when pressed, with haptic feedback on a completed press
+- active state is interaction blue with `aria-pressed`; modal triggers pass `aria-expanded` instead and keep the inset face while their modal is open
+- disabled: muted icon at 50% opacity
 
 Do not use `HeaderButton` inside page body.
 
@@ -260,7 +263,7 @@ Use `src/components/wui/Card.tsx` when existing flow uses card containers.
 Card style:
 
 - 8px corners
-- `p-4` (navigation-group shells use `p-2` around padded rows)
+- `p-4`
 - semantic subtle border
 - elevated-to-raised surface gradient from `.wui-card`
 - inset material highlight and restrained shadow
@@ -279,7 +282,7 @@ Real use:
 
 Long translated headings/labels wrap within their panel. Connection/device rows and Create destinations wrap according to available width and text size; do not shrink targets or hide meaningful text to force a single line.
 
-Settings forms use one shared raised Card per functional section, not per control. Headings, related status, fields, toggles, and section actions belong inside the same panel; do not nest raised Cards. Simple forms such as Accessibility, Language & Region, Advanced, and Device Detail use one panel without inventing an extra heading. Readers separates reader status from controls; Play Controls preserves its named groups; Manage Media has Database and Metadata scraper panels; Online groups account, connected-device, features, and Warp sections, including the signed-out account entry.
+One raised Card per functional section is the settings rule (see Settings pages); do not nest raised Cards. Simple forms such as Accessibility, Language & Region, Advanced, and Device Detail use one panel without an extra heading. Readers separates reader status from controls; Play Controls preserves its named groups; Manage Media has Database and Metadata scraper panels; Online groups account, connected-device, features, and Warp sections, including the signed-out account entry.
 
 ### ToggleSwitch
 
@@ -352,13 +355,14 @@ Real use: readers with no detected readers, mappings empty/search empty, search 
 
 Use `RadioGroup` for one setting/form value among mutually exclusive choices. Its circular recessed indicators and selected dots must not look like navigation tabs. No shared tray, raised option faces, or blue CTA buttons.
 
-- Default to stacked 48px rows. Use this for three or more options, long labels, and choices that reveal related form fields: appearance, text size, shake mode, profile role/PIN/limits, mapping type/match, and deck item type.
+- Default to stacked 48px rows. Use this for three or more options, long labels, and choices that reveal related form fields: appearance, text size, shake mode, profile role/PIN/limits, the profile switch picker, mapping type/match, and deck item type.
 - `layout="inline"` is only for two short choices without conditional form fields, currently reader Tap/Hold and Warp Annual/Monthly. Options share a line only while their content fits; translated labels and text zoom can push them onto separate rows. Do not squeeze, truncate, or horizontally scroll radio choices.
-- Long labels wrap, with the indicator aligned to the first text line. Existing group help remains associated with the group.
+- Long labels wrap, with the indicator aligned to the first text line.
+- Group help is either a string, rendered as muted text beneath and tied to the group with `aria-describedby`, or a `SettingHelp` node rendered beside the label.
 - Arrow/Home/End selection and roving focus remain; an unselected group still has a keyboard entry point. Disabled groups cannot activate or receive keyboard focus.
 - Existing Library sort lists and write-target value rows are specialized radio patterns, not tab bars; keep their established layouts.
 
-Reserve `TabBar` for content panels with tab/panel wiring. Its compact inset tray has 48px interactive targets and 40px visible faces, with equal 4px padding around each face. Selected tabs rise from the tray, with neutral text, edge and highlight. Scrolling tab lists retain single-line options. There are no Radix Tabs in the app.
+`TabBar` geometry: a compact inset tray with 48px interactive targets and 40px visible faces. Selected tabs rise from the tray, with neutral text, edge and highlight. Scrolling tab lists retain single-line options. There are no Radix Tabs in the app.
 
 ### ToggleChip
 
@@ -379,6 +383,7 @@ Use `SettingHelp` for settings explanations already expressed as help icons.
 Real behavior:
 
 - inline circular help button with `HelpCircleIcon size={18}`; wrapper and button use flex centering so inline baseline space cannot lift the icon above neighboring labels or Pro badges
+- accessible name comes from `settingHelp.label` with the setting title, unless the caller passes `ariaLabel`
 - hint color `text-foreground-hint`, hover/focus muted
 - opens a content-sized `SlideModal`
 - supports `**bold**` and paragraph breaks in description text
@@ -387,7 +392,7 @@ Do not replace an existing help-icon pattern with visible helper paragraphs.
 
 ## Settings pages
 
-Settings forms are restrained control panels: one raised Card per functional section, inset fields and choices, and neutral navigation rows. Keep any section heading inside its panel and use `gap-5` between panels. Preserve existing control-specific spacing inside panels; do not invent headings for simple forms, decorative icons, helper copy, a separate card for every setting, or nested raised Cards.
+Settings forms are restrained control panels: one raised Card per functional section, inset fields and choices, and neutral navigation rows. Keep any section heading inside its panel. Spacing comes from the settings panel classes (see Page stacks). Do not invent headings for simple forms, decorative icons, helper copy, a separate card for every setting, or nested raised Cards.
 
 Apply this rule by purpose, not route location: Logs, Manage devices, Help, About, and Licenses remain list/document screens with their established row styles. Existing entity cards (such as device rows), warnings, and inset status wells retain their own semantics. Modal shells are not settings panels.
 
@@ -395,17 +400,24 @@ Apply this rule by purpose, not route location: Logs, Manage devices, Help, Abou
 
 Subpage pattern:
 
-1. `PageFrame`
-2. back `HeaderButton`
-3. left-aligned page title using shared `PageHeader` typography
-4. content stack
-5. settings rows/inputs/toggles
+1. `PageFrame className="settings-panel-page"` with `headerMode="content-wide"`
+2. back `HeaderButton` and the page title in shared `PageHeader` typography
+3. `settings-panel-stack` or `settings-panel-layout`
+4. one `Card className="flex flex-col gap-4"` per section holding rows, inputs and toggles
 
 Examples:
 
-- `settings.advanced.tsx`: simple `gap-5` stack of toggles and nav row
-- `settings.readers.tsx`: reader status and controls in separate panels, `gap-5` between panels
-- `settings.play-controls.tsx`: grouped settings; inner field groups must match within page
+- `settings.advanced.tsx`: one panel of toggles, selects and nav rows
+- `settings.readers.tsx`: reader status and controls in separate panels
+- `settings.play-controls.tsx`: named groups; inner field groups must match within the page
+
+Shared behaviour:
+
+- Core settings are written through `useCoreSettingsUpdate`; typed values that save as you go use `useDebouncedSave`
+- errors: an action or save failure shows one toast; form validation is inline on the field. Never both for one failure, and never silent
+- loading: `Skeleton` for a pending value in a known slot (reader list, connection subtitle, stat values, switch); `InlineLoading` for a pending list or panel
+- dates and times use `formatAppDate` / `formatAppDateTime` from `src/lib/formatDate.ts`
+- `CoreOutdatedNotice` is a polite `role="status"` Card with a warning border and visible warning wash
 
 ### Adaptive Settings pages
 
@@ -442,7 +454,7 @@ Settings and Zap open the same `DeviceSheet`. Selection has no footer: Add devic
 Device management is a separate settings subflow:
 
 - page title matches Manage devices; switching stays in the shared sheet
-- list wrapper `flex flex-col gap-3 pt-2`
+- the Devices page uses `settings-panel-layout`; its saved-device section has an `h2` in `text-lg font-semibold` above a `flex flex-col gap-3` list. The Home-style heading is used only in the device sheet
 - rows use `DeviceRow`, which is a `Card` with active dot, primary name/address, muted address/platform/version metadata, and optional lock icon; tapping a row opens details without changing the active device
 - selection checkboxes appear only in the existing Combine editing mode
 - device detail uses one Card with a `flex flex-col gap-4` form stack: TextInput for name, an info section heading `text-lg font-semibold`, and full-width buttons for explicit device selection and Forget
@@ -466,14 +478,10 @@ Keep help buttons and their modals outside the checkbox label so opening or clos
 
 Match sibling field style exactly.
 
-Numeric field group pattern in Play Controls:
-
-- outer group: `flex flex-col gap-3`
-- each field: `flex flex-col gap-2`
-- peer field labels: exactly `text-sm font-medium`
-- input row: `flex gap-2`
-- paired fields: two `TextInput`s in one row
-- single numeric fields in same group: one `TextInput` in the same row pattern, constrained to one half-width
+- `SettingsFieldGroup` is the labelled row of related inputs, such as hours and minutes: a `fieldset` whose legend is `text-sm font-medium` with the inputs in one `flex gap-2` row and an optional hint beneath. Groups stack in `flex flex-col gap-3`
+- `StatRow` is the status row: muted label left, value right-aligned, both wrapping; pass a `Skeleton` as the value while pending
+- `ProgressBar` is the only progress bar (see Progress)
+- the profile switch picker is a stacked `RadioGroup` that opens on the active profile
 - disabled state stays on the inputs/toggles; do not make peer field labels differ by feature enabled state
 
 If one sibling section has no visible description, new sibling sections must not add one.
@@ -489,26 +497,22 @@ input; pressed or unavailable Save aligns with it. Do not top-align the faces
 or remove button travel to compensate. Keep the Save control mounted and the
 input footprint stable as edits enable or disable saving.
 
-### Native selects
+### Select
 
-Native selects share the `wui-input` recess and 48px minimum height. Keep native picker behavior:
+`src/components/wui/Select.tsx` is the only select. It keeps the native picker and shares the `wui-input` recess, a 48px minimum height, full width, and a drawn chevron in place of the platform arrow. Pass `label` for a visible label above the field and `help` for a `SettingHelp` control beside it; do not hand-write label markup or select classes.
 
-- Settings language and scraper select: `wui-input border-input text-foreground min-h-12 rounded-md border border-solid p-3`
-- `SimpleSystemSelect`: `wui-input` with `border-input text-foreground w-full rounded-md border px-3 py-2`
-- labels above are often `text-foreground` or `mb-1 text-foreground`
-- disabled: opacity/cursor where nearby component does so
-
-Real use: language select, scraper select, media search modal simple system select.
+Real use: language and region selects, Advanced, Online backup schedule, scraper select, Library system filters, and `SimpleSystemSelect`.
 
 ### Search/filter forms
 
-Search route pattern:
+`MediaSearchForm`, `MediaSearchSelectors` and `useMediaSearchForm` are the one search-form implementation, shared by Create search, the media search dialog and Library search:
 
 - role `search`
-- `TextInput` for query with `type="search"` and `clearable`
-- filter labels `mb-1 text-foreground`
-- selector triggers for system/tag
+- `TextInput` for query with `type="search"`
+- system and tag selector triggers
 - full-width Search button
+
+Do not build another search form or copy its fields into a page.
 
 ### Selector triggers and modal selectors
 
@@ -517,12 +521,12 @@ Use `SystemSelector`, `TagSelector`, and their trigger components for choosing s
 Selector modal pattern:
 
 - `SlideModal fixedHeight="90vh"`; shared modal maximum clamps rendered height to 80% of viewport
-- search bar at top with icon inside input
+- search bar at top with icon inside input; triggers use the shared `SelectorTrigger`
 - category tabs/accordion where relevant
 - search and category controls participate in normal modal scrolling rather
   than sticking over list content
-- existing list controls; preserve accessible-list fallback in virtualized tag search
-- footer for multi-select apply/clear count
+- rows put the `SelectionIndicator` on the left (checkbox for multi-select, radio for single); preserve accessible-list fallback in virtualized tag search
+- footers use `ModalActionBar`: Clear is `secondary` and disabled with nothing selected; Done or Apply stays enabled with nothing selected
 - `BackToTop` for long lists
 
 Tag selector keeps selected count inside the Apply label so its footer remains a
@@ -535,81 +539,69 @@ Do not create a new picker UI for systems/tags.
 
 ### SlideModal
 
-Use `SlideModal` as the default modal for app flows: bottom sheets, selectors, action confirmations, and multi-step content. Prefer it unless the nearest existing flow already uses a different modal type.
+Use `SlideModal` as the default modal for app flows: bottom sheets, selectors, action confirmations, and multi-step content. Do not implement one-off bottom-sheet shells.
 
-Visual behavior:
+Presentation:
 
-- one provider-owned black overlay `bg-black/60`, no blur; scrim stays mounted and fully dimmed through accepted dialog handoffs instead of crossfading separate layers. Click closes the current dismissible owner; blocking dialogs still reject passive dismissal. Tablet navigation retains its separate backdrop
-- bottom sheet below 760 CSS px retains its slide/drag motion; centered floating dialog from 760px stays centered without slide motion, with a 16px gutter inside all safe viewport edges. Overlay opacity fade remains
-- default dialogs remain bounded to 42rem (672px at default text size); only media search and command chooser opt into `layout="workspace"` for up to 60rem
-- content-sized by default and capped at 80% of viewport height and available safe viewport space; keyboard/notch insets participate in floating-dialog bounds and centering
-- fixed-height selector/search requests cannot exceed those caps
-- opaque raised surface with semantic border and a material highlight
-- 8px upper corners on sheets, 8px corners on floating dialogs; 16px shell gutter matching page content. Modal body
-  wrappers do not add a second horizontal gutter; padding inside rows, cards,
-  and fields remains component-owned
-- header, scrollable body, and persistent footer form distinct zones
-- mobile drag handle uses muted foreground
-- `text-lg font-semibold` title, centered on mobile and left-aligned from `sm`;
-  compact 8px title-to-body spacing, drag handle, and desktop close action;
-  the drag handle and close button keep 48px hit areas around their smaller visuals, and focus uses the `ring` outline. Centered close-button targets have equal top/right corner insets, including enlarged text. Centered titles align with the visible close glyph rather than the larger hover target: matching visual side inset and centered single-line text. Wrapped titles grow naturally; phone and pane offsets stay unchanged
-- safe-area bottom padding on edge-attached sheets; floating dialogs sit inside safe edges rather than repeating that edge padding
-- focus trap and Android back handling
-- one mounted title/body/footer tree across sheet/dialog resize; wide mode cancels any in-flight sheet drag without dismissal, and floating dialog content does not drag-to-dismiss
+- phone: bottom sheet with slide/drag motion, 8px upper corners, safe-area bottom padding, a centered title and a drag handle (no close X)
+- from 760px: centered floating dialog with 8px corners, no slide motion and no drag-to-dismiss, a 16px gutter inside all safe viewport edges, a left-aligned title and a close X (no handle). The title aligns with the visible close glyph, not its larger target
+- title is `text-lg font-semibold` and wraps naturally; handle and close button keep 48px hit areas around smaller visuals, and focus uses the `ring` outline
+- one provider-owned scrim (`SlideModalProvider`, `bg-black/60`, no blur) is portaled to `<body>` and stays mounted and fully dimmed through dialog handoffs instead of crossfading layers. Click closes the current dismissible owner. Tablet navigation keeps its separate backdrop
+- default dialogs are bounded to 42rem; only media search and the command chooser opt into `layout="workspace"` for up to 60rem
+- content-sized by default and capped at 80% of viewport height and the available safe space; keyboard and notch insets participate. `fixedHeight` requests cannot exceed those caps
+- opaque raised surface with semantic border and material highlight; 16px shell gutter matching page content. Body wrappers add no second horizontal gutter; padding inside rows, cards and fields stays component-owned
+- closed sheets stay mounted for lifecycle and transitions but suppress their upward shadow while off-screen, so stacked closed sheets never paint a gradient over the dock
+- header, scrollable body, and persistent footer form distinct zones; focus trap and Android back handling are built in
+- one mounted title/body/footer tree survives sheet/dialog resize; widening cancels an in-flight drag without dismissing
 
-Workspace bodies reuse existing controls and scrolling ownership. Media search
-uses intrinsic 20rem/30rem filter/result stacks from 1024px; actual available
-width and enlarged text determine wrapping. Command categories use intrinsic
-24rem tracks from 760px. Phone order, query/filter drafts, selected details,
-pending work, editor cursor and nested-selector ownership remain unchanged.
-Forms, confirmations, Profiles, pairing, and system/tag selectors stay bounded;
-do not widen them just because viewport space is available.
+Workspace bodies reuse existing controls and scrolling ownership. Media search uses intrinsic 20rem/30rem filter/result stacks from 1024px; available width and enlarged text determine wrapping. Command categories use intrinsic 24rem tracks from 760px. Forms, confirmations, Profiles, pairing, and system/tag selectors stay bounded; do not widen them just because viewport space is available.
 
-Persistent footer behavior:
+Use `dismissible={false}` only for mandatory blocking flows. It keeps the scrim but disables overlay-click, drag, Escape, Android-back, and close-button dismissal while preserving explicit completion/logout actions. Use `footerSkipLabel` when long content needs direct keyboard/screen-reader navigation to actions.
 
-- footer stays in normal flex flow below scrollable body with an 8px gap after its divider; never float actions over content
-- body shrinks and scrolls before footer; footer gets its own constrained overflow only as short-viewport/text-zoom fallback. Its scroll viewport extends into existing side and bottom shell gutters so reader halos and button shadows are not clipped; inset padding keeps action geometry and the divider unchanged
-- simple confirmations keep two labelled, equal-width actions on one row
-- form and selector footers with one secondary action plus one primary action use `ModalActionBar`, preserving the same labelled, equal-width pair; examples include Reset/Apply, Clear/Apply, Delete/Save, and Logout/Save
-- media/detail modals with several independent contextual actions use `ModalActionRail`; do not treat those actions as confirmation buttons
-- on narrow screens, the rail spans the footer above a full-width primary action; rail items use an icon above a short caption
-- only 640–759px sheets use inline rail icons/captions and place the rail beside the primary action. Centered dialogs from 760px stack icons above captions and put the full-width rail above the primary buttons; primary buttons retain the standard centered 20rem cap from `md`
-- rail items share available width while they fit, never wrap onto another row, and scroll horizontally once their minimum widths exceed the available space; adding actions must not shrink the primary action or grow the footer vertically
-- use short, stable visual captions such as `Favorite`, `Write`, `Copy`, and `Preview`; communicate toggle or loading state through icon treatment, `aria-pressed`, disabled state, and a state-specific accessible name rather than changing caption width. The contextual reader action explicitly changes `Write` to `Cancel` while waiting; `Button.labelAlternatives` reserves space for all translated captions so its footprint stays stable
-- rail icons never shrink, captions remain on one line, action order stays stable, every item remains directly reachable, and secondary actions precede the primary action in DOM and focus order
-- reserve icon-only buttons for established constrained controls and always provide an accessible `aria-label`
-- modal action targets stay at least 48px high; keep actions mounted and disable them during temporary unavailable, empty, disconnected, or loading states so the rail does not reflow
-- do not use action rails for confirmations, form submission pairs, single terminal actions, navigation, or unbounded destination data such as individual collections
-- current reference implementations are `MediaDetailsModal` and `LibraryMediaDetailsModal`
-- use `footerSkipLabel` when long content needs direct keyboard/screen-reader navigation to actions
+Footer:
 
-Use `dismissible={false}` only for mandatory blocking flows. This keeps the visible overlay but disables overlay-click, drag, Escape, Android-back, and close-button dismissal while preserving explicit completion/logout actions.
+- stays in normal flex flow below the scrollable body with an 8px gap after its divider; never float actions over content
+- body shrinks and scrolls before the footer; the footer scrolls only as a short-viewport/text-zoom fallback, and its viewport extends into the shell gutters so reader halos and button shadows are not clipped
+- `ModalActionBar` is the footer for confirmations, forms and selectors: one secondary plus one primary action as a labelled, equal-width pair (Cancel/confirm, Reset/Apply, Clear/Apply, Delete/Save, Logout/Save), or a lone action that follows the Button width cap
+- modal action targets stay at least 48px high; keep actions mounted and disabled during temporary unavailable, empty, disconnected, or loading states so the footer does not reflow
 
-Do not implement one-off bottom-sheet shells.
+Action rail (`ModalActionRail`), for media/detail surfaces with several independent contextual actions:
+
+- `ContextualWriteRail` (`src/components/library/ContextualWriteRail.tsx`) is the shared write/launch rail for Library details, launchable and deck-item modals, and the deck page
+- phone: the rail spans the footer above a full-width primary action, with icon above caption. 640–759px sheets use inline icon/caption beside the primary action. Dialogs from 760px stack icon above caption again and put the rail above the primary action
+- captions are one line of sentence case (`Favorite`, `Play later`, `Write`, `Copy`, `Preview`), 13px semibold with 12px side padding. Columns are `minmax(max-content, 1fr)`: items fit their caption, share spare width, never wrap, and the rail scrolls horizontally with edge chevrons once they no longer fit. Adding actions must not shrink the primary action or grow the footer
+- communicate toggle or loading state through icon treatment, `aria-pressed`, disabled state and a state-specific accessible name, not a changing caption. Toggled-on Favorite, Like, Dislike and Play later use the interaction colour on icon and caption with a 150ms fade and no background change; this is scoped to those buttons
+- the contextual reader action changes `Write` to `Cancel` while waiting; `Button.labelAlternatives` reserves space for every translated caption so its footprint stays stable
+- action order stays stable, every item remains directly reachable, and secondary actions precede the primary action in DOM and focus order
+- do not use rails for confirmations, form submission pairs, single terminal actions, navigation, or unbounded destination data such as individual collections
 
 ### Adaptive Library details
 
-Library preserves Systems/Collections, system/folder browsing, searches, tagged collections, history, and decks. Broad browse pages use the workspace layout; forms remain bounded.
+Library preserves Systems/Collections, system/folder browsing, searches, tagged collections, history collections, and decks. Broad browse pages use the workspace layout; forms remain bounded.
 
-- root, browse, collection, search, deck detail and deck-item editor use `headerMode="content-wide"`: title/actions scroll from 760px; phone retains pinned back/header/swipe behavior
-- inline breadcrumbs lead to Library; deck-item editor also links to its parameterized deck, preserving `/app/` base path and parent scroll intent. Folder/search ancestors use session-owned buttons, not fake route links: they retain selection cleanup and Back ownership, including jumping to earlier folders. Modified ancestor-link clicks do not clear current selection
-- Collections separates existing collection links and Decks into independently sized, intrinsically wrapping supporting/main stacks from 1024px. Deck filter/New deck toolbar wraps from 760px; phone ordering and unsupported-feature behavior remain
-- Library search separates bounded filters and flexible results from 1024px using 20rem/30rem flex bases. Available width, including space consumed by details pane and enlarged text, decides whether stacks fit side by side; neither column is squeezed merely because viewport is wide
-- deck detail uses the same independent context/items composition from 1024px, retaining original phone order, one drag/edit owner and existing contextual write/action rail. Metadata fields and description stay bounded to 42rem; standalone deck-item editor keeps the default form bound
-- both browse and shared search virtualizers measure list origin within the actual page scroller, including preceding headers/filters. Local row transforms subtract that origin; letter jumps honor measured scroll padding. Accessible browse jumps retain header clearance. Search retains its original 8px leading row space separately from page origin. Resize observers include preceding content, not only list dimensions
-- from 1100 CSS px, selected-media details occupy a separate 320px supporting pane (340px beside full sidebar); smaller windows retain the existing sheet
-- one mounted details feature and presentation host survive resize, including carousel state, contextual NFC work, and child-dialog drafts
-- pending game-detail artwork keeps the existing 16rem height but centers in a roughly 4:3 stand-in capped at 21.333rem rather than filling a wide dialog. Loaded images retain natural aspect ratio through existing `object-contain`; thumbnail and unavailable-artwork behavior stay unchanged
-- pane is a labeled nonmodal region, with its own detail scroll; no backdrop, focus trap, inert background, swipe-dismiss, or modal-priority Back registration
-- selection stays scoped to device and browse/search/collection context in session memory; selection neither launches media nor creates a URL/history entry
-- wide selection keeps list focus; narrow sheet traps focus. Closing/invalidating selection cancels its owned work; changing presentation does not
-- virtual browse rows retain existing minimum estimates but measure natural content height, allowing larger text and wrapping without overlapping rows
-- child dialogs retain takeover behavior and mounted underlying context; collapsing details defers its modal presentation while a competing dialog owns focus
-- pane footer stacks the existing horizontally scrolling action rail above full-width Launch; action order, captions, reachability, and 48px targets remain unchanged
-- game metadata is an exploration surface: each developer/publisher/genre/rating/family/board value, expanded tag, and system/year/player summary value links to existing Library results with a trailing right chevron. Field labels remain static; whole value is a keyboard/touch target, not just the chevron. No checkbox/selection styling. Descriptions, paths, and launcher identifiers remain reference text rather than pretending to be indexed tags
-- metadata links use exact raw `type:tag` filters and current system/device context; friendly labels never rewrite queries. Core labels take precedence, followed by translated known region/language/edition/revision fallbacks; unknown codes remain raw. Condensed list summaries and write-target labels stay unchanged
-- `/library/search` accepts validated optional system/tag parameters and auto-runs supported filters using existing search/results components. Each exploration history entry owns its search/scroll/selection session; editing one query does not overwrite another
-- ordinary metadata navigation remembers originating details in device/owner/history-entry-scoped Library session state without replacing source history key. Browser/page/swipe/Android Back returns to those details; Forward restores results. Explicit close/selection clears the return marker; device changes invalidate it. Modified/middle/new-tab clicks do not mutate or dismiss source. Ordinary phone tab memory and modal/pane Back priorities remain unchanged
+Layout:
+
+- root, browse, collection, search, deck detail and deck-item editor use `headerMode="content-wide"` with breadcrumbs to Library; the deck-item editor also links to its deck. Folder/search ancestors are session-owned buttons, not fake route links
+- collection tiles are `outline` buttons in a two-column grid (`library-collection-links`). From 1024px Collections separates tiles and Decks into independently sized stacks; the deck filter/New deck toolbar wraps from 760px
+- Favorites, Liked, Play later and Disliked (`LibraryTaggedCollection`) and `/library/recent` and `/library/top` (`LibraryHistoryCollection`) all render through `LibraryCollectionPage`. History rows add a muted detail line (last played, or total play time)
+- the first list row sits at the standard page inset on collections and system browse; do not pull lists up with negative margins
+- the selected row is recessed (`--surface-inset` plus the inset material shadow, `.library-browse-row[aria-current="true"]`), with no colour stripe
+- Library search separates bounded filters and flexible results from 1024px using 20rem/30rem flex bases; available width, including space taken by the details pane and enlarged text, decides whether they sit side by side
+- deck detail uses independent context/items stacks from 1024px, with one drag/edit owner and the contextual rail. Metadata fields and description stay bounded to 42rem
+- from 1100px selected-media details occupy the docked pane (see Breakpoints): a labeled nonmodal region with its own scroll; no backdrop, focus trap, inert background, swipe-dismiss, or modal-priority Back. Smaller windows keep the sheet
+- in the docked pane, detail label/value rows and the tags row stack; the footer stacks the action rail above full-width Launch
+- pending game-detail artwork keeps its 16rem height in a roughly 4:3 stand-in capped at 21.333rem; loaded images keep their natural aspect ratio
+- virtual lists measure their origin within the actual page scroller, including preceding headers/filters, and measure natural row height so larger text wraps without overlap. Letter jumps honor measured scroll padding
+
+Behaviour:
+
+- one mounted details feature and presentation host survive resize, including carousel state, contextual NFC work, and child-dialog drafts. Wide selection keeps list focus; the narrow sheet traps focus
+- selection stays scoped to device and browse/search/collection context in session memory; it neither launches media nor creates a URL/history entry. Closing or invalidating a selection cancels its owned work; changing presentation does not. Modified ancestor-link clicks do not clear it
+- child dialogs retain takeover behavior and the mounted underlying context
+- game metadata is an exploration surface: each developer/publisher/genre/rating/family/board value, expanded tag, and system/year/player summary value links to Library results with a trailing chevron. The whole value is the target; field labels stay static. Descriptions, paths, and launcher identifiers remain reference text
+- metadata links use exact raw `type:tag` filters and current system/device context; friendly labels never rewrite queries. Core labels take precedence, then translated known region/language/edition/revision fallbacks; unknown codes stay raw
+- `/library/search` accepts validated optional system/tag parameters and auto-runs supported filters. Each exploration history entry owns its search/scroll/selection session; at most 20 are kept per device, and the least recently visited are forgotten along with their scroll
+- metadata navigation remembers the originating details per history entry. Back (browser, page, swipe, Android) returns to those details and Forward restores results; a history entry's return marker outranks the scope's later selection. Explicit close or selection clears the marker; device changes invalidate it. Modified/middle/new-tab clicks do not mutate the source
 
 ### Reader activity
 
@@ -617,13 +609,13 @@ Physical NFC waits stay in context instead of opening an app-owned modal. `Reade
 
 - waiting latches the physical button down and adds a broad, slow blue halo outside its edge; do not draw an illuminated line inside the button face
 - a required re-tap uses an external amber double pulse
-- verification failure swaps to an explicit Retry/Cancel pair: Retry stays latched (pressed face) inside a static red halo with the failure text inside its face, and Cancel is an outline button; nothing pulses. Actions share equal-width columns while they fit and stack at narrow or enlarged-text widths rather than squeezing their labels
-- match ordinary full-width buttons: fill the mobile column, cap at 20rem only from the desktop breakpoint, and use normal stack gaps; the halo paints outside the face without adding layout padding
+- verification failure swaps to an explicit Retry/Cancel pair: Retry stays latched (pressed face) inside a static red halo with the failure text inside its face, and Cancel is an outline button; nothing pulses. The pair uses `.wui-action-grid`, the intrinsic two-action grid (9rem minimum tracks) also used by the manual-entry footer and mapping capture: equal-width faces while they fit, stacked at narrow or enlarged-text widths
+- width follows ordinary full-width buttons (see Button); the halo paints outside the face without adding layout padding
 - status sits inside the button beneath its main label, in smaller sentence-case text that inherits the face's contrasting text color. Compact reader buttons have a 72px minimum height for both idle and active states; Zap keeps its larger face. Content can grow for translated labels and text zoom rather than clipping. Do not reserve an empty status row below the button
 - pressing the latched waiting control again cancels the session; visible status copy says “Press again to cancel” so it cannot be mistaken for another NFC-card tap
 - labels describe the physical action; do not imply finite progress
 - state changes receive one live announcement without moving focus
-- the waiting halo is a solid ring whose `box-shadow` spread animates outward up to 8px, within ordinary control gutters; the re-tap glow animates opacity. The halo colour derives from `--interaction`
+- the waiting halo is a solid ring whose `box-shadow` spread animates outward up to 8px, within ordinary control gutters, in `--interaction`; the re-tap glow animates opacity in `--status-yellow`, and the error halo is static `--status-red`
 - reduced motion keeps a static illuminated state
 
 Game-detail and deck action rails use `ReaderActivityAction`, not the full-size control:
@@ -634,30 +626,17 @@ Game-detail and deck action rails use `ReaderActivityAction`, not the full-size 
 - reader rails include halo gutters in the intrinsic scrolling content width, not padding around overflowing grid tracks. Keep clearance at both scroll ends and below the depressed face; preserve normal scrolling boundaries and focus targets
 - contextual writes never enqueue a detached global write; cancel owned work when its details close or selection/device changes
 
-Queue or deep-link writes without a visible source control use the compact reader activity strip above the measured footer clearance (`--app-footer-overlay-clearance`). Native iOS NFC system UI may still appear because it is OS-owned. Do not add spinner, orbit, fake percentage, or app-owned full-screen reader overlays.
+Queue or deep-link writes without a visible source control use the compact reader activity strip above the measured footer clearance. Native iOS NFC system UI may still appear because it is OS-owned. Do not add spinner, orbit, fake percentage, or app-owned full-screen reader overlays. The dev-only App preview simulator (`docs/capacitor.md`) stays as the way to review these states without hardware.
 
 ### Confirm modals
 
-Confirm modal content is simple, but not one single template. New action confirmations should generally use `SlideModal` with concise text and equal-width buttons.
+Confirmations are a `SlideModal` with concise text and a `ModalActionBar` footer: Cancel (`secondary`) left, confirm right. `StopConfirmModal`, `ConfirmClearModal`, `DeepLinkConfirmModal`, `StagedTokenModal`, the App badge prompts, the Advanced error-reporting prompt, mapping delete, device forget and Manage Media clean all use it.
 
-- `StopConfirmModal`: `SlideModal` with a centered paragraph in a `p-4` body and a `ModalActionBar` footer: Cancel (`secondary`) left, confirm (`intent="primary"`) right, equal width.
-- Advanced error reporting confirmation matches the `StopConfirmModal` pattern.
-- `ConfirmClearModal` and mapping delete confirmation use `py-4` and a `flex gap-2` equal-width button row with Cancel `secondary` and the confirm action `intent="destructive"`.
-- Manage Media clean confirmation uses `SlideModal`, muted description text, and a `flex gap-2` equal-width button row.
+- body: one centered paragraph with `py-4` vertical padding and no horizontal padding of its own
+- confirm is `intent="primary"`, or `intent="destructive"` for destructive actions
+- a confirmation that must show the value being confirmed (staged token, deep link) uses `flex flex-col gap-4 py-4`: muted `text-sm` description, then the value in `text-foreground text-sm font-medium break-all`
 
-Match the existing confirmation type closest to the action. Destructive confirmations use `intent="destructive"` alone; do not add manual `border-error text-error` classes.
-
-### Staged token modal
-
-Launch Guard staged token modal pattern:
-
-- `SlideModal fixedHeight="auto"`
-- footer with two equal buttons in `flex gap-3`; shared footer owns separator and top padding
-- content `flex flex-col gap-4 py-4`
-- muted small description
-- token value `text-foreground text-sm font-medium break-all`
-
-Keep it concise. Do not add extra cards/icons/status badges.
+Keep them concise. Do not add extra cards, icons or status badges.
 
 ## Home screen
 
@@ -698,17 +677,20 @@ Patterns:
   _problems_ belong to the global
   `ConnectionStatusBar`, not to Home.
 - Now Playing is a `Card` with cover art from `LibraryArtwork`, the title and
-  system, and transports derived from the media's `launcherControls`. Keep the
-  previous/stop/play/next deck mounted while idle so the card does not shift.
-  Idle Play replays the most recent media when available; the other controls
-  remain unavailable. Never repurpose the Stop position as Play. When a
-  playlist is active, keep the artwork/title/system area exclusively about the
-  active media; do not replace it with playlist metadata or position. Show the
-  text queue in a second recessed, vertically scrollable well below the
-  transport. Its compact header carries playlist name and plain item position.
-  Each 48px row selects that item with `playlist.goto` then `playlist.play`;
-  highlight and auto-center the current item, using its name with ZapScript as
-  the fallback. Do not render playlist position as a progress bar.
+  system, and a transport deck. Artwork and title are one details control: a
+  single button whose hit area covers the artwork, opening the shared details.
+  Keep the previous/stop/play/next deck mounted while idle so the card does not
+  shift. Idle Play replays the most recent media when available; the other
+  controls remain unavailable. Never repurpose the Stop position as Play.
+  Without a playlist, the deck drives the launcher's media controls
+  (`launcherControls`) and carries its own group, Pause and Resume labels
+  rather than playlist wording. When a playlist is active, keep the
+  artwork/title/system area about the active media and show the text queue in a
+  second recessed, vertically scrollable well below the transport. Its compact
+  header carries playlist name and plain item position. Each 48px row selects
+  that item with `playlist.goto` then `playlist.play`; auto-center the current
+  item, using its name with ZapScript as the fallback. Do not render playlist
+  position as a progress bar.
 - Recently played and favourites are horizontal cover rows that scroll, each
   hidden when empty. Tapping a cover opens the shared media-details sheet so
   launch, favourite, and write actions stay consistent with Library and search.
@@ -718,23 +700,25 @@ Patterns:
   Played tabs. Both tabs use `HistoryListRow`: primary value or media title,
   muted timestamp metadata, optional low-priority details, and a right-aligned
   ghost Play action. Scan failures use a compact text status rather than
-  colouring the entire row. Keep the sheet at a stable 70vh while either API
-  loads, prefetch Played history when the sheet opens, and request distinct
-  media with a local compatibility dedupe for older Core versions.
-- Home section headings use `text-muted-foreground font-bold capitalize`.
+  colouring the entire row. The tabs share the history pages' states through
+  `HistoryQueryState` (not connected, error with Retry, loading, empty) and
+  their replay rule through `useHistoryReplay`: a replay needs a live target,
+  one runs at a time, and a failure that lands after a device change is
+  dropped. Keep the sheet at a stable 70vh while either API loads.
+- Home section headings use the Home label style from Typography.
 - Stop and transport actions are icon-only outline `Button` controls inside a
   shared recessed transport deck.
 
 ### Adaptive Zap
 
-- Phone keeps the order above. From 760 CSS px playback leads, with reader tools/status before secondary cover rows.
+- Phone keeps the order above. From 760px playback leads, in the DOM as well as visually, with reader tools/status before secondary cover rows.
 - From 1024px use independent main/supporting stacks in a 3:2 column split: playback/background slots then scan actions in the main column; Controls then Readers in the supporting column. Shared grid rows do not push scan actions down to match the remote's height. Covers span the workspace below. Keep section heights natural, with no extra enclosing cards. Short windows scroll; controls never shrink to fit height.
 - Main/supporting wrappers stay mounted at every width and become `display: contents` below the two-column threshold so phone order stays reader-first. Layout ownership stays separate from feature/session ownership; customization editor, visibility preferences, drag handles, and arbitrary resizing are not implemented.
 - Now playing, Controls, and Readers use the same outside-card Home heading. Docked Controls owns its body material, not its section heading. Omit the Controls launcher while the pane is visible. Docked Controls does not repeat disconnected copy: global connection status and disabled live controls suffice. Standalone phone dialog keeps its recovery hint; actual input/capture errors remain visible.
 - From 760px scan actions form a row of equal square-ish tiles with icons above captions, matching 24px icons, and a 10rem minimum height. Tracks grow from 10rem to 12rem and wrap when space or text sizing requires it; a single capability stays one tile rather than stretching across the column. Aspect ratio is a preference, not a fixed height: translated labels and active status can grow the row. NFC retains its primary material and camera its neutral secondary material; activity feedback stays within the existing mounted control. Phone scan geometry remains unchanged.
-- The scan bank opts nested reader wrappers out of the ordinary 20rem desktop cap, not just the outer button. Queued/deep-link writes still replace scanning with the existing full-width contextual reader control and retry/cancel recovery bank; wide write controls retain inline captions and at least 72px height. Playback artwork expands to 96×128 CSS px at default text size, with a full-width transport bank and 64px minimum key height. Remote D-pad and secondary keys retain 64px targets; their horizontal grouping wraps when width or text size requires it.
-- Scan history and Play history are real Zap child routes, accessible directly at any width. Scan history shares row/copy/replay presentation with the phone History sheet. Play history lists chronological sessions, including repeated games, with cursor pagination; Library Recently played remains a deduplicated collection. Page queries are device-scoped and expose loading, offline, error/retry and unsupported-Core states. Replay requires a live target, and stale target errors are ignored.
-- Devices combines the shared connection/discovery/manual-entry flow with saved-device management and direct connection actions. At wide widths these occupy separate columns; narrow widths stack. The phone DeviceSheet hosts the same connection feature with its existing footer/focus behavior. Width changes do not restart discovery or clear address drafts.
+- The scan bank opts nested reader wrappers out of the Button width cap, not just the outer button. Queued/deep-link writes still replace scanning with the contextual reader control and its retry/cancel recovery bank; from 760px that control is full-width with inline captions and at least 72px height. Playback artwork expands to 96×128 CSS px at default text size, with a full-width transport bank and 64px minimum key height. Remote D-pad and secondary keys retain 64px targets; their horizontal grouping wraps when width or text size requires it.
+- Scan history and Play history are real Zap child routes (`ZapHistory.tsx`), accessible directly at any width, with content-wide breadcrumb headers to Zap; phone keeps pinned Back/Refresh. They share rows, states and replay with the phone History sheet. Play history lists chronological sessions, including repeated games, with cursor pagination; Library Recently played remains a deduplicated collection. Page queries are device-scoped, and play history is gated on Core support.
+- Devices combines the shared connection/discovery/manual-entry flow with saved-device management and direct connection actions, in `settings-panel-layout` columns from 1024px. The phone DeviceSheet hosts the same connection feature with its existing footer/focus behavior. Width changes do not restart discovery or clear address drafts. Where the Core is too old to link to Zaparoo Online, device linking is plain muted text, not a disabled button.
 - One Home/session tree and one Controls controller remain mounted. Controls use the existing nonmodal pane on wide screens and the existing phone modal intent below the threshold; width alone does not open a previously closed phone modal.
 - Keyboard mode/case, focused surviving controls, screenshot results, and in-flight captures survive presentation changes. Captured exports remain usable offline.
 - Cached media is not a live connection. Play/transport/remote/capture require current connection state and actual transport readiness. Serialized input rechecks its record, endpoint, transport, and session generation immediately before dispatch; reconnect/device changes drop stale pending work and ignore stale responses.
@@ -744,7 +728,7 @@ Do not copy Home heading style into Settings; it is home/status-specific.
 
 ## Create, Search, and NFC flows
 
-Create destinations and shared new-deck editor use `PageFrame headerMode="content-wide"`: one title/action tree scrolls with content from 760px, while phone pinned headers/back/swipe remain. Create subpages use inline breadcrumbs to Create; mapping editors include Create and Mappings ancestors. New-deck ancestor follows entry context (Create or Library). Preserve drafts, selected results, reader sessions and modal ownership across resizing; layout changes never start, cancel or repeat operations.
+Create destinations and shared new-deck editor use `PageFrame headerMode="content-wide"`. Create subpages use inline breadcrumbs to Create; mapping editors include Create and Mappings ancestors. New-deck ancestor follows entry context (Create or Library). The custom text editor is locked while its write waits on a tag.
 
 ### Create landing
 
@@ -759,7 +743,9 @@ Use this pattern only for menu-like action cards.
 
 ### Search results
 
-Search result rows are list rows, not cards:
+Search result rows are list rows, not cards, and are rendered only by `VirtualSearchResults`; hosts learn about loading through its `onLoadingChange` rather than drawing their own state.
+
+Library search opts into `rowVariant="library"`, which renders the same artwork row (`LibraryMediaRow`) as Library browse and collection lists. Create search and the media search dialog keep the plain rows described here:
 
 - clickable row
 - `px-1 pt-3 pb-5`
@@ -779,8 +765,9 @@ styling:
   scrolls
 - shared `HistoryListRow` geometry with search text as the primary value and a
   muted timestamp below
-- right-aligned ghost Search action
-- Clear History is a centered destructive text action below the list with a
+- right-aligned ghost Search action, named “Search for …” with the query
+- the list uses the sheet gutter only; no extra horizontal padding
+- Clear History is a destructive `text` action below the list with a
   full-width touch target but no visible button face; it is not a prominent
   modal footer action
 - clearing keeps the sheet open so the empty-state result is apparent
@@ -793,10 +780,12 @@ Search/Create media details prioritize the value being written:
 
 - with Show filenames off, ZapScript is first and selected by default
 - with Show filenames on, Path is first and selected by default
-- tags only modify parsed ZapScript; Path selection disables them using the
-  shared recessed unavailable treatment
+- tags only modify parsed ZapScript; in Path mode they become plain display-only
+  badges with no selection indicator and no disabled inset (see Badge)
 - Favorite, Copy, and Preview remain secondary to Write in the modal action
-  rail, with no extra body padding above the footer
+  rail, with no extra body padding above the footer. Copy goes through the
+  shared clipboard helper (`src/lib/clipboard.ts`) and reports Copied or a
+  failure
 
 ### Mapping editor and ZapScript input
 
@@ -806,13 +795,13 @@ Mapping editor uses a plain `flex flex-col gap-4` form stack:
 - stacked `RadioGroup` for type/match
 - `ZapScriptInput` for override text
 - `ToggleSwitch` for enabled
-- save button primary, delete button `intent="destructive"`
+- Save is primary; Delete beside it is `variant="outline" intent="destructive"` with no icon
 
 `ZapScriptInput` is its own compound editor:
 
 - recessed monospace textarea with the shared input focus/error vocabulary
 - raised attached toolbar with matching boundary and 4px lower corners; utility rows wrap at narrow/zoomed widths
-- character count muted small text
+- character count muted small text; the ZapScript help link uses `ExternalIcon`
 - command palette uses existing `Button variant="outline"` grid/flex rows, localized category headings, and `BackToTop` for its long command list
 - clear action uses `ConfirmClearModal`
 
@@ -829,7 +818,8 @@ NFC content panels use custom rounded blocks, not WUI `Card`:
 - values: `bg-surface-inset rounded-lg px-3 py-2`, often mono/small
 - badges for NFC booleans/tech types
 - dangerous tool warnings use red icon/text in the Tools tab
-- Tools keeps every panel and warning mounted during physical waits. Each tool uses its own `ReaderActivityControl`; only the selected action latches, with the other operations unavailable until completion or cancellation
+- Read and Tools panels both stay mounted; the hidden one is only hidden. Each tool uses its own `ReaderActivityControl`; only the selected action latches, with the other operations unavailable until completion or cancellation
+- the Read/Tools tabs are locked during a tag wait. A tool's completion stays on Tools and clears the Read result, because only a read describes what is on the tag now
 
 ### Remote Keyboard and screenshots
 
@@ -856,7 +846,7 @@ Mapping rows use:
 - mono override preview `font-mono text-sm`
 - `NextIcon` right
 
-Use this style for mapping-like data rows. Mapping lists and editors show delayed inline loading, an explicit retryable load error, and `BackToTop` on long mapping lists. NFC and Camera capture buttons in the editor are supporting outline actions; Save remains the primary action.
+Use this style for mapping-like data rows. Mapping lists and editors show delayed `InlineLoading`, an explicit retryable load error, and `BackToTop` on long mapping lists. Token capture in the editor is one outline `ReaderActivityControl` beside a mounted outline Camera button, each shown only when the app has that capability and only for the ID type; leaving ID cancels a waiting capture. Save remains the primary action.
 
 ## Settings support pages
 
@@ -878,7 +868,8 @@ About page is a credits page and has unique content styling:
 - app heading centered `text-2xl font-bold`
 - credit groups use `flex flex-col gap-2`
 - credit rows use `flex flex-row justify-between`
-- supporter names include legacy inline colors
+- highlighted supporter names use `text-warning`
+- the Licenses link is a `settings-nav-row` inside a `Card`
 
 Do not copy About credits styling into normal settings pages.
 
@@ -891,7 +882,7 @@ Online settings has auth/account-specific layout:
 - linked state is plain “Linked to Zaparoo Online” text, never a disabled action or a claim that the device belongs to the signed-in account
 - Online features use a tri-state master checkbox (none, some, all) above individual switches; pressing the mixed state enables all available features. Cloud backups only join the master selection when Warp is confirmed
 - remote connection state sits beneath Remote control; backup result sits beneath backup controls. Only cloud backups carry a Warp requirement; do not label ordinary features “Free”
-- account actions are full-width outline buttons in `gap-3`
+- account actions are full-width outline buttons in `gap-3`; all four (dashboard, change password, log out, delete account) carry an icon
 - delete/scheduled-deletion states use error border/text/background treatments
 - signed-out view starts with primary Log in and secondary Sign up; authentication opens a `SlideModal` containing recessed `TextInput`s and the primary submit action
 
@@ -908,11 +899,12 @@ Logs screen is a dense utility page, not a card/list page:
 - search uses `TextInput` with empty label
 - level filters use compact `ToggleChip`s in a wrapping row `gap-1.5`
 - entry count is `text-muted-foreground text-sm`
-- log rows use `p-3 font-mono text-xs` and an inline `borderBottom` divider
+- log rows use `p-3 font-mono text-xs` with a `border-b` divider except on the last row
 - log message is `text-foreground font-mono text-sm break-all whitespace-pre-wrap`
 - metadata fields are `text-muted-foreground mt-1 font-sans text-sm break-all`
 - log level uses `Badge` variants
 - `BackToTop` appears for long log content
+- loading uses `InlineLoading`
 
 Do not use normal settings rows or cards for log entries.
 
@@ -941,6 +933,7 @@ Use `ConnectionStatusDisplay` for connection state:
 - subtitle `truncate text-sm` with muted or error color
 - optional action slot right
 - lock/unlock icon for encryption state
+- state wording comes from `connectionStateLabelKey` (`src/hooks/useDevicePresentation.ts`), shared with the sidebar device block and Home device pill
 
 Do not recreate connection rows manually.
 
@@ -948,10 +941,10 @@ Do not recreate connection rows manually.
 
 Use loading treatment that matches known dimensions:
 
-- `Skeleton` for specific pending UI slots, e.g. switch skeleton, stat value skeletons
-- `LoadingSpinner` for inline async work
-- `Loader2` icon for network scan, reconnecting indicator, and some header upload/refresh states
-- text-only muted pending states where existing component does that
+- `Skeleton` for a pending value in a known slot: switch, stat values, reader list, connection subtitle
+- `InlineLoading` (`src/components/InlineLoading.tsx`) for every pending list or panel: one centered row with a 16px spinner and status text, usually inside `DelayedLoading`
+- busy buttons show `LoadingSpinner size={20} decorative`; progress and inline status spinners are 16px
+- raw `Loader2` only in the connection status displays (`ConnectionStatusBar`, `ConnectionStatusDisplay`)
 - physical read/write waits use the latched `ReaderActivityControl`, not a loading spinner or blocking overlay
 
 Do not invent new loading cards or shimmer styles.
@@ -962,8 +955,8 @@ Progress bars exist for media database and scraper flows.
 
 Patterns:
 
-- both media database and scraper bars: a `h-[10px]` `rounded-full` track with `border-border bg-background`, and an `h-[8px]` `bg-primary` fill (`animate-pulse` for indeterminate optimizing)
-- status rows use `text-sm`, muted labels, values right-aligned
+- `src/components/ProgressBar.tsx` is the only bar: a `h-[10px]` `rounded-full` track with `border-border bg-background`, and an `h-[8px]` `bg-primary` fill (`animate-pulse` for indeterminate work)
+- status rows use `StatRow`
 
 Do not use progress bars outside real progress work.
 
@@ -971,7 +964,7 @@ Do not use progress bars outside real progress work.
 
 Choose row style by context:
 
-- Settings nav: plain 48px row with `NextIcon`
+- Settings nav: tiles on the Settings index; `settings-nav-row` (48px, trailing `NextIcon`) inside a Card on subpages
 - Device row: `DeviceRow` Card row with status dot, optional lock, muted metadata, optional separate right action
 - Mapping row: dense data row with badges and mono preview
 - Search result: large clickable result row with metadata and tags
@@ -1004,10 +997,11 @@ Button icon usage:
 
 - icons mark actions with a universal glyph (add, search, play, share, copy, edit, delete, refresh, external link); confirm and dismiss words (Cancel, Apply, Done, Save, Create, Try again, Yes/No, Log in, Sign up) are text-only
 - the trash can means deleting stored data. Clearing a selection or filter is text-only (an X only for a dismissible chip)
-- buttons in the same footer, pair or rail either all have icons or none do; a trigger may have an icon while its confirmation dialog does not
+- buttons in the same footer, pair or rail either all have icons or none do: a Delete beside Save has no trash icon, and the four Online account actions all carry one. A trigger may have an icon while its confirmation dialog does not
 - buttons that leave the app use the custom `ExternalIcon`
-- use one glyph per concept: where `src/lib/images.tsx` defines it (Play, Search, Save, Create, Camera, Nfc, External, History, Back, Next), use that instead of the lucide equivalent, except the Pause/Play/Skip transport set. Import lucide icons with their `Icon` suffix (`XIcon`, `Trash2Icon`)
-- busy buttons show `LoadingSpinner size={20} decorative`, never a raw `Loader2`
+- use one glyph per concept: where `src/lib/images.tsx` defines it (Play, Search, Save, Create, Camera, Nfc, External, History, Back, Next, Clear, Check, Lock, Warning, Database, Device), use that instead of the lucide equivalent. Custom glyphs accept numeric sizes. Lucide `PlusIcon` means add and is distinct from `CreateIcon`; directional and carousel chevrons and the Pause/Play/Skip transport set stay lucide. Import lucide icons with their `Icon` suffix (`XIcon`, `Trash2Icon`)
+- busy-button and loading spinners follow Loading
+- deliberate exceptions, not patterns to copy: the page-level action rail on deck detail; Warp “Manage” without an external icon; the eraser on ZapScript Clear; lucide icons for transport, bottom navigation and Settings tiles
 
 ## Accessibility and interaction
 
@@ -1021,7 +1015,6 @@ Keep existing accessibility behavior:
 - use `SlideModal` focus trap for bottom-sheet modals
 - use `useSmartSwipe` for subpage back gesture where sibling pages use it
 - use `useHaptics()` or WUI component `intent` instead of ad-hoc haptic calls
-- focus rings use the semantic interaction token (`ring-ring` or the `--interaction` outline); no hardcoded white ring on light surfaces, and `ring-offset-*` needs `ring-offset-background`
 
 Disabled controls should use component disabled props and existing disabled colors, not custom hidden interactivity.
 

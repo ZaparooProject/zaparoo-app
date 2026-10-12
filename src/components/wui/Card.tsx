@@ -31,11 +31,9 @@ export function Card(props: {
       data-disabled={props.disabled || undefined}
       className={classNames(
         "wui-card",
-        "rounded-lg",
         "border",
         "border-solid",
         "p-4",
-        "border-border",
         {
           "text-foreground-disabled cursor-not-allowed": props.disabled,
 

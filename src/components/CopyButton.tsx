@@ -1,19 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
-import { Clipboard } from "@capacitor/clipboard";
-import { Capacitor } from "@capacitor/core";
-import { CopyIcon, Check } from "lucide-react";
+import { CopyIcon, CheckIcon } from "lucide-react";
 import classNames from "classnames";
 import { useHaptics } from "@/hooks/useHaptics";
-
-const writeToClipboard = async (s: string) => {
-  if (Capacitor.isNativePlatform()) {
-    await Clipboard.write({ string: s });
-  } else {
-    await navigator.clipboard.writeText(s);
-  }
-};
+import { writeToClipboard } from "@/lib/clipboard";
 
 export const CopyButton = (props: {
   text: string;
@@ -81,7 +72,7 @@ export const CopyButton = (props: {
           copied ? "scale-75 opacity-0" : "scale-100 opacity-100",
         )}
       />
-      <Check
+      <CheckIcon
         aria-hidden="true"
         size={size}
         className={classNames(

@@ -1,12 +1,25 @@
+import { useLayoutEffect } from "react";
 import { useRouter, useRouterState, useSearch } from "@tanstack/react-router";
 import { LibraryGameSearch } from "@/components/library/LibraryGameSearch";
+import {
+  libraryMetadataScope,
+  useLibrarySessionStore,
+} from "@/lib/librarySessionStore";
 
 export function LibrarySearchPage() {
   const { system, tag } = useSearch({ from: "/library/search" });
   const router = useRouter();
   const state = useRouterState({ select: (state) => state.location.state });
-  if (!system && !tag) return <LibraryGameSearch />;
-  const scope = `metadata:${state.__TSR_key}:${JSON.stringify([system, tag])}`;
+  const scope =
+    system || tag
+      ? libraryMetadataScope(state.__TSR_key ?? "", system, tag)
+      : null;
+  // Runs after the page below has activated the device, so visiting an
+  // exploration entry keeps it and forgets only the least recently used ones.
+  useLayoutEffect(() => {
+    if (scope) useLibrarySessionStore.getState().touchMetadataScope(scope);
+  }, [scope]);
+  if (!scope) return <LibraryGameSearch />;
   return (
     <LibraryGameSearch
       key={scope}

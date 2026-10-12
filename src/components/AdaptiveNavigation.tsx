@@ -1,5 +1,4 @@
 import {
-  type CSSProperties,
   type ReactNode,
   useCallback,
   useEffect,
@@ -8,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { useLocation } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { MenuIcon, XIcon } from "lucide-react";
@@ -17,7 +17,6 @@ import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
 import { useSlideModalManager } from "@/hooks/useSlideModalManager";
 import { useHaptics } from "@/hooks/useHaptics";
 import { bottomTabForPath, type BottomTabId } from "@/lib/tabSessionStore";
-import { useStatusStore } from "@/lib/store";
 import { ZapLogo } from "@/lib/images";
 import { SidebarNavigation } from "@/components/SidebarNavigation";
 import { SidebarDeviceStatus } from "@/components/SidebarDeviceStatus";
@@ -28,12 +27,18 @@ export function AdaptiveNavigation({ children }: { children: ReactNode }) {
   const wide = useMediaQuery("(min-width: 760px)");
   const desktop = useMediaQuery("(min-width: 1280px)");
   const tablet = wide && !desktop;
-  const safe = useStatusStore((s) => s.safeInsets);
   const { impact } = useHaptics();
   const manager = useSlideModalManager();
   const id = useId();
   const drawerRef = useRef<HTMLDivElement>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
+  const inlineSlotRef = useRef<HTMLDivElement>(null);
+  // One stable host keeps the navigation tree and its DOM mounted while its
+  // place in reading order follows the layout: ahead of the page from 760px,
+  // in the footer dock slot on phones.
+  const [host] = useState(() =>
+    typeof document === "undefined" ? null : document.createElement("div"),
+  );
   const [open, setOpen] = useState(false);
   const [restoreOnClose, setRestoreOnClose] = useState(true);
   const [lastMode, setLastMode] = useState({ wide, desktop });
@@ -58,6 +63,17 @@ export function AdaptiveNavigation({ children }: { children: ReactNode }) {
     });
     setOpen(false);
   }
+  useLayoutEffect(() => {
+    const inlineSlot = inlineSlotRef.current;
+    if (!host || !inlineSlot) return;
+    const dockSlot = wide
+      ? null
+      : document.querySelector<HTMLElement>("[data-app-dock-slot]");
+    const target = dockSlot ?? inlineSlot;
+    if (host.parentElement !== target) target.appendChild(host);
+  }, [host, wide]);
+  useEffect(() => () => host?.remove(), [host]);
+  const currentPath = pathname.replace(/\/$/, "") || "/";
   const drawerOpen = tablet && open;
   const close = useCallback(() => setOpen(false), []);
   useLayoutEffect(() => {
@@ -101,7 +117,7 @@ export function AdaptiveNavigation({ children }: { children: ReactNode }) {
             ref={toggleRef}
             type="button"
             className="sidebar-disclosure"
-            aria-label={t("navigation.openMenu")}
+            aria-label={t("nav.openMenu")}
             aria-expanded={drawerOpen}
             aria-controls={id}
             onClick={() => {
@@ -124,74 +140,66 @@ export function AdaptiveNavigation({ children }: { children: ReactNode }) {
           onClick={close}
         />
       )}
-      <div
-        ref={drawerRef}
-        id={id}
-        role={tablet ? "dialog" : undefined}
-        aria-modal={drawerOpen || undefined}
-        aria-label={tablet ? t("nav.mainNavigation") : undefined}
-        tabIndex={tablet ? -1 : undefined}
-        hidden={tablet && !open}
-        className={wide ? "app-sidebar" : undefined}
-        style={
-          {
-            "--app-navigation-safe-top": safe.top,
-            "--app-navigation-safe-left": safe.left,
-            "--app-navigation-safe-right": safe.right,
-            "--bottom-nav-safe-inset": safe.bottom,
-          } as CSSProperties
-        }
-      >
-        {wide && (
-          <div className="sidebar-brand">
-            <ZapLogo width={144} />
-            {tablet && (
-              <button
-                type="button"
-                className="sidebar-disclosure"
-                aria-label={t("nav.close")}
-                onClick={close}
-              >
-                <XIcon size={24} aria-hidden="true" />
-              </button>
+      <div ref={inlineSlotRef} />
+      {host &&
+        createPortal(
+          <div
+            ref={drawerRef}
+            id={id}
+            role={tablet ? "dialog" : undefined}
+            aria-modal={drawerOpen || undefined}
+            aria-label={tablet ? t("nav.menu") : undefined}
+            tabIndex={tablet ? -1 : undefined}
+            hidden={tablet && !open}
+            className={wide ? "app-sidebar" : undefined}
+          >
+            {wide && (
+              <div className="sidebar-brand">
+                <ZapLogo width={144} />
+                {tablet && (
+                  <button
+                    type="button"
+                    className="sidebar-disclosure"
+                    aria-label={t("nav.close")}
+                    onClick={close}
+                  >
+                    <XIcon size={24} aria-hidden="true" />
+                  </button>
+                )}
+              </div>
             )}
-          </div>
+            <nav
+              aria-label={t("nav.mainNavigation")}
+              className={wide ? "sidebar-navigation" : "bottom-nav-shell"}
+            >
+              {wide ? (
+                <SidebarNavigation
+                  desktop={desktop}
+                  expanded={navigation.expanded}
+                  onToggle={(group) =>
+                    setNavigation((current) => ({
+                      ...current,
+                      expanded: {
+                        ...current.expanded,
+                        [group]: !current.expanded[group],
+                      },
+                    }))
+                  }
+                  onNavigate={(to) => {
+                    // Reselecting the current page changes no route, so no
+                    // page heading takes focus; return it to the menu button.
+                    if (to !== currentPath) setRestoreOnClose(false);
+                    close();
+                  }}
+                />
+              ) : (
+                children
+              )}
+            </nav>
+            {wide && <SidebarDeviceStatus />}
+          </div>,
+          host,
         )}
-        <nav
-          aria-label={t("nav.mainNavigation")}
-          className={wide ? "sidebar-navigation" : "bottom-nav-shell"}
-          style={
-            {
-              "--bottom-nav-safe-inset": safe.bottom,
-              "--app-navigation-safe-left": safe.left,
-              "--app-navigation-safe-right": safe.right,
-            } as CSSProperties
-          }
-        >
-          {wide ? (
-            <SidebarNavigation
-              desktop={desktop}
-              expanded={navigation.expanded}
-              onToggle={(group) =>
-                setNavigation((current) => ({
-                  ...current,
-                  expanded: {
-                    ...current.expanded,
-                    [group]: !current.expanded[group],
-                  },
-                }))
-              }
-              onNavigate={() => {
-                setRestoreOnClose(false);
-                close();
-              }}
-            />
-          ) : (
-            children
-          )}
-        </nav>
-        {wide && <SidebarDeviceStatus />}
-      </div>
     </>
   );
 }

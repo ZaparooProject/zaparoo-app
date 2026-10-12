@@ -334,7 +334,7 @@ describe("MediaDatabaseCard", () => {
     ).toBeInTheDocument();
   });
 
-  it("should show clean missing media errors inline", async () => {
+  it("should report clean missing media errors in a toast", async () => {
     const user = userEvent.setup();
     vi.mocked(CoreAPI.mediaCleanOrphans).mockRejectedValue(
       new Error("clean timed out"),
@@ -353,7 +353,10 @@ describe("MediaDatabaseCard", () => {
       }),
     );
 
-    expect(await screen.findByText("error")).toBeInTheDocument();
+    await vi.waitFor(() => {
+      expect(showRateLimitedErrorToast).toHaveBeenCalledWith("error");
+    });
+    expect(screen.queryByText("error")).not.toBeInTheDocument();
   });
 
   it("should disable clean missing media while scraping", () => {
@@ -410,7 +413,7 @@ describe("MediaDatabaseCard", () => {
     ).toBeInTheDocument();
   });
 
-  it("should show setup error inline when update finds invalid database metadata", async () => {
+  it("should report a setup error once when update finds invalid database metadata", async () => {
     vi.mocked(CoreAPI.mediaGenerate).mockRejectedValue(
       new Error("failed to get optimization status: no such table: DBConfig"),
     );
@@ -423,11 +426,13 @@ describe("MediaDatabaseCard", () => {
       }),
     );
 
-    expect(await screen.findByText("error")).toBeInTheDocument();
-    expect(showRateLimitedErrorToast).not.toHaveBeenCalled();
+    await vi.waitFor(() => {
+      expect(showRateLimitedErrorToast).toHaveBeenCalledWith("error");
+    });
+    expect(screen.queryByText("error")).not.toBeInTheDocument();
   });
 
-  it("should show unexpected update failures inline and in a toast", async () => {
+  it("should report unexpected update failures once, in a toast", async () => {
     vi.mocked(CoreAPI.mediaGenerate).mockRejectedValue(
       new Error("network down"),
     );
@@ -440,11 +445,14 @@ describe("MediaDatabaseCard", () => {
       }),
     );
 
-    expect(await screen.findByText("error")).toBeInTheDocument();
+    await vi.waitFor(() => {
+      expect(showRateLimitedErrorToast).toHaveBeenCalledWith("error");
+    });
+    expect(screen.queryByText("error")).not.toBeInTheDocument();
     expect(showRateLimitedErrorToast).toHaveBeenCalledWith("error");
   });
 
-  it("should show setup errors from clean missing media without a toast", async () => {
+  it("should report setup errors from clean missing media once", async () => {
     const user = userEvent.setup();
     vi.mocked(CoreAPI.mediaCleanOrphans).mockRejectedValue(
       new Error("failed to get optimization status: no such table: DBConfig"),
@@ -463,11 +471,13 @@ describe("MediaDatabaseCard", () => {
       }),
     );
 
-    expect(await screen.findByText("error")).toBeInTheDocument();
-    expect(showRateLimitedErrorToast).not.toHaveBeenCalled();
+    await vi.waitFor(() => {
+      expect(showRateLimitedErrorToast).toHaveBeenCalledWith("error");
+    });
+    expect(screen.queryByText("error")).not.toBeInTheDocument();
   });
 
-  it("should clear stale generate errors when resume is attempted", async () => {
+  it("should report a failed update without leaving an inline error behind", async () => {
     vi.mocked(CoreAPI.mediaGenerate).mockRejectedValue(
       new Error("Method not found"),
     );
@@ -478,7 +488,10 @@ describe("MediaDatabaseCard", () => {
         name: "settings.updateDb",
       }),
     );
-    expect(await screen.findByText("error")).toBeInTheDocument();
+    await vi.waitFor(() => {
+      expect(showRateLimitedErrorToast).toHaveBeenCalledWith("error");
+    });
+    expect(screen.queryByText("error")).not.toBeInTheDocument();
 
     mockStore.gamesIndex = {
       indexing: true,
@@ -883,7 +896,10 @@ describe("MediaDatabaseCard", () => {
       });
       expect(button).not.toBeDisabled();
     });
-    expect(await screen.findByText("error")).toBeInTheDocument();
+    await vi.waitFor(() => {
+      expect(showRateLimitedErrorToast).toHaveBeenCalledWith("error");
+    });
+    expect(screen.queryByText("error")).not.toBeInTheDocument();
     expect(showRateLimitedErrorToast).toHaveBeenCalledWith("error");
   });
 
@@ -901,9 +917,6 @@ describe("MediaDatabaseCard", () => {
 
     render(<MediaDatabaseCard />);
 
-    expect(
-      screen.queryByText("settings.updateDb.status.reconnecting"),
-    ).not.toBeInTheDocument();
     expect(screen.getAllByText("Sega Genesis").length).toBeGreaterThan(0);
     // Updates remain visibly paused without duplicating global status copy.
     expect(
@@ -983,7 +996,7 @@ describe("MediaDatabaseCard", () => {
       ).toBeEnabled();
     });
 
-    it("should show expected cancel failures inline and allow retry", async () => {
+    it("should report expected cancel failures and allow retry", async () => {
       const user = userEvent.setup();
       vi.mocked(CoreAPI.mediaGenerateCancel).mockRejectedValue(
         new Error("Method not found"),
@@ -995,11 +1008,13 @@ describe("MediaDatabaseCard", () => {
         screen.getByRole("button", { name: "settings.updateDb.cancel" }),
       );
 
-      expect(await screen.findByText("error")).toBeInTheDocument();
+      await vi.waitFor(() => {
+        expect(showRateLimitedErrorToast).toHaveBeenCalledWith("error");
+      });
+      expect(screen.queryByText("error")).not.toBeInTheDocument();
       expect(
         screen.getByRole("button", { name: "settings.updateDb.cancel" }),
       ).toBeEnabled();
-      expect(showRateLimitedErrorToast).not.toHaveBeenCalled();
     });
 
     it("should show unexpected cancel failures and allow retry", async () => {
@@ -1014,7 +1029,10 @@ describe("MediaDatabaseCard", () => {
         screen.getByRole("button", { name: "settings.updateDb.cancel" }),
       );
 
-      expect(await screen.findByText("error")).toBeInTheDocument();
+      await vi.waitFor(() => {
+        expect(showRateLimitedErrorToast).toHaveBeenCalledWith("error");
+      });
+      expect(screen.queryByText("error")).not.toBeInTheDocument();
       expect(
         screen.getByRole("button", { name: "settings.updateDb.cancel" }),
       ).toBeEnabled();

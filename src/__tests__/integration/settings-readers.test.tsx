@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { render, screen, waitFor } from "../../test-utils";
+import { render, screen, waitFor, within } from "../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { useStatusStore, ConnectionState } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
@@ -586,7 +586,9 @@ describe("Settings Readers Integration", () => {
 
       renderComponent();
 
-      expect(screen.getByText(/loading/i)).toBeInTheDocument();
+      expect(
+        screen.getByRole("status", { name: /loading/i }),
+      ).toBeInTheDocument();
     });
 
     it("should show the not-connected state instead of no readers when disconnected", () => {
@@ -734,32 +736,24 @@ describe("Settings Readers Integration", () => {
   });
 
   describe("Setting Help Dialogs", () => {
-    it("should render help icon for scan mode", () => {
+    it("should render a help control for each explained setting", () => {
       renderComponent();
 
+      // Scan mode, continuous scan, audio feedback and auto-detect at least.
       expect(
-        screen.getByRole("button", {
-          name: /Help for settings.readers.scanMode/i,
-        }),
-      ).toBeInTheDocument();
+        screen.getAllByRole("button", { name: "settingHelp.label" }).length,
+      ).toBeGreaterThanOrEqual(4);
     });
 
-    it("should render help icon for continuous scan", () => {
+    it("should keep scan mode help with its radio group label", () => {
       renderComponent();
 
+      const group = screen.getByRole("radiogroup", {
+        name: "settings.readers.scanMode",
+      });
       expect(
-        screen.getByRole("button", {
-          name: /Help for settings.readers.continuousScan/i,
-        }),
-      ).toBeInTheDocument();
-    });
-
-    it("should render help icon for audio feedback", () => {
-      renderComponent();
-
-      expect(
-        screen.getByRole("button", {
-          name: /Help for settings.readers.audioFeedback/i,
+        within(group.parentElement!).getByRole("button", {
+          name: "settingHelp.label",
         }),
       ).toBeInTheDocument();
     });

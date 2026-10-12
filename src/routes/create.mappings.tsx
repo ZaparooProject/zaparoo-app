@@ -16,7 +16,7 @@ import { useStatusStore } from "@/lib/store.ts";
 import { logger } from "@/lib/logger";
 import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { InlineLoading } from "@/components/InlineLoading";
 import { DelayedLoading } from "@/components/DelayedLoading";
 import { BackToTop } from "@/components/BackToTop";
 import { PageFrame } from "@/components/PageFrame";
@@ -140,13 +140,7 @@ export function Mappings() {
       <div className="flex flex-col gap-3">
         {isInitialLoading ? (
           <DelayedLoading>
-            <div
-              className="text-muted-foreground flex items-center justify-center gap-2 py-6"
-              role="status"
-            >
-              <LoadingSpinner size={16} className="text-primary" decorative />
-              <span>{t("loading")}</span>
-            </div>
+            <InlineLoading />
           </DelayedLoading>
         ) : mappings.isError ? (
           <EmptyState
@@ -175,16 +169,15 @@ export function Mappings() {
         ) : (
           <>
             <div className="mapping-list-toolbar">
-              {sortedMappings.length > 0 && (
-                <TextInput
-                  value={search}
-                  setValue={setSearch}
-                  placeholder={t("create.mappings.list.searchPlaceholder")}
-                  clearable
-                  inputMode="search"
-                  type="search"
-                />
-              )}
+              <TextInput
+                value={search}
+                setValue={setSearch}
+                aria-label={t("create.mappings.list.searchPlaceholder")}
+                placeholder={t("create.mappings.list.searchPlaceholder")}
+                clearable
+                inputMode="search"
+                type="search"
+              />
               <Button
                 icon={<PlusIcon size={20} />}
                 label={t("create.mappings.list.newMapping")}

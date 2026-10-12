@@ -15,7 +15,6 @@ describe("SettingHelp", () => {
     async ({ disabled, reflow }) => {
       const user = userEvent.setup();
       const setValue = vi.fn();
-      const onDisabledClick = vi.fn();
       render(
         <ToggleSwitch
           label="Remote control"
@@ -24,11 +23,10 @@ describe("SettingHelp", () => {
           setValue={setValue}
           reflow={reflow}
           disabled={disabled}
-          onDisabledClick={onDisabledClick}
         />,
       );
       await user.click(
-        screen.getByRole("button", { name: "Help for Remote control" }),
+        screen.getByRole("button", { name: "settingHelp.label" }),
       );
       expect(setValue).not.toHaveBeenCalled();
       const dialog = screen.getByRole("dialog", { name: "Remote control" });
@@ -42,12 +40,11 @@ describe("SettingHelp", () => {
       );
       expect(setValue).not.toHaveBeenCalled();
       expect(screen.getByRole("checkbox")).not.toBeChecked();
-      expect(onDisabledClick).not.toHaveBeenCalled();
       await user.click(
         screen.getByText("Remote control", { selector: "label" }),
       );
       if (disabled) {
-        expect(onDisabledClick).toHaveBeenCalledOnce();
+        expect(setValue).not.toHaveBeenCalled();
       } else {
         expect(setValue).toHaveBeenCalledWith(true);
       }
@@ -57,7 +54,6 @@ describe("SettingHelp", () => {
     "allows Escape dismissal without activating a disabled row (reflow: %s)",
     async (reflow) => {
       const user = userEvent.setup();
-      const onDisabledClick = vi.fn();
       const setValue = vi.fn();
       render(
         <ToggleSwitch
@@ -66,12 +62,11 @@ describe("SettingHelp", () => {
           setValue={setValue}
           disabled
           reflow={reflow}
-          onDisabledClick={onDisabledClick}
           help={<SettingHelp title="Reader mode" description="Help text" />}
         />,
       );
       const trigger = screen.getByRole("button", {
-        name: "Help for Reader mode",
+        name: "settingHelp.label",
       });
       trigger.focus();
       await user.keyboard("{Enter}");
@@ -83,7 +78,6 @@ describe("SettingHelp", () => {
         ).not.toBeInTheDocument(),
       );
       await waitFor(() => expect(trigger).toHaveFocus());
-      expect(onDisabledClick).not.toHaveBeenCalled();
       expect(setValue).not.toHaveBeenCalled();
     },
   );

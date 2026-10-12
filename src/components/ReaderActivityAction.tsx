@@ -1,10 +1,9 @@
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { NfcIcon } from "lucide-react";
 import { Button } from "@/components/wui/Button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useAnnouncer } from "@/components/A11yAnnouncer";
-import { CreateIcon } from "@/lib/images";
+import { CreateIcon, NfcIcon } from "@/lib/images";
 import type { ReaderActivityState } from "@/components/ReaderActivityControl";
 
 function messageKey(state: ReaderActivityState) {

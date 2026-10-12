@@ -3,6 +3,7 @@ import { Trash2Icon } from "lucide-react";
 import { RecentSearch } from "@/hooks/useRecentSearches";
 import { SearchIcon } from "@/lib/images";
 import { EmptyState } from "@/components/wui/EmptyState";
+import { formatAppDateTime } from "@/lib/formatDate";
 import { HistoryListRow } from "./HistoryListRow";
 import { SlideModal } from "./SlideModal";
 import { Button } from "./wui/Button";
@@ -52,13 +53,15 @@ export function RecentSearchesModal({
                 <HistoryListRow
                   key={`${search.timestamp}:${index}`}
                   title={<span className="break-words">{displayText}</span>}
-                  meta={new Date(search.timestamp).toLocaleString()}
+                  meta={formatAppDateTime(search.timestamp) ?? ""}
                   action={
                     <Button
                       icon={<SearchIcon size="20" />}
                       variant="ghost"
                       size="sm"
-                      aria-label={displayText}
+                      aria-label={t("create.search.searchAgain", {
+                        query: displayText,
+                      })}
                       onClick={() => handleSearchSelect(search)}
                     />
                   }
@@ -66,7 +69,7 @@ export function RecentSearchesModal({
               );
             })}
           </ul>
-          <div className="px-3 pt-2">
+          <div className="pt-2">
             <Button
               label={t("create.search.clearHistory")}
               icon={<Trash2Icon size="20" />}

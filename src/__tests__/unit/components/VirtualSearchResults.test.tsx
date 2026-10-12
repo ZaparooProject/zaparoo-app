@@ -176,8 +176,10 @@ describe("VirtualSearchResults", () => {
   });
 
   describe("loading state", () => {
-    it("should show loading indicator when isSearching is true", () => {
-      renderComponent({ isSearching: true });
+    it("should show the loading row while the first page is pending", () => {
+      vi.spyOn(CoreAPI, "mediaSearch").mockReturnValue(new Promise(() => {}));
+
+      renderComponent();
 
       expect(screen.getByText("create.search.loading")).toBeInTheDocument();
     });
@@ -283,7 +285,7 @@ describe("VirtualSearchResults", () => {
   });
 
   describe("search results", () => {
-    it("should call onSearchComplete when loading finishes", async () => {
+    it("should report loading while the first page is pending, then settle", async () => {
       const mediaSearchSpy = vi.spyOn(CoreAPI, "mediaSearch");
       mediaSearchSpy.mockResolvedValueOnce({
         results: createMockResults(5),
@@ -291,12 +293,13 @@ describe("VirtualSearchResults", () => {
         pagination: { hasNextPage: false, pageSize: 100, nextCursor: null },
       });
 
-      const onSearchComplete = vi.fn();
+      const onLoadingChange = vi.fn();
 
-      renderComponent({ onSearchComplete });
+      renderComponent({ onLoadingChange });
 
+      expect(onLoadingChange).toHaveBeenCalledWith(true);
       await waitFor(() => {
-        expect(onSearchComplete).toHaveBeenCalled();
+        expect(onLoadingChange).toHaveBeenLastCalledWith(false);
       });
     });
 
@@ -797,7 +800,7 @@ describe("VirtualSearchResults", () => {
       expect(setSelectedResult).toHaveBeenCalledWith(mockResults[0]);
     });
 
-    it("should deselect when clicking the same result again", async () => {
+    it("should keep selecting a result that is already selected", async () => {
       const mediaSearchSpy = vi.spyOn(CoreAPI, "mediaSearch");
       const mockResults = createMockResults(1);
       mediaSearchSpy.mockResolvedValueOnce({
@@ -822,7 +825,7 @@ describe("VirtualSearchResults", () => {
 
       fireEvent.click(screen.getByTestId("result-0"));
 
-      expect(setSelectedResult).toHaveBeenCalledWith(null);
+      expect(setSelectedResult).toHaveBeenCalledWith(mockResults[0]);
     });
 
     it("should handle keyboard Enter to select result", async () => {

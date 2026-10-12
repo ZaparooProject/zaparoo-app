@@ -36,7 +36,7 @@ const {
     status: null as null | string,
     write: vi.fn().mockResolvedValue(undefined),
     retry: vi.fn().mockResolvedValue(undefined),
-    end: vi.fn(),
+    end: vi.fn().mockResolvedValue(undefined),
     writing: false,
     result: null,
     verifyError: null,
@@ -74,17 +74,21 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 // Mock store
 vi.mock("@/lib/store", async (importOriginal) => {
   const actual = (await importOriginal()) as any;
+  const state = () => ({
+    connected: mockState.connected,
+    playing: mockState.playing,
+    backgroundPlaying: mockState.backgroundPlaying,
+    coreVersion: mockState.coreVersion,
+    coreVersionPending: mockState.coreVersionPending,
+    safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
+    writeOpen: false,
+    writeQueue: "",
+  });
   return {
     ...actual,
-    useStatusStore: (selector: any) =>
-      selector({
-        connected: mockState.connected,
-        playing: mockState.playing,
-        backgroundPlaying: mockState.backgroundPlaying,
-        coreVersion: mockState.coreVersion,
-        coreVersionPending: mockState.coreVersionPending,
-        safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
-      }),
+    useStatusStore: Object.assign((selector: any) => selector(state()), {
+      getState: state,
+    }),
   };
 });
 
@@ -160,8 +164,11 @@ describe("Create Index Route", () => {
     mockState.nfcAvailable = true;
     mockState.platform = "ios";
     mockNfcWriter.status = null;
-    mockNfcWriter.write.mockClear();
-    mockNfcWriter.end.mockClear();
+    // A write stays pending (tag not yet presented) for the whole test.
+    mockNfcWriter.write.mockReset();
+    mockNfcWriter.write.mockImplementation(() => new Promise<void>(() => {}));
+    mockNfcWriter.end.mockReset();
+    mockNfcWriter.end.mockResolvedValue(undefined);
     mockMediaActive.mockImplementation(async () => ({
       ...mockState.playing,
       zapScript: "@SNES/Super Mario World",
@@ -603,10 +610,36 @@ describe("Create Index Route", () => {
       );
 
       await waitFor(() => expect(mockNfcWriter.end).toHaveBeenCalledOnce());
-      expect(
-        screen.queryByRole("button", { name: "reader.cancelAction" }),
-      ).not.toBeInTheDocument();
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("button", { name: "reader.cancelAction" }),
+        ).not.toBeInTheDocument(),
+      );
       expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
+
+    it("should end the write it owns when the details close", async () => {
+      setActiveMedia();
+      const user = userEvent.setup();
+      renderComponent();
+
+      await user.click(
+        screen.getByRole("button", {
+          name: /create\.currentGameHeading/i,
+        }),
+      );
+      await user.click(
+        await screen.findByRole("button", {
+          name: /create\.search\.writeLabel/i,
+        }),
+      );
+      expect(
+        screen.getByRole("button", { name: "reader.cancelAction" }),
+      ).toBeInTheDocument();
+
+      await user.keyboard("{Escape}");
+
+      await waitFor(() => expect(mockNfcWriter.end).toHaveBeenCalledOnce());
     });
   });
 });

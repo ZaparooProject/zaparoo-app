@@ -1,4 +1,4 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeftIcon } from "lucide-react";
 import { useStatusStore } from "@/lib/store";
 
 interface SwipeBackIndicatorProps {
@@ -18,7 +18,7 @@ export function SwipeBackIndicator({ progress }: SwipeBackIndicatorProps) {
       data-swipe-back-indicator=""
       data-ready={clampedProgress === 1 ? "true" : "false"}
       aria-hidden="true"
-      className="bg-foreground text-background pointer-events-none fixed top-1/2 z-20 flex h-14 w-14 items-center justify-center rounded-full border border-black/10 shadow-lg"
+      className="bg-foreground text-background shadow-material pointer-events-none fixed top-1/2 z-20 flex h-14 w-14 items-center justify-center rounded-full border"
       style={{
         left: `calc(${safeLeft} + 0.25rem)`,
         opacity,
@@ -29,7 +29,7 @@ export function SwipeBackIndicator({ progress }: SwipeBackIndicatorProps) {
         willChange: "opacity, transform",
       }}
     >
-      <ArrowLeft size={32} strokeWidth={2.5} />
+      <ArrowLeftIcon size={32} strokeWidth={2.5} />
     </div>
   );
 }

@@ -3,10 +3,21 @@ import {
   forgetLibraryBrowse,
   type LibraryBrowseWindow,
   libraryBrowseScrollKey,
+  libraryMetadataScope,
   librarySearchScrollKey,
+  MAX_METADATA_SESSIONS,
   useLibrarySessionStore,
 } from "@/lib/librarySessionStore";
+import type { MediaBrowseEntry } from "@/lib/models";
 import { useTabSessionStore } from "@/lib/tabSessionStore";
+
+const ENTRY: MediaBrowseEntry = {
+  type: "media",
+  mediaId: 42,
+  name: "Super Game",
+  path: "/roms/SNES/Super Game.sfc",
+  systemId: "SNES",
+};
 
 const BROWSE_KEY = libraryBrowseScrollKey("SNES", "name-asc", "/roms/SNES");
 const T_WINDOW: LibraryBrowseWindow = {
@@ -125,5 +136,52 @@ describe("librarySessionStore navigation", () => {
     store.updateBrowseWindow(BROWSE_KEY, () => T_WINDOW);
     store.activateDevice("device-b");
     expect(useLibrarySessionStore.getState().browseWindows).toEqual({});
+  });
+
+  it("should forget the least recently visited exploration entries with their scroll", () => {
+    useTabSessionStore.getState().reset();
+    const scopes = Array.from(
+      { length: MAX_METADATA_SESSIONS + 1 },
+      (_, index) => libraryMetadataScope(`entry-${index}`, "SNES", "genre:rpg"),
+    );
+    for (const scope of scopes) {
+      const store = useLibrarySessionStore.getState();
+      store.setSearch(scope, { query: "", system: "SNES", tags: [] });
+      store.setSelectedMedia(`search:${scope}`, { entry: ENTRY });
+      useTabSessionStore
+        .getState()
+        .rememberScroll(librarySearchScrollKey(scope), 0, 100);
+      store.touchMetadataScope(scope);
+      // Returning to the first entry keeps it ahead of the second.
+      store.touchMetadataScope(scopes[0]!);
+    }
+
+    const state = useLibrarySessionStore.getState();
+    const scroll = useTabSessionStore.getState().scrollPositions;
+    const [kept, forgotten, ...rest] = scopes;
+    expect(state.searches[forgotten!]).toBeUndefined();
+    expect(state.selectedMedia[`search:${forgotten}`]).toBeUndefined();
+    expect(scroll[librarySearchScrollKey(forgotten!)]).toBeUndefined();
+    for (const scope of [kept!, ...rest]) {
+      expect(state.searches[scope]).toBeDefined();
+      expect(state.selectedMedia[`search:${scope}`]).toBeDefined();
+      expect(scroll[librarySearchScrollKey(scope)]).toBeDefined();
+    }
+  });
+
+  it("should cap remembered return markers at the oldest history entry", () => {
+    const store = useLibrarySessionStore.getState();
+    for (let index = 0; index <= MAX_METADATA_SESSIONS; index++) {
+      store.rememberMetadataReturn(
+        `entry-${index}`,
+        "library:favorites",
+        ENTRY,
+      );
+    }
+
+    const returns = useLibrarySessionStore.getState().metadataReturns;
+    expect(Object.keys(returns)).toHaveLength(MAX_METADATA_SESSIONS);
+    expect(returns["entry-0"]).toBeUndefined();
+    expect(returns[`entry-${MAX_METADATA_SESSIONS}`]?.entry).toBe(ENTRY);
   });
 });

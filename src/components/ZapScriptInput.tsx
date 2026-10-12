@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { Browser } from "@capacitor/browser";
-import { EraserIcon, HelpCircleIcon, PlusIcon } from "lucide-react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { EraserIcon, PlusIcon } from "lucide-react";
+import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import toast from "react-hot-toast";
 import { useStatusStore } from "@/lib/store.ts";
 import { CoreAPI, logRunFailure } from "@/lib/coreApi";
@@ -10,7 +10,7 @@ import { Button } from "@/components/wui/Button.tsx";
 import { MediaSearchModal } from "@/components/MediaSearchModal.tsx";
 import { CommandsModal } from "@/components/CommandsModal.tsx";
 import { SystemSelector } from "@/components/SystemSelector.tsx";
-import { PlayIcon } from "@/lib/images.tsx";
+import { ExternalIcon, PlayIcon } from "@/lib/images.tsx";
 import { ConfirmClearModal } from "@/components/ConfirmClearModal.tsx";
 
 export function ZapScriptInput(props: {
@@ -18,6 +18,8 @@ export function ZapScriptInput(props: {
   setValue: (value: string) => void;
   showPalette?: boolean;
   rows?: number;
+  /** Locks the editor and its tools, e.g. while its text is being written. */
+  disabled?: boolean;
   "aria-label"?: string;
   "aria-labelledby"?: string;
 }) {
@@ -27,19 +29,35 @@ export function ZapScriptInput(props: {
   const [searchOpen, setSearchOpen] = useState(false);
   const [commandsOpen, setCommandsOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [cursorPosition, setCursorPosition] = useState<number>(0);
+  // Last known caret. Null until the textarea has been focused, so inserts
+  // into text the user has not placed a caret in go to the end.
+  const caretRef = useRef<number | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const id = useId();
+  const charCountId = `${id}-char-count`;
+  const controlsId = `${id}-controls`;
+  const disabled = props.disabled ?? false;
 
   const { t } = useTranslation();
 
+  const rememberCaret = (element: HTMLTextAreaElement) => {
+    caretRef.current = element.selectionStart;
+  };
+
   const insertTextAtCursor = (textToInsert: string, focus: boolean = false) => {
-    const before = props.value.substring(0, cursorPosition);
-    const after = props.value.substring(cursorPosition);
+    const position = Math.min(
+      caretRef.current ?? props.value.length,
+      props.value.length,
+    );
+    const before = props.value.substring(0, position);
+    const after = props.value.substring(position);
     const newText = before + textToInsert + after;
-    const newPosition = cursorPosition + textToInsert.length;
+    const newPosition = position + textToInsert.length;
 
     props.setValue(newText);
-    setCursorPosition(newPosition); // Update cursor position state
+    // Setting the value moves an unfocused textarea's caret to the end, so
+    // the next insert continues from here rather than from the DOM.
+    caretRef.current = newPosition;
 
     if (focus) {
       setTimeout(() => {
@@ -57,17 +75,19 @@ export function ZapScriptInput(props: {
           className="wui-input border-input rounded-b-none border border-solid p-3 font-mono text-base leading-relaxed"
           aria-label={props["aria-label"] ?? t("create.custom.textareaLabel")}
           aria-labelledby={props["aria-labelledby"]}
-          aria-describedby="zapscript-char-count"
+          aria-describedby={charCountId}
           placeholder={t("create.custom.textPlaceholder")}
           value={props.value}
           autoCapitalize="off"
           autoComplete="off"
+          disabled={disabled}
           onChange={(e) => {
             props.setValue(e.target.value);
+            rememberCaret(e.currentTarget);
           }}
-          onSelect={(e) => {
-            setCursorPosition(e.currentTarget.selectionStart);
-          }}
+          onFocus={(e) => rememberCaret(e.currentTarget)}
+          onSelect={(e) => rememberCaret(e.currentTarget)}
+          onBlur={(e) => rememberCaret(e.currentTarget)}
           style={{
             resize: "vertical",
           }}
@@ -77,7 +97,7 @@ export function ZapScriptInput(props: {
         <div className="border-input bg-surface-raised rounded-b-md border border-t-0 border-solid p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div
-              id="zapscript-char-count"
+              id={charCountId}
               className="text-muted-foreground text-xs"
               style={{ flex: 1 }}
               aria-live="polite"
@@ -90,12 +110,12 @@ export function ZapScriptInput(props: {
               size="sm"
               onClick={() => setShowControls(!showControls)}
               aria-expanded={showControls}
-              aria-controls="zapscript-controls"
+              aria-controls={controlsId}
               icon={
                 showControls ? (
-                  <ChevronUp size={20} />
+                  <ChevronUpIcon size={20} />
                 ) : (
-                  <ChevronDown size={20} />
+                  <ChevronDownIcon size={20} />
                 )
               }
               label={t("create.custom.commandPalette")}
@@ -103,13 +123,14 @@ export function ZapScriptInput(props: {
           </div>
 
           {showControls && (
-            <div id="zapscript-controls" className="flex flex-wrap gap-2 pt-2">
+            <div id={controlsId} className="flex flex-wrap gap-2 pt-2">
               <div className="flex w-full flex-wrap items-end gap-2">
                 <Button
                   label="**"
                   aria-label={t("create.custom.insertCommandStart")}
                   variant="outline"
                   onClick={() => insertTextAtCursor("**")}
+                  disabled={disabled}
                   className="grow"
                 />
                 <Button
@@ -117,6 +138,7 @@ export function ZapScriptInput(props: {
                   aria-label={t("create.custom.insertCommandSeparator")}
                   variant="outline"
                   onClick={() => insertTextAtCursor("||")}
+                  disabled={disabled}
                   className="grow"
                 />
                 <Button
@@ -144,7 +166,7 @@ export function ZapScriptInput(props: {
                   label={t("create.custom.clear")}
                   variant="text"
                   intent="destructive"
-                  disabled={props.value === ""}
+                  disabled={disabled || props.value === ""}
                   onClick={() => setShowClearConfirm(true)}
                   className="grow"
                 />
@@ -154,7 +176,7 @@ export function ZapScriptInput(props: {
                   aria-label={t("create.custom.insertMedia")}
                   label={t("create.custom.searchMedia")}
                   variant="outline"
-                  disabled={!connected}
+                  disabled={disabled || !connected}
                   onClick={() => setSearchOpen(true)}
                   className="w-full"
                   icon={<PlusIcon size={20} />}
@@ -163,7 +185,7 @@ export function ZapScriptInput(props: {
                   aria-label={t("create.custom.insertSystem")}
                   label={t("create.custom.selectSystem")}
                   variant="outline"
-                  disabled={!connected}
+                  disabled={disabled || !connected}
                   onClick={() => setSystemsOpen(true)}
                   className="w-full"
                   icon={<PlusIcon size={20} />}
@@ -172,6 +194,7 @@ export function ZapScriptInput(props: {
                   aria-label={t("create.custom.insertCommand")}
                   label={t("create.custom.commands")}
                   variant="outline"
+                  disabled={disabled}
                   onClick={() => setCommandsOpen(true)}
                   className="w-full"
                   icon={<PlusIcon size={20} />}
@@ -185,7 +208,7 @@ export function ZapScriptInput(props: {
                     })
                   }
                   className="w-full"
-                  icon={<HelpCircleIcon size={20} />}
+                  icon={<ExternalIcon size="20" />}
                 />
               </div>
             </div>
@@ -198,6 +221,7 @@ export function ZapScriptInput(props: {
         close={() => setShowClearConfirm(false)}
         onConfirm={() => {
           props.setValue("");
+          caretRef.current = 0;
         }}
       />
       <SystemSelector

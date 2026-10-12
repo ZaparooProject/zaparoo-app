@@ -115,7 +115,7 @@ describe("Home cover rows", () => {
           onSelect={() => {}}
         />
         <MediaCoverRow
-          headingLabel="scan.favouritesHeading"
+          headingLabel="scan.favoritesHeading"
           entries={[entry({ name: "Zelda", path: "/games/zelda.sfc" })]}
           onSelect={() => {}}
         />
@@ -123,7 +123,7 @@ describe("Home cover rows", () => {
     );
 
     const favourites = within(
-      screen.getByRole("region", { name: "scan.favouritesHeading" }),
+      screen.getByRole("region", { name: "scan.favoritesHeading" }),
     );
     expect(favourites.getByText("Zelda")).toBeVisible();
   });

@@ -283,12 +283,64 @@ describe("game metadata exploration", () => {
     },
   );
 
+  it("returns to the originating details after the same collection selected another game", async () => {
+    const other = {
+      ...game,
+      mediaId: 7,
+      name: "Other Game",
+      path: "/roms/SNES/Other Game.sfc",
+    };
+    vi.mocked(CoreAPI.mediaSearch).mockImplementation(async (params) => ({
+      results: params.tags?.includes("user:favorite")
+        ? [game, other]
+        : [result],
+      total: 2,
+    }));
+    const describeMedia = vi.mocked(CoreAPI.mediaMeta).getMockImplementation()!;
+    vi.mocked(CoreAPI.mediaMeta).mockImplementation(async (params, signal) => {
+      const response = await describeMedia(params, signal);
+      if (params.mediaId !== other.mediaId) return response;
+      return {
+        media: {
+          ...response.media,
+          path: other.path,
+          title: { ...response.media.title, name: other.name },
+        },
+      };
+    });
+    const user = userEvent.setup();
+    const router = await app("/library/favorites");
+    await user.click(
+      within(await openGame()).getByRole("link", {
+        name: "library.developer: Stern",
+      }),
+    );
+    await screen.findByRole("heading", {
+      level: 1,
+      name: "library.searchTitle",
+    });
+
+    await act(() => router.navigate({ to: "/library/favorites" }));
+    await user.click(
+      await screen.findByRole("button", { name: /^Other Game/ }),
+    );
+    await screen.findByRole("dialog", { name: other.name });
+
+    await act(() => router.history.go(-2));
+    expect(
+      await screen.findByRole("dialog", { name: game.name }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("dialog", { name: other.name }),
+    ).not.toBeInTheDocument();
+  });
+
   it("uses page Back to return to Home cover details", async () => {
     viewport(1440);
     const router = await app("/");
     const user = userEvent.setup();
     const favoritesHeading = await screen.findByRole("heading", {
-      name: "scan.favouritesHeading",
+      name: "scan.favoritesHeading",
     });
     await user.click(
       within(favoritesHeading.closest("section")!).getByRole("button", {

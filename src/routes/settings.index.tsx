@@ -2,16 +2,16 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { Browser } from "@capacitor/browser";
 import { useTranslation } from "react-i18next";
 import {
-  PersonStanding,
-  Check,
-  Cloud,
-  Database,
-  HelpCircle,
-  Info,
-  Languages,
-  Radio,
-  SlidersHorizontal,
-  Wrench,
+  PersonStandingIcon,
+  CheckIcon,
+  CloudIcon,
+  DatabaseIcon,
+  HelpCircleIcon,
+  InfoIcon,
+  LanguagesIcon,
+  RadioIcon,
+  SlidersHorizontalIcon,
+  WrenchIcon,
 } from "lucide-react";
 import {
   PurchaseSupportActions,
@@ -29,8 +29,9 @@ import { DeviceConnectionSummary } from "@/components/DeviceConnectionSummary";
 import { CoreOutdatedNotice } from "@/components/CoreOutdatedNotice";
 import { GatedFeature } from "@/components/GatedFeature";
 import { InboxButton } from "@/components/InboxButton";
-import { isCoreFeatureAvailable } from "@/lib/featureGates";
+import { useKnownCoreFeature } from "@/hooks/useKnownCoreFeature";
 import {
+  getDisplayedWarpAccess,
   getPurchasePreviewState,
   usePurchasePreviewStore,
 } from "@/lib/purchasePreviewStore";
@@ -60,28 +61,16 @@ export function Settings() {
   );
   const purchasePreview = getPurchasePreviewState(configuredPurchasePreview);
   const purchasePreviewEnabled = purchasePreview !== "live";
-  const displayedOnlinePremiumAccess = purchasePreviewEnabled
-    ? purchasePreview === "warp"
-      ? true
-      : purchasePreview === "free" ||
-          purchasePreview === "checkout" ||
-          purchasePreview === "pro"
-        ? false
-        : null
-    : onlinePremiumAccess;
+  const displayedOnlinePremiumAccess = getDisplayedWarpAccess(
+    purchasePreview,
+    onlinePremiumAccess,
+  );
   const displayedProAccess = purchasePreviewEnabled
     ? purchasePreview === "pro"
     : proAccess;
   const appUi = useAppUi();
   const showNativePurchaseUI = appUi.enabled || purchasePreviewEnabled;
-  const coreVersion = useStatusStore((state) => state.coreVersion);
-  const coreVersionPending = useStatusStore(
-    (state) => state.coreVersionPending,
-  );
-  const showMediaScraper =
-    coreVersion !== null &&
-    !coreVersionPending &&
-    isCoreFeatureAvailable("mediaScrapers", coreVersion);
+  const { available: showMediaScraper } = useKnownCoreFeature("mediaScrapers");
   const navigationGroups = [
     {
       id: "app",
@@ -90,17 +79,17 @@ export function Settings() {
         {
           to: "/settings/language-region",
           label: t("settings.languageRegion.title"),
-          icon: Languages,
+          icon: LanguagesIcon,
         },
         {
           to: "/settings/accessibility",
           label: t("settings.accessibility.title"),
-          icon: PersonStanding,
+          icon: PersonStandingIcon,
         },
         {
           to: "/settings/online",
           label: t("online.title"),
-          icon: Cloud,
+          icon: CloudIcon,
           status:
             loggedInUser === null && !purchasePreviewEnabled
               ? t("online.settingsStatusSignedOut")
@@ -119,24 +108,24 @@ export function Settings() {
               {
                 to: "/settings/media" as const,
                 label: t("settings.media.title"),
-                icon: Database,
+                icon: DatabaseIcon,
               },
             ]
           : []),
         {
           to: "/settings/readers",
           label: t("settings.readers.title"),
-          icon: Radio,
+          icon: RadioIcon,
         },
         {
           to: "/settings/play-controls",
           label: t("settings.playControls.title"),
-          icon: SlidersHorizontal,
+          icon: SlidersHorizontalIcon,
         },
         {
           to: "/settings/advanced",
           label: t("settings.advanced.title"),
-          icon: Wrench,
+          icon: WrenchIcon,
         },
       ],
     },
@@ -147,9 +136,13 @@ export function Settings() {
         {
           to: "/settings/help",
           label: t("settings.help.title"),
-          icon: HelpCircle,
+          icon: HelpCircleIcon,
         },
-        { to: "/settings/about", label: t("settings.about.title"), icon: Info },
+        {
+          to: "/settings/about",
+          label: t("settings.about.title"),
+          icon: InfoIcon,
+        },
       ],
     },
   ] as const;
@@ -197,30 +190,28 @@ export function Settings() {
               </div>
             )}
 
-            {showNativePurchaseUI && displayedOnlinePremiumAccess === false && (
-              <div className="flex flex-col gap-5">
-                {displayedProAccess ? (
-                  <p
-                    role="status"
-                    className="text-success flex min-h-12 items-center gap-2 text-sm font-medium"
-                  >
-                    <Check size={20} aria-hidden="true" />
-                    {t("settings.app.proActive")}
-                  </p>
-                ) : (
-                  <Button
-                    label={t("scan.purchaseProAction")}
-                    intent="pro"
-                    className="w-full"
-                    onClick={
-                      purchasePreviewEnabled
-                        ? () => undefined
-                        : () => setProPurchaseModalOpen(true)
-                    }
-                  />
-                )}
-              </div>
-            )}
+            {showNativePurchaseUI &&
+              displayedOnlinePremiumAccess === false &&
+              (displayedProAccess ? (
+                <p
+                  role="status"
+                  className="text-success flex min-h-12 items-center gap-2 text-sm font-medium"
+                >
+                  <CheckIcon size={20} aria-hidden="true" />
+                  {t("settings.app.proActive")}
+                </p>
+              ) : (
+                <Button
+                  label={t("scan.purchaseProAction")}
+                  intent="pro"
+                  className="w-full"
+                  onClick={
+                    purchasePreviewEnabled
+                      ? () => undefined
+                      : () => setProPurchaseModalOpen(true)
+                  }
+                />
+              ))}
 
             {appUi.enabled &&
               !displayedProAccess &&
@@ -237,7 +228,7 @@ export function Settings() {
               >
                 <h2
                   id={`settings-${group.id}-heading`}
-                  className="text-lg font-semibold tracking-tight"
+                  className="text-foreground text-lg font-semibold"
                 >
                   {group.label}
                 </h2>

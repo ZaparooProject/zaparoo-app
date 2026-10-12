@@ -79,7 +79,7 @@ export type LibraryDetailFactType =
 
 export interface LibraryDetailFact {
   type: LibraryDetailFactType;
-  values: string[];
+  tags: TagInfo[];
 }
 
 export interface LibraryMetadataView {
@@ -488,11 +488,12 @@ export function organizeLibraryDetailTags(tags: readonly TagInfo[]): {
   );
   const factTypeSet = new Set<string>(LIBRARY_DETAIL_FACT_TYPES);
   const facts = LIBRARY_DETAIL_FACT_TYPES.flatMap((type) => {
-    const values = visibleTags
-      .filter((tag) => tag.type.trim().toLowerCase() === type)
-      .map((tag) => (tag.label || tag.tag).trim())
-      .filter(Boolean);
-    return values.length > 0 ? [{ type, values }] : [];
+    const factTags = visibleTags.filter(
+      (tag) =>
+        tag.type.trim().toLowerCase() === type &&
+        (tag.label || tag.tag).trim() !== "",
+    );
+    return factTags.length > 0 ? [{ type, tags: factTags }] : [];
   });
 
   return {

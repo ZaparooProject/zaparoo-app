@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Browser } from "@capacitor/browser";
 import { PageFrame } from "@/components/PageFrame";
 import { HeaderButton } from "@/components/wui/HeaderButton";
+import { Card } from "@/components/wui/Card";
 import { Button } from "@/components/wui/Button.tsx";
 import { BackIcon, ExternalIcon, NextIcon } from "@/lib/images";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
@@ -57,11 +58,11 @@ export function About() {
         <div className="flex flex-col gap-2">
           <div className="flex flex-row justify-between">
             <span>Callan Barrett</span>
-            <span>Developer</span>
+            <span>{t("settings.about.roleDeveloper")}</span>
           </div>
           <div className="flex flex-row justify-between">
             <span>Tim Wilsie</span>
-            <span>UX Designer</span>
+            <span>{t("settings.about.roleDesigner")}</span>
           </div>
         </div>
 
@@ -135,12 +136,14 @@ export function About() {
           />
         </div>
 
-        <Link to="/settings/licenses" className="settings-nav-row">
-          <span>{t("settings.licenses.title")}</span>
-          <span aria-hidden="true">
-            <NextIcon size="20" />
-          </span>
-        </Link>
+        <Card>
+          <Link to="/settings/licenses" className="settings-nav-row">
+            <span>{t("settings.licenses.title")}</span>
+            <span aria-hidden="true" className="shrink-0">
+              <NextIcon size="20" />
+            </span>
+          </Link>
+        </Card>
       </div>
     </PageFrame>
   );

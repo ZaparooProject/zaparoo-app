@@ -246,12 +246,56 @@ describe("SlideModal", () => {
     const closeMock = vi.fn();
     render(<SlideModal {...mockProps} isOpen={true} close={closeMock} />);
 
-    // There are two close buttons (drag handle on mobile, X button on desktop)
-    const closeButtons = screen.getAllByRole("button", { name: "nav.close" });
-    expect(closeButtons.length).toBe(2);
-    await user.click(closeButtons[0]!);
+    // A phone sheet has exactly one close control: its drag handle.
+    await user.click(screen.getByRole("button", { name: "nav.close" }));
 
     expect(closeMock).toHaveBeenCalled();
+  });
+
+  it("should offer exactly one close control as a floating dialog from 760px", async () => {
+    vi.spyOn(window, "matchMedia").mockImplementation(
+      (query) =>
+        ({
+          matches: query === "(min-width: 760px)",
+          media: query,
+          addEventListener: () => {},
+          removeEventListener: () => {},
+          addListener: () => {},
+          removeListener: () => {},
+        }) as unknown as MediaQueryList,
+    );
+    const user = userEvent.setup();
+    const closeMock = vi.fn();
+    render(<SlideModal {...mockProps} isOpen={true} close={closeMock} />);
+
+    await user.click(screen.getByRole("button", { name: "nav.close" }));
+
+    expect(closeMock).toHaveBeenCalled();
+  });
+
+  it("should stay registered across rerenders with a new inline close callback", () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    const { rerender } = render(
+      <>
+        <SlideModal {...mockProps} isOpen close={() => {}} title="Other" />
+        <SlideModal {...mockProps} isOpen close={first} />
+      </>,
+    );
+    first.mockClear();
+
+    // Rerendering an open modal must not re-run the handoff that closes the
+    // other registered surfaces.
+    const otherClose = vi.fn();
+    rerender(
+      <>
+        <SlideModal {...mockProps} isOpen close={otherClose} title="Other" />
+        <SlideModal {...mockProps} isOpen close={second} />
+      </>,
+    );
+
+    expect(first).not.toHaveBeenCalled();
+    expect(second).not.toHaveBeenCalled();
   });
 
   it("keeps one shared backdrop and invokes the current close callback after rerender", () => {

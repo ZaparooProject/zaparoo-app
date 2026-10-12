@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { CoreAPI } from "@/lib/coreApi";
-import { satisfies as versionSatisfies } from "@/lib/coreVersion";
 import {
   FAVORITE_TAG_FILTER,
   LIBRARY_QUERY_KEYS,
@@ -26,11 +25,10 @@ export function useRecentlyPlayed(): MediaBrowseEntry[] {
   const recentsFeature = useCoreFeature("mediaRecents", {
     requireKnownSupport: true,
   });
-  // Not a feature gate: this only widens the page we request, it never hides
-  // UI, so it would just add noise to the outdated-Core notice.
-  const coreVersion = useStatusStore((state) => state.coreVersion);
-  const coreDedupes =
-    coreVersion !== null && versionSatisfies(coreVersion, "2.17.0");
+  // Only widens the page we request on older Core; it never hides UI.
+  const coreDedupes = useCoreFeature("mediaHistoryDistinct", {
+    requireKnownSupport: true,
+  }).available;
 
   const query = useQuery({
     queryKey: [MEDIA_HISTORY_QUERY_KEYS.history, deviceKey, "recents"],

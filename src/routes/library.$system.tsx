@@ -2,7 +2,6 @@ import {
   type ReactNode,
   useCallback,
   useEffect,
-  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -53,8 +52,8 @@ import { BackToTop } from "@/components/BackToTop";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { Button } from "@/components/wui/Button";
 import { HeaderButton } from "@/components/wui/HeaderButton";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { DelayedLoading } from "@/components/DelayedLoading";
+import { InlineLoading } from "@/components/InlineLoading";
 import { BackIcon } from "@/lib/images";
 import {
   LibraryBrowseList,
@@ -69,7 +68,7 @@ import {
 } from "@/hooks/useLibraryMediaSelection";
 import { LibraryMediaOptionsModal } from "@/components/library/LibraryMediaOptionsModal";
 import { LibraryRefinementSummary } from "@/components/library/LibrarySystemRefinementBar";
-import { LibraryGameSearch } from "@/components/library/LibraryGameSearch";
+import { LibrarySearchBody } from "@/components/library/LibraryGameSearch";
 
 export const Route = createFileRoute("/library/$system")({
   component: LibrarySystem,
@@ -132,15 +131,9 @@ export function LibrarySystem() {
   const setEmbeddedSearchOpen = useLibrarySessionStore(
     (state) => state.setEmbeddedSearchOpen,
   );
-  const activateLibraryDevice = useLibrarySessionStore(
-    (state) => state.activateDevice,
-  );
   const connected = useStatusStore((state) => state.connected);
   const corePlatform = useStatusStore((state) => state.corePlatform);
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
-  useLayoutEffect(() => {
-    activateLibraryDevice(deviceKey);
-  }, [activateLibraryDevice, deviceKey]);
   const libraryFeature = useCoreFeature("mediaLibrary");
   const currentPath = levels.at(-1)?.path ?? "";
   const browseScrollKey = libraryBrowseScrollKey(
@@ -379,10 +372,7 @@ export function LibrarySystem() {
   } else if (browse.isLoading || autoEnteringInitialRoot) {
     content = (
       <DelayedLoading>
-        <div className="text-muted-foreground flex items-center justify-center gap-2 py-8">
-          <LoadingSpinner size={16} className="text-primary" />
-          <span>{t("library.loadingFolder")}</span>
-        </div>
+        <InlineLoading label={t("library.loadingFolder")} />
       </DelayedLoading>
     );
   } else if (browse.isError) {
@@ -514,12 +504,7 @@ export function LibrarySystem() {
         }
       >
         {searchOpen ? (
-          <LibraryGameSearch
-            initialSystemId={systemId}
-            onBack={closeSearch}
-            embedded
-            scrollRef={scrollRef}
-          />
+          <LibrarySearchBody initialSystemId={systemId} scrollRef={scrollRef} />
         ) : (
           <>
             <LibraryRefinementSummary
@@ -532,14 +517,10 @@ export function LibrarySystem() {
             />
             {jumpingLabel && (
               <DelayedLoading>
-                <div
-                  className="text-muted-foreground flex items-center justify-center gap-2 pb-3"
-                  role="status"
-                  aria-live="polite"
-                >
-                  <LoadingSpinner size={16} className="text-primary" />
-                  <span>{t("library.jumpingTo", { label: jumpingLabel })}</span>
-                </div>
+                <InlineLoading
+                  label={t("library.jumpingTo", { label: jumpingLabel })}
+                  className="pt-0 pb-3"
+                />
               </DelayedLoading>
             )}
             {content}

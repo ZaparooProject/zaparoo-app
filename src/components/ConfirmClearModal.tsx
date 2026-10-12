@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { SlideModal } from "@/components/SlideModal.tsx";
 import { Button } from "@/components/wui/Button.tsx";
+import { ModalActionBar } from "@/components/wui/ModalActionBar";
 
 export function ConfirmClearModal(props: {
   isOpen: boolean;
@@ -14,24 +15,26 @@ export function ConfirmClearModal(props: {
       close={props.close}
       title={t("create.custom.clearConfirmTitle")}
       footer={
-        <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            label={t("nav.cancel")}
-            onClick={props.close}
-            className="flex-1"
-          />
-          <Button
-            variant="outline"
-            intent="destructive"
-            label={t("create.custom.clear")}
-            onClick={() => {
-              props.onConfirm();
-              props.close();
-            }}
-            className="flex-1"
-          />
-        </div>
+        <ModalActionBar
+          secondaryAction={
+            <Button
+              variant="secondary"
+              label={t("nav.cancel")}
+              onClick={props.close}
+            />
+          }
+          primaryAction={
+            <Button
+              variant="outline"
+              intent="destructive"
+              label={t("create.custom.clear")}
+              onClick={() => {
+                props.onConfirm();
+                props.close();
+              }}
+            />
+          }
+        />
       }
     >
       {null}

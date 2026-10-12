@@ -59,7 +59,7 @@ export function DeviceDetail() {
   const { forgetDevice } = useDeviceConnectionActions();
   const { selectRecord } = useSelectDevice();
 
-  const headingTitle = record?.name ?? endpoint?.address ?? "";
+  const headingTitle = record?.name || endpoint?.address || "";
   const headingRef = usePageHeadingFocus<HTMLHeadingElement>(headingTitle);
 
   const initialName = record?.name ?? "";
@@ -144,11 +144,12 @@ export function DeviceDetail() {
       headerCenter={
         <h1
           ref={headingRef}
-          className="text-foreground flex min-w-0 items-center gap-2 text-xl"
+          className="flex min-w-0 items-center gap-2"
           title={headingTitle}
         >
           {isActive && (
             <span
+              role="img"
               aria-label={t("settings.activeDevice")}
               className="bg-success h-2 w-2 shrink-0 rounded-full"
             />
@@ -214,6 +215,7 @@ export function DeviceDetail() {
         close={() => {
           if (!forgetting) setConfirmOpen(false);
         }}
+        dismissible={!forgetting}
         title={t("settings.deviceDetail.forgetTitle")}
         footer={
           <ModalActionBar
@@ -239,9 +241,9 @@ export function DeviceDetail() {
           />
         }
       >
-        <div className="py-4">
-          <p className="text-center">{t("settings.deviceDetail.forgetBody")}</p>
-        </div>
+        <p className="py-4 text-center">
+          {t("settings.deviceDetail.forgetBody")}
+        </p>
       </SlideModal>
     </PageFrame>
   );

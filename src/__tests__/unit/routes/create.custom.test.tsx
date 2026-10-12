@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent } from "../../../test-utils";
+import { render, screen, fireEvent, waitFor } from "../../../test-utils";
+import { useStatusStore } from "@/lib/store";
+
+const initialStatusState = { ...useStatusStore.getState() };
 
 // Use vi.hoisted for all variables that need to be accessed in mock factories
 const { componentRef, mockGoBack, mockNfcWriter, mockState } = vi.hoisted(
@@ -10,7 +13,7 @@ const { componentRef, mockGoBack, mockNfcWriter, mockState } = vi.hoisted(
       status: null as null | string,
       write: vi.fn().mockResolvedValue(undefined),
       retry: vi.fn().mockResolvedValue(undefined),
-      end: vi.fn(),
+      end: vi.fn().mockResolvedValue(undefined),
       writing: false,
       result: null,
       verifyError: null,
@@ -35,18 +38,6 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
       return { options };
     },
     useRouter: () => ({ navigate: mockGoBack }),
-  };
-});
-
-// Mock store
-vi.mock("@/lib/store", async (importOriginal) => {
-  const actual = (await importOriginal()) as any;
-  return {
-    ...actual,
-    useStatusStore: (selector: any) =>
-      selector({
-        safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
-      }),
   };
 });
 
@@ -82,13 +73,16 @@ vi.mock("@/components/ZapScriptInput.tsx", () => ({
   ZapScriptInput: ({
     value,
     setValue,
+    disabled,
   }: {
     value: string;
     setValue: (v: string) => void;
+    disabled?: boolean;
   }) => (
     <textarea
       data-testid="zap-script-input"
       value={value}
+      disabled={disabled}
       onChange={(e) => setValue(e.target.value)}
       aria-label="ZapScript input"
     />
@@ -106,9 +100,13 @@ describe("Create Custom Route", () => {
     vi.clearAllMocks();
     mockState.customText = "";
     mockState.setCustomText.mockClear();
+    useStatusStore.setState({ ...initialStatusState });
     mockNfcWriter.status = null;
-    mockNfcWriter.write.mockClear();
-    mockNfcWriter.end.mockClear();
+    // A write stays pending (tag not yet presented) for the whole test.
+    mockNfcWriter.write.mockReset();
+    mockNfcWriter.write.mockImplementation(() => new Promise<void>(() => {}));
+    mockNfcWriter.end.mockReset();
+    mockNfcWriter.end.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -182,7 +180,7 @@ describe("Create Custom Route", () => {
   });
 
   describe("write functionality", () => {
-    it("should call nfcWriter.write when write button clicked with text", () => {
+    it("should call nfcWriter.write when write button clicked with text", async () => {
       mockState.customText = "test zapscript";
       renderComponent();
 
@@ -190,10 +188,42 @@ describe("Create Custom Route", () => {
         screen.getByRole("button", { name: "create.custom.write" }),
       );
 
-      expect(mockNfcWriter.write).toHaveBeenCalledWith(
-        "write",
-        "test zapscript",
+      await waitFor(() =>
+        expect(mockNfcWriter.write).toHaveBeenCalledWith(
+          "write",
+          "test zapscript",
+        ),
       );
+    });
+
+    it("should lock the editor while its write is waiting for a tag", async () => {
+      mockState.customText = "test text";
+      renderComponent();
+      expect(screen.getByTestId("zap-script-input")).toBeEnabled();
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "create.custom.write" }),
+      );
+      expect(screen.getByTestId("zap-script-input")).toBeDisabled();
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "reader.cancelAction" }),
+      );
+
+      await waitFor(() =>
+        expect(screen.getByTestId("zap-script-input")).toBeEnabled(),
+      );
+      expect(mockNfcWriter.end).toHaveBeenCalledOnce();
+    });
+
+    it("should not start a write while a queued write owns the reader", () => {
+      mockState.customText = "test text";
+      useStatusStore.setState({ writeQueue: "**launch.system:snes" });
+      renderComponent();
+
+      expect(
+        screen.getByRole("button", { name: "create.custom.write" }),
+      ).toBeDisabled();
     });
 
     it("should not call nfcWriter.write when text is empty", () => {

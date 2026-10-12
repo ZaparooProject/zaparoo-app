@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Lock } from "lucide-react";
+import { LockIcon } from "lucide-react";
 import { Card } from "./wui/Card";
 
 export interface DeviceRowEntry {
@@ -36,6 +36,7 @@ export function DeviceRow({
       >
         {isActive && (
           <span
+            role="img"
             aria-label={t("settings.activeDevice")}
             className="bg-success h-2 w-2 shrink-0 rounded-full"
           />
@@ -46,7 +47,7 @@ export function DeviceRow({
               {entry.name || entry.address}
             </span>
             {isPaired && (
-              <Lock
+              <LockIcon
                 className="text-success h-4 w-4 shrink-0"
                 aria-label={t("connection.encrypted")}
               />

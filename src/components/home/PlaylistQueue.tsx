@@ -97,7 +97,7 @@ export function PlaylistQueue({
       // Scrollable regions must be keyboard-focusable.
       // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
       tabIndex={0}
-      className="border-border bg-background mt-3 max-h-44 overflow-y-auto rounded-lg border border-solid shadow-inner"
+      className="border-border bg-background inset-shadow-material mt-3 max-h-44 overflow-y-auto rounded-lg border border-solid"
     >
       <div
         ref={headerRef}

@@ -45,6 +45,18 @@ export interface LibraryBrowseWindow {
   loadedKeys: string[];
 }
 
+/** Exploration entries kept per device before the oldest is forgotten. */
+export const MAX_METADATA_SESSIONS = 20;
+
+/** Session scope owned by one metadata-exploration history entry. */
+export function libraryMetadataScope(
+  historyKey: string,
+  system: string | undefined,
+  tag: string | undefined,
+): string {
+  return `metadata:${historyKey}:${JSON.stringify([system, tag])}`;
+}
+
 export type LibraryBrowseWindowUpdater = (
   current: LibraryBrowseWindow | null,
 ) => LibraryBrowseWindow | null;
@@ -64,6 +76,9 @@ interface LibrarySessionState {
   browseWindows: Record<string, LibraryBrowseWindow>;
   selectedMedia: Record<string, LibraryMediaSelection>;
   metadataReturns: Record<string, { owner: string; entry: MediaBrowseEntry }>;
+  /** Exploration scopes, least recently visited first. */
+  metadataScopes: string[];
+  touchMetadataScope: (scope: string) => void;
   rememberMetadataReturn: (
     historyKey: string,
     owner: string,
@@ -108,17 +123,51 @@ const initialLibrarySessionState = {
   browseWindows: {},
   selectedMedia: {},
   metadataReturns: {},
+  metadataScopes: [] as string[],
 };
 
 export const useLibrarySessionStore = create<LibrarySessionState>()((set) => ({
   ...initialLibrarySessionState,
   rememberMetadataReturn: (historyKey, owner, entry) =>
-    set((state) => ({
-      metadataReturns: {
-        ...state.metadataReturns,
-        [historyKey]: { owner, entry },
-      },
-    })),
+    set((state) => {
+      // Re-inserting keeps key order least recently remembered first.
+      const metadataReturns = { ...state.metadataReturns };
+      delete metadataReturns[historyKey];
+      metadataReturns[historyKey] = { owner, entry };
+      const keys = Object.keys(metadataReturns);
+      for (const stale of keys.slice(
+        0,
+        Math.max(0, keys.length - MAX_METADATA_SESSIONS),
+      )) {
+        delete metadataReturns[stale];
+      }
+      return { metadataReturns };
+    }),
+  touchMetadataScope: (scope) => {
+    let evicted: string[] = [];
+    set((state) => {
+      if (state.metadataScopes.at(-1) === scope) return state;
+      const metadataScopes = [
+        ...state.metadataScopes.filter((known) => known !== scope),
+        scope,
+      ];
+      evicted = metadataScopes.splice(
+        0,
+        Math.max(0, metadataScopes.length - MAX_METADATA_SESSIONS),
+      );
+      if (evicted.length === 0) return { metadataScopes };
+      const searches = { ...state.searches };
+      const selectedMedia = { ...state.selectedMedia };
+      for (const stale of evicted) {
+        delete searches[stale];
+        delete selectedMedia[`search:${stale}`];
+      }
+      return { metadataScopes, searches, selectedMedia };
+    });
+    for (const stale of evicted) {
+      useTabSessionStore.getState().forgetScroll(librarySearchScrollKey(stale));
+    }
+  },
   forgetMetadataReturn: (historyKey, owner) =>
     set((state) => {
       if (state.metadataReturns[historyKey]?.owner !== owner) return state;
@@ -180,6 +229,7 @@ export const useLibrarySessionStore = create<LibrarySessionState>()((set) => ({
       browseWindows: {},
       selectedMedia: {},
       metadataReturns: {},
+      metadataScopes: [],
     }),
   activateDevice: (deviceAddress) =>
     set((state) =>

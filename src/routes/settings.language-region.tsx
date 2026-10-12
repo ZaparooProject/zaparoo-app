@@ -86,50 +86,36 @@ export function LanguageRegionSettings() {
         </h1>
       }
     >
-      <Card className="flex flex-col gap-5">
-        <div>
-          <label
-            htmlFor="settings-language"
-            className="mb-2 block text-sm font-medium"
-          >
-            {t("settings.languageRegion.appLanguage")}
-          </label>
-          <Select
-            id="settings-language"
-            value={selectedLanguage}
-            onChange={(event) => i18n.changeLanguage(event.target.value)}
-          >
-            {LANGUAGE_OPTIONS.map(({ value, label }) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </Select>
-        </div>
+      <Card className="flex flex-col gap-4">
+        <Select
+          id="settings-language"
+          label={t("settings.languageRegion.appLanguage")}
+          value={selectedLanguage}
+          onChange={(event) => i18n.changeLanguage(event.target.value)}
+        >
+          {LANGUAGE_OPTIONS.map(({ value, label }) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </Select>
 
-        <div>
-          <label
-            htmlFor="settings-system-names"
-            className="mb-2 block text-sm font-medium"
-          >
-            {t("settings.systemNames.label")}
-          </label>
-          <Select
-            id="settings-system-names"
-            value={systemNameRegion}
-            onChange={(event) =>
-              setSystemNameRegion(
-                event.target.value as SystemNameRegionPreference,
-              )
-            }
-          >
-            {SYSTEM_NAME_REGION_OPTIONS.map(({ value, labelKey }) => (
-              <option key={value} value={value}>
-                {t(labelKey)}
-              </option>
-            ))}
-          </Select>
-        </div>
+        <Select
+          id="settings-system-names"
+          label={t("settings.systemNames.label")}
+          value={systemNameRegion}
+          onChange={(event) =>
+            setSystemNameRegion(
+              event.target.value as SystemNameRegionPreference,
+            )
+          }
+        >
+          {SYSTEM_NAME_REGION_OPTIONS.map(({ value, labelKey }) => (
+            <option key={value} value={value}>
+              {t(labelKey)}
+            </option>
+          ))}
+        </Select>
       </Card>
     </PageFrame>
   );

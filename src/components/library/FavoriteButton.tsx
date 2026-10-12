@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import { Heart } from "lucide-react";
+import { HeartIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useMediaPreferences } from "@/components/library/useMediaPreferences";
 import type { MediaBrowseEntry, TagInfo } from "@/lib/models";
@@ -34,7 +34,9 @@ export function FavoriteButton(props: {
     <Button
       label={props.iconOnly ? undefined : (props.displayLabel ?? favoriteLabel)}
       aria-label={actionLabel}
-      icon={<Heart size={20} fill={flags.favorite ? "currentColor" : "none"} />}
+      icon={
+        <HeartIcon size={20} fill={flags.favorite ? "currentColor" : "none"} />
+      }
       variant={props.variant ?? "outline"}
       size={props.iconOnly ? "lg" : "default"}
       layout={props.layout}

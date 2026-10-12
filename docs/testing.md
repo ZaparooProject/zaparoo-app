@@ -316,27 +316,31 @@ it("should show error when API fails", async () => {
 
 ```typescript
 import { useStatusStore } from "@/lib/store";
+import { seedActiveDevice } from "@/test-utils/deviceRegistry";
 import { act } from "@testing-library/react";
 
-beforeEach(() => {
+beforeEach(async () => {
   // Reset store to initial state before each test
   useStatusStore.setState({
-    connected: false,
-    connectionState: ConnectionState.IDLE,
+    encryptionState: "unknown",
+    pairingRequired: false,
     // ... other initial values
   });
+  // Without a saved device the component always reports "not connected"
+  await seedActiveDevice({ address: "192.168.1.100" });
 });
 
 it("should update UI when connection state changes", async () => {
-  render(<ConnectionStatus />);
+  // `wrap` provides ConnectionContext; see ConnectionStatusDisplay.test.tsx
+  render(wrap(<ConnectionStatusDisplay />, { isConnected: true }));
 
-  expect(screen.getByText(/disconnected/i)).toBeInTheDocument();
+  expect(screen.getByText("connection.connectingToCore")).toBeInTheDocument();
 
   act(() => {
-    useStatusStore.getState().setConnected(true);
+    useStatusStore.setState({ encryptionState: "plaintext" });
   });
 
-  expect(screen.getByText(/connected/i)).toBeInTheDocument();
+  expect(screen.getByText("scan.connectedHeading")).toBeInTheDocument();
 });
 ```
 

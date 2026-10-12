@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSmartTabs } from "@/hooks/useSmartTabs";
+import { FALLBACK_CATEGORY } from "@/lib/systemFilters";
 import { TextInput } from "@/components/wui/TextInput";
 import { TabBar } from "@/components/wui/TabBar";
 import { getTabBarTabId } from "@/components/wui/tabBarIds";
@@ -77,7 +78,10 @@ export function SystemFilterControls(props: {
               },
               ...props.categories.map((category) => ({
                 value: category,
-                label: category,
+                label:
+                  category === FALLBACK_CATEGORY
+                    ? t("systemSelector.otherCategory")
+                    : category,
                 id: getTabBarTabId(category, props.tabIdPrefix),
               })),
             ]}

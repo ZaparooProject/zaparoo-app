@@ -1,7 +1,8 @@
 import type { ComponentType } from "react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@/test-utils";
+import toast from "react-hot-toast";
+import { act, render, screen, fireEvent, waitFor } from "@/test-utils";
 import { CoreAPI } from "@/lib/coreApi";
 
 type RouteComponent = ComponentType;
@@ -87,6 +88,10 @@ vi.mock("@/lib/store", async (importOriginal) => {
   };
 });
 
+vi.mock("react-hot-toast", () => ({
+  default: { error: vi.fn(), success: vi.fn() },
+}));
+
 // Mock hooks
 vi.mock("@/hooks/useSmartSwipe", () => ({
   useSmartSwipe: () => ({}),
@@ -152,6 +157,7 @@ describe("Settings Play Controls Route", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -187,12 +193,12 @@ describe("Settings Play Controls Route", () => {
   });
 
   describe("enabled toggle", () => {
-    it("should render the enabled toggle label", () => {
+    it("should render the enabled toggle label", async () => {
       renderComponent();
 
       expect(
-        screen.getByRole("button", {
-          name: "Help for settings.core.playtime.enabled",
+        await screen.findByRole("checkbox", {
+          name: "settings.core.playtime.enabled",
         }),
       ).toBeInTheDocument();
     });
@@ -215,13 +221,13 @@ describe("Settings Play Controls Route", () => {
         await screen.findByText("settings.core.launchGuard.title"),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("button", {
-          name: "Help for settings.core.launchGuard.enabled",
+        await screen.findByRole("checkbox", {
+          name: "settings.core.launchGuard.enabled",
         }),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("button", {
-          name: "Help for settings.core.launchGuard.requireConfirm",
+        await screen.findByRole("checkbox", {
+          name: "settings.core.launchGuard.requireConfirm",
         }),
       ).toBeInTheDocument();
       expect(
@@ -387,10 +393,67 @@ describe("Settings Play Controls Route", () => {
     it("should not persist unchanged synced limits", async () => {
       renderComponent();
 
+      vi.useFakeTimers({ shouldAdvanceTime: true });
       await screen.findByDisplayValue("2");
-      await new Promise((resolve) => setTimeout(resolve, 650));
+      await act(() => vi.advanceTimersByTimeAsync(650));
 
       expect(mockPlaytimeLimitsUpdate).not.toHaveBeenCalled();
+      expect(mockSettingsUpdate).not.toHaveBeenCalled();
+    });
+
+    it("should not save an emptied field as zero", async () => {
+      renderComponent();
+
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      fireEvent.change(await screen.findByDisplayValue("15"), {
+        target: { value: "" },
+      });
+      await act(() => vi.advanceTimersByTimeAsync(650));
+
+      expect(mockSettingsUpdate).not.toHaveBeenCalled();
+    });
+
+    it("should save a pending edit when the page is left", async () => {
+      const { unmount } = renderComponent();
+
+      fireEvent.change(await screen.findByDisplayValue("2"), {
+        target: { value: "3" },
+      });
+      unmount();
+
+      await waitFor(() => {
+        expect(mockPlaytimeLimitsUpdate).toHaveBeenCalledWith({ daily: "3h" });
+      });
+    });
+
+    it("should report a failed save and restore the saved value", async () => {
+      mockPlaytimeLimitsUpdate.mockRejectedValue(new Error("offline"));
+      renderComponent();
+
+      fireEvent.change(await screen.findByDisplayValue("2"), {
+        target: { value: "3" },
+      });
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith("settings.updateFailed");
+      });
+      expect(await screen.findByDisplayValue("2")).toBeInTheDocument();
+      expect(screen.queryByDisplayValue("3")).not.toBeInTheDocument();
+    });
+
+    it("should report a failed Core setting change", async () => {
+      mockSettingsUpdate.mockRejectedValue(new Error("offline"));
+      renderComponent();
+
+      fireEvent.click(
+        await screen.findByRole("checkbox", {
+          name: "settings.core.launchGuard.enabled",
+        }),
+      );
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith("settings.updateFailed");
+      });
     });
 
     it("should persist changed playtime limits", async () => {

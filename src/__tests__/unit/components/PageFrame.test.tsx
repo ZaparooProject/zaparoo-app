@@ -90,16 +90,6 @@ describe("PageFrame", () => {
     expect(screen.getByText("Left")).toBeInTheDocument();
     expect(screen.getByText("Center")).toBeInTheDocument();
     expect(screen.getByText("Right")).toBeInTheDocument();
-    expect(screen.getByTestId("header-left").parentElement).toHaveClass(
-      "mr-[12px]",
-      "md:mr-[16px]",
-    );
-    expect(screen.getByTestId("header-center").parentElement).not.toHaveClass(
-      "pl-[4px]",
-    );
-    expect(screen.getByTestId("header-right").parentElement).toHaveClass(
-      "ml-[4px]",
-    );
   });
 
   it("should render headerCenter with title styling", () => {
@@ -113,7 +103,6 @@ describe("PageFrame", () => {
 
     const heading = screen.getByRole("heading", { level: 1 });
     expect(heading).toBeInTheDocument();
-    expect(heading.parentElement).toHaveClass("pl-[4px]");
     expect(screen.getByText("Test Title")).toBeInTheDocument();
   });
 
@@ -547,17 +536,15 @@ describe("PageFrame", () => {
     expect(screen.getByRole("heading", { name: "Test Title" })).toBe(heading);
   });
 
-  it("should apply correct styles when header is not present", () => {
-    const { container } = render(
+  it("should render content without header chrome when no header is given", () => {
+    render(
       <PageFrame>
         <div>Test content</div>
       </PageFrame>,
     );
 
-    const scrollContainer = container.querySelector(".flex-1.overflow-y-auto");
-    expect(scrollContainer).toBeInTheDocument();
-    expect(scrollContainer).toHaveClass("page-frame-scroll");
-    expect(scrollContainer).not.toHaveClass("page-frame-scroll-with-header");
+    expect(screen.queryByRole("heading")).not.toBeInTheDocument();
+    expect(screen.getByText("Test content")).toBeVisible();
   });
 
   it("should handle empty header components gracefully", () => {

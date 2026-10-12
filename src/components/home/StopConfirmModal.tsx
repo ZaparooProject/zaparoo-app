@@ -38,9 +38,7 @@ export function StopConfirmModal({
         />
       }
     >
-      <div className="p-4">
-        <p className="text-center">{description ?? t("stopPlaying")}</p>
-      </div>
+      <p className="py-4 text-center">{description ?? t("stopPlaying")}</p>
     </SlideModal>
   );
 }

@@ -4,6 +4,7 @@ import { CopyButton } from "@/components/CopyButton";
 import { HistoryListRow } from "@/components/HistoryListRow";
 import { PlayIcon } from "@/lib/images";
 import type { HistoryResponseEntry } from "@/lib/models";
+import { formatAppDateTime } from "@/lib/formatDate";
 
 function ScanHistoryRow({
   item,
@@ -48,7 +49,7 @@ function ScanHistoryRow({
               <span aria-hidden="true">·</span>
             </>
           )}
-          <span>{new Date(item.time).toLocaleString()}</span>
+          <span>{formatAppDateTime(item.time)}</span>
         </div>
       }
       details={

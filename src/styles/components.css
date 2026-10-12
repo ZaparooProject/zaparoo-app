@@ -6,7 +6,13 @@
     --button-depth: 4px;
     --button-hover-travel: 2px;
     --button-hover-edge: 2px;
+    --button-pressed-shadow:
+      0 0 0 var(--button-edge), 0 2px 4px var(--material-shadow),
+      inset 0 1px 0 var(--pressed-highlight);
+    border: 1px solid transparent;
     border-radius: 4px;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -21,26 +27,23 @@
     border-radius: 50%;
   }
   .wui-button[data-variant="fill"],
-  .site-button-primary,
   .zaparoo-tour-step .shepherd-button {
-    --button-edge: #005599;
+    --button-edge: var(--cap-primary-edge);
     --button-highlight: rgb(255 255 255 / 30%);
-    color: #ffffff;
-    border: 1px solid transparent;
-    background: linear-gradient(180deg, #3cb0ff 0%, #0090fe 50%, #0070cc 100%);
+    color: var(--cap-ink);
+    background: var(--cap-primary);
     /* White labels need a dark halo against the bright cap. */
     text-shadow:
-      0 -1px 0 #005599,
-      0 1px 0 #005599,
-      -1px 0 0 #005599,
-      1px 0 0 #005599;
+      0 -1px 0 var(--cap-primary-edge),
+      0 1px 0 var(--cap-primary-edge),
+      -1px 0 0 var(--cap-primary-edge),
+      1px 0 0 var(--cap-primary-edge);
   }
   .wui-button[data-variant="secondary"],
-  .site-button-secondary,
   .zaparoo-tour-step .shepherd-button.shepherd-button-secondary {
     --button-edge: var(--secondary-edge);
-    --button-highlight: rgb(255 255 255 / 10%);
-    border: 1px solid var(--edge-default);
+    --button-highlight: var(--pressed-highlight);
+    border-color: var(--edge-default);
     color: var(--text-primary);
     background: linear-gradient(
       180deg,
@@ -63,30 +66,22 @@
     text-shadow: 0 1px 0 rgb(255 255 255 / 10%);
   }
   /* Pro/support actions use the arcade gold cap; gold needs a dark label. */
-  .wui-button[data-variant="fill"][data-intent="pro"],
-  .site-button-pro {
-    --button-edge: #9a6a00;
+  .wui-button[data-variant="fill"][data-intent="pro"] {
+    --button-edge: var(--cap-pro-edge);
     --button-highlight: rgb(255 255 255 / 45%);
-    color: #2a1c00;
-    border: 1px solid transparent;
-    background: linear-gradient(180deg, #ffd980 0%, #f5b418 50%, #dc9a00 100%);
+    color: var(--cap-pro-ink);
+    background: var(--cap-pro);
     text-shadow: 0 1px 0 rgb(255 255 255 / 35%);
   }
-  .wui-button[data-variant="fill"][data-intent="destructive"],
-  .site-button-destructive {
-    --button-edge: #a11b1b;
+  .wui-button[data-variant="fill"][data-intent="destructive"] {
+    --button-edge: var(--cap-destructive-edge);
     --button-highlight: rgb(255 255 255 / 30%);
-    color: #ffffff;
-    border: 1px solid transparent;
-    background: linear-gradient(180deg, #da3838 0%, #cf3030 50%, #c62828 100%);
-    text-shadow: 0 -1px 0 rgb(0 0 0 / 30%);
+    color: var(--cap-ink);
+    background: var(--cap-destructive);
+    text-shadow: 0 -1px 0 var(--cap-destructive-edge);
   }
   .wui-button:not(:where([data-variant="text"], [data-variant="ghost"])),
-  .site-button-primary,
-  .site-button-secondary,
   .site-button-outline,
-  .site-button-destructive,
-  .site-button-pro,
   .zaparoo-tour-step .shepherd-button {
     margin-bottom: var(--button-depth);
     box-shadow:
@@ -122,10 +117,10 @@
     color: var(--status-red);
     border-color: var(--status-red);
   }
-  .wui-button:is(
-      [data-variant="text"],
-      [data-variant="ghost"]
-    )[data-intent="destructive"] {
+  .wui-button:is([data-variant="text"], [data-variant="ghost"]):is(
+      [data-intent="destructive"],
+      [data-intent="pro"]
+    ) {
     border-color: transparent;
   }
   .wui-button:is([data-variant="text"], [data-variant="ghost"]):not(
@@ -171,10 +166,13 @@
     ),
   .zaparoo-tour-step .shepherd-button:not(:disabled):active {
     transform: translateY(var(--button-depth));
-    box-shadow:
-      0 0 0 var(--button-edge),
-      0 2px 4px var(--material-shadow),
-      inset 0 1px 0 rgb(255 255 255 / 10%);
+    box-shadow: var(--button-pressed-shadow);
+  }
+  /* Two related actions: equal columns while they fit, stacked when narrow. */
+  .wui-action-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+    gap: 0.5rem;
   }
   /* Reader controls behave like illuminated, latched physical switches. */
   .wui-reader-button-shell {
@@ -204,15 +202,15 @@
   .wui-reader-button-shell > .wui-button[data-reader-state="attention"]::before,
   .wui-reader-action[data-reader-state="attention"]::before {
     box-shadow:
-      0 0 6px 2px rgb(255 217 128 / 90%),
-      0 0 10px 3px rgb(245 180 24 / 55%);
+      0 0 6px 2px color-mix(in srgb, var(--status-yellow) 90%, transparent),
+      0 0 10px 3px color-mix(in srgb, var(--status-yellow) 55%, transparent);
     animation: reader-button-attention 1.65s ease-out infinite;
   }
   .wui-reader-button-shell > .wui-button[data-reader-state="error"]::before,
   .wui-reader-action[data-reader-state="error"]::before {
     box-shadow:
-      0 0 6px 2px rgb(218 56 56 / 75%),
-      0 0 10px 3px rgb(198 40 40 / 38%);
+      0 0 6px 2px color-mix(in srgb, var(--status-red) 75%, transparent),
+      0 0 10px 3px color-mix(in srgb, var(--status-red) 38%, transparent);
     opacity: 0.82;
   }
   .wui-reader-button-shell > .wui-button {
@@ -223,10 +221,7 @@
       :where([data-variant="text"], [data-variant="ghost"])
     ) {
     transform: translateY(var(--button-depth));
-    box-shadow:
-      0 0 0 var(--button-edge),
-      0 2px 4px var(--material-shadow),
-      inset 0 1px 0 rgb(255 255 255 / 10%);
+    box-shadow: var(--button-pressed-shadow);
   }
   .wui-reader-action {
     position: relative;
@@ -274,85 +269,9 @@
       opacity: 0.35;
     }
   }
-  /* Canonical circular icon action, shared with Zaparoo Online. */
-  .wui-circle-button {
-    --circle-edge: #005599;
-    --circle-highlight: rgb(255 255 255 / 30%);
-    display: inline-flex;
-    width: 3rem;
-    min-width: 3rem;
-    height: 3rem;
-    min-height: 3rem;
-    margin-bottom: 4px;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid transparent;
-    border-radius: 50%;
-    color: #ffffff;
-    background: linear-gradient(180deg, #3cb0ff 0%, #0090fe 50%, #0070cc 100%);
-    box-shadow:
-      0 4px 0 var(--circle-edge),
-      0 6px 10px var(--material-shadow),
-      inset 0 1px 0 var(--circle-highlight);
-    text-shadow: 0 -1px 0 rgb(0 0 0 / 30%);
-    transform: translateY(0);
-    transition:
-      transform 100ms ease-in-out,
-      box-shadow 100ms ease-in-out;
-  }
-  .wui-circle-button[data-variant="secondary"] {
-    --circle-edge: var(--surface-raised);
-    --circle-highlight: rgb(255 255 255 / 10%);
-    color: var(--text-primary);
-    border-color: var(--surface-highlight);
-    background: linear-gradient(
-      180deg,
-      var(--surface-highlight) 0%,
-      var(--surface-raised) 50%,
-      var(--surface-inset) 100%
-    );
-    text-shadow: 0 1px 0 rgb(255 255 255 / 10%);
-  }
-  .wui-circle-button[data-variant="destructive"] {
-    --circle-edge: #a11b1b;
-    color: #ffffff;
-    background: linear-gradient(180deg, #da3838 0%, #cf3030 50%, #c62828 100%);
-    text-shadow: 0 -1px 0 rgb(0 0 0 / 30%);
-  }
-  .wui-circle-button[data-variant="pro"] {
-    --circle-edge: #9a6a00;
-    --circle-highlight: rgb(255 255 255 / 45%);
-    color: #2a1c00;
-    background: linear-gradient(180deg, #ffd980 0%, #f5b418 50%, #dc9a00 100%);
-    text-shadow: 0 1px 0 rgb(255 255 255 / 35%);
-  }
-  .wui-circle-button:focus-visible {
-    outline: 2px solid var(--interaction);
-    outline-offset: 2px;
-  }
-  @media (hover: hover) and (pointer: fine) {
-    .wui-circle-button:not(:disabled):hover {
-      transform: translateY(2px);
-      box-shadow:
-        0 2px 0 var(--circle-edge),
-        0 4px 6px var(--material-shadow),
-        inset 0 1px 0 var(--circle-highlight);
-    }
-  }
-  .wui-circle-button:not(:disabled):is(:active, [data-pressed="true"]) {
-    transform: translateY(4px);
-    box-shadow:
-      0 0 0 var(--circle-edge),
-      0 2px 4px var(--material-shadow),
-      inset 0 1px 0 rgb(255 255 255 / 10%);
-  }
-  .wui-circle-button:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-  }
   /* Full width means "fill the column" on phones; desktop columns are wider
      than any single action needs, so cap and center instead of stretching. */
-  @media (min-width: 48rem) {
+  @media (min-width: 760px) {
     .wui-button.w-full,
     .site-button.w-full,
     .wui-reader-button-shell,
@@ -448,9 +367,7 @@
   .wui-playlist-item[aria-current="true"] {
     color: var(--interaction);
     background: var(--interaction-wash);
-    box-shadow:
-      inset 0 1px 3px var(--material-shadow),
-      inset 3px 0 0 var(--interaction);
+    box-shadow: inset 0 1px 3px var(--material-shadow);
     font-weight: 600;
   }
   .wui-playlist-item[aria-current="true"] > :first-child {
@@ -485,6 +402,7 @@
     transform: none;
   }
   .wui-card {
+    border-color: var(--edge-subtle);
     border-radius: 8px;
     background-image: linear-gradient(
       180deg,
@@ -505,26 +423,20 @@
     border-color: var(--edge-strong);
     box-shadow: inset 0 2px 5px var(--material-shadow);
   }
-  :is(
-    .wui-card[data-disabled="true"][data-interactive="true"],
-    .wui-disabled-inset
-  ) {
+  .wui-card[data-disabled="true"][data-interactive="true"] {
     border-color: var(--edge-subtle);
     background: var(--surface-inset);
     box-shadow: inset 0 2px 5px var(--material-shadow);
     transform: translateY(1px);
     opacity: 1;
   }
-  :is(
-      .wui-card[data-disabled="true"][data-interactive="true"],
-      .wui-disabled-inset
-    )
-    > * {
-    opacity: 0.45;
+  .wui-card[data-disabled="true"][data-interactive="true"] > * {
+    opacity: 0.5;
   }
   .wui-input {
     min-width: 0;
     background: var(--surface-inset);
+    border-color: var(--edge-default);
     border-radius: 4px;
     color: var(--text-primary);
     box-shadow: inset 0 1px 3px var(--material-shadow);
@@ -546,6 +458,10 @@
   }
   .wui-input[aria-invalid="true"] {
     border-color: var(--status-red);
+  }
+  .wui-input:disabled {
+    border-color: var(--text-muted);
+    color: var(--text-muted);
   }
   .wui-editor > textarea {
     border-radius: 4px 4px 0 0;
@@ -651,9 +567,11 @@
     overflow-wrap: anywhere;
     cursor: pointer;
   }
-  .page-parent-link:hover {
-    color: var(--text-primary);
-    text-decoration: underline;
+  @media (hover: hover) and (pointer: fine) {
+    .page-parent-link:hover {
+      color: var(--text-primary);
+      text-decoration: underline;
+    }
   }
   .page-parent-link:focus-visible {
     outline: 2px solid var(--interaction);
@@ -745,21 +663,18 @@
   /* Persistent app navigation adapts the shared elevated header material. */
   .bottom-nav-shell {
     min-height: calc(
-      var(--bottom-nav-base-height) + var(--bottom-nav-safe-inset)
+      var(--bottom-nav-base-height) + var(--app-safe-bottom, 0px)
     );
-    padding-bottom: var(--bottom-nav-safe-inset);
+    padding-bottom: var(--app-safe-bottom, 0px);
     background: var(--surface-raised);
     border-top: 1px solid var(--edge-default);
     box-shadow: inset 0 1px 0 var(--material-highlight);
   }
-  .app-navigation-items,
   .app-navigation-grid {
     /* Keep normal dock geometry while allowing translated/zoomed labels to grow. */
     min-height: calc(var(--bottom-nav-base-height) - 1px);
-  }
-  .app-navigation-grid {
-    padding-right: calc(8px + var(--app-navigation-safe-right, 0px));
-    padding-left: calc(8px + var(--app-navigation-safe-left, 0px));
+    padding-right: calc(8px + var(--app-safe-right, 0px));
+    padding-left: calc(8px + var(--app-safe-left, 0px));
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 4px;
   }
@@ -776,11 +691,11 @@
     flex-direction: column;
   }
   .wui-modal-action-rail,
-  .library-media-tag-row {
+  .library-detail-row {
     display: flex;
     flex-direction: column;
   }
-  .library-media-tag-row {
+  .library-detail-row {
     gap: 0.5rem;
   }
   @media (min-width: 640px) {
@@ -788,7 +703,7 @@
       display: grid;
       grid-template-columns: minmax(0, auto) minmax(12rem, 1fr);
     }
-    .library-media-tag-row {
+    .library-detail-row {
       flex-direction: row;
       align-items: flex-start;
       gap: 0.75rem;
@@ -813,7 +728,7 @@
   .page-frame-scroll-with-header {
     padding-top: calc(var(--page-header-overlay-height, 57px) + 1.25rem);
   }
-  @media (max-width: 767px) {
+  @media (max-width: 759px) {
     .online-settings-page > .page-frame-scroll-with-header {
       padding-top: calc(var(--page-header-overlay-height, 57px) + 1rem);
       padding-bottom: calc(var(--app-footer-overlay-height, 64px) + 1rem);
@@ -863,59 +778,9 @@
       background: var(--surface-highlight);
     }
   }
-  @media (min-width: 48rem) {
+  @media (min-width: 760px) {
     .page-frame-scroll {
-      padding-bottom: calc(var(--app-footer-overlay-clearance, 92px) + 0.5rem);
       scrollbar-gutter: stable both-edges;
-    }
-    .page-frame-scroll-with-header {
-      padding-top: calc(var(--page-header-overlay-clearance, 92px) + 0.5rem);
-    }
-    .page-header-shell {
-      padding-right: calc(
-        1rem +
-          var(--page-content-safe-right, var(--page-header-safe-right, 0px))
-      );
-      padding-left: calc(
-        1rem + var(--page-content-safe-left, var(--page-header-safe-left, 0px))
-      );
-      background: transparent;
-      border-bottom: 0;
-      box-shadow: none;
-    }
-    .page-header-surface {
-      display: flex;
-      min-height: 68px;
-      margin-top: 0.75rem;
-      align-items: center;
-      pointer-events: auto;
-    }
-    .page-header-surface > * {
-      width: 100%;
-    }
-    .page-header-content {
-      padding-right: 4px;
-      padding-left: 8px;
-    }
-    .bottom-nav-shell {
-      --bottom-nav-base-height: max(80px, 5rem);
-      padding: 0 1rem calc(var(--bottom-nav-safe-inset) + 0.75rem);
-      background: transparent;
-      border-top: 0;
-      box-shadow: none;
-    }
-    .bottom-nav-surface {
-      width: fit-content;
-    }
-    :is(.page-header-surface, .bottom-nav-surface) {
-      max-width: 42rem;
-      margin-inline: auto;
-      border-radius: 8px;
-      background: var(--surface-raised);
-      box-shadow:
-        0 4px 0 var(--surface-base),
-        0 6px 12px var(--material-shadow),
-        inset 0 1px 0 var(--material-highlight);
     }
   }
   :root,
@@ -924,6 +789,11 @@
   }
   .app-global-reader-strip {
     left: 0;
+    /* The desktop sidebar already covers the left inset. */
+    padding-right: calc(1rem + var(--app-safe-right, 0px));
+    padding-left: calc(
+      1rem + max(0px, var(--app-safe-left, 0px) - var(--app-navigation-width))
+    );
   }
   .page-frame-support {
     display: contents;
@@ -941,7 +811,7 @@
   .zap-workspace {
     display: flex;
     width: 100%;
-    max-width: 672px;
+    max-width: var(--content-bound);
     margin-inline: auto;
     flex-direction: column;
     gap: 1.25rem;
@@ -1005,7 +875,7 @@
     }
     .page-frame-content-wide-header:not(.page-frame-workspace)
       .page-header-surface {
-      max-width: 42rem;
+      max-width: var(--content-bound);
       margin-inline: auto;
     }
     .page-header-content-row {
@@ -1044,6 +914,13 @@
     .zap-scan-tile {
       min-height: 10rem;
       aspect-ratio: 1;
+    }
+    /* A contextual write spans the column instead of the 20rem action cap. */
+    .zap-write-activity .wui-reader-button-shell,
+    .zap-write-activity .wui-reader-actions {
+      width: 100%;
+      max-width: none;
+      margin-inline: 0;
     }
     .zap-playback {
       order: 0;
@@ -1112,17 +989,14 @@
     }
   }
 
-  .library-details-panel .wui-modal-action-rail,
-  .library-details-panel .library-media-tag-row {
-    display: flex;
+  .library-details-panel .library-detail-row {
     flex-direction: column;
-  }
-  .library-details-panel .library-media-tag-row {
     gap: 0.5rem;
   }
+  /* Selected rows read as pressed in, like the active dock tab: no colour. */
   .library-browse-row[aria-current="true"] {
     background: var(--surface-inset);
-    box-shadow: inset 3px 0 0 var(--interaction);
+    box-shadow: inset 0 1px 3px var(--material-shadow);
   }
   .app-sidebar[hidden] {
     display: none;
@@ -1130,15 +1004,15 @@
   .app-sidebar {
     position: fixed;
     inset: 0 auto 0 0;
-    z-index: 50;
+    /* Above page chrome and the reader strip, below the modal scrim (40). */
+    z-index: 35;
     display: flex;
     flex-direction: column;
     width: min(calc(256px + var(--app-safe-left, 0px)), 100vw);
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: calc(1rem + var(--app-navigation-safe-top, 0px)) 0
-      calc(1rem + var(--bottom-nav-safe-inset, 0px))
-      var(--app-navigation-safe-left, 0px);
+    padding: calc(1rem + var(--app-safe-top, 0px)) 0
+      calc(1rem + var(--app-safe-bottom, 0px)) var(--app-safe-left, 0px);
     color: var(--text-primary);
     background: var(--surface-raised);
     border-right: 1px solid var(--edge-default);
@@ -1209,11 +1083,11 @@
     font-size: 0.875rem;
     font-weight: 500;
   }
-  .sidebar-root-link[aria-current="page"],
-  .sidebar-child-link[aria-current="page"] {
+  .sidebar-root-link[aria-current],
+  .sidebar-child-link[aria-current] {
     color: var(--text-primary);
   }
-  .sidebar-child-link[aria-current="page"] {
+  .sidebar-child-link[aria-current] {
     font-weight: 600;
   }
   @media (hover: hover) and (pointer: fine) {
@@ -1230,6 +1104,12 @@
     outline: 2px solid var(--interaction);
     outline-offset: -2px;
   }
+  .sidebar-child-link[aria-disabled="true"],
+  .sidebar-child-link[aria-disabled="true"]:hover {
+    color: var(--text-muted);
+    background: transparent;
+    cursor: not-allowed;
+  }
   .sidebar-device-status {
     margin-top: auto;
     padding: 1rem 1rem 0;
@@ -1239,13 +1119,14 @@
   .app-navigation-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 40;
+    z-index: 34;
     background: rgb(0 0 0 / 60%);
     pointer-events: auto;
   }
   .app-tablet-bar {
     position: fixed;
     inset: 0 0 auto;
+    z-index: 30;
     display: flex;
     min-height: var(--app-navigation-top);
     align-items: center;
@@ -1317,8 +1198,11 @@
       --app-navigation-width: calc(256px + var(--app-safe-left, 0px));
       --app-navigation-top: 0px;
     }
-    .adaptive-app-main {
+    .adaptive-app-main,
+    .app-connection-status {
       --page-content-safe-left: 0px;
+    }
+    .adaptive-app-main {
       width: calc(100% - var(--app-navigation-width));
       margin-left: var(--app-navigation-width);
     }
@@ -1370,7 +1254,7 @@
     }
     .library-collection-links {
       flex: 1 1 20rem;
-      max-width: 42rem;
+      max-width: var(--content-bound);
     }
     .library-collections:not(.library-collections-with-decks)
       .library-collection-links {
@@ -1389,7 +1273,7 @@
   }
   .library-search-filters {
     width: 100%;
-    max-width: 42rem;
+    max-width: var(--content-bound);
     align-self: center;
   }
   .library-search-results,
@@ -1408,13 +1292,13 @@
   .deck-edit-form,
   .deck-description {
     width: 100%;
-    max-width: 42rem;
+    max-width: var(--content-bound);
   }
   .deck-context,
   .deck-items {
     display: contents;
   }
-  @media (min-width: 768px) {
+  @media (min-width: 760px) {
     .library-search-filter-selectors {
       flex-direction: row;
     }
@@ -1430,7 +1314,7 @@
     .library-search-filters,
     .deck-context {
       flex: 1 1 20rem;
-      max-width: 42rem;
+      max-width: var(--content-bound);
       align-self: auto;
     }
     .library-search-results,
@@ -1452,21 +1336,6 @@
     flex-wrap: wrap;
     overflow-wrap: anywhere;
   }
-  .playtime-status > div > div {
-    flex-wrap: wrap;
-    column-gap: 0.5rem;
-  }
-  .playtime-status > div > div > span {
-    max-width: 100%;
-    overflow-wrap: anywhere;
-  }
-  .settings-play-main fieldset {
-    min-width: 0;
-  }
-  .settings-play-main fieldset :is(label, legend),
-  .settings-play-main h2 {
-    overflow-wrap: anywhere;
-  }
   .media-search-workspace {
     display: flex;
     min-height: 0;
@@ -1475,7 +1344,7 @@
   .media-search-filters {
     width: 100%;
     min-width: 0;
-    max-width: 42rem;
+    max-width: var(--content-bound);
     margin-inline: auto;
   }
   .media-search-results {
@@ -1518,7 +1387,7 @@
   .nfc-workspace {
     display: flex;
     width: 100%;
-    max-width: 672px;
+    max-width: var(--content-bound);
     margin-inline: auto;
     flex-direction: column;
   }
@@ -1546,7 +1415,7 @@
     flex-direction: column;
     gap: 1rem;
   }
-  @media (min-width: 768px) {
+  @media (min-width: 760px) {
     .create-search-filter-selectors {
       flex-direction: row;
     }
@@ -1555,7 +1424,7 @@
     .create-overview-page .page-header-surface,
     .create-search-page .page-header-surface,
     .nfc-workspace-page .page-header-surface {
-      max-width: 672px;
+      max-width: var(--content-bound);
       margin-inline: auto;
     }
     .mapping-list-toolbar {
@@ -1606,17 +1475,20 @@
     }
   }
   .settings-panel-stack,
-  .settings-panel-layout {
+  .settings-panel-layout,
+  .settings-overview {
     display: flex;
     width: 100%;
-    max-width: 672px;
+    max-width: var(--content-bound);
     margin-inline: auto;
     flex-direction: column;
     gap: 1.25rem;
   }
   .settings-play-main,
   .settings-online-device,
-  .settings-online-account {
+  .settings-online-account,
+  .settings-overview-context,
+  .settings-overview-destinations {
     display: flex;
     min-width: 0;
     flex-direction: column;
@@ -1629,25 +1501,10 @@
     .settings-play-profiles {
     display: none;
   }
-  .settings-overview {
-    display: flex;
-    width: 100%;
-    max-width: 672px;
-    margin-inline: auto;
-    flex-direction: column;
-    gap: 1.25rem;
-  }
-  .settings-overview-context,
-  .settings-overview-destinations {
-    display: flex;
-    min-width: 0;
-    flex-direction: column;
-    gap: 1.25rem;
-  }
   @media (min-width: 760px) {
     .settings-overview-page .page-header-surface,
     .settings-panel-page .page-header-surface {
-      max-width: 672px;
+      max-width: var(--content-bound);
       margin-inline: auto;
     }
   }
@@ -1723,11 +1580,10 @@
     font-size: 0.875rem;
     font-weight: 500;
   }
-  .settings-nav-row > :last-child {
-    flex-shrink: 0;
-  }
-  .settings-nav-row:hover {
-    background: var(--surface-highlight);
+  @media (hover: hover) and (pointer: fine) {
+    .settings-nav-row:hover {
+      background: var(--surface-highlight);
+    }
   }
   .settings-nav-row:focus-visible {
     outline: 2px solid var(--interaction);
@@ -1735,7 +1591,6 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .wui-button,
-    .wui-circle-button,
     .site-button,
     .wui-toggle-thumb,
     .wui-card,

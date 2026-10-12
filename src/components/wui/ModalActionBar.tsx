@@ -14,8 +14,10 @@ export function ModalActionBar({
     secondaryAction === undefined ||
     secondaryAction === false
   ) {
+    // A lone action matches a standalone full-width button: capped and
+    // centered from the md breakpoint rather than spanning the dialog.
     return (
-      <div className="[&>*]:min-h-12 [&>*]:w-full [&>*]:max-w-none">
+      <div className="[&>*]:min-h-12 [&>*]:w-full md:[&>*]:mx-auto md:[&>*]:max-w-[20rem]">
         {primaryAction}
       </div>
     );

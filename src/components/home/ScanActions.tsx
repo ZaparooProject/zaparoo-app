@@ -1,6 +1,6 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Camera, NfcIcon } from "lucide-react";
+import { CameraIcon, NfcIcon } from "@/lib/images";
 import { Button } from "@/components/wui/Button";
 import { Card } from "@/components/wui/Card";
 import { EmptyState } from "@/components/wui/EmptyState";
@@ -94,7 +94,7 @@ export function ScanActions({
               ? "zap-scan-tile w-full max-w-none"
               : "min-h-[4.5rem] w-full"
           }
-          icon={<Camera size={24} />}
+          icon={<CameraIcon size={24} />}
           label={t("scan.scanCode")}
           aria-label={t("scan.scanCode")}
           // A camera sheet over a live NFC session would fight it for the tag.

@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import userEvent from "@testing-library/user-event";
+import { QueryClient } from "@tanstack/react-query";
 import {
   act,
+  createProvidersWithQueryClient,
   mockDeviceRecord,
   render,
   screen,
@@ -14,6 +16,7 @@ import { CoreAPI } from "@/lib/coreApi";
 import { ConnectionState, useStatusStore } from "@/lib/store";
 import { useTabSessionStore } from "@/lib/tabSessionStore";
 import { deviceRegistry } from "@/lib/devices/deviceRegistry";
+import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 
 vi.mock("@/lib/coreApi", () => ({
   CoreAPI: {
@@ -27,6 +30,10 @@ vi.mock("@/lib/coreApi", () => ({
   isMediaOperationConflictError: (error: unknown) =>
     error instanceof Error &&
     error.message.toLowerCase().includes("optimization in progress"),
+}));
+
+vi.mock("@/lib/toastUtils", () => ({
+  showRateLimitedErrorToast: vi.fn(),
 }));
 
 vi.mock("react-i18next", () => ({
@@ -541,12 +548,91 @@ describe("MediaScrapeCard", () => {
     await waitFor(() => expect(button).not.toBeDisabled());
     await user.click(button);
 
-    expect(await screen.findByText("error")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(showRateLimitedErrorToast).toHaveBeenCalledWith("error");
+    });
+    expect(screen.queryByText("error")).not.toBeInTheDocument();
     await waitFor(() => {
       expect(
         screen.getByRole("button", { name: "settings.scrapeMedia" }),
       ).not.toBeDisabled();
     });
+  });
+
+  it("should report a failed cancel and let the user try again", async () => {
+    const user = userEvent.setup();
+    vi.mocked(CoreAPI.mediaScrapeStatus).mockResolvedValue({
+      scraperId: "gamelist.xml",
+      systemId: "snes",
+      processed: 1,
+      total: 2,
+      matched: 1,
+      skipped: 0,
+      totalScraped: 12,
+      scraping: true,
+      done: false,
+      paused: false,
+    });
+    vi.mocked(CoreAPI.mediaScrapeCancel).mockRejectedValueOnce(
+      new Error("cancel timed out"),
+    );
+
+    render(<MediaScrapeCard />);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "settings.scrapeMedia.cancel",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(showRateLimitedErrorToast).toHaveBeenCalledWith("error");
+    });
+    expect(
+      screen.getByRole("button", { name: "settings.scrapeMedia.cancel" }),
+    ).toBeEnabled();
+  });
+
+  it("should not resurrect a finished scrape from a cached status", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const wrapper = createProvidersWithQueryClient(queryClient);
+    vi.mocked(CoreAPI.mediaScrapeStatus).mockResolvedValueOnce({
+      scraperId: "gamelist.xml",
+      systemId: "snes",
+      processed: 1,
+      total: 2,
+      matched: 1,
+      skipped: 0,
+      totalScraped: 12,
+      scraping: true,
+      done: false,
+      paused: false,
+    });
+
+    const view = render(<MediaScrapeCard />, { wrapper } as never);
+    await screen.findByRole("button", { name: "settings.scrapeMedia.cancel" });
+    view.unmount();
+
+    // The run ended while the page was closed, and Core is slow to answer.
+    act(() => useStatusStore.getState().setScrapingStatus(null));
+    vi.mocked(CoreAPI.mediaScrapeStatus).mockImplementationOnce(
+      () => new Promise(() => {}),
+    );
+
+    render(<MediaScrapeCard />, { wrapper } as never);
+
+    expect(
+      await screen.findByRole("button", { name: "settings.scrapeMedia" }),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(CoreAPI.mediaScrapeStatus).toHaveBeenCalledTimes(2);
+    });
+    expect(useStatusStore.getState().scrapingStatus).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "settings.scrapeMedia.cancel" }),
+    ).not.toBeInTheDocument();
   });
 
   it("should keep the form visible when showing completed scrape stats", async () => {

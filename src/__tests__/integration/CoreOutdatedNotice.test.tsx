@@ -43,6 +43,24 @@ describe("CoreOutdatedNotice", () => {
     ).toBeInTheDocument();
   });
 
+  it("should announce the notice politely rather than as an alert", () => {
+    render(<CoreOutdatedNotice />);
+
+    const notice = screen
+      .getAllByRole("status")
+      .find((element) =>
+        element.textContent?.includes("settings.coreOutdated.title"),
+      );
+    expect(notice).toBeDefined();
+    expect(
+      screen
+        .queryAllByRole("alert")
+        .some((element) =>
+          element.textContent?.includes("settings.coreOutdated.title"),
+        ),
+    ).toBe(false);
+  });
+
   it("should list unavailable features in the notice", () => {
     render(<CoreOutdatedNotice />);
     expect(screen.getByText("features.testFeatureA")).toBeInTheDocument();

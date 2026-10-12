@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { SlideModal } from "@/components/SlideModal";
 import { Button } from "@/components/wui/Button";
+import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { RunQueueItem } from "@/lib/store";
 
 export function DeepLinkConfirmModal(props: {
@@ -21,20 +22,22 @@ export function DeepLinkConfirmModal(props: {
       title={t("deepLinks.confirmTitle")}
       fixedHeight="auto"
       footer={
-        <div className="flex gap-3">
-          <Button
-            variant="secondary"
-            label={t("nav.cancel")}
-            onClick={props.onCancel}
-            className="flex-1"
-          />
-          <Button
-            label={t("deepLinks.confirmRun")}
-            onClick={props.onConfirm}
-            intent="primary"
-            className="flex-1"
-          />
-        </div>
+        <ModalActionBar
+          secondaryAction={
+            <Button
+              variant="secondary"
+              label={t("nav.cancel")}
+              onClick={props.onCancel}
+            />
+          }
+          primaryAction={
+            <Button
+              label={t("deepLinks.confirmRun")}
+              onClick={props.onConfirm}
+              intent="primary"
+            />
+          }
+        />
       }
     >
       <div className="flex flex-col gap-4 py-4">

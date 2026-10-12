@@ -22,7 +22,7 @@ export function NowPlayingPreferences(props: {
     <div
       role="group"
       aria-label={t("scan.mediaPreferences")}
-      className="mt-auto flex gap-1 overflow-x-auto overscroll-x-contain"
+      className="relative mt-auto flex gap-1 overflow-x-auto overscroll-x-contain"
     >
       <MediaPreferenceActions
         entry={entry}

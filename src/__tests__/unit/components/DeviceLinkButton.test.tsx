@@ -94,9 +94,12 @@ describe("DeviceLinkButton", () => {
 
     render(<DeviceLinkButton enabled />);
 
-    expect(
-      screen.getByRole("button", { name: "online.deviceLink.checking" }),
-    ).toBeDisabled();
+    const checking = screen.getByRole("button", {
+      name: "online.deviceLink.checking",
+    });
+    expect(checking).toBeDisabled();
+    // In-flight work keeps the raised face; it is not a missing prerequisite.
+    expect(checking).toHaveAttribute("data-disabled-appearance", "busy");
   });
 
   it("should hide inactive linking and explain unsupported Core", () => {
@@ -105,9 +108,12 @@ describe("DeviceLinkButton", () => {
 
     useStatusStore.setState({ coreVersion: "2.15.9" });
     rerender(<DeviceLinkButton enabled />);
+    // An unmet Core requirement is information, not an action that looks
+    // like it might become pressable.
     expect(
-      screen.getByRole("button", { name: "online.deviceLink.updateCore" }),
-    ).toBeDisabled();
+      screen.getByText("online.deviceLink.updateCore"),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
   it("should report device link state changes", () => {

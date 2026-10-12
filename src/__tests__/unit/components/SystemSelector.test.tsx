@@ -292,6 +292,10 @@ describe("SystemSelector", () => {
       expect(screen.getByRole("tab", { name: "Sega" })).toBeInTheDocument();
       expect(screen.getByRole("tab", { name: "Sony" })).toBeInTheDocument();
       expect(screen.getByRole("tab", { name: "Atari" })).toBeInTheDocument();
+      // Systems without a Core category get a translated fallback label.
+      expect(
+        screen.getByRole("tab", { name: "systemSelector.otherCategory" }),
+      ).toBeInTheDocument();
     });
 
     it("should filter systems by selected category", async () => {
@@ -603,9 +607,6 @@ describe("SystemSelector", () => {
       expect(
         screen.queryByText("systemSelector.allSystems"),
       ).not.toBeInTheDocument();
-      expect(
-        screen.queryByText("systemSelector.selectionCount"),
-      ).not.toBeInTheDocument();
       await user.click(
         screen.getByRole("button", { name: "systemSelector.done" }),
       );
@@ -613,17 +614,14 @@ describe("SystemSelector", () => {
       expect(onSelect).not.toHaveBeenCalled();
     });
 
-    it("keeps Done disabled when a selection is required", () => {
+    it("keeps Done available with nothing selected, so Clear can be confirmed", () => {
       render(<SystemSelector {...defaultProps} mode="multi" />);
-      expect(
-        screen.queryByText("systemSelector.selectionCount"),
-      ).not.toBeInTheDocument();
       expect(
         screen.queryByText("systemSelector.allSystems"),
       ).not.toBeInTheDocument();
       expect(
         screen.getByRole("button", { name: "systemSelector.done" }),
-      ).toBeDisabled();
+      ).toBeEnabled();
     });
 
     it("preserves selections hidden by category and search filters", async () => {
@@ -666,9 +664,6 @@ describe("SystemSelector", () => {
         />,
       );
 
-      expect(
-        screen.queryByText("systemSelector.selectionCount"),
-      ).not.toBeInTheDocument();
       expect(
         screen.getByRole("checkbox", { name: "Nintendo Entertainment System" }),
       ).toBeChecked();

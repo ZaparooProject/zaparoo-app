@@ -9,18 +9,18 @@ import { HeaderButton } from "@/components/wui/HeaderButton";
 import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { DelayedLoading } from "@/components/DelayedLoading";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { InlineLoading } from "@/components/InlineLoading";
+import { HistoryQueryState } from "@/components/home/HistoryQueryState";
 import { ScanHistoryList } from "@/components/home/ScanHistoryList";
 import { PlayedHistoryList } from "@/components/home/PlayedHistoryList";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
-import { useLiveCoreControls } from "@/hooks/useLiveCoreControls";
+import { useHistoryReplay } from "@/hooks/useHistoryReplay";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
-import { CoreAPI, logRunFailure } from "@/lib/coreApi";
+import { CoreAPI } from "@/lib/coreApi";
 import { BackIcon } from "@/lib/images";
 import { MEDIA_HISTORY_QUERY_KEYS } from "@/lib/mediaHistory";
 import { useStatusStore } from "@/lib/store";
-import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 
 export function ScanHistory() {
   return <ZapHistory kind="scans" />;
@@ -41,10 +41,7 @@ function ZapHistory({ kind }: { kind: "scans" | "played" }) {
   const connected = useStatusStore((s) => s.connected);
   const versionPending = useStatusStore((s) => s.coreVersionPending);
   const feature = useCoreFeature("mediaRecents", { requireKnownSupport: true });
-  const requestRef = useRef<symbol | null>(null);
-  const controls = useLiveCoreControls(() => {
-    requestRef.current = null;
-  });
+  const replay = useHistoryReplay();
   const enabled = connected && Boolean(deviceKey);
   const scans = useQuery({
     queryKey: ["history", deviceKey],
@@ -70,40 +67,6 @@ function ZapHistory({ kind }: { kind: "scans" | "played" }) {
   const query = kind === "scans" ? scans : played;
   const entries = played.data?.pages.flatMap((page) => page.entries) ?? [];
   const goBack = () => void navigate({ to: "/", resetScroll: false });
-  const replay = (params: Parameters<typeof CoreAPI.run>[0]) => {
-    const target = controls.captureTarget();
-    if (!target || requestRef.current) return;
-    const request = Symbol();
-    requestRef.current = request;
-    void CoreAPI.run(params)
-      .catch((error) => {
-        if (!controls.isCurrentTarget(target)) return;
-        logRunFailure("Failed to replay history", error, {
-          action: "replayHistory",
-        });
-        showRateLimitedErrorToast(
-          t(
-            kind === "scans"
-              ? "scan.historyReplayError"
-              : "scan.coverRowLaunchError",
-          ),
-        );
-      })
-      .finally(() => {
-        if (requestRef.current === request) requestRef.current = null;
-      });
-  };
-  const loading = (
-    <DelayedLoading>
-      <div
-        className="text-muted-foreground flex items-center justify-center gap-2 py-8"
-        role="status"
-      >
-        <LoadingSpinner size={16} decorative />
-        <span>{t("loading")}</span>
-      </div>
-    </DelayedLoading>
-  );
   const unavailable = kind === "played" && !feature.available;
   const empty =
     kind === "scans" ? scans.data?.entries.length === 0 : entries.length === 0;
@@ -132,65 +95,40 @@ function ZapHistory({ kind }: { kind: "scans" | "played" }) {
         />
       }
     >
-      {!enabled ? (
-        <EmptyState title={t("settings.notConnected")} />
-      ) : kind === "played" && versionPending ? (
-        loading
-      ) : unavailable ? (
+      {enabled && kind === "played" && versionPending ? (
+        <DelayedLoading>
+          <InlineLoading />
+        </DelayedLoading>
+      ) : enabled && unavailable ? (
         <EmptyState
           title={t("library.updateCore")}
           description={t("features.requiresCoreVersion", {
             version: feature.requiredVersion,
           })}
         />
-      ) : query.isPending ? (
-        loading
-      ) : query.isError && !query.data ? (
-        <EmptyState
-          title={t("scan.historyLoadError")}
-          action={
-            <Button
-              variant="outline"
-              label={t("scan.retry")}
-              onClick={() => void query.refetch()}
-            />
-          }
-        />
       ) : (
-        <>
-          {query.isError && (
-            <p role="alert" className="text-error mb-3 text-sm">
-              {t("scan.historyLoadError")}
-            </p>
+        <HistoryQueryState
+          offline={!enabled}
+          isPending={query.isPending}
+          isError={query.isError}
+          hasData={query.data !== undefined}
+          isEmpty={empty}
+          emptyTitle={t(
+            kind === "scans" ? "scan.history.empty" : "scan.historyPlayedEmpty",
           )}
-          {empty ? (
-            <EmptyState
-              title={t(
-                kind === "scans"
-                  ? "scan.history.empty"
-                  : "scan.historyPlayedEmpty",
-              )}
-            />
-          ) : kind === "scans" ? (
+          onRetry={() => void query.refetch()}
+        >
+          {kind === "scans" ? (
             <ScanHistoryList
               entries={scans.data?.entries ?? []}
-              connected={controls.available}
-              onReplay={(item) =>
-                replay({
-                  type: item.type,
-                  uid: item.uid,
-                  text: item.text,
-                  data: item.data,
-                })
-              }
+              connected={replay.available}
+              onReplay={replay.replayScan}
             />
           ) : (
             <PlayedHistoryList
               entries={entries}
-              connected={connected}
-              launchAvailable={controls.available}
-              isPending={false}
-              onLaunch={(item) => replay({ text: item.mediaPath })}
+              launchAvailable={replay.available}
+              onLaunch={replay.launchMedia}
             />
           )}
           {kind === "played" && played.hasNextPage && (
@@ -203,7 +141,7 @@ function ZapHistory({ kind }: { kind: "scans" | "played" }) {
               onClick={() => void played.fetchNextPage()}
             />
           )}
-        </>
+        </HistoryQueryState>
       )}
       <BackToTop scrollContainerRef={scrollRef} threshold={200} />
     </PageFrame>

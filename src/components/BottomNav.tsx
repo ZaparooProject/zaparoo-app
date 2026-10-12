@@ -1,14 +1,8 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import {
-  LibraryBigIcon,
-  SettingsIcon,
-  SquarePenIcon,
-  ZapIcon,
-} from "lucide-react";
-import classNames from "classnames";
 import { ReactElement, useLayoutEffect } from "react";
 import { AdaptiveNavigation } from "@/components/AdaptiveNavigation";
+import { APP_SECTIONS } from "@/lib/appSections";
 import { useStatusStore } from "@/lib/store";
 import {
   bottomTabForPath,
@@ -20,7 +14,6 @@ import { useHaptics } from "@/hooks/useHaptics";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { NotificationBadge } from "@/components/NotificationBadge";
 import { PAGE_SCROLL_RESTORATION_SELECTOR } from "@/components/PageFrame";
-import { ResponsiveContainer } from "./ResponsiveContainer";
 
 function NavButton(props: {
   text: string;
@@ -31,21 +24,13 @@ function NavButton(props: {
   isAtRoot: boolean;
   onPopToRoot: () => void;
   onScrollToTop: () => boolean;
-  className?: string;
   notificationCount?: number;
   ariaLabel?: string;
-  "data-tour"?: string;
 }) {
   const { impact } = useHaptics();
 
   return (
-    <div
-      className={classNames(
-        "inline-flex flex-col items-center justify-center",
-        props.className,
-      )}
-      data-tour={props["data-tour"]}
-    >
+    <div className="inline-flex flex-col items-center justify-center">
       <Link
         to={props.isActive ? props.rootPath : props.path}
         resetScroll={false}
@@ -101,14 +86,11 @@ export function BottomNav() {
     rememberLocation(pathname, location.href ?? pathname);
   }, [location.href, pathname, rememberLocation]);
 
-  // Determine which nav item is active based on current path
-  const isHome = bottomTabForPath(pathname) === "zap";
-  const isLibrary = pathname.startsWith("/library");
-  const isCreate = pathname.startsWith("/create");
-  const isSettings = pathname.startsWith("/settings");
+  const activeTab = bottomTabForPath(pathname);
 
+  // Settings carries its own Inbox entry point, so the badge only shows elsewhere.
   const settingsNotificationCount =
-    inboxFeature.available && !isSettings ? inboxCount : 0;
+    inboxFeature.available && activeTab !== "settings" ? inboxCount : 0;
   const popNavigationToRoot = (tab: BottomTabId) => {
     popTabToRoot(tab);
     if (tab === "library") resetLibraryNavigation();
@@ -133,64 +115,36 @@ export function BottomNav() {
     return true;
   };
 
-  const settingsLabel =
-    settingsNotificationCount > 0
-      ? t("nav.settingsWithNotifications", {
-          count: settingsNotificationCount,
-        })
-      : undefined;
-
   return (
     <AdaptiveNavigation>
       <div className="bottom-nav-surface">
-        <ResponsiveContainer maxWidth="nav" className="app-navigation-items">
-          <div className="app-navigation-grid mx-auto grid max-w-lg items-center">
-            <NavButton
-              text={t("nav.index")}
-              icon={<ZapIcon size="24" />}
-              path={lastHref.zap}
-              rootPath="/"
-              isActive={isHome}
-              isAtRoot={isAtRoot("/")}
-              onPopToRoot={() => popNavigationToRoot("zap")}
-              onScrollToTop={scrollActivePageToTop}
-            />
-            <NavButton
-              text={t("nav.library")}
-              icon={<LibraryBigIcon size="24" />}
-              path={lastHref.library}
-              rootPath="/library"
-              isActive={isLibrary}
-              isAtRoot={isAtRoot("/library")}
-              onPopToRoot={() => popNavigationToRoot("library")}
-              onScrollToTop={scrollActivePageToTop}
-            />
-            <NavButton
-              text={t("nav.create")}
-              icon={<SquarePenIcon size="24" />}
-              path={lastHref.create}
-              rootPath="/create"
-              isActive={isCreate}
-              isAtRoot={isAtRoot("/create")}
-              onPopToRoot={() => popNavigationToRoot("create")}
-              onScrollToTop={scrollActivePageToTop}
-              data-tour="nav-create"
-            />
-            <NavButton
-              text={t("nav.settings")}
-              icon={<SettingsIcon size="24" />}
-              path={lastHref.settings}
-              rootPath="/settings"
-              isActive={isSettings}
-              isAtRoot={isAtRoot("/settings")}
-              onPopToRoot={() => popNavigationToRoot("settings")}
-              onScrollToTop={scrollActivePageToTop}
-              notificationCount={settingsNotificationCount}
-              ariaLabel={settingsLabel}
-              data-tour="nav-settings"
-            />
-          </div>
-        </ResponsiveContainer>
+        <div className="app-navigation-grid mx-auto grid max-w-lg items-center">
+          {APP_SECTIONS.map(({ id, to, label, Icon }) => {
+            const notificationCount =
+              id === "settings" ? settingsNotificationCount : 0;
+            return (
+              <NavButton
+                key={id}
+                text={t(label)}
+                icon={<Icon size="24" />}
+                path={lastHref[id]}
+                rootPath={to}
+                isActive={activeTab === id}
+                isAtRoot={isAtRoot(to)}
+                onPopToRoot={() => popNavigationToRoot(id)}
+                onScrollToTop={scrollActivePageToTop}
+                notificationCount={notificationCount}
+                ariaLabel={
+                  notificationCount > 0
+                    ? t("nav.settingsWithNotifications", {
+                        count: notificationCount,
+                      })
+                    : undefined
+                }
+              />
+            );
+          })}
+        </div>
       </div>
     </AdaptiveNavigation>
   );

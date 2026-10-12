@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
 interface ModalActionRailProps {
@@ -22,21 +28,24 @@ export function ModalActionRail({
   const contentRef = useRef<HTMLDivElement>(null);
   const [edges, setEdges] = useState({ left: false, right: false });
 
+  const updateEdges = useCallback(() => {
+    const scroller = scrollRef.current;
+    if (!scroller) return;
+    const left = scroller.scrollLeft > 2;
+    const right =
+      scroller.scrollWidth - scroller.clientWidth - scroller.scrollLeft > 2;
+    setEdges((previous) =>
+      previous.left === left && previous.right === right
+        ? previous
+        : { left, right },
+    );
+  }, []);
+
   useEffect(() => {
     const scroller = scrollRef.current;
     const content = contentRef.current;
     if (!scroller || !content) return;
 
-    const updateEdges = () => {
-      const left = scroller.scrollLeft > 2;
-      const right =
-        scroller.scrollWidth - scroller.clientWidth - scroller.scrollLeft > 2;
-      setEdges((previous) =>
-        previous.left === left && previous.right === right
-          ? previous
-          : { left, right },
-      );
-    };
     updateEdges();
     if (typeof ResizeObserver === "undefined") {
       window.addEventListener("resize", updateEdges);
@@ -46,7 +55,7 @@ export function ModalActionRail({
     observer.observe(scroller);
     observer.observe(content);
     return () => observer.disconnect();
-  }, []);
+  }, [updateEdges]);
 
   const maskImage =
     edges.left && edges.right
@@ -70,18 +79,7 @@ export function ModalActionRail({
           ref={scrollRef}
           role="group"
           aria-label={ariaLabel}
-          onScroll={() => {
-            const scroller = scrollRef.current;
-            if (!scroller) return;
-            setEdges({
-              left: scroller.scrollLeft > 2,
-              right:
-                scroller.scrollWidth -
-                  scroller.clientWidth -
-                  scroller.scrollLeft >
-                2,
-            });
-          }}
+          onScroll={updateEdges}
           className={
             readerAction
               ? "scroll-px-2 overflow-x-auto overscroll-x-contain"
@@ -91,10 +89,12 @@ export function ModalActionRail({
         >
           <div
             ref={contentRef}
+            // Stacked items (below 640px and from 760px) are 56px tall; only the
+            // inline 640-759px sheet layout uses 48px.
             // Captions are single-line sentence case. Each action is as wide as
             // its caption plus padding, shares spare width evenly, and the
             // rail scrolls when they don't all fit.
-            className={`grid min-w-full grid-flow-col gap-1 [&>*]:min-h-14 [&>*]:w-full [&>*]:max-w-none [&>*]:px-3 [&>*]:text-[13px] [&>*]:font-semibold [&>*]:tracking-normal [&>*]:whitespace-nowrap [&>*]:normal-case sm:[&>*]:min-h-12 ${
+            className={`grid min-w-full grid-flow-col gap-1 [&>*]:min-h-14 [&>*]:w-full [&>*]:max-w-none [&>*]:px-3 [&>*]:text-[13px] [&>*]:font-semibold [&>*]:tracking-normal [&>*]:whitespace-nowrap [&>*]:normal-case min-[760px]:[&>*]:min-h-14 sm:[&>*]:min-h-12 ${
               // Intrinsic content width includes both gutters in the scroll range;
               // the bottom gutter also clears the latched face's 2px travel.
               readerAction

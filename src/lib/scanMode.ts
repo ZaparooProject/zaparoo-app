@@ -3,7 +3,3 @@
  * produced one, so the phone's primary reader is the one the person uses.
  */
 export type ScanMode = "nfc" | "camera";
-
-export function isScanMode(value: unknown): value is ScanMode {
-  return value === "nfc" || value === "camera";
-}

@@ -13,6 +13,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { render, screen, waitFor } from "../../test-utils";
 import userEvent from "@testing-library/user-event";
+import toast from "react-hot-toast";
 import { useStatusStore, ConnectionState } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 
@@ -59,6 +60,10 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
     })),
   };
 });
+
+vi.mock("react-hot-toast", () => ({
+  default: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }),
+}));
 
 // Mock useSmartSwipe
 vi.mock("@/hooks/useSmartSwipe", () => ({
@@ -909,10 +914,51 @@ describe("Settings Logs Integration", () => {
       await waitFor(() => {
         expect(mockWriteText).toHaveBeenCalled();
       });
+      await waitFor(() => {
+        expect(toast.success).toHaveBeenCalledWith("copied");
+      });
+    });
+
+    it("should say so when the logs cannot be copied", async () => {
+      const user = userEvent.setup();
+      Object.defineProperty(navigator, "clipboard", {
+        value: { writeText: vi.fn().mockRejectedValue(new Error("denied")) },
+        writable: true,
+        configurable: true,
+      });
+
+      mockState.queryData = {
+        filename: "test.log",
+        content: createMockLogContent([
+          { level: "info", time: "2025-01-15T10:30:00Z", message: "Copy test" },
+        ]),
+        size: 100,
+      };
+
+      render(<Logs />);
+      await user.click(
+        screen.getByRole("button", { name: /nav.moreActions/i }),
+      );
+      await user.click(
+        screen.getByRole("button", { name: /settings.logs.copy/i }),
+      );
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith("copyFailed");
+      });
+      expect(toast.success).not.toHaveBeenCalledWith("copied");
     });
   });
 
   describe("Loading State", () => {
+    it("should show a visible loading state while logs are fetched", () => {
+      mockState.isLoading = true;
+
+      render(<Logs />);
+
+      expect(screen.getByText("loading")).toBeInTheDocument();
+    });
+
     it("should show loading state in refresh button title", () => {
       mockState.isLoading = true;
 

@@ -63,7 +63,6 @@ export function MediaDetailsModal({
       ? filenameFromPath(media.path) || media.name
       : media.name
     : "";
-  const hasSecondaryActions = Boolean(favoriteEntry || onCopy || onPreview);
   const writeLabel = primaryActionLabel ?? t("create.search.writeLabel");
   const writeIcon = primaryActionIcon ?? <CreateIcon size="20" />;
   const primaryAction = media ? (
@@ -74,6 +73,7 @@ export function MediaDetailsModal({
         activeLabel={readerActivity.activeLabel}
         errorMessage={readerActivity.errorMessage}
         icon={writeIcon}
+        disabled={!writeTarget.selectedValue}
         onStart={() => void onWrite(writeTarget.selectedValue)}
         onCancel={readerActivity.onCancel}
         onRetry={readerActivity.onRetry}
@@ -83,60 +83,63 @@ export function MediaDetailsModal({
         label={writeLabel}
         icon={writeIcon}
         intent="primary"
+        disabled={!writeTarget.selectedValue}
         onClick={() => void onWrite(writeTarget.selectedValue)}
       />
     )
   ) : undefined;
+  // Favorite is always offered, so the footer is always an action rail.
   const footer =
-    media && primaryAction ? (
-      hasSecondaryActions ? (
-        <ModalActionRail
-          aria-label={t("create.search.mediaActions")}
-          actions={
-            <>
-              {favoriteEntry && (
-                <FavoriteButton
-                  entry={favoriteEntry}
-                  fallbackSystemId={media.system.id}
-                  deviceKey={deviceKey}
-                  displayLabel={t("library.favorite")}
-                  layout="responsive"
-                  variant="text"
-                  className="w-full whitespace-nowrap"
-                />
-              )}
-              {onCopy && (
-                <Button
-                  label={t("create.search.copyLabel")}
-                  icon={<CopyIcon size="20" />}
-                  layout="responsive"
-                  variant="text"
-                  className="whitespace-nowrap"
-                  onClick={() => void onCopy(writeTarget.selectedValue)}
-                />
-              )}
-              {onPreview && (
-                <Button
-                  label={t("create.search.playLabel")}
-                  icon={<PlayIcon size="20" />}
-                  layout="responsive"
-                  variant="text"
-                  className="whitespace-nowrap"
-                  disabled={previewDisabled}
-                  onClick={() => void onPreview(writeTarget.selectedValue)}
-                />
-              )}
-            </>
-          }
-          primaryAction={primaryAction}
-        />
-      ) : (
-        primaryAction
-      )
+    media && favoriteEntry && primaryAction ? (
+      <ModalActionRail
+        aria-label={t("create.search.mediaActions")}
+        actions={
+          <>
+            <FavoriteButton
+              entry={favoriteEntry}
+              fallbackSystemId={media.system.id}
+              deviceKey={deviceKey}
+              displayLabel={t("library.favorite")}
+              layout="responsive"
+              variant="text"
+              className="w-full whitespace-nowrap"
+            />
+            {onCopy && (
+              <Button
+                label={t("create.search.copyLabel")}
+                icon={<CopyIcon size="20" />}
+                layout="responsive"
+                variant="text"
+                className="w-full whitespace-nowrap"
+                onClick={() => void onCopy(writeTarget.selectedValue)}
+              />
+            )}
+            {onPreview && (
+              <Button
+                label={t("create.search.playLabel")}
+                icon={<PlayIcon size="20" />}
+                layout="responsive"
+                variant="text"
+                className="w-full whitespace-nowrap"
+                disabled={previewDisabled}
+                disabledAppearance="unavailable"
+                onClick={() => void onPreview(writeTarget.selectedValue)}
+              />
+            )}
+          </>
+        }
+        primaryAction={primaryAction}
+      />
     ) : undefined;
 
   return (
-    <SlideModal isOpen={isOpen} close={close} title={title} footer={footer}>
+    <SlideModal
+      isOpen={isOpen}
+      close={close}
+      title={title}
+      footer={footer}
+      footerSkipLabel={t("accessibility.skipToActions")}
+    >
       {media && (
         <div className="flex flex-col gap-4 pt-2">
           <div className="flex flex-col gap-3">

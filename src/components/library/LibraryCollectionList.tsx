@@ -3,13 +3,12 @@ import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
-  Bookmark,
-  Heart,
-  History,
+  BookmarkIcon,
+  HeartIcon,
   PlusIcon,
-  ThumbsDown,
-  ThumbsUp,
-  Trophy,
+  ThumbsDownIcon,
+  ThumbsUpIcon,
+  TrophyIcon,
 } from "lucide-react";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
@@ -17,10 +16,10 @@ import { CoreAPI } from "@/lib/coreApi";
 import { LIBRARY_QUERY_KEYS } from "@/lib/libraryMedia";
 import { useStatusStore } from "@/lib/store";
 import { Button } from "@/components/wui/Button";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { InlineLoading } from "@/components/InlineLoading";
 import { DelayedLoading } from "@/components/DelayedLoading";
 import { useTabSessionStore } from "@/lib/tabSessionStore";
-import { NextIcon } from "@/lib/images";
+import { HistoryIcon, NextIcon } from "@/lib/images";
 import { LibraryLinkButton } from "@/components/library/LibraryLinkButton";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { TextInput } from "@/components/wui/TextInput";
@@ -29,37 +28,37 @@ const collections = [
   {
     to: "/library/favorites",
     label: "library.favorites",
-    Icon: Heart,
+    Icon: HeartIcon,
     scope: "favorites",
   },
   {
     to: "/library/recent",
     label: "library.recentlyPlayedShort",
-    Icon: History,
+    Icon: HistoryIcon,
     scope: "recent",
   },
   {
     to: "/library/top",
     label: "library.topPlayed",
-    Icon: Trophy,
+    Icon: TrophyIcon,
     scope: "top",
   },
   {
     to: "/library/liked",
     label: "library.liked",
-    Icon: ThumbsUp,
+    Icon: ThumbsUpIcon,
     scope: "liked",
   },
   {
     to: "/library/play-later",
     label: "library.playLater",
-    Icon: Bookmark,
+    Icon: BookmarkIcon,
     scope: "play-later",
   },
   {
     to: "/library/disliked",
     label: "library.disliked",
-    Icon: ThumbsDown,
+    Icon: ThumbsDownIcon,
     scope: "disliked",
   },
 ] as const;
@@ -155,13 +154,7 @@ export function LibraryCollectionList({
             />
           ) : decksQuery.isLoading ? (
             <DelayedLoading>
-              <div
-                className="text-muted-foreground flex items-center justify-center gap-2 py-6"
-                role="status"
-              >
-                <LoadingSpinner size={16} className="text-primary" decorative />
-                <span>{t("decks.loading")}</span>
-              </div>
+              <InlineLoading label={t("decks.loading")} />
             </DelayedLoading>
           ) : visibleDecks.length > 0 ? (
             <nav aria-label={t("decks.title")}>

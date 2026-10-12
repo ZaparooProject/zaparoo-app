@@ -15,6 +15,7 @@ import {
   Status,
   isFormatRelatedError,
 } from "./nfc";
+import { nfcErrorMessageKey } from "./nfcErrorMessages";
 import { isAppPreviewEnabled } from "./appPreviewStore";
 import { simulateNfcOperation } from "./nfcPreview";
 import { CoreAPI, isExpectedReaderWriteError } from "./coreApi.ts";
@@ -78,30 +79,26 @@ function coreWrite(text: string, signal?: AbortSignal): Promise<Result> {
     });
   }
 
-  return CoreAPI.write({ text }, signal)
-    .then((result) => {
-      // Check if the result indicates cancellation
-      if (result && typeof result === "object" && "cancelled" in result) {
-        return {
-          status: Status.Cancelled,
-          info: {
-            rawTag: null,
-            tag: null,
-          },
-        };
-      } else {
-        return {
-          status: Status.Success,
-          info: {
-            rawTag: null,
-            tag: null,
-          },
-        };
-      }
-    })
-    .catch((e) => {
-      throw e;
-    });
+  return CoreAPI.write({ text }, signal).then((result) => {
+    // Check if the result indicates cancellation
+    if (result && typeof result === "object" && "cancelled" in result) {
+      return {
+        status: Status.Cancelled,
+        info: {
+          rawTag: null,
+          tag: null,
+        },
+      };
+    } else {
+      return {
+        status: Status.Success,
+        info: {
+          rawTag: null,
+          tag: null,
+        },
+      };
+    }
+  });
 }
 
 async function determineWriteMethod(
@@ -185,8 +182,8 @@ export function useNfcWriter(
     action: WriteAction;
     text?: string;
   } | null>(null);
-  // Verification-failure toast content stashed until the reader activity closes,
-  // so the toast is not fired while the scan UI still covers it.
+  // Verification-failure toast content stashed until the reader activity ends,
+  // so it does not compete with the in-context Retry/Cancel recovery.
   const deferredErrorToastRef = useRef<{
     title: string;
     message: string;
@@ -412,7 +409,7 @@ export function useNfcWriter(
           }
           if (e instanceof NfcVerificationError) {
             // The reader activity surfaces this failure with a retry action; the
-            // toast is deferred until the modal closes so it stays visible.
+            // toast is deferred until that activity ends.
             verifyErrorRef.current = e;
             setVerifyError(e);
             deferredErrorToastRef.current = {
@@ -427,8 +424,10 @@ export function useNfcWriter(
             showMs += 4000;
           }
           // Use user-friendly message for format-related errors on Android
-          const userMessage =
-            Capacitor.getPlatform() === "android" && isFormatRelatedError(e)
+          const messageKey = nfcErrorMessageKey(e);
+          const userMessage = messageKey
+            ? t(messageKey)
+            : Capacitor.getPlatform() === "android" && isFormatRelatedError(e)
               ? t("spinner.formatErrorRetry")
               : e.message;
           toast.error(
@@ -525,8 +524,8 @@ export function useNfcWriter(
     setWriting(false);
     setRetapRequired(false);
 
-    // The scan UI is gone now, so a stashed verification-failure toast can
-    // fire without being obscured.
+    // The reader activity has ended, so a stashed verification-failure toast
+    // can fire now.
     const deferredToast = deferredErrorToastRef.current;
     if (deferredToast) {
       deferredErrorToastRef.current = null;

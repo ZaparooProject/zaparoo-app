@@ -94,7 +94,7 @@ describe("MediaPreferenceActions", () => {
     for (const label of [
       "library.favorite",
       "library.like",
-      "library.playLater",
+      "library.playLaterAction",
     ]) {
       expect(screen.getByText(label).closest("button")).toBeDisabled();
     }

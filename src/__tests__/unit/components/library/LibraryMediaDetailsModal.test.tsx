@@ -258,6 +258,63 @@ describe("LibraryMediaDetailsModal", () => {
     },
   );
 
+  it("does not reopen the deck picker on a later selection when an add fails after close", async () => {
+    useStatusStore.setState({ coreVersion: "2.18.0" });
+    vi.spyOn(CoreAPI, "decks").mockResolvedValue({
+      decks: [
+        {
+          deckId: "0k3v9x2rq7bm",
+          name: "Weekend",
+          description: "",
+          owned: true,
+          locked: false,
+          itemCount: 0,
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      ],
+    });
+    let failAdd: (error: Error) => void = () => {};
+    vi.spyOn(CoreAPI, "deckUpdate").mockReturnValue(
+      new Promise((_, reject) => {
+        failAdd = reject;
+      }),
+    );
+    const failure = vi.spyOn(toast, "error");
+    const user = userEvent.setup();
+    const { rerender, props } = renderModal();
+
+    const dialog = await screen.findByRole("dialog", { name: "Super Game" });
+    await user.click(
+      within(dialog).getByRole("button", { name: "decks.addAction" }),
+    );
+    const picker = await screen.findByRole("dialog", {
+      name: "decks.addAction",
+    });
+    await user.click(
+      await within(picker).findByRole("button", { name: /Weekend/ }),
+    );
+
+    rerender(
+      <LibraryMediaDetailsModal {...props} isOpen={false} entry={null} />,
+    );
+    await act(async () => failAdd(new Error("offline")));
+    await waitFor(() => expect(failure).toHaveBeenCalledWith("decks.addError"));
+
+    rerender(
+      <LibraryMediaDetailsModal
+        {...props}
+        entry={{ ...ENTRY, mediaId: 43, name: "Next Game" }}
+      />,
+    );
+    expect(
+      await screen.findByRole("button", { name: "decks.addAction" }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("dialog", { name: "decks.addAction" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("separates deck creation from searchable selection and preserves search on cancel", async () => {
     useStatusStore.setState({ coreVersion: "2.18.0" });
     vi.spyOn(CoreAPI, "decks").mockResolvedValue({ decks: [] });
@@ -276,7 +333,6 @@ describe("LibraryMediaDetailsModal", () => {
     renderModal({ entry: { ...ENTRY, zapScript: "@SNES/Super Game" } });
     const user = userEvent.setup();
     const overlay = screen.getByTestId("modal-overlay");
-    expect(overlay.style.opacity).toBe("1");
     await user.click(
       await screen.findByRole("button", { name: "decks.addAction" }),
     );
@@ -296,14 +352,12 @@ describe("LibraryMediaDetailsModal", () => {
     await user.click(within(picker).getByRole("button", { name: "decks.new" }));
     let form = screen.getByRole("dialog", { name: "decks.new" });
     expect(screen.getByTestId("modal-overlay")).toBe(overlay);
-    expect(overlay.style.opacity).toBe("1");
     expect(
       within(form).getByRole("button", { name: "decks.createAndAdd" }),
     ).toBeDisabled();
     await user.click(within(form).getByRole("button", { name: "nav.cancel" }));
     picker = screen.getByRole("dialog", { name: "decks.addAction" });
     expect(screen.getByTestId("modal-overlay")).toBe(overlay);
-    expect(overlay.style.opacity).toBe("1");
     expect(
       within(picker).getByRole("searchbox", { name: "decks.search" }),
     ).toHaveValue("Weekend");
@@ -334,7 +388,6 @@ describe("LibraryMediaDetailsModal", () => {
     ).toBeInTheDocument();
     expect(success).toHaveBeenCalledWith("decks.added");
     expect(screen.getByTestId("modal-overlay")).toBe(overlay);
-    expect(overlay.style.opacity).toBe("1");
   });
 
   it("should render persistent actions and curated game metadata", async () => {
@@ -442,10 +495,6 @@ describe("LibraryMediaDetailsModal", () => {
     );
 
     expect(screen.getAllByRole("dialog", { hidden: true })).toContain(dialog);
-    expect(dialog).toHaveStyle({
-      transform: "translate3d(0, 100%, 0)",
-      transition: "transform 0.2s ease-in-out",
-    });
     expect(dialog).toHaveTextContent("Super Game");
     expect(dialog).toHaveTextContent("A platform adventure.");
     expect(

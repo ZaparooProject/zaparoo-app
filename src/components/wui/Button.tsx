@@ -108,8 +108,7 @@ export const Button = memo(
         aria-controls={props["aria-controls"]}
         tabIndex={props.decorative ? -1 : undefined}
         className={classNames(
-          "wui-button flex min-h-12 min-w-12 shrink-0 touch-manipulation items-center justify-center border border-solid border-transparent text-sm font-bold tracking-wider uppercase",
-          "disabled:cursor-not-allowed",
+          "wui-button flex min-h-12 min-w-12 shrink-0 touch-manipulation items-center justify-center",
           {
             "flex-row gap-2": !props.readerStatus && layout === "inline",
             "flex-col gap-1": !!props.readerStatus || layout === "stacked",

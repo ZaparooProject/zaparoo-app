@@ -84,7 +84,7 @@ export function TabBar<T extends string>({
       role="tablist"
       aria-label={label}
       className={classNames(
-        "border-border bg-surface-inset gap-1 rounded-lg border border-solid p-0.5 shadow-inner",
+        "border-border bg-surface-inset inset-shadow-material gap-1 rounded-lg border border-solid p-0.5",
         layout === "grid" ? "grid" : "flex",
         className,
       )}
@@ -128,7 +128,7 @@ export function TabBar<T extends string>({
               layout === "scroll" && "shrink-0 whitespace-nowrap",
               "uppercase",
               {
-                "cursor-not-allowed opacity-60": disabled,
+                "cursor-not-allowed opacity-50": disabled,
               },
             )}
           >

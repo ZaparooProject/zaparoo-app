@@ -19,35 +19,9 @@ import { usePreferencesStore } from "@/lib/preferencesStore";
 import { seedActiveDevice } from "@/test-utils/deviceRegistry";
 import * as nfc from "@/lib/nfc";
 import * as libraryImages from "@/lib/libraryImages";
+import * as toastUtils from "@/lib/toastUtils";
 import type { HistoryResponse, PlaylistState } from "@/lib/models";
-
-function responsiveWindow(initialWidth: number) {
-  let width = initialWidth;
-  const listeners = new Set<() => void>();
-  vi.spyOn(window, "matchMedia").mockImplementation((query) => ({
-    get matches() {
-      const minimum = /min-width:\s*(\d+)px/.exec(query);
-      return minimum ? width >= Number(minimum[1]) : false;
-    },
-    media: query,
-    onchange: null,
-    addEventListener: (_type: string, listener: unknown) => {
-      listeners.add(listener as () => void);
-    },
-    removeEventListener: (_type: string, listener: unknown) => {
-      listeners.delete(listener as () => void);
-    },
-    addListener: () => {},
-    removeListener: () => {},
-    dispatchEvent: () => true,
-  }));
-  return async (next: number) => {
-    await act(() => {
-      width = next;
-      listeners.forEach((listener) => listener());
-    });
-  };
-}
+import { responsiveWindow } from "@/test-utils/responsiveWindow";
 
 async function renderZap(initialPath = "/", basepath?: string) {
   const root = createRootRoute({ component: RootLayout });
@@ -192,7 +166,9 @@ describe("Adaptive Zap", () => {
       within(navigation).getByRole("link", { name: "scan.scanHistoryTitle" }),
     ).toBeInTheDocument();
     expect(
-      within(navigation).getByRole("link", { name: "navigation.devices" }),
+      within(navigation).getByRole("link", {
+        name: "scan.deviceSheetAllDevices",
+      }),
     ).toHaveAttribute("href", "/settings/devices");
     expect(
       within(navigation).getByRole("link", { name: "nav.index" }),
@@ -499,8 +475,141 @@ describe("Adaptive Zap", () => {
     });
     expect(up).toBeEnabled();
     expect(
-      within(background).getByRole("button", { name: "scan.playlistPlay" }),
+      within(background).getByRole("button", { name: "scan.mediaResume" }),
     ).toBeEnabled();
+  });
+
+  it("should drive ordinary media with launcher controls, not playlist commands", async () => {
+    responsiveWindow(1180);
+    const user = userEvent.setup();
+    const control = vi.spyOn(CoreAPI, "mediaControl").mockResolvedValue();
+    await renderZap();
+    const primary = within(
+      screen.getByRole("region", { name: "scan.nowPlayingHeading" }),
+    );
+    expect(
+      primary.getByRole("group", { name: "scan.mediaControls" }),
+    ).toBeInTheDocument();
+
+    await user.click(primary.getByRole("button", { name: "scan.mediaPause" }));
+    await user.click(
+      primary.getByRole("button", { name: "scan.playlistNext" }),
+    );
+    await user.click(
+      primary.getByRole("button", { name: "scan.playlistPrevious" }),
+    );
+
+    expect(control.mock.calls).toEqual([
+      [{ action: "pause" }],
+      [{ action: "next" }],
+      [{ action: "previous" }],
+    ]);
+    expect(CoreAPI.run).not.toHaveBeenCalled();
+  });
+
+  it("should resume paused background media in its own slot", async () => {
+    responsiveWindow(1180);
+    const user = userEvent.setup();
+    const control = vi.spyOn(CoreAPI, "mediaControl").mockResolvedValue();
+    useStatusStore.setState({
+      backgroundPlaying: {
+        ...audio,
+        mediaName: "Background Track",
+        playbackState: "paused",
+      },
+    });
+    await renderZap();
+
+    await user.click(
+      within(
+        screen.getByRole("region", { name: "scan.backgroundMediaHeading" }),
+      ).getByRole("button", { name: "scan.mediaResume" }),
+    );
+
+    expect(control).toHaveBeenCalledExactlyOnceWith({
+      action: "resume",
+      slot: "background",
+    });
+    expect(CoreAPI.run).not.toHaveBeenCalled();
+  });
+
+  it("should not report a stop failure from a Core that is no longer selected", async () => {
+    responsiveWindow(1180);
+    const user = userEvent.setup();
+    const toast = vi.spyOn(toastUtils, "showRateLimitedErrorToast");
+    let fail!: (error: Error) => void;
+    vi.spyOn(CoreAPI, "mediaControl").mockReturnValue(
+      new Promise<void>((_resolve, reject) => {
+        fail = reject;
+      }),
+    );
+    useStatusStore.setState({
+      backgroundPlaying: { ...audio, mediaName: "Background Track" },
+    });
+    await renderZap();
+    await user.click(
+      screen.getByRole("button", { name: "scan.stopBackgroundMediaButton" }),
+    );
+    await user.click(
+      within(
+        await screen.findByRole("dialog", { name: "create.nfc.confirm" }),
+      ).getByRole("button", { name: "yes" }),
+    );
+    await waitFor(() =>
+      expect(CoreAPI.mediaControl).toHaveBeenCalledWith({
+        action: "stop",
+        slot: "background",
+      }),
+    );
+
+    await act(async () => {
+      await seedActiveDevice({ address: "192.168.1.101" });
+    });
+    await act(async () => {
+      fail(new Error("old Core went away"));
+    });
+
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it("should put playback first in reading order on wide screens without remounting", async () => {
+    const resize = responsiveWindow(390);
+    await renderZap();
+    const playback = screen.getByRole("region", {
+      name: "scan.nowPlayingHeading",
+    });
+    const controls = screen.getByRole("button", {
+      name: "scan.remoteKeyboard",
+    });
+    // Phone: reader tools lead.
+    expect(
+      controls.compareDocumentPosition(playback) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    controls.focus();
+
+    await resize(800);
+
+    // Same nodes, now with playback ahead of the reader tools.
+    expect(screen.getByRole("region", { name: "scan.nowPlayingHeading" })).toBe(
+      playback,
+    );
+    expect(screen.getByRole("button", { name: "scan.remoteKeyboard" })).toBe(
+      controls,
+    );
+    expect(
+      playback.compareDocumentPosition(controls) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(controls).toHaveFocus();
+
+    await resize(390);
+
+    expect(
+      controls.compareDocumentPosition(playback) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(controls).toHaveFocus();
   });
 
   it("should invalidate stop confirmation on Core switch", async () => {

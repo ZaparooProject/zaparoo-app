@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { ListChecks, MonitorIcon, XIcon } from "lucide-react";
+import { ListChecksIcon, MonitorIcon, XIcon } from "lucide-react";
 import { DeviceConnectionPanel } from "@/components/home/DeviceConnectionPanel";
 import { useSelectDevice } from "@/hooks/useSelectDevice";
 import { useConnection } from "@/hooks/useConnection";
@@ -29,7 +29,8 @@ import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { SlideModal } from "@/components/SlideModal";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DelayedLoading } from "@/components/DelayedLoading";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { InlineLoading } from "@/components/InlineLoading";
+import { useStatusStore } from "@/lib/store";
 import { BackIcon } from "@/lib/images";
 import { DeviceRow } from "@/components/DeviceRow";
 
@@ -86,6 +87,10 @@ export function Devices() {
   const [combineFailed, setCombineFailed] = useState(false);
   const [isCombining, setIsCombining] = useState(false);
 
+  // Pairing from this page stores a credential and restarts the connection, so
+  // the lock icons are re-read whenever the encryption state settles again.
+  const encryptionState = useStatusStore((state) => state.encryptionState);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -106,7 +111,7 @@ export function Devices() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [encryptionState, isConnected]);
 
   const sortedRecords = useMemo(() => {
     return Object.values(records)
@@ -256,11 +261,7 @@ export function Devices() {
           aria-label={t("nav.back")}
         />
       }
-      headerCenter={
-        <h1 ref={headingRef} className="text-foreground text-xl">
-          {t("scan.deviceSheetAllDevices")}
-        </h1>
-      }
+      headerCenter={<h1 ref={headingRef}>{t("scan.deviceSheetAllDevices")}</h1>}
       headerRight={
         sortedRecords.length >= 2 ? (
           <HeaderButton
@@ -271,7 +272,9 @@ export function Devices() {
                 setIsEditing(true);
               }
             }}
-            icon={isEditing ? <XIcon size={24} /> : <ListChecks size={24} />}
+            icon={
+              isEditing ? <XIcon size={24} /> : <ListChecksIcon size={24} />
+            }
             aria-label={t(
               isEditing
                 ? "settings.deviceCombine.cancelEdit"
@@ -283,12 +286,8 @@ export function Devices() {
         ) : undefined
       }
     >
-      <div className="grid items-start gap-5 min-[1024px]:grid-cols-2">
-        <DeviceConnectionPanel
-          isOpen={registrySettled}
-          close={() => undefined}
-          presentation="page"
-        />
+      <div className="settings-panel-layout">
+        <DeviceConnectionPanel isOpen={registrySettled} />
         <section
           aria-labelledby="saved-devices-heading"
           className="flex min-w-0 flex-col gap-3"
@@ -298,10 +297,7 @@ export function Devices() {
           </h2>
           {!registrySettled ? (
             <DelayedLoading>
-              <div className="text-muted-foreground flex items-center justify-center gap-2 py-8">
-                <LoadingSpinner size={16} className="text-primary" decorative />
-                <span>{t("settings.deviceHistoryLoading")}</span>
-              </div>
+              <InlineLoading label={t("settings.deviceHistoryLoading")} />
             </DelayedLoading>
           ) : sortedRecords.length === 0 ? (
             <EmptyState
@@ -413,21 +409,21 @@ export function Devices() {
           />
         }
       >
-        <div className="flex flex-col gap-4 py-4">
-          <p className="text-center">
+        <div className="flex flex-col gap-4 py-4 text-center">
+          <p>
             {t("settings.deviceCombine.body", {
               first:
-                combineTarget?.name ??
-                parsedEndpointForRecord(combineTarget)?.address ??
+                combineTarget?.name ||
+                parsedEndpointForRecord(combineTarget)?.address ||
                 "",
               second:
-                combineSource?.name ??
-                parsedEndpointForRecord(combineSource)?.address ??
+                combineSource?.name ||
+                parsedEndpointForRecord(combineSource)?.address ||
                 "",
             })}
           </p>
           {combineFailed && (
-            <p className="text-error text-center text-sm" role="alert">
+            <p className="text-error text-sm" role="alert">
               {t("settings.deviceCombine.failed")}
             </p>
           )}

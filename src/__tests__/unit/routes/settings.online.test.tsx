@@ -625,7 +625,7 @@ describe("Settings Online Route", () => {
       });
     });
 
-    it("should call RevenueCat logout before Firebase signOut on native platform", async () => {
+    it("should leave the RevenueCat reset to the queued identity sync on native", async () => {
       const user = userEvent.setup();
       mockState.platform = "ios";
       renderComponent();
@@ -633,88 +633,25 @@ describe("Settings Online Route", () => {
       await user.click(screen.getByRole("button", { name: "online.logout" }));
 
       await waitFor(() => {
-        expect(mockPurchasesLogOut).toHaveBeenCalled();
         expect(mockFirebaseAuth.signOut).toHaveBeenCalled();
       });
-
-      expect(mockPurchasesLogOut.mock.invocationCallOrder[0]!).toBeLessThan(
-        mockFirebaseAuth.signOut.mock.invocationCallOrder[0]!,
-      );
-    });
-
-    it("should not call Purchases.logOut when RC user is already anonymous on native platform", async () => {
-      const user = userEvent.setup();
-      mockState.platform = "ios";
-
-      const { Purchases } = await import("@revenuecat/purchases-capacitor");
-      vi.mocked(Purchases.isAnonymous).mockResolvedValueOnce({
-        isAnonymous: true,
-      });
-
-      renderComponent();
-
-      await user.click(screen.getByRole("button", { name: "online.logout" }));
-
-      await waitFor(() => {
-        expect(mockFirebaseAuth.signOut).toHaveBeenCalled();
-      });
-
+      // A direct logout here could interleave with a queued purchase or login.
       expect(mockPurchasesLogOut).not.toHaveBeenCalled();
     });
 
-    it("should ignore expected RevenueCat logout state errors on native platform", async () => {
+    it("should say so when signing out fails", async () => {
       const user = userEvent.setup();
-      const { logger } = await import("@/lib/logger");
-      mockState.platform = "ios";
-      mockPurchasesLogOut.mockRejectedValueOnce(
-        new Error("Cannot log out anonymous app user"),
-      );
-
+      mockFirebaseAuth.signOut.mockRejectedValueOnce(new Error("offline"));
       renderComponent();
 
       await user.click(screen.getByRole("button", { name: "online.logout" }));
 
       await waitFor(() => {
-        expect(mockFirebaseAuth.signOut).toHaveBeenCalled();
+        expect(toast.error).toHaveBeenCalledWith("online.logoutFailed");
       });
-
-      expect(logger.error).not.toHaveBeenCalled();
-    });
-
-    it("should log unexpected RevenueCat logout errors on native platform", async () => {
-      const user = userEvent.setup();
-      const { logger } = await import("@/lib/logger");
-      mockState.platform = "ios";
-      const error = new Error("network connection lost");
-      mockPurchasesLogOut.mockRejectedValueOnce(error);
-
-      renderComponent();
-
-      await user.click(screen.getByRole("button", { name: "online.logout" }));
-
-      await waitFor(() => {
-        expect(mockFirebaseAuth.signOut).toHaveBeenCalled();
-      });
-
-      expect(logger.error).toHaveBeenCalledWith(
-        "RevenueCat logout failed:",
-        error,
-        expect.objectContaining({ action: "logOut" }),
-      );
-    });
-
-    it("should skip RevenueCat logout on web platform", async () => {
-      const user = userEvent.setup();
-      mockState.platform = "web";
-      renderComponent();
-
-      await user.click(screen.getByRole("button", { name: "online.logout" }));
-
-      await waitFor(() => {
-        expect(mockFirebaseAuth.signOut).toHaveBeenCalled();
-      });
-
-      expect(mockPurchasesLogOut).not.toHaveBeenCalled();
+      expect(
+        screen.getByRole("button", { name: "online.logout" }),
+      ).toBeInTheDocument();
     });
   });
 

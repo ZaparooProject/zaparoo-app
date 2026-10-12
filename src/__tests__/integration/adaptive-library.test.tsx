@@ -32,6 +32,7 @@ import { usePreferencesStore } from "@/lib/preferencesStore";
 import { useLibrarySessionStore } from "@/lib/librarySessionStore";
 import { useTabSessionStore } from "@/lib/tabSessionStore";
 import { seedActiveDevice } from "@/test-utils/deviceRegistry";
+import { responsiveWindow } from "@/test-utils/responsiveWindow";
 
 const system = { id: "SNES", name: "Super Nintendo", mediaCount: 2 };
 const game = {
@@ -74,34 +75,6 @@ const deck: Deck = {
     },
   ],
 };
-
-function responsiveWindow(initialWidth: number) {
-  let width = initialWidth;
-  const listeners = new Set<() => void>();
-  vi.spyOn(window, "matchMedia").mockImplementation((query) => ({
-    get matches() {
-      const minimum = /min-width:\s*(\d+)px/.exec(query);
-      return minimum ? width >= Number(minimum[1]) : false;
-    },
-    media: query,
-    onchange: null,
-    addEventListener: (_type: string, listener: unknown) => {
-      listeners.add(listener as () => void);
-    },
-    removeEventListener: (_type: string, listener: unknown) => {
-      listeners.delete(listener as () => void);
-    },
-    addListener: () => {},
-    removeListener: () => {},
-    dispatchEvent: () => true,
-  }));
-  return async (next: number) => {
-    await act(() => {
-      width = next;
-      listeners.forEach((listener) => listener());
-    });
-  };
-}
 
 async function renderLibrary(path: string, basepath?: string) {
   const root = createRootRoute({ component: RootLayout });

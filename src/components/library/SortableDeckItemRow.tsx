@@ -5,12 +5,14 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { DeckItem } from "@/lib/models";
 import { useHapticPress } from "@/hooks/useHapticPress";
+import { useSystemNameResolver } from "@/hooks/useSystemName";
 import { Button } from "@/components/wui/Button";
 import { NextIcon } from "@/lib/images";
 import { DeckArtwork } from "@/components/library/DeckArtwork";
 
 export function SortableDeckItemRow({
   item,
+  systemName,
   index,
   count,
   editable,
@@ -20,6 +22,8 @@ export function SortableDeckItemRow({
   onMove,
 }: {
   item: DeckItem;
+  /** Catalog name for the item's system, when it is known. */
+  systemName?: string;
   index: number;
   count: number;
   editable: boolean;
@@ -30,6 +34,7 @@ export function SortableDeckItemRow({
 }) {
   const { t } = useTranslation();
   const handleHapticPress = useHapticPress();
+  const resolveSystemName = useSystemNameResolver();
   const {
     attributes,
     listeners,
@@ -63,7 +68,10 @@ export function SortableDeckItemRow({
           {item.kind === "card"
             ? t("decks.card")
             : item.media
-              ? item.media.system
+              ? resolveSystemName(
+                  item.media.system,
+                  systemName ?? item.media.system,
+                )
               : t("decks.script")}
         </span>
       </span>

@@ -1,14 +1,8 @@
-import { type ReactNode, useCallback, useMemo, useRef } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useMemo } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
-import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
-import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { CoreAPI } from "@/lib/coreApi";
-import { satisfies as versionSatisfies } from "@/lib/coreVersion";
-import { entrySystemId } from "@/lib/libraryMedia";
 import { formatDurationDisplay } from "@/lib/utils";
 import {
   dedupeHistoryByMedia,
@@ -19,16 +13,7 @@ import {
 } from "@/lib/mediaHistory";
 import type { MediaBrowseEntry } from "@/lib/models";
 import { useStatusStore } from "@/lib/store";
-import { BackIcon } from "@/lib/images";
-import { PageFrame } from "@/components/PageFrame";
-import { BackToTop } from "@/components/BackToTop";
-import { DelayedLoading } from "@/components/DelayedLoading";
-import { EmptyState } from "@/components/wui/EmptyState";
-import { Button } from "@/components/wui/Button";
-import { HeaderButton } from "@/components/wui/HeaderButton";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { LibraryBrowseList } from "@/components/library/LibraryBrowseList";
-import { LibraryDetailsSurface } from "@/components/library/LibraryDetailsSurface";
+import { LibraryCollectionPage } from "@/components/library/LibraryCollectionPage";
 import { useLibraryMediaSelection } from "@/hooks/useLibraryMediaSelection";
 
 const PAGE_SIZE = 100;
@@ -59,27 +44,18 @@ export function LibraryHistoryCollection({
 }: {
   kind: LibraryHistoryCollectionKind;
 }) {
-  const config = HISTORY_COLLECTIONS[kind];
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(t(config.title));
   const connected = useStatusStore((state) => state.connected);
-  const coreVersion = useStatusStore((state) => state.coreVersion);
-  const coreVersionPending = useStatusStore(
-    (state) => state.coreVersionPending,
-  );
   const deviceKey = useActiveDeviceKey();
   const selection = useLibraryMediaSelection(`history:${kind}`, deviceKey);
-  const { entry: selectedEntry, selectEntry: setSelectedEntry } = selection;
   const historyFeature = useCoreFeature("mediaRecents", {
     requireKnownSupport: true,
   });
   const enabled = connected && historyFeature.available && deviceKey !== "";
-  // Core only collapses repeat sessions from 2.17; older versions need a
-  // wider page and a local collapse.
-  const coreDedupes =
-    coreVersion !== null && versionSatisfies(coreVersion, "2.17.0");
+  // Older Core versions return every session, so they need a wider page and
+  // a local collapse.
+  const coreDedupes = useCoreFeature("mediaHistoryDistinct", {
+    requireKnownSupport: true,
+  }).available;
 
   const recentQuery = useInfiniteQuery({
     queryKey: [MEDIA_HISTORY_QUERY_KEYS.history, deviceKey, "collection"],
@@ -109,7 +85,6 @@ export function LibraryHistoryCollection({
     staleTime: 30_000,
     refetchOnMount: "always",
   });
-  const query = kind === "recent" ? recentQuery : topQuery;
 
   const { entries, details } = useMemo(() => {
     const entries: MediaBrowseEntry[] = [];
@@ -133,123 +108,28 @@ export function LibraryHistoryCollection({
     return { entries, details };
   }, [kind, recentQuery.data?.pages, topQuery.data?.entries]);
 
-  const goBack = useCallback(() => {
-    setSelectedEntry(null);
-    void navigate({ to: "/library", resetScroll: false });
-  }, [navigate, setSelectedEntry]);
-  const handleBackButton = useCallback(() => {
-    goBack();
-    return true;
-  }, [goBack]);
-  useBackButtonHandler(`library-${kind}`, handleBackButton);
-
-  const loadingContent = (
-    <DelayedLoading>
-      <div className="text-muted-foreground flex items-center justify-center gap-2 py-8">
-        <LoadingSpinner size={16} className="text-primary" />
-        <span>{t(config.loading)}</span>
-      </div>
-    </DelayedLoading>
-  );
-
-  let content: ReactNode;
-  if (!connected) {
-    content = <EmptyState title={t("library.disconnected")} />;
-  } else if (coreVersionPending) {
-    content = loadingContent;
-  } else if (!historyFeature.available) {
-    content = (
-      <EmptyState
-        title={t("library.updateCore")}
-        description={t("features.requiresCoreVersion", {
-          version: historyFeature.requiredVersion,
-        })}
-      />
-    );
-  } else if (query.isLoading) {
-    content = loadingContent;
-  } else if (query.isError) {
-    content = (
-      <EmptyState
-        title={t(config.error)}
-        action={
-          <Button
-            label={t("library.tryAgain")}
-            variant="outline"
-            onClick={() => void query.refetch()}
-          />
+  const paging =
+    kind === "recent"
+      ? {
+          hasNextPage: Boolean(recentQuery.hasNextPage),
+          isFetchingNextPage: recentQuery.isFetchingNextPage,
+          onFetchMore: () => void recentQuery.fetchNextPage(),
         }
-      />
-    );
-  } else if (entries.length === 0) {
-    content = (
-      <EmptyState title={t(config.empty)} description={t(config.hint)} />
-    );
-  } else {
-    // Rows centre their artwork with a 16px inset; cancel it so artwork sits at the
-    // standard page inset. Same for every collection page.
-    content = (
-      <div className="-mt-4">
-        <LibraryBrowseList
-          entries={entries}
-          systemId=""
-          deviceKey={deviceKey}
-          scrollRef={scrollRef}
-          hasNextPage={kind === "recent" && Boolean(recentQuery.hasNextPage)}
-          isFetchingNextPage={
-            kind === "recent" && recentQuery.isFetchingNextPage
-          }
-          imagesPaused={false}
-          interactionDisabled={false}
-          onFetchMore={() => void recentQuery.fetchNextPage()}
-          onSelect={setSelectedEntry}
-          selectedEntry={selectedEntry}
-          showSystemName
-          entryDetail={(entry) => details.get(entry)}
-          ariaLabel={t(config.list)}
-        />
-      </div>
-    );
-  }
+      : {};
 
   return (
-    <>
-      <PageFrame
-        headerMode="content-wide"
-        breadcrumbs={[
-          {
-            to: "/library",
-            label: t("library.title"),
-            onNavigate: () => setSelectedEntry(null),
-          },
-        ]}
-        layout="workspace"
-        supportingPane={
-          <LibraryDetailsSurface
-            selection={selection}
-            systemId={selectedEntry ? entrySystemId(selectedEntry) : ""}
-            deviceKey={deviceKey}
-          />
-        }
-        onSwipeBack={goBack}
-        scrollRef={scrollRef}
-        sessionScrollKey={`library:${kind}:list`}
-        headerLeft={
-          <HeaderButton
-            icon={<BackIcon size="24" />}
-            aria-label={t("nav.back")}
-            onClick={goBack}
-          />
-        }
-        headerCenter={
-          <h1 ref={headingRef} className="text-foreground text-xl">
-            {t(config.title)}
-          </h1>
-        }
-      >
-        {content}
-        <BackToTop scrollContainerRef={scrollRef} threshold={200} />
-      </PageFrame>
-    </>
+    <LibraryCollectionPage
+      id={kind}
+      labels={HISTORY_COLLECTIONS[kind]}
+      deviceKey={deviceKey}
+      selection={selection}
+      unsupportedRequiredVersion={
+        historyFeature.available ? null : historyFeature.requiredVersion
+      }
+      query={kind === "recent" ? recentQuery : topQuery}
+      entries={entries}
+      entryDetail={(entry) => details.get(entry)}
+      {...paging}
+    />
   );
 }

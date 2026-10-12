@@ -5,18 +5,18 @@ import { Capacitor } from "@capacitor/core";
 import { Directory, Filesystem } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
 import {
-  Camera,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronUp,
-  Download,
-  House,
-  Share2,
-  Undo2,
+  ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ChevronUpIcon,
+  DownloadIcon,
+  HouseIcon,
+  Share2Icon,
+  Undo2Icon,
   XIcon,
 } from "lucide-react";
 import Keyboard from "react-simple-keyboard/build/index.modern.esm.js";
+import { CameraIcon } from "@/lib/images";
 import "react-simple-keyboard/build/css/index.css";
 import { SlideModal } from "@/components/SlideModal";
 import { TabBar } from "@/components/wui/TabBar";
@@ -175,12 +175,12 @@ function getRemoteActions(platform: string | null): RemoteAction[] {
       {
         labelKey: "remoteKeyboard.back",
         keys: "{esc}",
-        icon: <Undo2 size={28} />,
+        icon: <Undo2Icon size={28} />,
       },
       {
         labelKey: "remoteKeyboard.osd",
         keys: "{f12}",
-        icon: <House size={28} />,
+        icon: <HouseIcon size={28} />,
       },
     ];
   }
@@ -193,7 +193,7 @@ function getRemoteActions(platform: string | null): RemoteAction[] {
       {
         labelKey: "remoteKeyboard.back",
         keys: "{esc}",
-        icon: <Undo2 size={28} />,
+        icon: <Undo2Icon size={28} />,
       },
       { labelKey: "remoteKeyboard.menu", keys: "{space}" },
       { labelKey: "remoteKeyboard.context", keys: "{backspace}" },
@@ -206,7 +206,7 @@ function getRemoteActions(platform: string | null): RemoteAction[] {
     {
       labelKey: "remoteKeyboard.back",
       keys: "{esc}",
-      icon: <Undo2 size={28} />,
+      icon: <Undo2Icon size={28} />,
     },
     { labelKey: "remoteKeyboard.menu", keys: "{f12}" },
     { labelKey: "remoteKeyboard.start", keys: "{space}" },
@@ -427,7 +427,7 @@ export function RemoteKeyboardModal(props: {
                 disabled={!enabled}
                 aria-label={t("remoteKeyboard.up")}
                 onClick={() => sendMacro("{up}", false)}
-                icon={<ChevronUp size={28} />}
+                icon={<ChevronUpIcon size={28} />}
               />
               <Button
                 variant="secondary"
@@ -436,7 +436,7 @@ export function RemoteKeyboardModal(props: {
                 disabled={!enabled}
                 aria-label={t("remoteKeyboard.left")}
                 onClick={() => sendMacro("{left}", false)}
-                icon={<ChevronLeft size={28} />}
+                icon={<ChevronLeftIcon size={28} />}
               />
               <Button
                 variant="secondary"
@@ -453,7 +453,7 @@ export function RemoteKeyboardModal(props: {
                 disabled={!enabled}
                 aria-label={t("remoteKeyboard.right")}
                 onClick={() => sendMacro("{right}", false)}
-                icon={<ChevronRight size={28} />}
+                icon={<ChevronRightIcon size={28} />}
               />
               <Button
                 variant="secondary"
@@ -462,7 +462,7 @@ export function RemoteKeyboardModal(props: {
                 disabled={!enabled}
                 aria-label={t("remoteKeyboard.down")}
                 onClick={() => sendMacro("{down}", false)}
-                icon={<ChevronDown size={28} />}
+                icon={<ChevronDownIcon size={28} />}
               />
             </div>
             <div className="remote-keyboard-pad-actions">
@@ -495,7 +495,7 @@ export function RemoteKeyboardModal(props: {
                   capturingScreenshot ? (
                     <LoadingSpinner size={28} decorative />
                   ) : (
-                    <Camera size={28} />
+                    <CameraIcon size={28} />
                   )
                 }
               />
@@ -512,7 +512,7 @@ export function RemoteKeyboardModal(props: {
                     <Button
                       variant="secondary"
                       className="w-full max-w-none min-w-0"
-                      icon={<Share2 size={20} />}
+                      icon={<Share2Icon size={20} />}
                       label={t("remoteKeyboard.screenshotShare")}
                       onClick={() => void shareScreenshot()}
                     />
@@ -534,7 +534,7 @@ export function RemoteKeyboardModal(props: {
                         className="wui-button-icon flex shrink-0 items-center"
                         aria-hidden="true"
                       >
-                        <Download size={20} />
+                        <DownloadIcon size={20} />
                       </span>
                       {t("remoteKeyboard.screenshotDownload")}
                     </a>

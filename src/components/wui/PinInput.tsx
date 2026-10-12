@@ -68,11 +68,10 @@ function Slot({
       className={classNames(
         "wui-input relative flex h-12 w-12 min-w-0 items-center justify-center",
         "border border-solid",
-        "rounded-md text-2xl font-semibold",
+        "text-2xl font-semibold",
         "transition-[border-color,box-shadow] duration-150",
         {
           "border-foreground-disabled text-foreground-disabled": disabled,
-          "border-input": !disabled && !isActive,
           "border-primary ring-primary/30 ring-2": !disabled && isActive,
           "text-foreground": !disabled,
         },

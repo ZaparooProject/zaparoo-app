@@ -263,9 +263,6 @@ describe("Settings Index Route", () => {
       expect(
         app.getByRole("link", { name: /online\.title/ }),
       ).toHaveTextContent("online.settingsStatusSignedOut");
-      expect(
-        screen.queryByText("settings.moreSettings"),
-      ).not.toBeInTheDocument();
     });
 
     it.each([

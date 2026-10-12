@@ -2,7 +2,8 @@ import type { System } from "@/lib/models";
 import { compareStrings } from "@/lib/utils";
 
 const PRIORITY_CATEGORIES = ["Nintendo", "Sony", "Sega", "Atari"];
-const FALLBACK_CATEGORY = "Other";
+/** Category value for systems Core reports without one; translate for display. */
+export const FALLBACK_CATEGORY = "Other";
 
 export type SystemReleasePeriod =
   | "any"

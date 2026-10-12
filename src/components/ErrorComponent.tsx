@@ -40,7 +40,7 @@ Timestamp: ${new Date().toISOString()}
         paddingLeft: `calc(1rem + max(${safeInsets.left}px, var(--safe-area-inset-left, env(safe-area-inset-left, 0px))))`,
       }}
     >
-      <div className="bg-error-wash my-auto w-full max-w-md shrink-0 rounded-lg p-6 shadow-lg">
+      <div className="bg-error-wash shadow-material my-auto w-full max-w-md shrink-0 rounded-lg p-6">
         <h1 className="mb-4 text-xl font-semibold">
           {t("errorBoundary.title")}
         </h1>

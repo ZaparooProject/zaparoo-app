@@ -249,3 +249,25 @@ describe("Home Page Scan Flows", () => {
     });
   });
 });
+
+describe("ScanActions without reader hardware", () => {
+  it("should explain that the phone cannot scan instead of offering scan actions", () => {
+    renderActions({
+      layout: {
+        leading: null,
+        alternate: null,
+        canScan: false,
+        showEmptyState: true,
+      },
+    });
+
+    expect(screen.getByText("scan.noReaderTitle")).toBeVisible();
+    expect(screen.getByText("scan.noReaderSub")).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: /scan\.tapTag/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /scan\.scanCode/ }),
+    ).not.toBeInTheDocument();
+  });
+});

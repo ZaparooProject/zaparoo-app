@@ -98,14 +98,11 @@ describe("BottomNav", () => {
     );
   });
 
-  it("uses shared nav-tab styling and aria-current for active state", () => {
+  it("marks the active destination with aria-current", () => {
     render(<BottomNav />);
 
     const homeLink = screen.getByTestId("link-/");
-    expect(homeLink).toHaveClass("bottom-nav-tab");
     expect(homeLink).toHaveAttribute("aria-current", "page");
-    expect(homeLink.querySelector(".bottom-nav-icon")).toBeInTheDocument();
-    expect(homeLink).not.toHaveClass("border");
   });
 
   it("renders all navigation buttons", () => {

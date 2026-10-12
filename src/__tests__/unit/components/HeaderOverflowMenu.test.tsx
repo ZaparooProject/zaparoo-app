@@ -57,6 +57,24 @@ describe("HeaderOverflowMenu", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("should keep the scrim interactive so clicking it dismisses the portaled menu", async () => {
+    const user = userEvent.setup();
+    render(<HeaderOverflowMenu actions={actions} />);
+
+    await user.click(screen.getByRole("button", { name: "nav.moreActions" }));
+    const scrim = screen.getByTestId("modal-overlay");
+
+    // Focus isolation makes the app root inert around a body-level dialog;
+    // browsers ignore clicks on anything inside an inert subtree.
+    expect(scrim.closest("[inert]")).toBeNull();
+
+    await user.click(scrim);
+
+    expect(
+      screen.queryByRole("dialog", { name: "nav.moreActions" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("has no detectable accessibility violations while open", async () => {
     const user = userEvent.setup();
     const { baseElement } = render(<HeaderOverflowMenu actions={actions} />);

@@ -1,9 +1,10 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { useState, useEffect, useRef } from "react";
+import toast from "react-hot-toast";
 import { Card } from "@/components/wui/Card";
 import { CoreAPI } from "@/lib/coreApi";
+import { logger } from "@/lib/logger";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
 import { SettingHelp } from "@/components/wui/SettingHelp";
 import { useStatusStore, ConnectionState } from "@/lib/store";
@@ -22,14 +23,65 @@ import {
 } from "@/lib/utils";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useClientCapability } from "@/hooks/useClientCapability";
-import { ClientCapability, type UpdateSettingsRequest } from "@/lib/models";
+import { ClientCapability } from "@/lib/models";
 import { ProfileManager } from "@/components/ProfileManager";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { GatedFeature } from "@/components/GatedFeature";
+import { StatRow } from "@/components/StatRow";
+import { SettingsFieldGroup } from "@/components/SettingsFieldGroup";
+import {
+  CORE_SETTINGS_QUERY_KEY,
+  useCoreSettingsUpdate,
+} from "@/hooks/useCoreSettingsUpdate";
+import { useDebouncedSave } from "@/hooks/useDebouncedSave";
 
 export const Route = createFileRoute("/settings/play-controls")({
   component: PlayControlsSettings,
 });
+
+const PLAYTIME_LIMITS_QUERY_KEY = ["playtime", "limits"] as const;
+const WHOLE_NUMBER = /^\d+$/;
+
+interface DurationDraft {
+  hours: string;
+  minutes: string;
+}
+
+function durationDraft(duration: string): DurationDraft {
+  const { hours, minutes } = parseDuration(duration);
+  return { hours: String(hours), minutes: String(minutes) };
+}
+
+function serializeDuration(draft: DurationDraft): string {
+  return formatDuration({
+    hours: parseInt(draft.hours, 10) || 0,
+    minutes: parseInt(draft.minutes, 10) || 0,
+  });
+}
+
+// An emptied field is mid-edit, not a request to save zero.
+function isCompleteDuration(draft: DurationDraft): boolean {
+  return WHOLE_NUMBER.test(draft.hours) && WHOLE_NUMBER.test(draft.minutes);
+}
+
+function serializeMinutes(value: string): string {
+  const total = parseInt(value, 10) || 0;
+  return formatDuration({ hours: Math.floor(total / 60), minutes: total % 60 });
+}
+
+function isWholeNumber(value: string): boolean {
+  return WHOLE_NUMBER.test(value);
+}
+
+function serializeSeconds(value: string): string {
+  return String(parseFloat(value) || 0);
+}
+
+function isSeconds(value: string): boolean {
+  if (value.trim() === "") return false;
+  const seconds = Number(value);
+  return Number.isFinite(seconds) && seconds >= 0;
+}
 
 export function PlayControlsSettings() {
   const { t } = useTranslation();
@@ -60,44 +112,18 @@ export function PlayControlsSettings() {
   const goBack = () =>
     void router.navigate(appBackNavigationOptions("/settings"));
 
-  const [dailyHours, setDailyHours] = useState("0");
-  const [dailyMinutes, setDailyMinutes] = useState("0");
-  const [sessionHours, setSessionHours] = useState("0");
-  const [sessionMinutes, setSessionMinutes] = useState("0");
-  const [resetMinutes, setResetMinutes] = useState("0");
-  const [launchGuardTimeout, setLaunchGuardTimeout] = useState("15");
-  const [launchGuardDelay, setLaunchGuardDelay] = useState("0");
+  const queryClient = useQueryClient();
 
-  const dailyTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined,
-  );
-  const sessionTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined,
-  );
-  const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined,
-  );
-  const launchGuardTimeoutRef = useRef<
-    ReturnType<typeof setTimeout> | undefined
-  >(undefined);
-  const launchGuardDelayRef = useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined,
-  );
-
-  const {
-    data: limitsConfig,
-    refetch: refetchLimits,
-    isPending,
-  } = useQuery({
-    queryKey: ["playtime", "limits"],
+  const { data: limitsConfig, isPending } = useQuery({
+    queryKey: PLAYTIME_LIMITS_QUERY_KEY,
     queryFn: () => CoreAPI.playtimeLimits(),
     enabled: connected && playtimeLimitsAvailable,
     refetchOnMount: "always",
     refetchInterval: 30000,
   });
 
-  const { data: coreSettings, refetch: refetchSettings } = useQuery({
-    queryKey: ["settings"],
+  const { data: coreSettings } = useQuery({
+    queryKey: CORE_SETTINGS_QUERY_KEY,
     queryFn: () => CoreAPI.settings(),
     enabled: connected,
     refetchOnMount: "always",
@@ -111,177 +137,75 @@ export function PlayControlsSettings() {
     refetchInterval: 30000,
   });
 
-  const updateMutation = useMutation({
+  const updateLimits = useMutation({
     mutationFn: CoreAPI.playtimeLimitsUpdate.bind(CoreAPI),
-    onSuccess: () => {
-      refetchLimits();
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: PLAYTIME_LIMITS_QUERY_KEY }),
+    onError: (error) => {
+      logger.error("Failed to update playtime limits", error, {
+        category: "api",
+        action: "playtimeLimits.update",
+        severity: "warning",
+      });
+      toast.error(t("settings.updateFailed"));
     },
   });
 
-  const updateCoreSetting = useMutation({
-    mutationFn: (params: UpdateSettingsRequest) =>
-      CoreAPI.settingsUpdate(params),
-    onSuccess: () => {
-      refetchSettings();
-    },
+  const updateCoreSetting = useCoreSettingsUpdate();
+
+  const [daily, setDaily] = useDebouncedSave<DurationDraft>({
+    saved: limitsConfig ? durationDraft(limitsConfig.daily) : undefined,
+    serialize: serializeDuration,
+    canSave: isCompleteDuration,
+    save: (draft) =>
+      updateLimits.mutateAsync({ daily: serializeDuration(draft) }),
+    enabled: canWriteCoreSettings,
   });
-
-  useEffect(() => {
-    if (limitsConfig) {
-      const daily = parseDuration(limitsConfig.daily);
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydrate controls from external Core settings.
-      setDailyHours(String(daily.hours));
-      setDailyMinutes(String(daily.minutes));
-
-      const session = parseDuration(limitsConfig.session);
-      setSessionHours(String(session.hours));
-      setSessionMinutes(String(session.minutes));
-
-      const reset = parseDuration(limitsConfig.sessionReset);
-      setResetMinutes(String(reset.hours * 60 + reset.minutes));
-    }
-  }, [limitsConfig]);
-
-  useEffect(() => {
-    if (coreSettings) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydrate controls from external Core settings.
-      setLaunchGuardTimeout(String(coreSettings.launchGuardTimeout ?? 15));
-      setLaunchGuardDelay(String(coreSettings.launchGuardDelay ?? 0));
-    }
-  }, [coreSettings]);
-
-  useEffect(() => {
-    if (!limitsConfig || !canWriteCoreSettings) return;
-
-    if (dailyTimeoutRef.current) {
-      clearTimeout(dailyTimeoutRef.current);
-    }
-
-    dailyTimeoutRef.current = setTimeout(() => {
-      if (!limitsConfig) return;
-
-      const daily = formatDuration({
-        hours: parseInt(dailyHours) || 0,
-        minutes: parseInt(dailyMinutes) || 0,
-      });
-      if (daily !== formatDuration(parseDuration(limitsConfig.daily))) {
-        updateMutation.mutate({ daily });
-      }
-    }, 500);
-
-    return () => {
-      if (dailyTimeoutRef.current) {
-        clearTimeout(dailyTimeoutRef.current);
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dailyHours, dailyMinutes, canWriteCoreSettings]);
-
-  useEffect(() => {
-    if (!limitsConfig || !canWriteCoreSettings) return;
-
-    if (sessionTimeoutRef.current) {
-      clearTimeout(sessionTimeoutRef.current);
-    }
-
-    sessionTimeoutRef.current = setTimeout(() => {
-      if (!limitsConfig) return;
-
-      const session = formatDuration({
-        hours: parseInt(sessionHours) || 0,
-        minutes: parseInt(sessionMinutes) || 0,
-      });
-      if (session !== formatDuration(parseDuration(limitsConfig.session))) {
-        updateMutation.mutate({ session });
-      }
-    }, 500);
-
-    return () => {
-      if (sessionTimeoutRef.current) {
-        clearTimeout(sessionTimeoutRef.current);
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionHours, sessionMinutes, canWriteCoreSettings]);
-
-  useEffect(() => {
-    if (!limitsConfig || !canWriteCoreSettings) return;
-
-    if (resetTimeoutRef.current) {
-      clearTimeout(resetTimeoutRef.current);
-    }
-
-    resetTimeoutRef.current = setTimeout(() => {
-      if (!limitsConfig) return;
-
-      const resetMins = parseInt(resetMinutes) || 0;
-      const sessionReset = formatDuration({
-        hours: Math.floor(resetMins / 60),
-        minutes: resetMins % 60,
-      });
-      if (
-        sessionReset !==
-        formatDuration(parseDuration(limitsConfig.sessionReset))
-      ) {
-        updateMutation.mutate({ sessionReset });
-      }
-    }, 500);
-
-    return () => {
-      if (resetTimeoutRef.current) {
-        clearTimeout(resetTimeoutRef.current);
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resetMinutes, canWriteCoreSettings]);
-
-  useEffect(() => {
-    if (!coreSettings || !canWriteCoreSettings) return;
-
-    const timeout = parseFloat(launchGuardTimeout) || 0;
-    if (timeout === (coreSettings.launchGuardTimeout ?? 15)) return;
-
-    if (launchGuardTimeoutRef.current) {
-      clearTimeout(launchGuardTimeoutRef.current);
-    }
-
-    launchGuardTimeoutRef.current = setTimeout(() => {
-      updateCoreSetting.mutate({ launchGuardTimeout: timeout });
-    }, 500);
-
-    return () => {
-      if (launchGuardTimeoutRef.current) {
-        clearTimeout(launchGuardTimeoutRef.current);
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [launchGuardTimeout, canWriteCoreSettings]);
-
-  useEffect(() => {
-    if (!coreSettings || !canWriteCoreSettings) return;
-
-    const delay = parseFloat(launchGuardDelay) || 0;
-    if (delay === (coreSettings.launchGuardDelay ?? 0)) return;
-
-    if (launchGuardDelayRef.current) {
-      clearTimeout(launchGuardDelayRef.current);
-    }
-
-    launchGuardDelayRef.current = setTimeout(() => {
-      updateCoreSetting.mutate({ launchGuardDelay: delay });
-    }, 500);
-
-    return () => {
-      if (launchGuardDelayRef.current) {
-        clearTimeout(launchGuardDelayRef.current);
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [launchGuardDelay, canWriteCoreSettings]);
+  const [session, setSession] = useDebouncedSave<DurationDraft>({
+    saved: limitsConfig ? durationDraft(limitsConfig.session) : undefined,
+    serialize: serializeDuration,
+    canSave: isCompleteDuration,
+    save: (draft) =>
+      updateLimits.mutateAsync({ session: serializeDuration(draft) }),
+    enabled: canWriteCoreSettings,
+  });
+  const savedReset = limitsConfig
+    ? parseDuration(limitsConfig.sessionReset)
+    : undefined;
+  const [resetMinutes, setResetMinutes] = useDebouncedSave<string>({
+    saved: savedReset
+      ? String(savedReset.hours * 60 + savedReset.minutes)
+      : undefined,
+    serialize: serializeMinutes,
+    canSave: isWholeNumber,
+    save: (draft) =>
+      updateLimits.mutateAsync({ sessionReset: serializeMinutes(draft) }),
+    enabled: canWriteCoreSettings,
+  });
+  const [launchGuardTimeout, setLaunchGuardTimeout] = useDebouncedSave<string>({
+    saved: coreSettings
+      ? String(coreSettings.launchGuardTimeout ?? 15)
+      : undefined,
+    serialize: serializeSeconds,
+    canSave: isSeconds,
+    save: (draft) =>
+      updateCoreSetting.mutateAsync({ launchGuardTimeout: Number(draft) }),
+    enabled: canWriteCoreSettings,
+  });
+  const [launchGuardDelay, setLaunchGuardDelay] = useDebouncedSave<string>({
+    saved: coreSettings
+      ? String(coreSettings.launchGuardDelay ?? 0)
+      : undefined,
+    serialize: serializeSeconds,
+    canSave: isSeconds,
+    save: (draft) =>
+      updateCoreSetting.mutateAsync({ launchGuardDelay: Number(draft) }),
+    enabled: canWriteCoreSettings,
+  });
 
   const handleEnabledToggle = (enabled: boolean) => {
     if (canWriteCoreSettings) {
-      updateMutation.mutate({ enabled });
+      updateLimits.mutate({ enabled });
     }
   };
 
@@ -311,10 +235,29 @@ export function PlayControlsSettings() {
     }
   };
 
+  const limitFieldsDisabled = !canWriteCoreSettings || !limitsConfig?.enabled;
+
+  const durationRow = (label: string, duration: string | undefined) => (
+    <StatRow
+      label={label}
+      valueLabel={
+        isStatusPending
+          ? undefined
+          : formatDurationAccessible(duration ?? "0s", t)
+      }
+    >
+      {isStatusPending ? (
+        <Skeleton className="h-5 w-14" />
+      ) : (
+        formatDurationDisplay(duration ?? "0s")
+      )}
+    </StatRow>
+  );
+
   return (
     <PageFrame
       layout="workspace"
-      className="settings-panel-page"
+      className="settings-panel-page wrap-anywhere"
       headerMode="content-wide"
       breadcrumbs={[{ to: "/settings", label: t("settings.title") }]}
       onSwipeBack={goBack}
@@ -372,207 +315,136 @@ export function PlayControlsSettings() {
                 />
 
                 {limitsConfig?.enabled && (
-                  <div className="playtime-status bg-surface-inset border-border flex flex-col gap-2 rounded-md border p-3">
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">
-                          {t("settings.core.playtime.currentSession")}
-                        </span>
-                        {isStatusPending ? (
-                          <Skeleton className="h-5 w-16" />
-                        ) : (
-                          <Badge
-                            className="max-w-full wrap-anywhere"
-                            variant={getStateBadgeVariant(
-                              playtimeStatus?.state ?? "reset",
+                  <div className="bg-surface-inset border-border flex flex-col gap-2 rounded-md border p-3">
+                    {!connected ? (
+                      <p className="text-muted-foreground text-sm">
+                        {t("settings.notConnected")}
+                      </p>
+                    ) : (
+                      <>
+                        <div className="flex flex-col gap-2">
+                          <div className="flex flex-wrap items-center justify-between gap-x-2">
+                            <h3 className="max-w-full text-sm font-medium">
+                              {t("settings.core.playtime.currentSession")}
+                            </h3>
+                            {isStatusPending ? (
+                              <Skeleton className="h-5 w-16" />
+                            ) : (
+                              <Badge
+                                className="max-w-full wrap-anywhere"
+                                variant={getStateBadgeVariant(
+                                  playtimeStatus?.state ?? "reset",
+                                )}
+                              >
+                                {getStateLabel(
+                                  playtimeStatus?.state ?? "reset",
+                                )}
+                              </Badge>
                             )}
-                          >
-                            {getStateLabel(playtimeStatus?.state ?? "reset")}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">
-                          {t("settings.core.playtime.sessionDuration")}
-                        </span>
-                        {isStatusPending ? (
-                          <Skeleton className="h-5 w-14" />
-                        ) : (
-                          <span
-                            aria-label={formatDurationAccessible(
-                              playtimeStatus?.sessionDuration ?? "0s",
-                              t,
-                            )}
-                          >
-                            {formatDurationDisplay(
-                              playtimeStatus?.sessionDuration ?? "0s",
-                            )}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">
-                          {t("settings.core.playtime.sessionRemaining")}
-                        </span>
-                        {isStatusPending ? (
-                          <Skeleton className="h-5 w-14" />
-                        ) : (
-                          <span
-                            aria-label={formatDurationAccessible(
-                              playtimeStatus?.sessionRemaining ?? "0s",
-                              t,
-                            )}
-                          >
-                            {formatDurationDisplay(
-                              playtimeStatus?.sessionRemaining ?? "0s",
-                            )}
-                          </span>
-                        )}
-                      </div>
-                      {playtimeStatus?.cooldownRemaining &&
-                        playtimeStatus?.state === "cooldown" && (
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">
-                              {t("settings.core.playtime.cooldownRemaining")}
-                            </span>
-                            <span
-                              aria-label={formatDurationAccessible(
-                                playtimeStatus.cooldownRemaining,
-                                t,
-                              )}
-                            >
-                              {formatDurationDisplay(
-                                playtimeStatus.cooldownRemaining,
-                              )}
-                            </span>
                           </div>
-                        )}
-                    </div>
+                          {durationRow(
+                            t("settings.core.playtime.sessionDuration"),
+                            playtimeStatus?.sessionDuration,
+                          )}
+                          {durationRow(
+                            t("settings.core.playtime.sessionRemaining"),
+                            playtimeStatus?.sessionRemaining,
+                          )}
+                          {playtimeStatus?.cooldownRemaining &&
+                            playtimeStatus.state === "cooldown" &&
+                            durationRow(
+                              t("settings.core.playtime.cooldownRemaining"),
+                              playtimeStatus.cooldownRemaining,
+                            )}
+                        </div>
 
-                    <div className="border-border flex flex-col gap-2 border-t pt-2">
-                      <span className="text-sm font-medium">
-                        {t("settings.core.playtime.dailyUsage")}
-                      </span>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">
-                          {t("settings.core.playtime.dailyUsageToday")}
-                        </span>
-                        {isStatusPending ? (
-                          <Skeleton className="h-5 w-14" />
-                        ) : (
-                          <span
-                            aria-label={formatDurationAccessible(
-                              playtimeStatus?.dailyUsageToday ?? "0s",
-                              t,
-                            )}
-                          >
-                            {formatDurationDisplay(
-                              playtimeStatus?.dailyUsageToday ?? "0s",
-                            )}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">
-                          {t("settings.core.playtime.dailyRemaining")}
-                        </span>
-                        {isStatusPending ? (
-                          <Skeleton className="h-5 w-14" />
-                        ) : (
-                          <span
-                            aria-label={formatDurationAccessible(
-                              playtimeStatus?.dailyRemaining ?? "0s",
-                              t,
-                            )}
-                          >
-                            {formatDurationDisplay(
-                              playtimeStatus?.dailyRemaining ?? "0s",
-                            )}
-                          </span>
-                        )}
-                      </div>
-                    </div>
+                        <div className="border-border flex flex-col gap-2 border-t pt-2">
+                          <h3 className="text-sm font-medium">
+                            {t("settings.core.playtime.dailyUsage")}
+                          </h3>
+                          {durationRow(
+                            t("settings.core.playtime.dailyUsageToday"),
+                            playtimeStatus?.dailyUsageToday,
+                          )}
+                          {durationRow(
+                            t("settings.core.playtime.dailyRemaining"),
+                            playtimeStatus?.dailyRemaining,
+                          )}
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
 
                 <div className="flex flex-col gap-3">
-                  <fieldset className="flex flex-col gap-2">
-                    <legend className="text-sm font-medium">
-                      {t("settings.core.playtime.dailyLimit")}
-                    </legend>
-                    <div className="flex gap-2">
-                      <TextInput
-                        type="number"
-                        placeholder="0"
-                        value={dailyHours}
-                        setValue={setDailyHours}
-                        label={t("settings.core.playtime.hours")}
-                        disabled={
-                          !canWriteCoreSettings || !limitsConfig?.enabled
-                        }
-                      />
-                      <TextInput
-                        type="number"
-                        placeholder="0"
-                        value={dailyMinutes}
-                        setValue={setDailyMinutes}
-                        label={t("settings.core.playtime.minutes")}
-                        disabled={
-                          !canWriteCoreSettings || !limitsConfig?.enabled
-                        }
-                      />
-                    </div>
-                  </fieldset>
+                  <SettingsFieldGroup
+                    legend={t("settings.core.playtime.dailyLimit")}
+                  >
+                    <TextInput
+                      type="number"
+                      placeholder="0"
+                      value={daily?.hours ?? "0"}
+                      setValue={(hours) =>
+                        setDaily({ hours, minutes: daily?.minutes ?? "0" })
+                      }
+                      label={t("settings.core.playtime.hours")}
+                      disabled={limitFieldsDisabled}
+                    />
+                    <TextInput
+                      type="number"
+                      placeholder="0"
+                      value={daily?.minutes ?? "0"}
+                      setValue={(minutes) =>
+                        setDaily({ hours: daily?.hours ?? "0", minutes })
+                      }
+                      label={t("settings.core.playtime.minutes")}
+                      disabled={limitFieldsDisabled}
+                    />
+                  </SettingsFieldGroup>
 
-                  <fieldset className="flex flex-col gap-2">
-                    <legend className="text-sm font-medium">
-                      {t("settings.core.playtime.sessionLimit")}
-                    </legend>
-                    <div className="flex gap-2">
-                      <TextInput
-                        type="number"
-                        placeholder="0"
-                        value={sessionHours}
-                        setValue={setSessionHours}
-                        label={t("settings.core.playtime.hours")}
-                        disabled={
-                          !canWriteCoreSettings || !limitsConfig?.enabled
-                        }
-                      />
-                      <TextInput
-                        type="number"
-                        placeholder="0"
-                        value={sessionMinutes}
-                        setValue={setSessionMinutes}
-                        label={t("settings.core.playtime.minutes")}
-                        disabled={
-                          !canWriteCoreSettings || !limitsConfig?.enabled
-                        }
-                      />
-                    </div>
-                  </fieldset>
+                  <SettingsFieldGroup
+                    legend={t("settings.core.playtime.sessionLimit")}
+                  >
+                    <TextInput
+                      type="number"
+                      placeholder="0"
+                      value={session?.hours ?? "0"}
+                      setValue={(hours) =>
+                        setSession({ hours, minutes: session?.minutes ?? "0" })
+                      }
+                      label={t("settings.core.playtime.hours")}
+                      disabled={limitFieldsDisabled}
+                    />
+                    <TextInput
+                      type="number"
+                      placeholder="0"
+                      value={session?.minutes ?? "0"}
+                      setValue={(minutes) =>
+                        setSession({ hours: session?.hours ?? "0", minutes })
+                      }
+                      label={t("settings.core.playtime.minutes")}
+                      disabled={limitFieldsDisabled}
+                    />
+                  </SettingsFieldGroup>
 
-                  <fieldset className="flex flex-col gap-2">
-                    <legend className="text-sm font-medium">
-                      {t("settings.core.playtime.sessionReset")}
-                    </legend>
-                    <div className="flex gap-2">
-                      <TextInput
-                        type="number"
-                        placeholder="0"
-                        value={resetMinutes}
-                        setValue={setResetMinutes}
-                        label={t("settings.core.playtime.minutes")}
-                        disabled={
-                          !canWriteCoreSettings || !limitsConfig?.enabled
-                        }
-                        className="max-w-[calc(50%-0.25rem)]"
-                      />
-                    </div>
-                    <span className="text-muted-foreground text-xs">
-                      {t("settings.core.playtime.neverReset")}
-                    </span>
-                  </fieldset>
+                  <SettingsFieldGroup
+                    legend={t("settings.core.playtime.sessionReset")}
+                    hint={
+                      <p className="text-muted-foreground mt-2 text-xs">
+                        {t("settings.core.playtime.neverReset")}
+                      </p>
+                    }
+                  >
+                    <TextInput
+                      type="number"
+                      placeholder="0"
+                      value={resetMinutes ?? "0"}
+                      setValue={setResetMinutes}
+                      label={t("settings.core.playtime.minutes")}
+                      disabled={limitFieldsDisabled}
+                      className="max-w-[calc(50%-0.25rem)]"
+                    />
+                  </SettingsFieldGroup>
                 </div>
               </Card>
             </section>
@@ -621,39 +493,33 @@ export function PlayControlsSettings() {
               />
 
               <div className="flex flex-col gap-3">
-                <fieldset className="flex flex-col gap-2">
-                  <legend className="text-sm font-medium">
-                    {t("settings.core.launchGuard.timeout")}
-                  </legend>
-                  <div className="flex gap-2">
-                    <TextInput
-                      type="number"
-                      placeholder="15"
-                      value={launchGuardTimeout}
-                      setValue={setLaunchGuardTimeout}
-                      label={t("settings.core.launchGuard.seconds")}
-                      disabled={!canWriteCoreSettings || !launchGuardEnabled}
-                      className="max-w-[calc(50%-0.25rem)]"
-                    />
-                  </div>
-                </fieldset>
+                <SettingsFieldGroup
+                  legend={t("settings.core.launchGuard.timeout")}
+                >
+                  <TextInput
+                    type="number"
+                    placeholder="15"
+                    value={launchGuardTimeout ?? "15"}
+                    setValue={setLaunchGuardTimeout}
+                    label={t("settings.core.launchGuard.seconds")}
+                    disabled={!canWriteCoreSettings || !launchGuardEnabled}
+                    className="max-w-[calc(50%-0.25rem)]"
+                  />
+                </SettingsFieldGroup>
 
-                <fieldset className="flex flex-col gap-2">
-                  <legend className="text-sm font-medium">
-                    {t("settings.core.launchGuard.delay")}
-                  </legend>
-                  <div className="flex gap-2">
-                    <TextInput
-                      type="number"
-                      placeholder="0"
-                      value={launchGuardDelay}
-                      setValue={setLaunchGuardDelay}
-                      label={t("settings.core.launchGuard.seconds")}
-                      disabled={!canWriteCoreSettings || !launchGuardEnabled}
-                      className="max-w-[calc(50%-0.25rem)]"
-                    />
-                  </div>
-                </fieldset>
+                <SettingsFieldGroup
+                  legend={t("settings.core.launchGuard.delay")}
+                >
+                  <TextInput
+                    type="number"
+                    placeholder="0"
+                    value={launchGuardDelay ?? "0"}
+                    setValue={setLaunchGuardDelay}
+                    label={t("settings.core.launchGuard.seconds")}
+                    disabled={!canWriteCoreSettings || !launchGuardEnabled}
+                    className="max-w-[calc(50%-0.25rem)]"
+                  />
+                </SettingsFieldGroup>
               </div>
             </Card>
           </section>

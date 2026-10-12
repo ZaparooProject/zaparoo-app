@@ -270,7 +270,10 @@ export function useWarpSubscription(appUserID: string) {
           purchaseError,
         });
       } finally {
-        if (!silent && !signal.aborted && mountedRef.current) {
+        // A silent refresh can replace the first load before it finishes, so
+        // whichever load is still current when it settles ends the loading
+        // state. An aborted load has been superseded and leaves it alone.
+        if (!signal.aborted && mountedRef.current) {
           setIsLoading(false);
         }
       }

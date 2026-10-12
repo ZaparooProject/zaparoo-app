@@ -47,10 +47,11 @@ export function ToggleChip(props: ToggleChipProps) {
           "px-4": props.compact && (props.label || !props.icon),
           "px-6": !props.compact && (props.label || !props.icon),
           "rounded-full": !props.label && props.icon,
-          "rounded-[4px]": props.label || !props.icon,
+          "rounded-md": props.label || !props.icon,
         },
         {
-          "bg-primary-wash shadow-inner": props.state && !props.disabled,
+          "bg-primary-wash inset-shadow-material":
+            props.state && !props.disabled,
           "text-primary": props.state && !props.disabled,
           "border-primary": props.state && !props.disabled,
           "border-input": !props.state && !props.disabled,

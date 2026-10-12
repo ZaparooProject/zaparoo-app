@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Bell } from "lucide-react";
+import { BellIcon } from "lucide-react";
 import { useStatusStore } from "@/lib/store";
 import { useHaptics } from "@/hooks/useHaptics";
 import { HeaderButton } from "@/components/wui/HeaderButton";
@@ -25,7 +25,7 @@ export function InboxButton() {
       }}
       icon={
         <span className="relative">
-          <Bell size={24} aria-hidden="true" />
+          <BellIcon size={24} aria-hidden="true" />
           <NotificationBadge count={inboxCount} className="-top-2 -right-2" />
         </span>
       }

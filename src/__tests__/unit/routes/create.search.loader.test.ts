@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { Preferences } from "@capacitor/preferences";
+import { CoreAPI } from "@/lib/coreApi";
+import { Route } from "@/routes/create.search";
 
-// Mock dependencies
 vi.mock("@capacitor/preferences", () => ({
   Preferences: {
     get: vi.fn().mockResolvedValue({ value: null }),
@@ -8,280 +10,72 @@ vi.mock("@capacitor/preferences", () => ({
   },
 }));
 
-vi.mock("../../../lib/coreApi", () => ({
-  CoreAPI: {
-    systems: vi.fn(),
-  },
-  isRequestCancelledError: (error: unknown) => {
-    const message = error instanceof Error ? error.message : String(error);
-    return /request cancelled|request canceled|connection reset|aborted/i.test(
-      message,
-    );
-  },
-}));
+const runLoader = () =>
+  (Route.options.loader as (context: unknown) => Promise<unknown>)({});
 
 describe("Create Search Route Loader", () => {
-  let mockPreferencesGet: any;
-  let mockCoreApiSystems: any;
-  let Route: any;
+  const mockPreferencesGet = vi.mocked(Preferences.get);
 
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
-
-    // Get the mock functions
-    const { Preferences } = await import("@capacitor/preferences");
-    mockPreferencesGet = vi.mocked(Preferences.get);
-
-    const { CoreAPI } = await import("../../../lib/coreApi");
-    mockCoreApiSystems = vi.mocked(CoreAPI.systems);
-
-    // Import route after mocking
-    const routeModule = await import("../../../routes/create.search");
-    Route = routeModule.Route;
+    mockPreferencesGet.mockResolvedValue({ value: null });
   });
 
-  it("should load search system preference and systems data", async () => {
-    const mockSystemsResponse = {
-      systems: [
-        { id: "snes", name: "Super Nintendo" },
-        { id: "genesis", name: "Sega Genesis" },
-      ],
-    };
-
+  it("should load the saved system and tag filters", async () => {
     mockPreferencesGet
       .mockResolvedValueOnce({ value: "snes" }) // searchSystem
-      .mockResolvedValueOnce({ value: "[]" }); // searchTags (empty array)
-    mockCoreApiSystems.mockResolvedValue(mockSystemsResponse);
+      .mockResolvedValueOnce({ value: '["genre:rpg"]' }); // searchTags
 
-    const result = await Route.options?.loader?.({} as any);
-
-    expect(result).toEqual({
+    await expect(runLoader()).resolves.toEqual({
       systemQuery: "snes",
-      tagQuery: [],
-      systems: mockSystemsResponse,
+      tagQuery: ["genre:rpg"],
     });
-
     expect(mockPreferencesGet).toHaveBeenCalledWith({ key: "searchSystem" });
     expect(mockPreferencesGet).toHaveBeenCalledWith({ key: "searchTags" });
-    expect(mockCoreApiSystems).toHaveBeenCalledWith();
   });
 
-  it("should remove zero-count systems and reset a saved empty system", async () => {
-    mockPreferencesGet
-      .mockResolvedValueOnce({ value: "3do" })
-      .mockResolvedValueOnce({ value: "[]" });
-    mockCoreApiSystems.mockResolvedValue({
-      systems: [
-        { id: "snes", name: "Super Nintendo", mediaCount: 10 },
-        { id: "3do", name: "3DO", mediaCount: 0 },
-      ],
-    });
-
-    const result = await Route.options?.loader?.({} as any);
-
-    expect(result).toEqual({
+  it("should default to all systems and no tags when nothing is saved", async () => {
+    await expect(runLoader()).resolves.toEqual({
       systemQuery: "all",
       tagQuery: [],
-      systems: {
-        systems: [{ id: "snes", name: "Super Nintendo", mediaCount: 10 }],
-      },
     });
   });
 
-  it("should use default 'all' when no search system preference exists", async () => {
-    const mockSystemsResponse = { systems: [] };
-
+  it("should treat an empty saved system as all systems", async () => {
     mockPreferencesGet
-      .mockResolvedValueOnce({ value: null }) // searchSystem
-      .mockResolvedValueOnce({ value: null }); // searchTags
-    mockCoreApiSystems.mockResolvedValue(mockSystemsResponse);
+      .mockResolvedValueOnce({ value: "" })
+      .mockResolvedValueOnce({ value: null });
 
-    const result = await Route.options?.loader?.({} as any);
-
-    expect(result).toEqual({
-      systemQuery: "all",
-      tagQuery: [],
-      systems: mockSystemsResponse,
-    });
+    await expect(runLoader()).resolves.toMatchObject({ systemQuery: "all" });
   });
 
-  it("should use default 'all' when search system preference is undefined", async () => {
-    const mockSystemsResponse = { systems: [] };
-
-    mockPreferencesGet
-      .mockResolvedValueOnce({ value: undefined }) // searchSystem
-      .mockResolvedValueOnce({ value: undefined }); // searchTags
-    mockCoreApiSystems.mockResolvedValue(mockSystemsResponse);
-
-    const result = await Route.options?.loader?.({} as any);
-
-    expect(result).toEqual({
-      systemQuery: "all",
-      tagQuery: [],
-      systems: mockSystemsResponse,
-    });
-  });
-
-  it("should handle empty string preference", async () => {
-    const mockSystemsResponse = { systems: [] };
-
-    mockPreferencesGet
-      .mockResolvedValueOnce({ value: "" }) // searchSystem
-      .mockResolvedValueOnce({ value: "" }); // searchTags
-    mockCoreApiSystems.mockResolvedValue(mockSystemsResponse);
-
-    const result = await Route.options?.loader?.({} as any);
-
-    expect(result).toEqual({
-      systemQuery: "all", // empty string should default to "all"
-      tagQuery: [],
-      systems: mockSystemsResponse,
-    });
-  });
-
-  it("should handle preferences API failure", async () => {
-    mockPreferencesGet.mockRejectedValue(
-      new Error("Preferences not available"),
-    );
-    mockCoreApiSystems.mockResolvedValue({ systems: [] });
-
-    await expect(Route.options?.loader?.({} as any)).rejects.toThrow(
-      "Preferences not available",
-    );
-
-    // CoreAPI.systems is called in parallel, so it will be called even if preferences fail
-    expect(mockCoreApiSystems).toHaveBeenCalled();
-  });
-
-  it("should use empty systems when CoreAPI systems request is cancelled", async () => {
+  it("should ignore unparseable saved tags", async () => {
     mockPreferencesGet
       .mockResolvedValueOnce({ value: "snes" })
-      .mockResolvedValueOnce({ value: "[]" });
-    mockCoreApiSystems.mockRejectedValue(
-      new Error("Request cancelled: connection reset"),
-    );
+      .mockResolvedValueOnce({ value: "{not json" });
 
-    const result = await Route.options?.loader?.({} as any);
-
-    expect(result).toEqual({
+    await expect(runLoader()).resolves.toEqual({
       systemQuery: "snes",
       tagQuery: [],
-      systems: { systems: [] },
     });
   });
 
-  it("should handle CoreAPI systems failure", async () => {
-    mockPreferencesGet
-      .mockResolvedValueOnce({ value: "snes" }) // searchSystem
-      .mockResolvedValueOnce({ value: "[]" }); // searchTags
-    mockCoreApiSystems.mockRejectedValue(new Error("Core API unavailable"));
-
-    await expect(Route.options?.loader?.({} as any)).rejects.toThrow(
-      "Core API unavailable",
-    );
-  });
-
-  it("should handle both APIs failing", async () => {
+  it("should reject when preferences cannot be read", async () => {
     mockPreferencesGet.mockRejectedValue(new Error("Preferences failed"));
-    mockCoreApiSystems.mockRejectedValue(new Error("Core API failed"));
 
-    // Should fail on the first error (preferences)
-    await expect(Route.options?.loader?.({} as any)).rejects.toThrow(
-      "Preferences failed",
-    );
+    await expect(runLoader()).rejects.toThrow("Preferences failed");
   });
 
-  it("should handle malformed systems response", async () => {
-    mockPreferencesGet
-      .mockResolvedValueOnce({ value: "snes" }) // searchSystem
-      .mockResolvedValueOnce({ value: "[]" }); // searchTags
-    mockCoreApiSystems.mockResolvedValue(null);
+  it("should not wait on Core, so navigation is not blocked while disconnected", async () => {
+    // A request made while disconnected is queued and may not settle for 30s.
+    const systems = vi
+      .spyOn(CoreAPI, "systems")
+      .mockReturnValue(new Promise(() => {}));
 
-    const result = await Route.options?.loader?.({} as any);
-
-    expect(result).toEqual({
+    await expect(runLoader()).resolves.toEqual({
       systemQuery: "all",
       tagQuery: [],
-      systems: null,
     });
-  });
-
-  it("should discard a saved system missing from current device", async () => {
-    const mockSystemsResponse = { systems: [] };
-
-    // Test with a custom system ID
-    mockPreferencesGet
-      .mockResolvedValueOnce({ value: "custom-system-123" }) // searchSystem
-      .mockResolvedValueOnce({ value: '["action", "rpg"]' }); // searchTags (JSON array)
-    mockCoreApiSystems.mockResolvedValue(mockSystemsResponse);
-
-    const result = await Route.options?.loader?.({} as any);
-
-    expect(result).toEqual({
-      systemQuery: "all",
-      tagQuery: ["action", "rpg"],
-      systems: mockSystemsResponse,
-    });
-  });
-
-  it("should execute both API calls in parallel", async () => {
-    // Track the order of API calls to verify parallelism
-    const callOrder: string[] = [];
-
-    mockPreferencesGet.mockImplementation(({ key }: { key: string }) => {
-      callOrder.push(`preferences:${key}`);
-      return Promise.resolve({ value: key === "searchSystem" ? "snes" : "[]" });
-    });
-
-    mockCoreApiSystems.mockImplementation(() => {
-      callOrder.push("systems");
-      return Promise.resolve({ systems: [] });
-    });
-
-    const result = await Route.options?.loader?.({} as any);
-
-    // Verify all APIs were called
-    expect(mockPreferencesGet).toHaveBeenCalledWith({ key: "searchSystem" });
-    expect(mockPreferencesGet).toHaveBeenCalledWith({ key: "searchTags" });
-    expect(mockCoreApiSystems).toHaveBeenCalled();
-
-    // Verify result is correct (proves parallel execution worked)
-    expect(result).toEqual({
-      systemQuery: "all",
-      tagQuery: [],
-      systems: { systems: [] },
-    });
-  });
-
-  it("should handle systems response with large data", async () => {
-    const largeSystems = Array.from({ length: 100 }, (_, i) => ({
-      id: `system-${i}`,
-      name: `System ${i}`,
-    }));
-    const mockSystemsResponse = { systems: largeSystems };
-
-    mockPreferencesGet
-      .mockResolvedValueOnce({ value: "system-50" }) // searchSystem
-      .mockResolvedValueOnce({ value: "[]" }); // searchTags
-    mockCoreApiSystems.mockResolvedValue(mockSystemsResponse);
-
-    const result = await Route.options?.loader?.({} as any);
-
-    expect(result.systems.systems).toHaveLength(100);
-    expect(result.systemQuery).toBe("system-50");
-    expect(result.tagQuery).toEqual([]);
-  });
-
-  it("should handle CoreAPI timeout", async () => {
-    mockPreferencesGet
-      .mockResolvedValueOnce({ value: "snes" }) // searchSystem
-      .mockResolvedValueOnce({ value: "[]" }); // searchTags
-
-    // Simulate immediate rejection (simpler than using timers)
-    mockCoreApiSystems.mockRejectedValue(new Error("Request timeout"));
-
-    await expect(Route.options?.loader?.({} as any)).rejects.toThrow(
-      "Request timeout",
-    );
+    expect(systems).not.toHaveBeenCalled();
   });
 });

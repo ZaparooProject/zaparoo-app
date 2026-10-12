@@ -5,7 +5,7 @@ import type { MediaBrowseIndexGroup, MediaBrowseSort } from "@/lib/models";
 import { SlideModal } from "@/components/SlideModal";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { Button } from "@/components/wui/Button";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { InlineLoading } from "@/components/InlineLoading";
 import { DelayedLoading } from "@/components/DelayedLoading";
 import { useHapticPress } from "@/hooks/useHapticPress";
 
@@ -40,10 +40,7 @@ export function LibraryLetterJumpModal(props: {
       <div className="flex flex-col py-2">
         {indexQuery.isLoading ? (
           <DelayedLoading>
-            <div className="text-muted-foreground flex items-center justify-center gap-2 py-8">
-              <LoadingSpinner size={16} className="text-primary" />
-              <span>{t("library.loadingLetters")}</span>
-            </div>
+            <InlineLoading label={t("library.loadingLetters")} />
           </DelayedLoading>
         ) : indexQuery.isError ? (
           <EmptyState
@@ -64,7 +61,7 @@ export function LibraryLetterJumpModal(props: {
             <button
               key={group.key}
               type="button"
-              className="border-border hover:bg-foreground/10 focus-visible:ring-ring flex min-h-12 w-full items-center justify-between gap-3 border-b px-2 py-3 text-left last:border-b-0 focus-visible:ring-2 focus-visible:outline-none"
+              className="border-border hover:bg-surface-highlight focus-visible:ring-ring flex min-h-12 w-full items-center justify-between gap-3 border-b px-2 py-3 text-left last:border-b-0 focus-visible:ring-2 focus-visible:outline-none"
               onPointerUp={handleHapticPress}
               onClick={() => props.onSelect(group)}
             >

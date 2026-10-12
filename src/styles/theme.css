@@ -34,32 +34,41 @@
   --status-yellow-wash: #fff0c5;
   --interaction-wash: #deebfc;
   --interaction-glow: rgb(9 92 185 / 28%);
-  --radius: 0.5rem;
+  /* Arcade caps keep one face in both themes; only their ink differs. */
+  --cap-primary: linear-gradient(180deg, #3cb0ff 0%, #0090fe 50%, #0070cc 100%);
+  --cap-primary-edge: #005599;
+  --cap-pro: linear-gradient(180deg, #ffd980 0%, #f5b418 50%, #dc9a00 100%);
+  --cap-pro-edge: #9a6a00;
+  --cap-pro-ink: #2a1c00;
+  --cap-destructive: linear-gradient(
+    180deg,
+    #da3838 0%,
+    #cf3030 50%,
+    #c62828 100%
+  );
+  --cap-destructive-edge: #a11b1b;
+  --cap-ink: #ffffff;
+  --pressed-highlight: rgb(255 255 255 / 10%);
+  /* Bounded form/reference column; follows text size like Tailwind's 2xl. */
+  --content-bound: 42rem;
+  --font-app: "Outfit", system-ui, sans-serif;
   --bottom-nav-base-height: max(64px, 3.25rem);
 
   /* One palette; legacy WUI and shadcn names are aliases, not separate themes. */
   --background: var(--surface-base);
   --foreground: var(--text-primary);
   --card: var(--surface-raised);
-  --card-foreground: var(--text-primary);
-  --popover: var(--surface-raised);
-  --popover-foreground: var(--text-primary);
   --primary: var(--interaction);
   --primary-foreground: #ffffff;
-  --secondary: var(--surface-highlight);
-  --secondary-foreground: var(--text-primary);
   --muted: var(--surface-inset);
   --muted-foreground: var(--text-secondary);
   --foreground-hint: var(--text-muted);
-  --accent: var(--interaction-wash);
-  --accent-foreground: var(--text-primary);
-  --destructive: var(--status-red);
   --border: var(--edge-subtle);
   --input: var(--edge-default);
   --ring: var(--interaction);
+  /* Read directly by inline styles, independent of the Tailwind aliases. */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-success: var(--status-green);
 }
 
 .dark {
@@ -88,14 +97,19 @@
   --status-yellow-wash: #332b18;
   --interaction-wash: #142a43;
   --interaction-glow: rgb(70 177 255 / 55%);
+  /* The dark interaction blue is bright, so content on it needs dark ink. */
+  --primary-foreground: #0a0f18;
 }
 
 @theme inline {
-  --font-sans: "Outfit", system-ui, sans-serif;
+  --font-sans: var(--font-app);
+  /* Tablet chrome starts at 760 CSS px; `md:` follows the same threshold. */
+  --breakpoint-md: 47.5rem;
+  --shadow-material: 0 6px 12px var(--material-shadow);
+  --inset-shadow-material: inset 0 1px 3px var(--material-shadow);
   --color-surface-raised: var(--surface-raised);
   --color-surface-inset: var(--surface-inset);
   --color-surface-highlight: var(--surface-highlight);
-  --color-bd-outline: var(--text-secondary);
   --color-foreground-disabled: var(--text-muted);
   --color-success: var(--status-green);
   --color-error: var(--status-red);

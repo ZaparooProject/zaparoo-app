@@ -1,4 +1,9 @@
 import { create } from "zustand";
+import {
+  APP_SECTIONS,
+  appSectionForPath,
+  type AppSectionId,
+} from "@/lib/appSections";
 
 declare module "@tanstack/history" {
   interface HistoryState {
@@ -6,7 +11,7 @@ declare module "@tanstack/history" {
   }
 }
 
-export type BottomTabId = "zap" | "library" | "create" | "settings";
+export type BottomTabId = AppSectionId;
 
 export interface SessionSearchParams {
   query: string;
@@ -28,26 +33,12 @@ interface TabSessionState {
   reset: () => void;
 }
 
-const defaultLastHref: Record<BottomTabId, string> = {
-  zap: "/",
-  library: "/library",
-  create: "/create",
-  settings: "/settings",
-};
+const defaultLastHref = Object.fromEntries(
+  APP_SECTIONS.map(({ id, to }) => [id, to]),
+) as Record<BottomTabId, string>;
 
-export function bottomTabForPath(pathname: string): BottomTabId | null {
-  if (pathname === "/" || pathname.startsWith("/zap/")) return "zap";
-  if (pathname === "/library" || pathname.startsWith("/library/")) {
-    return "library";
-  }
-  if (pathname === "/create" || pathname.startsWith("/create/")) {
-    return "create";
-  }
-  if (pathname === "/settings" || pathname.startsWith("/settings/")) {
-    return "settings";
-  }
-  return null;
-}
+export const bottomTabForPath: (pathname: string) => BottomTabId | null =
+  appSectionForPath;
 
 export type AppBackDestination =
   | "/"

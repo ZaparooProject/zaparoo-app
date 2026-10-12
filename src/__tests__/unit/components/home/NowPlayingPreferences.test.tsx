@@ -32,9 +32,9 @@ function NowPlaying(props: {
       connected
       headingLabel={headingLabel}
       onStop={vi.fn()}
-      onPlaylistPrevious={vi.fn()}
-      onPlaylistToggle={vi.fn()}
-      onPlaylistNext={vi.fn()}
+      onPrevious={vi.fn()}
+      onToggle={vi.fn()}
+      onNext={vi.fn()}
     />
   );
 }
@@ -221,7 +221,7 @@ describe("Now Playing preferences", () => {
     );
   });
 
-  it("opens the same read-only details when the cover is pressed", async () => {
+  it("opens read-only details from the single artwork and title control", async () => {
     const lookup = vi
       .spyOn(CoreAPI, "mediaMeta")
       .mockResolvedValue(
@@ -234,10 +234,13 @@ describe("Now Playing preferences", () => {
     });
     render(<NowPlaying {...primary} />);
 
-    const cover = await screen.findByRole("button", {
-      name: "library.details: library.imageAlt",
+    // Artwork and title share one control, so there is a single tab stop.
+    const details = await screen.findAllByRole("button", {
+      name: /^library\.details/,
     });
-    await userEvent.setup().click(cover);
+    expect(details).toHaveLength(1);
+    expect(details[0]).toHaveAccessibleName("library.details: Game");
+    await userEvent.setup().click(details[0]!);
 
     const dialog = screen.getByRole("dialog", { name: "Game" });
     expect(within(dialog).getByText("Platformer")).toBeInTheDocument();
@@ -275,6 +278,37 @@ describe("Now Playing preferences", () => {
         screen.getByRole("group", { name: "scan.mediaPreferences" }),
       ).getByRole("button", { name: "library.addLike" }),
     ).toBeEnabled();
+  });
+
+  it("closes details when different media starts instead of reopening them for it", async () => {
+    vi.spyOn(CoreAPI, "mediaLookup").mockResolvedValue({ match: null });
+    vi.spyOn(CoreAPI, "mediaImage").mockResolvedValue({
+      contentType: "text/plain",
+      data: "",
+      typeTag: "",
+    });
+    vi.spyOn(CoreAPI, "mediaMeta").mockImplementation(({ path }) =>
+      Promise.resolve(meta(path ?? primary.mediaPath)),
+    );
+    const { rerender } = render(<NowPlaying {...primary} />);
+    await userEvent
+      .setup()
+      .click(
+        await screen.findByRole("button", { name: "library.details: Game" }),
+      );
+    expect(screen.getByRole("dialog", { name: "Game" })).toBeInTheDocument();
+
+    rerender(
+      <NowPlaying
+        {...primary}
+        mediaName="Other Game"
+        mediaPath="/roms/SNES/other.sfc"
+      />,
+    );
+
+    // Details for the new media become available, but stay closed.
+    await screen.findByRole("button", { name: "library.details: Other Game" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("does not offer actions for empty or playlist-only media, missing index, or unsupported Core", () => {

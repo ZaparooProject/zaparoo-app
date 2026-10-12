@@ -105,9 +105,13 @@ describe("Settings About Route", () => {
     it("should display developer credits", () => {
       renderComponent();
       expect(screen.getByText("Callan Barrett")).toBeInTheDocument();
-      expect(screen.getByText("Developer")).toBeInTheDocument();
+      expect(
+        screen.getByText("settings.about.roleDeveloper"),
+      ).toBeInTheDocument();
       expect(screen.getByText("Tim Wilsie")).toBeInTheDocument();
-      expect(screen.getByText("UX Designer")).toBeInTheDocument();
+      expect(
+        screen.getByText("settings.about.roleDesigner"),
+      ).toBeInTheDocument();
     });
 
     it("should display translations section", () => {

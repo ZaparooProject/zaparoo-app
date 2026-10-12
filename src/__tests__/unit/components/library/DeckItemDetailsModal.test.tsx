@@ -47,7 +47,6 @@ describe("DeckItemDetailsModal launching", () => {
     });
     expect(launching).toHaveTextContent("decks.play");
     expect(launching).toBeDisabled();
-    expect(launching.querySelector("svg.animate-spin")).not.toBeNull();
 
     finish();
     expect(

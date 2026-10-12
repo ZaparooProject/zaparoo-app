@@ -5,7 +5,13 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { render, screen, within } from "@/test-utils";
+import { act, render, screen, waitFor, within } from "@/test-utils";
+import {
+  mockDeviceRecord,
+  seedActiveDevice,
+  seedDeviceRegistry,
+} from "@/test-utils/deviceRegistry";
+import { deviceRegistry } from "@/lib/devices/deviceRegistry";
 import { ReaderStrip } from "@/components/home/ReaderStrip";
 import { CoreAPI } from "@/lib/coreApi";
 import { useStatusStore, ConnectionState } from "@/lib/store";
@@ -70,6 +76,48 @@ describe("Home reader strip", () => {
 
     await readerRegion().findByText("Cartridge slot");
     expect(readerRegion().getByText("scan.readerHolding")).toBeVisible();
+  });
+
+  it("does not show the previous device's readers after switching device", async () => {
+    const first = await seedActiveDevice({ recordId: "first-core" });
+    const second = mockDeviceRecord({
+      recordId: "second-core",
+      address: "192.168.1.60",
+    });
+    await seedDeviceRegistry([first, second], first.recordId);
+    let resolveSecond!: (value: { readers: never[] }) => void;
+    vi.spyOn(CoreAPI, "readers")
+      .mockResolvedValueOnce({
+        readers: [
+          mockReaderInfo({
+            id: "first",
+            readerId: "first",
+            info: "First Core reader",
+            connected: true,
+          }),
+        ],
+      })
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveSecond = resolve;
+        }),
+      );
+    render(<ReaderStrip connected />);
+    await readerRegion().findByText("First Core reader");
+
+    await act(async () => {
+      await deviceRegistry.setActiveRecord(second.recordId);
+    });
+
+    await waitFor(() =>
+      expect(
+        readerRegion().queryByText("First Core reader"),
+      ).not.toBeInTheDocument(),
+    );
+    resolveSecond({ readers: [] });
+    expect(
+      await readerRegion().findByText("settings.readers.noReadersDetected"),
+    ).toBeVisible();
   });
 
   it("says so when the device reports no readers", async () => {

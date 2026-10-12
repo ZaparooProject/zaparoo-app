@@ -1,9 +1,11 @@
+import { formatAppDateTime } from "@/lib/formatDate";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "../../../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { HistoryModal } from "@/components/home/HistoryModal";
 import { CoreAPI } from "@/lib/coreApi";
-import { useStatusStore } from "@/lib/store";
+import { ConnectionState, useStatusStore } from "@/lib/store";
+import { seedActiveDevice } from "../../../../test-utils/deviceRegistry";
 
 // Note: CopyButton uses Clipboard and Haptics plugins which are already
 // mocked globally in test-setup.ts. No additional mocking needed.
@@ -36,12 +38,15 @@ describe("HistoryModal", () => {
     historyData: undefined,
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     vi.spyOn(CoreAPI, "run").mockResolvedValue(undefined);
     vi.spyOn(CoreAPI, "mediaHistory").mockResolvedValue({ entries: [] });
+    vi.spyOn(CoreAPI, "isConnected").mockReturnValue(true);
+    await seedActiveDevice();
     useStatusStore.setState({
       connected: true,
+      connectionState: ConnectionState.CONNECTED,
       coreVersion: "2.17.0",
       coreVersionPending: false,
     });
@@ -143,29 +148,86 @@ describe("HistoryModal", () => {
   });
 
   describe("empty state", () => {
-    it("should render empty modal when historyData is undefined", () => {
-      // Arrange & Act
-      render(<HistoryModal {...defaultProps} historyData={undefined} />);
-
-      // Assert - Modal renders but no entries
-      const titles = screen.getAllByText("scan.historyTitle");
-      expect(titles.length).toBeGreaterThan(0);
-      // No history entries should be present
-      expect(
-        screen.queryByText(/scan\.lastScannedTime/),
-      ).not.toBeInTheDocument();
-    });
-
-    it("should render empty modal when historyData has no entries", () => {
-      // Arrange & Act
+    it("should say there are no scans when history has no entries", () => {
       render(<HistoryModal {...defaultProps} historyData={{ entries: [] }} />);
 
-      // Assert - Modal renders but no entries
-      const titles = screen.getAllByText("scan.historyTitle");
-      expect(titles.length).toBeGreaterThan(0);
+      expect(screen.getByText("scan.history.empty")).toBeVisible();
+    });
+
+    it("should say nothing has been played when play history is empty", async () => {
+      const user = userEvent.setup();
+      render(<HistoryModal {...defaultProps} historyData={{ entries: [] }} />);
+
+      await user.click(
+        screen.getByRole("tab", { name: "scan.historyTabPlayed" }),
+      );
+
+      expect(await screen.findByText("scan.historyPlayedEmpty")).toBeVisible();
       expect(
-        screen.queryByText(/scan\.lastScannedTime/),
+        screen.queryByRole("button", { name: "scan.coverRowLaunch" }),
       ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("scan history request states", () => {
+    it("should offer a retry instead of loading forever when the request fails", async () => {
+      const user = userEvent.setup();
+      const onRetryHistory = vi.fn();
+      render(
+        <HistoryModal
+          {...defaultProps}
+          historyData={undefined}
+          historyError
+          onRetryHistory={onRetryHistory}
+        />,
+      );
+
+      expect(screen.getByText("scan.historyLoadError")).toBeInTheDocument();
+      expect(screen.queryByText("loading")).not.toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "scan.retry" }));
+
+      expect(onRetryHistory).toHaveBeenCalledTimes(1);
+    });
+
+    it("should say the device is not connected when there is nothing cached", () => {
+      useStatusStore.setState({ connected: false });
+      render(<HistoryModal {...defaultProps} historyData={undefined} />);
+
+      expect(screen.getByText("settings.notConnected")).toBeInTheDocument();
+      expect(screen.queryByText("loading")).not.toBeInTheDocument();
+    });
+
+    it("should announce loading while the first request is pending", async () => {
+      render(<HistoryModal {...defaultProps} historyData={undefined} />);
+
+      expect(await screen.findByText("loading")).toBeInTheDocument();
+    });
+
+    it("should keep earlier scans visible beside a failed refresh", () => {
+      render(
+        <HistoryModal
+          {...defaultProps}
+          historyData={{ entries: [createHistoryEntry()] }}
+          historyError
+        />,
+      );
+
+      expect(screen.getByText("scan.historyLoadError")).toBeInTheDocument();
+      expect(screen.getByText("game:mario")).toBeInTheDocument();
+    });
+
+    it("should not offer replay when Core has no live transport", () => {
+      vi.mocked(CoreAPI.isConnected).mockReturnValue(false);
+      render(
+        <HistoryModal
+          {...defaultProps}
+          historyData={{ entries: [createHistoryEntry()] }}
+        />,
+      );
+
+      expect(
+        screen.getByRole("button", { name: "scan.historyReplay" }),
+      ).toBeDisabled();
     });
   });
 
@@ -179,7 +241,7 @@ describe("HistoryModal", () => {
       render(<HistoryModal {...defaultProps} historyData={historyData} />);
 
       expect(
-        screen.getByText(new Date(time).toLocaleString()),
+        screen.getByText(formatAppDateTime(time) ?? ""),
       ).toBeInTheDocument();
     });
 

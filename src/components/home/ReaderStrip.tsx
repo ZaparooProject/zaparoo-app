@@ -1,6 +1,7 @@
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import { GatedFeature } from "@/components/GatedFeature";
+import { InlineLoading } from "@/components/InlineLoading";
 import { ReaderStatusRow } from "@/components/ReaderStatusRow";
 import { Card } from "@/components/wui/Card";
 import { EmptyState } from "@/components/wui/EmptyState";
@@ -29,7 +30,8 @@ export function ReaderStrip({ connected }: ReaderStripProps) {
             {!connected ? (
               <EmptyState size="compact" title={t("settings.notConnected")} />
             ) : isPending ? (
-              <span className="text-muted-foreground">{t("loading")}</span>
+              // Compact, so the card does not jump when the rows arrive.
+              <InlineLoading className="py-2" />
             ) : readers.length > 0 ? (
               readers.map((reader) => (
                 <ReaderStatusRow

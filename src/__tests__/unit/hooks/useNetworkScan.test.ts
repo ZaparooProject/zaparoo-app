@@ -152,7 +152,7 @@ describe("useNetworkScan", () => {
         await result.current.startScan();
       });
 
-      expect(result.current.error).toBe("Failed to scan network");
+      expect(result.current.error).toBe("settings.networkScan.scanFailed");
       expect(result.current.isScanning).toBe(false);
       expect(mockLoggerError).toHaveBeenCalledWith(
         "Failed to start network scan",

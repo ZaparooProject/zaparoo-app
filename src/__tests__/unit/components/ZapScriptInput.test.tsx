@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor, within } from "../../../test-utils";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { ZapScriptInput } from "@/components/ZapScriptInput";
 import { useStatusStore } from "@/lib/store";
@@ -97,9 +103,10 @@ describe("ZapScriptInput", () => {
       const textarea = screen.getByRole("textbox", {
         name: "create.custom.textareaLabel",
       });
-      expect(textarea).toHaveAttribute(
-        "aria-describedby",
-        "zapscript-char-count",
+      const describedBy = textarea.getAttribute("aria-describedby");
+      expect(describedBy).toBeTruthy();
+      expect(document.getElementById(describedBy!)).toHaveTextContent(
+        "create.custom.characters",
       );
     });
   });
@@ -527,7 +534,7 @@ describe("ZapScriptInput", () => {
       render(<ZapScriptInput value="test" setValue={vi.fn()} />);
 
       // Assert
-      const charCount = document.getElementById("zapscript-char-count");
+      const charCount = screen.getByText("create.custom.characters");
       expect(charCount).toHaveAttribute("aria-live", "polite");
       expect(charCount).toHaveAttribute("aria-atomic", "true");
     });
@@ -543,13 +550,45 @@ describe("ZapScriptInput", () => {
       const toggle = screen.getByRole("button", {
         name: "create.custom.commandPalette",
       });
-      expect(toggle).toHaveAttribute("aria-controls", "zapscript-controls");
+      const controlsId = toggle.getAttribute("aria-controls");
+      expect(controlsId).toBeTruthy();
 
       // Act - expand to verify controls ID exists
       await user.click(toggle);
 
       // Assert - controls element should exist with the ID
-      expect(document.getElementById("zapscript-controls")).toBeInTheDocument();
+      expect(document.getElementById(controlsId!)).toBeInTheDocument();
+    });
+
+    it("should give two editors on one page distinct ids", () => {
+      render(
+        <>
+          <ZapScriptInput value="" setValue={vi.fn()} aria-label="first" />
+          <ZapScriptInput value="" setValue={vi.fn()} aria-label="second" />
+        </>,
+      );
+
+      const first = screen.getByRole("textbox", { name: "first" });
+      const second = screen.getByRole("textbox", { name: "second" });
+      expect(first.getAttribute("aria-describedby")).not.toBe(
+        second.getAttribute("aria-describedby"),
+      );
+    });
+
+    it("should lock the textarea and its insert tools when disabled", () => {
+      render(
+        <ZapScriptInput value="abc" setValue={vi.fn()} showPalette disabled />,
+      );
+
+      expect(
+        screen.getByRole("textbox", { name: "create.custom.textareaLabel" }),
+      ).toBeDisabled();
+      expect(
+        screen.getByLabelText("create.custom.insertCommandStart"),
+      ).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "create.custom.clear" }),
+      ).toBeDisabled();
     });
   });
 
@@ -627,36 +666,54 @@ describe("ZapScriptInput", () => {
   });
 
   describe("cursor position tracking", () => {
-    it("should insert text at cursor position", async () => {
-      // Arrange
+    const renderEditor = (value: string, setValue = vi.fn()) => {
+      render(<ZapScriptInput value={value} setValue={setValue} showPalette />);
+      return {
+        setValue,
+        textarea: screen.getByRole("textbox", {
+          name: "create.custom.textareaLabel",
+        }) as HTMLTextAreaElement,
+      };
+    };
+
+    it("should append to pre-filled text that has never been focused", async () => {
       const user = userEvent.setup();
-      const setValue = vi.fn();
-      render(
-        <ZapScriptInput
-          value="hello world"
-          setValue={setValue}
-          showPalette={true}
-        />,
+      const { setValue } = renderEditor("**launch.system:");
+
+      await user.click(
+        screen.getByLabelText("create.custom.insertCommandSeparator"),
       );
 
-      // Act - focus textarea and set selection, then click insert
-      const textarea = screen.getByRole("textbox", {
-        name: "create.custom.textareaLabel",
-      }) as HTMLTextAreaElement;
+      expect(setValue).toHaveBeenCalledWith("**launch.system:||");
+    });
 
-      // Simulate selecting at position 5 (after "hello")
-      textarea.focus();
-      textarea.setSelectionRange(5, 5);
-      // Trigger select event to update cursor position
+    it("should insert at the caret the user placed", async () => {
+      const user = userEvent.setup();
+      const { setValue, textarea } = renderEditor("hello world");
+
       await user.click(textarea);
+      textarea.setSelectionRange(5, 5);
+      fireEvent.select(textarea);
 
-      // Now insert ** - it should append at cursor position tracked
       await user.click(
         screen.getByLabelText("create.custom.insertCommandStart"),
       );
 
-      // Assert - setValue should be called (cursor tracking is internal)
-      expect(setValue).toHaveBeenCalled();
+      expect(setValue).toHaveBeenCalledWith("hello** world");
+    });
+
+    it("should keep the caret the textarea had when focus moved to a tool", async () => {
+      const user = userEvent.setup();
+      const { setValue, textarea } = renderEditor("hello world");
+
+      await user.click(textarea);
+      textarea.setSelectionRange(0, 0);
+      // No select event: the live selection is read as focus leaves.
+      await user.click(
+        screen.getByLabelText("create.custom.insertCommandStart"),
+      );
+
+      expect(setValue).toHaveBeenCalledWith("**hello world");
     });
   });
 });

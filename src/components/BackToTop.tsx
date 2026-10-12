@@ -6,7 +6,7 @@ import {
   type MouseEvent,
   type RefObject,
 } from "react";
-import { ChevronUp } from "lucide-react";
+import { ChevronUpIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useDebouncedCallback } from "use-debounce";
 import { useStatusStore } from "@/lib/store";
@@ -43,19 +43,11 @@ function fixedContainingBlock(element: HTMLElement): HTMLElement | null {
 interface BackToTopProps {
   scrollContainerRef: RefObject<HTMLElement | null>;
   threshold?: number;
-  /**
-   * Distance above the bottom edge. Inside a dialog it is measured from the
-   * bottom of the scroll area (the footer separator, if there is a footer);
-   * on pages it defaults to the measured footer clearance. Either way the
-   * button keeps a 1rem margin.
-   */
-  bottomOffset?: string;
 }
 
 export function BackToTop({
   scrollContainerRef,
   threshold = 300,
-  bottomOffset,
 }: BackToTopProps) {
   const [isVisible, setIsVisible] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -97,7 +89,7 @@ export function BackToTop({
   const measureDialogGap = useCallback(() => {
     const container = scrollContainerRef.current;
     const wrapper = wrapperRef.current;
-    if (!container || !wrapper || bottomOffset !== undefined) return;
+    if (!container || !wrapper) return;
     if (!container.closest('[role="dialog"]')) {
       setPageRightGap(measurePageRightGap(container, window.innerWidth));
       setDialogGap(null);
@@ -112,7 +104,7 @@ export function BackToTop({
       blockBottom - container.getBoundingClientRect().bottom,
     );
     setDialogGap((previous) => (previous === gap ? previous : gap));
-  }, [bottomOffset, scrollContainerRef]);
+  }, [scrollContainerRef]);
 
   useEffect(() => {
     measureDialogGap();
@@ -173,12 +165,13 @@ export function BackToTop({
         transform: "translateZ(0)",
         willChange: "opacity",
         right: `max(calc(${pageRightGap}px + ${EDGE_MARGIN}), calc(${EDGE_MARGIN} + var(--app-safe-right, ${safeInsets.right})))`,
+        // Inside a dialog the gap is measured from the bottom of its scroll
+        // area; on pages it is the measured footer, which already includes the
+        // bottom safe inset. Either way the button keeps a 1rem margin.
         bottom:
           dialogGap !== null
             ? `calc(${dialogGap}px + ${EDGE_MARGIN})`
-            : bottomOffset
-              ? `calc(${bottomOffset} + ${safeInsets.bottom})`
-              : `calc(var(--app-footer-overlay-clearance, 92px) + ${EDGE_MARGIN})`,
+            : `calc(var(--app-footer-overlay-clearance, 64px) + ${EDGE_MARGIN})`,
       }}
     >
       <button
@@ -191,7 +184,7 @@ export function BackToTop({
         aria-label={t("backToTop")}
         {...handlers}
       >
-        <ChevronUp size={24} aria-hidden="true" />
+        <ChevronUpIcon size={24} aria-hidden="true" />
       </button>
     </div>
   );

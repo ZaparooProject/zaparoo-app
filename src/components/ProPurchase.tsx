@@ -563,15 +563,17 @@ export function PurchaseSupportActions({
   };
 
   const showRestore = variant !== "diagnosticsOnly";
+  // The lone Restore action on the Settings landing is a quiet text action;
+  // wherever diagnostics are offered, both are outline buttons.
   const showDiagnostics = variant !== "restoreOnly";
-  const useOutlineButtons = variant !== "restoreOnly";
+  const buttonVariant = showDiagnostics ? "outline" : "text";
 
   return (
     <div className="flex flex-col gap-2">
       {showDiagnostics && (
         <Button
           label={t("settings.app.copyBillingDiagnostics")}
-          variant={useOutlineButtons ? "outline" : "text"}
+          variant={buttonVariant}
           onClick={() => void handleCopyDiagnostics()}
           disabled={isRestoring || isCopyingDiagnostics}
           disabledAppearance="busy"
@@ -585,7 +587,7 @@ export function PurchaseSupportActions({
               ? t("online.warp.restoring")
               : t("settings.app.restorePurchases")
           }
-          variant={useOutlineButtons ? "outline" : "text"}
+          variant={buttonVariant}
           onClick={() => void handleRestore()}
           disabled={isRestoring || isCopyingDiagnostics}
           disabledAppearance="busy"

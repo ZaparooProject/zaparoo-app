@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
-import { systemHasIndexedMedia } from "@/lib/systemFilters";
+import { FALLBACK_CATEGORY, systemHasIndexedMedia } from "@/lib/systemFilters";
 import { compareStrings } from "@/lib/utils";
 import { useSystemsWithDisplayNames } from "@/hooks/useSystemName";
 import { Select } from "@/components/wui/Select";
@@ -12,7 +12,6 @@ import { Select } from "@/components/wui/Select";
 interface SimpleSystemSelectProps {
   value: string; // The currently selected system ID (or "all")
   onSelect: (systemId: string) => void;
-  placeholder?: string;
   includeAllOption?: boolean;
   className?: string;
   disabled?: boolean;
@@ -23,7 +22,6 @@ interface SimpleSystemSelectProps {
 export function SimpleSystemSelect({
   value,
   onSelect,
-  placeholder,
   includeAllOption = false,
   className,
   disabled = false,
@@ -52,7 +50,7 @@ export function SimpleSystemSelect({
   // Group systems by category and sort
   const groupedSystems = displaySystems.reduce(
     (acc, system) => {
-      const category = system.category || "Other";
+      const category = system.category || FALLBACK_CATEGORY;
       if (!acc[category]) {
         acc[category] = [];
       }
@@ -89,8 +87,6 @@ export function SimpleSystemSelect({
         className,
       )}
     >
-      {placeholder && <option value="">{placeholder}</option>}
-
       {includeAllOption && (
         <option value="all">{t("systemSelector.allSystems")}</option>
       )}
@@ -99,7 +95,14 @@ export function SimpleSystemSelect({
         <option disabled>{t("loading")}</option>
       ) : (
         sortedCategories.map(({ category, systems }) => (
-          <optgroup key={category} label={category}>
+          <optgroup
+            key={category}
+            label={
+              category === FALLBACK_CATEGORY
+                ? t("systemSelector.otherCategory")
+                : category
+            }
+          >
             {systems.map((system) => (
               <option key={system.id} value={system.id}>
                 {system.name}

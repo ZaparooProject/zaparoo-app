@@ -405,6 +405,30 @@ describe("WarpSubscription", () => {
     },
   );
 
+  it.each(["busy", "requirements"] as const)(
+    "should leave checkout when the purchase stops as %s",
+    async (result) => {
+      mockPurchase.mockResolvedValue(result);
+      const user = userEvent.setup();
+      render(<WarpSubscription appUserID="user-123" />);
+
+      await user.click(screen.getByRole("button", { name: "online.warp.get" }));
+      await user.click(
+        screen.getByRole("button", { name: "online.warp.subscribe" }),
+      );
+
+      // Subscribe must not appear to do nothing: the stale offer goes away.
+      await waitFor(() => {
+        expect(
+          screen.queryByRole("button", { name: "online.warp.subscribe" }),
+        ).not.toBeInTheDocument();
+      });
+      // Only a stale offer needs the account reloaded; completing the
+      // requirements modal reloads by itself.
+      expect(mockRetry).toHaveBeenCalledTimes(result === "busy" ? 1 : 0);
+    },
+  );
+
   it.each(["cancelled", "busy", "requirements"] as const)(
     "should not show an error for the %s purchase result",
     async (result) => {

@@ -6,7 +6,6 @@ import { StatusBar, Style } from "@capacitor/status-bar";
 import { usePrevious } from "@uidotdev/usehooks";
 import { useTranslation } from "react-i18next";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
-import { NfcIcon } from "lucide-react";
 import { getTrialAccessContext } from "@/lib/warpSubscription";
 import { useTrialAccessExpiry } from "@/hooks/useTrialAccessExpiry";
 import { useTheme } from "@/components/theme-provider";
@@ -26,7 +25,7 @@ import {
   getOnlineApiErrorContext,
   RequirementsNotMetError,
 } from "@/lib/errors";
-import { DatabaseIcon, PlayIcon } from "@/lib/images";
+import { DatabaseIcon, NfcIcon, PlayIcon } from "@/lib/images";
 import {
   ensurePurchasesUser,
   getPurchaseAccess,
@@ -145,7 +144,7 @@ function QueueProcessors() {
   return (
     <>
       {writeOpen && (
-        <div className="app-global-reader-strip bg-surface-raised border-border fixed right-0 bottom-[var(--app-footer-overlay-clearance,92px)] z-40 border-t px-4 py-3 shadow-[0_-4px_12px_var(--material-shadow)]">
+        <div className="app-global-reader-strip bg-surface-raised border-border fixed right-0 bottom-[var(--app-footer-overlay-clearance,64px)] z-30 border-t py-3 shadow-[0_-4px_12px_var(--material-shadow)]">
           <div className="mx-auto max-w-md">
             <ReaderActivityControl
               state={

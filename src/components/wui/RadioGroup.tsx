@@ -1,11 +1,15 @@
 import classNames from "classnames";
-import { useId } from "react";
+import { useId, type ReactNode } from "react";
 import { handleRadioGroupKeyDown } from "@/lib/radioGroup";
 
 interface RadioGroupProps<T extends string> {
   label: string;
   labelHidden?: boolean;
-  help?: string;
+  /**
+   * A string renders as visible supporting text below the choices; a node
+   * (such as `SettingHelp`) renders beside the label instead.
+   */
+  help?: ReactNode;
   options: { value: T; label: string }[];
   value: T;
   onChange: (next: T) => void;
@@ -28,22 +32,31 @@ export function RadioGroup<T extends string>({
   const helpId = useId();
   const selectedIndex = options.findIndex((option) => option.value === value);
   const inline = layout === "inline" && options.length === 2;
+  const helpText = typeof help === "string" ? help : undefined;
+  const helpNode = typeof help === "string" ? undefined : help;
 
   return (
     <div className="flex min-w-0 flex-col">
-      <span
-        id={labelId}
-        className={classNames("mb-2 text-sm font-medium", {
-          "sr-only": labelHidden,
+      <div
+        className={classNames("flex items-center gap-1", {
+          "mb-2": !labelHidden,
         })}
       >
-        {label}
-      </span>
+        <span
+          id={labelId}
+          className={classNames("text-sm font-medium", {
+            "sr-only": labelHidden,
+          })}
+        >
+          {label}
+        </span>
+        {helpNode}
+      </div>
       <div
         role="radiogroup"
         aria-labelledby={labelId}
         tabIndex={-1}
-        aria-describedby={help ? helpId : undefined}
+        aria-describedby={helpText ? helpId : undefined}
         onKeyDown={handleRadioGroupKeyDown}
         className={classNames(
           "flex",
@@ -68,7 +81,7 @@ export function RadioGroup<T extends string>({
               className={classNames(
                 "focus-visible:ring-ring flex min-h-12 max-w-full cursor-pointer items-start gap-3 rounded-sm py-3 text-left text-sm leading-6 font-medium focus-visible:ring-2 focus-visible:outline-none",
                 inline && "shrink-0 grow basis-auto",
-                disabled && "cursor-not-allowed opacity-60",
+                disabled && "cursor-not-allowed opacity-50",
               )}
             >
               <span
@@ -87,9 +100,9 @@ export function RadioGroup<T extends string>({
           );
         })}
       </div>
-      {help && (
+      {helpText && (
         <span id={helpId} className="text-muted-foreground mt-1 text-sm">
-          {help}
+          {helpText}
         </span>
       )}
     </div>

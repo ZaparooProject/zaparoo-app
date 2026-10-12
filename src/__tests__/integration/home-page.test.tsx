@@ -99,9 +99,9 @@ describe("Home Page Integration", () => {
           playlist={null}
           connected
           onStop={() => {}}
-          onPlaylistPrevious={() => {}}
-          onPlaylistToggle={() => {}}
-          onPlaylistNext={() => {}}
+          onPrevious={() => {}}
+          onToggle={() => {}}
+          onNext={() => {}}
         />,
       );
 
@@ -141,9 +141,9 @@ describe("Home Page Integration", () => {
             disambiguatingTags: [],
           }}
           onStop={() => {}}
-          onPlaylistPrevious={() => {}}
-          onPlaylistToggle={() => {}}
-          onPlaylistNext={() => {}}
+          onPrevious={() => {}}
+          onToggle={() => {}}
+          onNext={() => {}}
           onReplayLast={onReplayLast}
         />,
       );
@@ -184,9 +184,9 @@ describe("Home Page Integration", () => {
           }}
           replayingLast
           onStop={() => {}}
-          onPlaylistPrevious={() => {}}
-          onPlaylistToggle={() => {}}
-          onPlaylistNext={() => {}}
+          onPrevious={() => {}}
+          onToggle={() => {}}
+          onNext={() => {}}
           onReplayLast={() => {}}
         />,
       );
@@ -208,9 +208,9 @@ describe("Home Page Integration", () => {
           playlist={null}
           connected
           onStop={() => {}}
-          onPlaylistPrevious={() => {}}
-          onPlaylistToggle={() => {}}
-          onPlaylistNext={() => {}}
+          onPrevious={() => {}}
+          onToggle={() => {}}
+          onNext={() => {}}
         />,
       );
 
@@ -240,9 +240,9 @@ describe("Home Page Integration", () => {
           playlist={null}
           connected
           onStop={onStop}
-          onPlaylistPrevious={() => {}}
-          onPlaylistToggle={() => {}}
-          onPlaylistNext={() => {}}
+          onPrevious={() => {}}
+          onToggle={() => {}}
+          onNext={() => {}}
         />,
       );
 
@@ -267,9 +267,9 @@ describe("Home Page Integration", () => {
           playlist={null}
           connected
           onStop={() => {}}
-          onPlaylistPrevious={() => {}}
-          onPlaylistToggle={() => {}}
-          onPlaylistNext={() => {}}
+          onPrevious={() => {}}
+          onToggle={() => {}}
+          onNext={() => {}}
         />,
       );
 
@@ -277,7 +277,7 @@ describe("Home Page Integration", () => {
         screen.getByRole("button", { name: "scan.playlistPrevious" }),
       ).toBeDisabled();
       expect(
-        screen.getByRole("button", { name: "scan.playlistPause" }),
+        screen.getByRole("button", { name: "scan.mediaPause" }),
       ).toBeEnabled();
       expect(
         screen.getByRole("button", { name: "scan.playlistNext" }),
@@ -297,9 +297,9 @@ describe("Home Page Integration", () => {
           playlist={null}
           connected
           onStop={() => {}}
-          onPlaylistPrevious={() => {}}
-          onPlaylistToggle={() => {}}
-          onPlaylistNext={() => {}}
+          onPrevious={() => {}}
+          onToggle={() => {}}
+          onNext={() => {}}
         />,
       );
 
@@ -310,7 +310,7 @@ describe("Home Page Integration", () => {
         screen.getByRole("button", { name: "scan.stopPlayingButton" }),
       ).toBeEnabled();
       expect(
-        screen.getByRole("button", { name: "scan.playlistPause" }),
+        screen.getByRole("button", { name: "scan.mediaPause" }),
       ).toBeDisabled();
       expect(
         screen.getByRole("button", { name: "scan.playlistNext" }),
@@ -331,14 +331,14 @@ describe("Home Page Integration", () => {
           playlist={null}
           connected
           onStop={() => {}}
-          onPlaylistPrevious={() => {}}
-          onPlaylistToggle={() => {}}
-          onPlaylistNext={() => {}}
+          onPrevious={() => {}}
+          onToggle={() => {}}
+          onNext={() => {}}
         />,
       );
 
       expect(
-        screen.getByRole("button", { name: "scan.playlistPlay" }),
+        screen.getByRole("button", { name: "scan.mediaResume" }),
       ).toBeInTheDocument();
     });
 
@@ -369,9 +369,9 @@ describe("Home Page Integration", () => {
           }}
           connected
           onStop={() => {}}
-          onPlaylistPrevious={() => {}}
-          onPlaylistToggle={() => {}}
-          onPlaylistNext={() => {}}
+          onPrevious={() => {}}
+          onToggle={() => {}}
+          onNext={() => {}}
           onPlaylistSelect={onPlaylistSelect}
         />,
       );
@@ -531,9 +531,9 @@ describe("Home Page Integration", () => {
           playlist={null}
           connected
           onStop={() => {}}
-          onPlaylistPrevious={() => {}}
-          onPlaylistToggle={() => {}}
-          onPlaylistNext={() => {}}
+          onPrevious={() => {}}
+          onToggle={() => {}}
+          onNext={() => {}}
         />,
       );
 
@@ -554,9 +554,9 @@ describe("Home Page Integration", () => {
           playlist={null}
           connected
           onStop={() => {}}
-          onPlaylistPrevious={() => {}}
-          onPlaylistToggle={() => {}}
-          onPlaylistNext={() => {}}
+          onPrevious={() => {}}
+          onToggle={() => {}}
+          onNext={() => {}}
         />,
       );
 

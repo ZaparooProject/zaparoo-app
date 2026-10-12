@@ -201,9 +201,6 @@ describe("Settings Device Detail Route", () => {
     expect(
       screen.queryByRole("button", { name: "online.deviceLink.link" }),
     ).not.toBeInTheDocument();
-    expect(
-      screen.queryByText("online.deviceLink.description"),
-    ).not.toBeInTheDocument();
   });
 
   it("should navigate back to the device list without resetting scroll", async () => {

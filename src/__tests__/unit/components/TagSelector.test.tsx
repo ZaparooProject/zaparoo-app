@@ -383,6 +383,33 @@ describe("TagSelector", () => {
       });
     });
 
+    it("should virtualize search results against the modal's own scroller", async () => {
+      const { useVirtualizer } = await import("@tanstack/react-virtual");
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      vi.mocked(CoreAPI.mediaTags).mockResolvedValue({
+        tags: createMockTags(),
+      });
+
+      render(<TagSelector {...defaultProps} />);
+      const searchbox = await screen.findByRole("searchbox", {
+        name: "tagSelector.searchTags",
+      });
+      await user.type(searchbox, "199");
+      await act(async () => {
+        vi.advanceTimersByTime(350);
+      });
+      await waitFor(() => {
+        expect(screen.getAllByRole("listitem")).toHaveLength(2);
+      });
+
+      // The scroller holds the search controls as well as the list: one
+      // scrolling body, not a nested list viewport that never scrolls.
+      const options = vi.mocked(useVirtualizer).mock.lastCall![0];
+      const scroller = options.getScrollElement() as HTMLElement;
+      expect(scroller).toContainElement(searchbox);
+      expect(scroller).toContainElement(screen.getByRole("list"));
+    });
+
     it("should render all matching tags in normal flow for accessible lists", async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       usePreferencesStore.setState({ accessibleLists: true });

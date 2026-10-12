@@ -8,7 +8,6 @@ export function ToggleSwitch(props: {
   value: boolean | undefined;
   setValue: (value: boolean) => void;
   disabled?: boolean;
-  onDisabledClick?: () => void;
   /** Help control rendered outside the checkbox label. */
   help?: React.ReactNode;
   /** Content rendered after the label, outside the clickable label area */
@@ -20,23 +19,6 @@ export function ToggleSwitch(props: {
 }) {
   const { impact } = useHaptics();
   const inputId = useId();
-  const hasDisabledClickHandler = props.disabled && props.onDisabledClick;
-
-  const handleContainerClick = hasDisabledClickHandler
-    ? (e: React.MouseEvent) => {
-        e.preventDefault();
-        props.onDisabledClick!();
-      }
-    : undefined;
-
-  const handleContainerKeyDown = hasDisabledClickHandler
-    ? (e: React.KeyboardEvent) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          props.onDisabledClick!();
-        }
-      }
-    : undefined;
 
   return (
     <div
@@ -44,10 +26,6 @@ export function ToggleSwitch(props: {
         "text-foreground flex min-h-12 items-center justify-between gap-4 select-none",
         { "flex-wrap": props.reflow },
       )}
-      onClick={handleContainerClick}
-      onKeyDown={handleContainerKeyDown}
-      role={hasDisabledClickHandler ? "button" : undefined}
-      tabIndex={hasDisabledClickHandler ? 0 : undefined}
     >
       <span
         className={classNames(
@@ -103,10 +81,6 @@ export function ToggleSwitch(props: {
               "peer-focus-visible:ring-ring",
               "peer-focus-visible:ring-offset-2",
               "peer-focus-visible:ring-offset-background",
-              {
-                "border-input": !props.disabled,
-                "border-foreground-disabled": props.disabled,
-              },
             )}
           ></div>
           <div className="wui-toggle-thumb pointer-events-none"></div>

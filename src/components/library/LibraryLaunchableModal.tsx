@@ -7,15 +7,11 @@ import { ConnectionState, useStatusStore } from "@/lib/store";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { useNfcWriteAvailable } from "@/hooks/useNfcWriteAvailable";
 import { useContextualNfcWrite } from "@/hooks/useContextualNfcWrite";
-import {
-  ReaderActivityAction,
-  ReaderActivityStatus,
-} from "@/components/ReaderActivityAction";
 import { SlideModal } from "@/components/SlideModal";
-import { Button } from "@/components/wui/Button";
-import { ModalActionRail } from "@/components/wui/ModalActionRail";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { PlayIcon } from "@/lib/images";
+import {
+  ContextualWriteRail,
+  LaunchButton,
+} from "@/components/library/ContextualWriteRail";
 import { DetailRow } from "@/components/library/LibraryMediaDetailsModal";
 
 /**
@@ -64,54 +60,19 @@ export function LibraryLaunchableModal(props: {
   };
 
   const footer = props.system ? (
-    <ModalActionRail
+    <ContextualWriteRail
       aria-label={t("library.mediaActions")}
-      readerAction
-      status={
-        writeActivity.state === "attention" ||
-        writeActivity.state === "error" ? (
-          <ReaderActivityStatus
-            state={writeActivity.state}
-            onCancel={() => void writeActivity.cancel()}
-          />
-        ) : undefined
-      }
-      actions={
-        <ReaderActivityAction
-          state={writeActivity.state}
-          label={t("library.writeAction")}
-          idleAriaLabel={t("library.write")}
-          busy={launching}
-          disabled={
-            !zapScript ||
-            !writeAvailable ||
-            launching ||
-            writeActivity.externalWriteActive
-          }
-          onStart={write}
-          onCancel={() => void writeActivity.cancel()}
-          onRetry={() => void writeActivity.retry()}
-        />
-      }
+      activity={writeActivity}
+      writeDisabled={!zapScript || !writeAvailable}
+      busy={launching}
+      onWrite={write}
       primaryAction={
-        <Button
+        <LaunchButton
           label={t("library.launch")}
-          aria-label={launching ? t("library.launching") : t("library.launch")}
-          icon={
-            launching ? (
-              <LoadingSpinner size={20} decorative />
-            ) : (
-              <PlayIcon size="20" />
-            )
-          }
-          intent="primary"
-          disabled={
-            !zapScript || !liveConnected || launching || writeActivity.active
-          }
-          disabledAppearance={
-            launching || writeActivity.active ? "busy" : "unavailable"
-          }
-          onClick={() => void launch()}
+          launching={launching}
+          unavailable={!zapScript || !liveConnected}
+          busy={writeActivity.active}
+          onLaunch={() => void launch()}
         />
       }
     />
@@ -126,6 +87,7 @@ export function LibraryLaunchableModal(props: {
       }}
       title={props.system?.name ?? ""}
       footer={footer}
+      footerSkipLabel={t("accessibility.skipToActions")}
     >
       {props.system && (
         <div className="flex flex-col gap-4 py-2">

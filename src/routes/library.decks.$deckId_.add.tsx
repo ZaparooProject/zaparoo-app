@@ -17,8 +17,8 @@ import { EmptyState } from "@/components/wui/EmptyState";
 import { TextInput } from "@/components/wui/TextInput";
 import { RadioGroup } from "@/components/wui/RadioGroup";
 import { Button } from "@/components/wui/Button";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { DelayedLoading } from "@/components/DelayedLoading";
+import { InlineLoading } from "@/components/InlineLoading";
 import { ZapScriptInput } from "@/components/ZapScriptInput";
 import { BackIcon } from "@/lib/images";
 
@@ -131,13 +131,7 @@ export function AddDeckItem() {
         />
       ) : deckQuery.isLoading ? (
         <DelayedLoading>
-          <div
-            className="text-muted-foreground flex items-center justify-center gap-2 py-6"
-            role="status"
-          >
-            <LoadingSpinner size={16} className="text-primary" decorative />
-            <span>{t("decks.loading")}</span>
-          </div>
+          <InlineLoading label={t("decks.loading")} />
         </DelayedLoading>
       ) : deckQuery.isError || !deck ? (
         <EmptyState

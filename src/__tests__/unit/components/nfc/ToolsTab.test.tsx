@@ -1,31 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "../../../../test-utils";
+import userEvent from "@testing-library/user-event";
+import { Capacitor } from "@capacitor/core";
+import { render, screen } from "../../../../test-utils";
 import { ToolsTab } from "@/components/nfc/ToolsTab";
 import { WriteAction } from "@/lib/writeNfcHook";
 
-// Mock react-i18next
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({
-    t: (key: string) => {
-      const translations: Record<string, string> = {
-        "create.nfc.format": "Format Tag",
-        "create.nfc.erase": "Erase Tag",
-        "create.nfc.makeReadOnly": "Make Read-Only",
-        "create.nfc.tools.formatDescription": "Prepare tag for writing",
-        "create.nfc.tools.formatWarning": "This will erase all data",
-        "create.nfc.tools.eraseDescription": "Remove all data from tag",
-        "create.nfc.tools.eraseWarning": "This action cannot be undone",
-        "create.nfc.tools.makeReadOnlyDescription":
-          "Prevent further modifications",
-        "create.nfc.tools.makeReadOnlyWarning": "This cannot be reversed",
-        loading: "Loading...",
-      };
-      return translations[key] || key;
-    },
-  }),
-}));
-
-// Mock Capacitor
 vi.mock("@capacitor/core", () => ({
   Capacitor: {
     getPlatform: vi.fn(() => "android"),
@@ -33,206 +12,81 @@ vi.mock("@capacitor/core", () => ({
 }));
 
 describe("ToolsTab", () => {
-  const mockOnToolAction = vi.fn();
+  const onStart = vi.fn();
+  const renderTab = (activeAction: WriteAction | null = null) =>
+    render(
+      <ToolsTab
+        renderToolControl={({ action, label }) => (
+          <button
+            type="button"
+            disabled={activeAction !== null && activeAction !== action}
+            onClick={() => onStart(action)}
+          >
+            {label}
+          </button>
+        )}
+      />,
+    );
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(Capacitor.getPlatform).mockReturnValue("android");
   });
 
-  describe("rendering", () => {
-    it("should render available tools for current platform", () => {
-      render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />);
+  it("renders a heading, description and warning for every tool", () => {
+    renderTab();
 
-      expect(screen.getAllByText("Format Tag")).toHaveLength(2); // Header and button
-      expect(screen.getAllByText("Erase Tag")).toHaveLength(2); // Header and button
-      expect(screen.getAllByText("Make Read-Only")).toHaveLength(2); // Header and button
-    });
-
-    it("should render tool descriptions", () => {
-      render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />);
-
-      expect(screen.getByText("Prepare tag for writing")).toBeInTheDocument();
-      expect(screen.getByText("Remove all data from tag")).toBeInTheDocument();
+    for (const tool of ["format", "erase", "makeReadOnly"]) {
       expect(
-        screen.getByText("Prevent further modifications"),
+        screen.getByRole("heading", { name: `create.nfc.${tool}` }),
       ).toBeInTheDocument();
-    });
-
-    it("should render warning messages for dangerous tools", () => {
-      render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />);
-
-      expect(screen.getByText("This will erase all data")).toBeInTheDocument();
       expect(
-        screen.getByText("This action cannot be undone"),
+        screen.getByText(`create.nfc.tools.${tool}Description`),
       ).toBeInTheDocument();
-      expect(screen.getByText("This cannot be reversed")).toBeInTheDocument();
-    });
+      expect(
+        screen.getByText(`create.nfc.tools.${tool}Warning`),
+      ).toBeInTheDocument();
+    }
   });
 
-  describe("interactions", () => {
-    it("should call onToolAction with correct action when button is clicked", () => {
-      render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />);
+  it("hands each tool's action and label to the page's reader control", async () => {
+    const user = userEvent.setup();
+    renderTab();
 
-      const formatButton = screen.getByRole("button", { name: "Format Tag" });
-      fireEvent.click(formatButton);
+    await user.click(screen.getByRole("button", { name: "create.nfc.format" }));
+    await user.click(screen.getByRole("button", { name: "create.nfc.erase" }));
+    await user.click(
+      screen.getByRole("button", { name: "create.nfc.makeReadOnly" }),
+    );
 
-      expect(mockOnToolAction).toHaveBeenCalledWith(WriteAction.Format);
-    });
-
-    it("should call onToolAction for erase action", () => {
-      render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />);
-
-      const eraseButton = screen.getByRole("button", { name: "Erase Tag" });
-      fireEvent.click(eraseButton);
-
-      expect(mockOnToolAction).toHaveBeenCalledWith(WriteAction.Erase);
-    });
-
-    it("should call onToolAction for make read-only action", () => {
-      render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />);
-
-      const readOnlyButton = screen.getByRole("button", {
-        name: "Make Read-Only",
-      });
-      fireEvent.click(readOnlyButton);
-
-      expect(mockOnToolAction).toHaveBeenCalledWith(WriteAction.MakeReadOnly);
-    });
+    expect(onStart.mock.calls).toEqual([
+      [WriteAction.Format],
+      [WriteAction.Erase],
+      [WriteAction.MakeReadOnly],
+    ]);
   });
 
-  describe("processing state", () => {
-    it("should disable buttons when processing", () => {
-      render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={true} />);
+  it("keeps every panel and warning mounted while one tool is active", () => {
+    renderTab(WriteAction.Erase);
 
-      const buttons = screen.getAllByRole("button");
-      buttons.forEach((button) => {
-        expect(button).toBeDisabled();
-      });
-    });
-
-    it("should show loading text when processing", () => {
-      render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={true} />);
-
-      expect(screen.getAllByText("Loading...")).toHaveLength(3); // One for each tool button
-    });
-
-    it("should enable buttons when not processing", () => {
-      render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />);
-
-      const buttons = screen.getAllByRole("button");
-      buttons.forEach((button) => {
-        expect(button).not.toBeDisabled();
-      });
-    });
+    expect(
+      screen.getByRole("button", { name: "create.nfc.erase" }),
+    ).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "create.nfc.format" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByText("create.nfc.tools.formatWarning"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("create.nfc.tools.makeReadOnlyWarning"),
+    ).toBeInTheDocument();
   });
 
-  describe("button interactions", () => {
-    it("should handle rapid button clicks", () => {
-      render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />);
+  it("offers no tools on a platform without tag tools", () => {
+    vi.mocked(Capacitor.getPlatform).mockReturnValue("web");
+    renderTab();
 
-      const formatButton = screen.getByRole("button", { name: "Format Tag" });
-
-      fireEvent.click(formatButton);
-      fireEvent.click(formatButton);
-      fireEvent.click(formatButton);
-
-      expect(mockOnToolAction).toHaveBeenCalledTimes(3);
-    });
-
-    it("should prevent interactions when processing", () => {
-      render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={true} />);
-
-      const buttons = screen.getAllByRole("button");
-
-      buttons.forEach((button) => {
-        fireEvent.click(button);
-      });
-
-      expect(mockOnToolAction).not.toHaveBeenCalled();
-    });
-
-    it("should handle keyboard interactions", () => {
-      render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />);
-
-      const formatButton = screen.getByRole("button", { name: "Format Tag" });
-
-      fireEvent.keyDown(formatButton, { key: "Enter", code: "Enter" });
-
-      expect(formatButton).toBeInTheDocument();
-    });
-  });
-
-  describe("translation integration", () => {
-    it("should use translation keys for all text content", () => {
-      render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />);
-
-      expect(screen.getAllByText("Format Tag")).toHaveLength(2);
-      expect(screen.getAllByText("Erase Tag")).toHaveLength(2);
-      expect(screen.getAllByText("Make Read-Only")).toHaveLength(2);
-    });
-
-    it("should handle loading state translation", () => {
-      render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={true} />);
-      expect(screen.getAllByText("Loading...")).toHaveLength(3);
-    });
-
-    it("should handle missing translation keys gracefully", () => {
-      render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />);
-
-      const buttons = screen.getAllByRole("button");
-      expect(buttons.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe("icon rendering", () => {
-    it("should render correct icons for each tool", () => {
-      render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />);
-
-      const buttons = screen.getAllByRole("button");
-      buttons.forEach((button) => {
-        const icon = button.querySelector("svg");
-        expect(icon).toBeInTheDocument();
-      });
-    });
-
-    it("should maintain icon accessibility", () => {
-      render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />);
-
-      const svgElements = document.querySelectorAll('svg[aria-hidden="true"]');
-      expect(svgElements.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe("edge cases", () => {
-    it("should handle unknown platform gracefully", () => {
-      const { Capacitor } = require("@capacitor/core");
-      const originalGetPlatform = Capacitor.getPlatform;
-      Capacitor.getPlatform = vi.fn().mockReturnValue("unknown");
-
-      render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />);
-
-      const buttons = screen.queryAllByRole("button");
-      expect(buttons.length).toBe(3);
-
-      Capacitor.getPlatform = originalGetPlatform;
-    });
-
-    it("should handle rapid state changes", () => {
-      const { rerender } = render(
-        <ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />,
-      );
-
-      rerender(
-        <ToolsTab onToolAction={mockOnToolAction} isProcessing={true} />,
-      );
-      rerender(
-        <ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />,
-      );
-      rerender(
-        <ToolsTab onToolAction={mockOnToolAction} isProcessing={true} />,
-      );
-
-      expect(screen.getAllByText("Loading...")).toHaveLength(3);
-    });
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });

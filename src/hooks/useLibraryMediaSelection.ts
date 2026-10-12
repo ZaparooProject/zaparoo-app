@@ -18,7 +18,7 @@ export function useLibraryMediaSelection(scope: string, deviceKey: string) {
   useLayoutEffect(() => {
     useLibrarySessionStore.getState().activateDevice(deviceKey);
   }, [deviceKey]);
-  // At these shell widths at least 1020px remains after the rail/sidebar.
+  // Matches the CSS threshold where PageFrame reserves its supporting pane.
   const docked = useMediaQuery("(min-width: 1100px)");
   const { entry: returnedEntry, forget: forgetReturn } =
     useMetadataDetailsReturn(`library:${scope}`, deviceKey);
@@ -27,19 +27,23 @@ export function useLibraryMediaSelection(scope: string, deviceKey: string) {
       ? (state.selectedMedia[scope] ?? null)
       : null,
   );
-  const selection: LibraryMediaSelection | null =
-    savedSelection ?? (returnedEntry ? { entry: returnedEntry } : null);
+  // A history entry's own return marker outranks the scope's latest selection,
+  // which another visit to the same page may have replaced.
+  const returnOutranksSaved =
+    returnedEntry !== null && savedSelection?.entry !== returnedEntry;
+  const selection: LibraryMediaSelection | null = returnOutranksSaved
+    ? { entry: returnedEntry }
+    : savedSelection;
   useLayoutEffect(() => {
     if (
-      !savedSelection &&
-      returnedEntry &&
+      returnOutranksSaved &&
       useLibrarySessionStore.getState().deviceAddress === deviceKey
     ) {
       useLibrarySessionStore
         .getState()
         .setSelectedMedia(scope, { entry: returnedEntry });
     }
-  }, [deviceKey, scope, savedSelection, returnedEntry]);
+  }, [deviceKey, scope, returnOutranksSaved, returnedEntry]);
   const contextKey = `${deviceKey}\u0001${scope}`;
   const [presentation, setPresentation] = useState({
     key: contextKey,

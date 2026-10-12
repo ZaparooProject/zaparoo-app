@@ -178,29 +178,6 @@ describe("ConnectionStatusBar", () => {
     expect(screen.getAllByText("connection.connectingToCore")).toHaveLength(2);
   });
 
-  it("applies horizontal safe-area insets to the visual row", () => {
-    useStatusStore.setState({
-      safeInsets: { top: "0px", bottom: "0px", left: "12px", right: "8px" },
-    });
-
-    render(
-      <Wrapper value={connectionValue()}>
-        <ConnectionStatusBar />
-      </Wrapper>,
-    );
-    act(() => vi.advanceTimersByTime(1_000));
-
-    const message = screen.getByText("connection.connectingToCore", {
-      selector: "span",
-    });
-    expect(message.parentElement?.style.paddingLeft).toBe(
-      "calc(0.75rem + 12px)",
-    );
-    expect(message.parentElement?.style.paddingRight).toBe(
-      "calc(0.75rem + 8px)",
-    );
-  });
-
   it("escalates to persistent Core unavailable status after ten seconds", () => {
     render(
       <Wrapper value={connectionValue()}>

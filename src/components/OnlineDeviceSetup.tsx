@@ -32,6 +32,8 @@ import {
 import { Select } from "@/components/wui/Select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useHaptics } from "@/hooks/useHaptics";
+import { CORE_SETTINGS_QUERY_KEY } from "@/hooks/useCoreSettingsUpdate";
+import { formatAppDate } from "@/lib/formatDate";
 
 interface OnlineDeviceSetupProps {
   connected: boolean;
@@ -95,23 +97,12 @@ function isOnlineSettingsPermissionError(error: unknown): boolean {
   );
 }
 
-function formatBackupDate(
-  value: string | undefined,
-  language: string,
-): string | null {
-  if (!value) return null;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? null
-    : date.toLocaleDateString(language, { dateStyle: "medium" });
-}
-
 export function OnlineDeviceSetup({
   connected,
   warpActive,
   onSignIn,
 }: OnlineDeviceSetupProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { impact } = useHaptics();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -153,7 +144,7 @@ export function OnlineDeviceSetup({
   }, [linkState]);
 
   const settingsQuery = useQuery({
-    queryKey: ["settings", "online"],
+    queryKey: CORE_SETTINGS_QUERY_KEY,
     queryFn: () => CoreAPI.settings(),
     enabled: connected && linked && canWriteCoreSettings,
   });
@@ -211,11 +202,13 @@ export function OnlineDeviceSetup({
   const backupStatusLabel = getBackupStatusLabel(
     remoteStatus,
     backupStatusQuery.data?.activeOperation,
-    i18n.language,
     t,
   );
+  // The link check and the settings read share one loading treatment: the
+  // same rows, with their switches pending.
   const settingsLoading =
-    canWriteCoreSettings && linked && settingsQuery.isPending;
+    featuresPending ||
+    (canWriteCoreSettings && linked && settingsQuery.isPending);
   const actionsDisabled = updateSettings.isPending;
   const cloudAvailable =
     warpActive === true || remoteStatus?.availability === "available";
@@ -274,13 +267,12 @@ export function OnlineDeviceSetup({
       ...(!on || cloudAvailable ? { backupRemoteEnabled: on } : {}),
     });
 
-  const linkedSince = formatBackupDate(remoteStatus?.linkedAt, i18n.language);
-  const warpLabel =
-    warpActive === true || remoteStatus?.availability === "available"
-      ? t("online.deviceLink.warpActive")
-      : remoteStatus?.availability === "unavailable"
-        ? t("online.deviceLink.warpInactive")
-        : t("online.deviceLink.warpChecking");
+  const linkedSince = formatAppDate(remoteStatus?.linkedAt);
+  const warpLabel = cloudAvailable
+    ? t("online.deviceLink.warpActive")
+    : remoteStatus?.availability === "unavailable"
+      ? t("online.deviceLink.warpInactive")
+      : t("online.deviceLink.warpChecking");
   const remoteState = remoteActivityQuery.data?.status.state ?? "unknown";
 
   const backupStatusRow = (
@@ -321,7 +313,7 @@ export function OnlineDeviceSetup({
     <>
       <Card>
         <section
-          className="flex w-full flex-col gap-3"
+          className="flex w-full flex-col gap-4"
           aria-labelledby="online-device-title"
         >
           <div className="flex items-center">
@@ -350,32 +342,36 @@ export function OnlineDeviceSetup({
             <div className="flex flex-col">
               {linkedSince && (
                 <div className="flex min-h-[48px] items-center justify-between gap-4">
-                  <span>{t("online.deviceLink.linkedSince")}</span>
+                  <span className="text-sm font-medium">
+                    {t("online.deviceLink.linkedSince")}
+                  </span>
                   <span className="text-muted-foreground text-right text-sm">
                     {linkedSince}
                   </span>
                 </div>
               )}
               <div className="flex min-h-[48px] items-center justify-between gap-4">
-                <span>{t("online.deviceLink.warp")}</span>
+                <span className="text-sm font-medium">
+                  {t("online.deviceLink.warp")}
+                </span>
                 <span className="text-muted-foreground text-right text-sm">
                   {backupStatusQuery.isPending
                     ? t("online.deviceLink.warpChecking")
                     : warpLabel}
                 </span>
               </div>
-              {canWriteCoreSettings && (
-                <Button
-                  label={t("online.deviceLink.unlink")}
-                  variant="outline"
-                  intent="destructive"
-                  onClick={() => setUnlinkOpen(true)}
-                  disabled={unlink.isPending}
-                  disabledAppearance="busy"
-                  className="mt-2 w-full"
-                />
-              )}
             </div>
+          )}
+          {linked && canWriteCoreSettings && (
+            <Button
+              label={t("online.deviceLink.unlink")}
+              variant="outline"
+              intent="destructive"
+              onClick={() => setUnlinkOpen(true)}
+              disabled={unlink.isPending}
+              disabledAppearance="busy"
+              className="w-full"
+            />
           )}
           {!connected && (
             <div className="flex flex-col gap-3">
@@ -408,22 +404,14 @@ export function OnlineDeviceSetup({
               {t("online.features.title")}
             </h2>
 
-            {featuresPending ? (
+            {featuresPending || canWriteCoreSettings ? (
               <div
-                className="flex flex-col gap-5"
-                role="status"
-                aria-label={t("online.features.loading")}
+                className="flex flex-col"
+                role={featuresPending ? "status" : undefined}
+                aria-label={
+                  featuresPending ? t("online.features.loading") : undefined
+                }
               >
-                <Skeleton className="h-8 w-full rounded-full" />
-                <Skeleton className="h-8 w-full rounded-full" />
-                <div className="flex flex-col gap-2">
-                  <Skeleton className="h-5 w-32" />
-                  <Skeleton className="h-12 w-full rounded-md" />
-                </div>
-                <Skeleton className="h-12 w-full" />
-              </div>
-            ) : canWriteCoreSettings ? (
-              <div className="flex flex-col">
                 {settingsQuery.isError ? (
                   <div className="flex flex-col gap-3">
                     <p className="text-muted-foreground text-sm" role="status">
@@ -476,6 +464,7 @@ export function OnlineDeviceSetup({
                     {remoteControlFeature.available && (
                       <div className="flex flex-col">
                         <ToggleSwitch
+                          reflow
                           label={t("online.features.remoteControl")}
                           help={
                             <SettingHelp
@@ -499,6 +488,7 @@ export function OnlineDeviceSetup({
                     )}
 
                     <ToggleSwitch
+                      reflow
                       label={t("online.features.playHistory")}
                       help={
                         <SettingHelp
@@ -506,7 +496,7 @@ export function OnlineDeviceSetup({
                           description={t("online.features.playHistoryHelp")}
                         />
                       }
-                      value={settingsQuery.data?.playtimeSyncEnabled ?? false}
+                      value={settings?.playtimeSyncEnabled ?? false}
                       setValue={(value) =>
                         updateSettings.mutate({ playtimeSyncEnabled: value })
                       }
@@ -516,6 +506,7 @@ export function OnlineDeviceSetup({
 
                     {librarySyncFeature.available && (
                       <ToggleSwitch
+                        reflow
                         label={t("online.features.librarySync")}
                         help={
                           <SettingHelp
@@ -534,6 +525,7 @@ export function OnlineDeviceSetup({
 
                     <div className="flex flex-col gap-3">
                       <ToggleSwitch
+                        reflow
                         label={t("online.features.automaticBackup")}
                         help={
                           <SettingHelp
@@ -543,7 +535,7 @@ export function OnlineDeviceSetup({
                             )}
                           />
                         }
-                        value={settingsQuery.data?.backupRemoteEnabled ?? false}
+                        value={settings?.backupRemoteEnabled ?? false}
                         setValue={(value) =>
                           updateSettings.mutate({ backupRemoteEnabled: value })
                         }
@@ -567,18 +559,10 @@ export function OnlineDeviceSetup({
                         </div>
                       ) : (
                         <div>
-                          <label
-                            htmlFor="online-backup-schedule"
-                            className="mb-2 block text-sm font-medium"
-                          >
-                            {t("online.features.schedule")}
-                          </label>
                           <Select
                             id="online-backup-schedule"
-                            value={
-                              settingsQuery.data?.backupRemoteSchedule ??
-                              "daily"
-                            }
+                            label={t("online.features.schedule")}
+                            value={settings?.backupRemoteSchedule ?? "daily"}
                             onChange={(event) =>
                               updateSettings.mutate({
                                 backupRemoteSchedule: event.target.value as
@@ -590,7 +574,7 @@ export function OnlineDeviceSetup({
                             disabled={
                               actionsDisabled ||
                               !cloudAvailable ||
-                              !settingsQuery.data?.backupRemoteEnabled
+                              !settings?.backupRemoteEnabled
                             }
                           >
                             <option value="daily">
@@ -689,9 +673,11 @@ export function OnlineDeviceSetup({
           />
         }
       >
-        <p className="text-muted-foreground py-2 text-sm">
-          {t("online.deviceLink.unlinkConfirmMessage")}
-        </p>
+        <div className="py-4">
+          <p className="text-center">
+            {t("online.deviceLink.unlinkConfirmMessage")}
+          </p>
+        </div>
       </SlideModal>
     </>
   );
@@ -700,7 +686,6 @@ export function OnlineDeviceSetup({
 function getBackupStatusLabel(
   remote: BackupStatusEntry | undefined,
   activeOperation: string | undefined,
-  language: string,
   t: ReturnType<typeof useTranslation>["t"],
 ): string {
   if (activeOperation?.startsWith("remote")) {
@@ -710,7 +695,7 @@ function getBackupStatusLabel(
   if (remote.lastStatus === "failed") {
     return t("online.features.lastBackupFailed");
   }
-  const lastSuccess = formatBackupDate(remote.lastSuccessAt, language);
+  const lastSuccess = formatAppDate(remote.lastSuccessAt);
   if (lastSuccess) {
     return t("online.features.lastBackup", { date: lastSuccess });
   }

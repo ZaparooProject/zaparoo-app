@@ -214,9 +214,7 @@ export function Library() {
         <h2
           id="library-systems-heading"
           className={
-            favoritesFeature.available
-              ? "sr-only"
-              : "text-muted-foreground text-sm font-semibold"
+            favoritesFeature.available ? "sr-only" : "text-lg font-semibold"
           }
         >
           {t("library.systems")}

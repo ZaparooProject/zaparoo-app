@@ -719,6 +719,23 @@ describe("useWarpSubscription", () => {
     });
   });
 
+  it("should finish loading when a foreground refresh replaces the first load", async () => {
+    mockGetSubscriptionStatus.mockImplementationOnce(
+      () => new Promise<SubscriptionResponse>(() => {}),
+    );
+    const { result } = renderHook(() => useWarpSubscription("user-123"));
+    await waitFor(() => expect(appStateCallback).not.toBeNull());
+    await waitFor(() =>
+      expect(mockGetSubscriptionStatus).toHaveBeenCalledTimes(1),
+    );
+    expect(result.current.isLoading).toBe(true);
+
+    act(() => appStateCallback?.({ isActive: true }));
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.subscription?.is_premium).toBe(false);
+  });
+
   it("should ignore a foreground response after retry starts", async () => {
     const { result } = renderHook(() => useWarpSubscription("user-123"));
     await waitFor(() => expect(result.current.isLoading).toBe(false));

@@ -31,6 +31,7 @@ import type { Deck } from "@/lib/models";
 import { ConnectionState, useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { seedActiveDevice } from "@/test-utils/deviceRegistry";
+import { responsiveWindow } from "@/test-utils/responsiveWindow";
 
 const system = {
   id: "nes",
@@ -54,34 +55,6 @@ const deck: Deck = {
   createdAt: 1,
   updatedAt: 1,
 };
-
-function responsiveWindow(initialWidth: number) {
-  let width = initialWidth;
-  const listeners = new Set<() => void>();
-  vi.spyOn(window, "matchMedia").mockImplementation((query) => ({
-    get matches() {
-      const minimum = /min-width:\s*(\d+)px/.exec(query);
-      return minimum ? width >= Number(minimum[1]) : false;
-    },
-    media: query,
-    onchange: null,
-    addEventListener: (_type: string, listener: unknown) => {
-      listeners.add(listener as () => void);
-    },
-    removeEventListener: (_type: string, listener: unknown) => {
-      listeners.delete(listener as () => void);
-    },
-    addListener: () => {},
-    removeListener: () => {},
-    dispatchEvent: () => true,
-  }));
-  return async (next: number) => {
-    await act(() => {
-      width = next;
-      listeners.forEach((listener) => listener());
-    });
-  };
-}
 
 async function renderCreate(path: string, basepath?: string) {
   const root = createRootRoute({ component: RootLayout });

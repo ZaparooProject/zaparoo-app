@@ -1,100 +1,54 @@
 import { useTranslation } from "react-i18next";
-import { MonitorIcon } from "lucide-react";
 import { StatusPill } from "@/components/wui/StatusPill";
-import { HeaderButton } from "@/components/wui/HeaderButton";
 import {
+  connectionStateLabelKey,
   useActiveDeviceSummary,
   useConnectionUiState,
   type ConnectionUIState,
 } from "@/hooks/useDevicePresentation";
 import { useStatusStore } from "@/lib/store";
 
-/** Status colour and wording per connection state; never colour alone. */
-const STATE_PRESENTATION: Record<
-  ConnectionUIState,
-  { dotClass: string; statusKey: string }
-> = {
-  connected: { dotClass: "bg-success", statusKey: "connection.connected" },
-  connecting: {
-    dotClass: "bg-muted-foreground",
-    statusKey: "connection.connectingToCore",
-  },
-  reconnecting: {
-    dotClass: "bg-warning",
-    statusKey: "connection.reconnectingToCore",
-  },
-  unavailable: {
-    dotClass: "bg-error",
-    statusKey: "connection.coreUnavailable",
-  },
-  networkUnavailable: {
-    dotClass: "bg-error",
-    statusKey: "connection.networkUnavailable",
-  },
-  error: { dotClass: "bg-error", statusKey: "scan.connectionError" },
-  pairingRequired: {
-    dotClass: "bg-warning",
-    statusKey: "connection.pairingRequired",
-  },
-  disconnected: {
-    dotClass: "bg-muted-foreground",
-    statusKey: "connection.disconnected",
-  },
+/** Status colour per connection state; wording always accompanies it. */
+const STATE_DOT_CLASS: Record<ConnectionUIState, string> = {
+  connected: "bg-success",
+  connecting: "bg-muted-foreground",
+  reconnecting: "bg-warning",
+  unavailable: "bg-error",
+  networkUnavailable: "bg-error",
+  error: "bg-error",
+  pairingRequired: "bg-warning",
+  disconnected: "bg-muted-foreground",
 };
 
 interface HomeDevicePillProps {
   onOpen: () => void;
   sheetOpen: boolean;
   className?: string;
-  compact?: boolean;
 }
 
 export function HomeDevicePill({
   onOpen,
   sheetOpen,
   className,
-  compact = false,
 }: HomeDevicePillProps) {
   const { t } = useTranslation();
   const connectionError = useStatusStore((state) => state.connectionError);
   const { uiState } = useConnectionUiState(connectionError);
   const { name, address } = useActiveDeviceSummary();
 
-  const presentation = STATE_PRESENTATION[uiState];
   const deviceLabel = name || address || t("scan.deviceNone");
 
   const accessibleName = t("scan.devicePill", {
     device: deviceLabel,
-    status: t(presentation.statusKey),
+    status: t(connectionStateLabelKey(uiState)),
   });
-
-  if (compact) {
-    return (
-      <HeaderButton
-        icon={
-          <span className="relative">
-            <MonitorIcon size={24} />
-            <span
-              aria-hidden="true"
-              className={`absolute -right-1 -bottom-1 size-2 rounded-full ${presentation.dotClass}`}
-            />
-          </span>
-        }
-        aria-label={accessibleName}
-        aria-haspopup="dialog"
-        aria-expanded={sheetOpen}
-        active={sheetOpen}
-        onClick={onOpen}
-      />
-    );
-  }
 
   return (
     <StatusPill
       className={className}
       dot={
         <span
-          className={`block size-2 rounded-full ${presentation.dotClass}`}
+          className={`block size-2 rounded-full ${STATE_DOT_CLASS[uiState]}`}
         />
       }
       label={deviceLabel}

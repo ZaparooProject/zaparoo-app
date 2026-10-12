@@ -4,41 +4,30 @@ import {
   useImperativeHandle,
   useLayoutEffect,
   useRef,
-  useState,
 } from "react";
 import type { ReactNode, RefObject } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { FolderIcon, Heart } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { useAccessibleLists } from "@/hooks/useAccessibleLists";
 import { useStatusStore } from "@/lib/store";
-import {
-  compactLibraryTag,
-  entrySystemId,
-  hasFavoriteTag,
-  isPlainFolderEntry,
-  libraryEntryDisplayName,
-  libraryEntryTags,
-  mediaRefKey,
-} from "@/lib/libraryMedia";
+import { mediaRefKey } from "@/lib/libraryMedia";
 import type { LibraryBrowseRange } from "@/lib/libraryBrowse";
 import type { MediaBrowseEntry } from "@/lib/models";
-import { NextIcon } from "@/lib/images";
-import { useSystemNameResolver } from "@/hooks/useSystemName";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { InlineLoading } from "@/components/InlineLoading";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/wui/Button";
 import { useAnnouncer } from "@/components/A11yAnnouncer";
-import { useHapticPress } from "@/hooks/useHapticPress";
 import { DelayedLoading } from "@/components/DelayedLoading";
 import { useInitialPageScrollOffset } from "@/lib/pageScrollContext";
 import { useVirtualListScrollMargin } from "@/hooks/useVirtualListScrollMargin";
-import { TagList } from "@/components/TagList";
-import { LibraryArtworkFrame } from "@/components/library/LibraryArtworkFrame";
+import { LibraryMediaRow } from "@/components/library/LibraryMediaRow";
+import {
+  libraryMediaRowBoxStyle,
+  libraryMediaRowGeometry,
+} from "@/components/library/libraryMediaRowGeometry";
 
-const ROW_HEIGHT = 88;
 // Matches the virtualizer's scroll-end delay so jumps and flings settle before
 // unloaded rows are requested.
 const LOAD_INDEX_DELAY_MS = 150;
@@ -55,6 +44,7 @@ function inRanges(
 function LibraryBrowsePlaceholderRow(props: {
   textZoomed: boolean;
   minHeight: number;
+  leadingInset?: number;
   hasDivider: boolean;
 }) {
   return (
@@ -64,206 +54,11 @@ function LibraryBrowsePlaceholderRow(props: {
         "h-full": !props.textZoomed,
         "border-border border-b": props.hasDivider,
       })}
-      style={{ minHeight: `${props.minHeight}px` }}
+      style={libraryMediaRowBoxStyle(props.minHeight, props.leadingInset)}
     >
       <Skeleton className="h-16 w-16 shrink-0" />
       <Skeleton className="h-5 w-2/3" />
     </div>
-  );
-}
-
-function AdaptiveLibraryTitle({
-  title,
-  allowWrap,
-}: {
-  title: string;
-  allowWrap: boolean;
-}) {
-  const containerRef = useRef<HTMLSpanElement>(null);
-  const measureRef = useRef<HTMLSpanElement>(null);
-  const [compact, setCompact] = useState(false);
-
-  useLayoutEffect(() => {
-    const container = containerRef.current;
-    const measure = measureRef.current;
-    if (!container || !measure) return;
-
-    const update = () =>
-      setCompact(measure.scrollWidth > container.clientWidth);
-    const frame = requestAnimationFrame(update);
-    const observer =
-      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
-    observer?.observe(container);
-
-    return () => {
-      cancelAnimationFrame(frame);
-      observer?.disconnect();
-    };
-  }, [title]);
-
-  return (
-    <span ref={containerRef} className="relative w-full min-w-0">
-      <span
-        ref={measureRef}
-        className="pointer-events-none invisible absolute font-semibold whitespace-nowrap"
-        aria-hidden="true"
-      >
-        {title}
-      </span>
-      <span
-        className={classNames("font-semibold break-words", {
-          "leading-5": allowWrap,
-          "line-clamp-2 text-sm leading-4": compact && !allowWrap,
-          "truncate leading-5": !compact && !allowWrap,
-        })}
-      >
-        {title}
-      </span>
-    </span>
-  );
-}
-
-function LibraryBrowseRow(props: {
-  entry: MediaBrowseEntry;
-  systemId: string;
-  deviceKey: string;
-  showFilenames: boolean;
-  corePlatform: string | null;
-  imagesPaused: boolean;
-  interactionDisabled: boolean;
-  deferImages: boolean;
-  textZoomed: boolean;
-  minHeight: number;
-  hasDivider: boolean;
-  showSystemName: boolean;
-  detail?: string;
-  selected: boolean;
-  onSelect: (entry: MediaBrowseEntry) => void;
-}) {
-  const { t } = useTranslation();
-  const resolveSystemName = useSystemNameResolver();
-  const handleHapticPress = useHapticPress("light", !props.interactionDisabled);
-  const rowSystemId = entrySystemId(props.entry, props.systemId);
-  const entry = props.entry;
-  const isFolder = isPlainFolderEntry(entry);
-  const rowRef = useRef<HTMLButtonElement>(null);
-  const [imageVisible, setImageVisible] = useState(
-    () => !props.deferImages || typeof IntersectionObserver === "undefined",
-  );
-
-  useEffect(() => {
-    if (!props.deferImages) return;
-
-    const row = rowRef.current;
-    if (!row || typeof IntersectionObserver === "undefined") return;
-
-    const observer = new IntersectionObserver((entries) => {
-      if (entries.some((observed) => observed.isIntersecting)) {
-        setImageVisible(true);
-        observer.disconnect();
-      }
-    });
-    observer.observe(row);
-    return () => observer.disconnect();
-  }, [props.deferImages]);
-
-  return (
-    <button
-      ref={rowRef}
-      type="button"
-      className={classNames(
-        "library-browse-row focus-visible:ring-ring flex w-full items-center gap-3 px-1 py-3 text-left focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed",
-        {
-          "h-full": !props.textZoomed,
-          "border-border border-b": props.hasDivider,
-        },
-      )}
-      style={{ minHeight: `${props.minHeight}px` }}
-      disabled={props.interactionDisabled}
-      aria-current={props.selected ? "true" : undefined}
-      onPointerUp={handleHapticPress}
-      onClick={() => props.onSelect(entry)}
-    >
-      {isFolder ? (
-        <span
-          className="text-foreground-hint bg-surface-highlight flex h-16 w-16 shrink-0 items-center justify-center rounded-md"
-          aria-hidden="true"
-        >
-          <FolderIcon size={24} />
-        </span>
-      ) : (
-        <LibraryArtworkFrame
-          entry={entry}
-          systemId={rowSystemId}
-          deviceKey={props.deviceKey}
-          maxSize={128}
-          priority="thumbnail"
-          enabled={!props.imagesPaused && (!props.deferImages || imageVisible)}
-          compact
-          className="size-16"
-        />
-      )}
-      <span
-        className={classNames("flex min-w-0 flex-1 flex-col", {
-          "overflow-hidden": !props.textZoomed,
-        })}
-      >
-        <AdaptiveLibraryTitle
-          allowWrap={props.textZoomed}
-          title={libraryEntryDisplayName(
-            entry,
-            props.showFilenames,
-            props.corePlatform,
-          )}
-        />
-        {isFolder ? (
-          entry.fileCount !== undefined && (
-            <span className="text-muted-foreground text-sm">
-              {t("library.fileCount", { count: entry.fileCount })}
-            </span>
-          )
-        ) : (
-          <>
-            {props.showSystemName && rowSystemId && (
-              <span
-                className={classNames("text-muted-foreground text-sm", {
-                  truncate: !props.textZoomed,
-                })}
-              >
-                {resolveSystemName(
-                  rowSystemId,
-                  entry.systemName || rowSystemId,
-                )}
-              </span>
-            )}
-            {props.detail && (
-              <span
-                className={classNames("text-muted-foreground text-sm", {
-                  truncate: !props.textZoomed,
-                })}
-              >
-                {props.detail}
-              </span>
-            )}
-            <TagList
-              tags={libraryEntryTags(entry)}
-              preserveOrder
-              formatTag={compactLibraryTag}
-            />
-          </>
-        )}
-      </span>
-      <span className="flex shrink-0 items-center gap-2">
-        {!isFolder && hasFavoriteTag(entry.tags) && (
-          <span role="img" aria-label={t("library.favorite")}>
-            <Heart size={18} fill="currentColor" aria-hidden="true" />
-          </span>
-        )}
-        <span aria-hidden="true" className="text-muted-foreground shrink-0">
-          <NextIcon size="20" />
-        </span>
-      </span>
-    </button>
   );
 }
 
@@ -302,9 +97,11 @@ export const LibraryBrowseList = forwardRef<
     usePreferencesStore((state) => state.textZoomLevel) ?? 1;
   const accessibleLists = useAccessibleLists();
   const corePlatform = useStatusStore((state) => state.corePlatform);
-  const baseRowHeight = props.showSystemName ? 96 : ROW_HEIGHT;
-  const textZoomed = textZoomLevel > 1;
-  const rowHeight = Math.ceil(baseRowHeight * Math.max(1, textZoomLevel));
+  const { textZoomed, rowHeight, leadingInset, rowMinHeight } =
+    libraryMediaRowGeometry(props.showSystemName ?? false, textZoomLevel);
+  const selectedKey = props.selectedEntry
+    ? JSON.stringify(mediaRefKey(props.selectedEntry, props.systemId))
+    : null;
   const rowRefs = useRef(new Map<number, HTMLDivElement>());
   const loadMoreStartRef = useRef<number | null>(null);
   const loadEarlierRangeRef = useRef<LibraryBrowseRange | null>(null);
@@ -315,7 +112,7 @@ export const LibraryBrowseList = forwardRef<
   const virtualizer = useVirtualizer({
     count: props.entries.length + (props.hasNextPage ? 1 : 0),
     getScrollElement: () => props.scrollRef.current,
-    estimateSize: () => rowHeight,
+    estimateSize: rowMinHeight,
     overscan: 2,
     initialOffset: initialScrollOffset,
     scrollMargin,
@@ -465,7 +262,7 @@ export const LibraryBrowseList = forwardRef<
     index: number,
     deferImages: boolean,
   ) => (
-    <LibraryBrowseRow
+    <LibraryMediaRow
       entry={entry}
       systemId={props.systemId}
       deviceKey={props.deviceKey}
@@ -476,13 +273,13 @@ export const LibraryBrowseList = forwardRef<
       deferImages={deferImages}
       textZoomed={textZoomed}
       minHeight={rowHeight}
+      leadingInset={index === 0 ? leadingInset : undefined}
       showSystemName={props.showSystemName ?? false}
       detail={props.entryDetail?.(entry)}
-      selected={Boolean(
-        props.selectedEntry &&
-        JSON.stringify(mediaRefKey(entry, props.systemId)) ===
-          JSON.stringify(mediaRefKey(props.selectedEntry, props.systemId)),
-      )}
+      selected={
+        selectedKey !== null &&
+        JSON.stringify(mediaRefKey(entry, props.systemId)) === selectedKey
+      }
       hasDivider={props.hasNextPage || index < props.entries.length - 1}
       onSelect={props.onSelect}
     />
@@ -523,7 +320,7 @@ export const LibraryBrowseList = forwardRef<
             aria-posinset={index + 1}
             aria-setsize={setSize}
             style={{
-              minHeight: `${rowHeight}px`,
+              minHeight: `${rowMinHeight(index)}px`,
               scrollMarginTop: `${scrollPaddingStart}px`,
             }}
           >
@@ -600,7 +397,6 @@ export const LibraryBrowseList = forwardRef<
           return props.isFetchingNextPage ? (
             <div
               key={virtualItem.key}
-              role="status"
               style={{
                 position: "absolute",
                 width: "100%",
@@ -608,10 +404,7 @@ export const LibraryBrowseList = forwardRef<
               }}
             >
               <DelayedLoading>
-                <div className="text-muted-foreground flex h-full items-center justify-center gap-2">
-                  <LoadingSpinner size={16} className="text-primary" />
-                  <span>{t("library.loadingMore")}</span>
-                </div>
+                <InlineLoading label={t("library.loadingMore")} />
               </DelayedLoading>
             </div>
           ) : null;
@@ -635,7 +428,7 @@ export const LibraryBrowseList = forwardRef<
               top: 0,
               left: 0,
               width: "100%",
-              minHeight: `${rowHeight}px`,
+              minHeight: `${rowMinHeight(virtualItem.index)}px`,
               transform: `translateY(${virtualItem.start - scrollMargin}px)`,
             }}
           >
@@ -649,6 +442,9 @@ export const LibraryBrowseList = forwardRef<
               <LibraryBrowsePlaceholderRow
                 textZoomed={textZoomed}
                 minHeight={rowHeight}
+                leadingInset={
+                  virtualItem.index === 0 ? leadingInset : undefined
+                }
                 hasDivider={
                   props.hasNextPage ||
                   virtualItem.index < props.entries.length - 1

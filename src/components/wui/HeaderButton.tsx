@@ -1,5 +1,6 @@
 import classNames from "classnames";
-import { ReactElement, useState, memo, useRef } from "react";
+import { ReactElement, memo } from "react";
+import { useTactilePress } from "@/hooks/useTactilePress";
 
 interface HeaderButtonProps {
   onClick?: () => void;
@@ -15,14 +16,15 @@ interface HeaderButtonProps {
 export const HeaderButton = memo(function HeaderButton(
   props: HeaderButtonProps,
 ) {
-  const [isPressed, setIsPressed] = useState(false);
-  const touchStartPos = useRef<{ x: number; y: number } | null>(null);
-  const hasMoved = useRef(false);
+  const { pressed, shouldFireClick, handlers } = useTactilePress({
+    disabled: props.disabled,
+    hasOnClick: props.onClick !== undefined,
+  });
 
   return (
     <button
       type="button"
-      data-pressed={isPressed}
+      data-pressed={pressed}
       aria-pressed={
         props["aria-expanded"] === undefined ? props.active : undefined
       }
@@ -34,7 +36,7 @@ export const HeaderButton = memo(function HeaderButton(
           "text-muted-foreground hover:text-foreground":
             !props.active && !props.disabled,
           "text-muted-foreground cursor-not-allowed": props.disabled,
-          "text-muted-foreground": isPressed && !props.disabled,
+          "text-muted-foreground": pressed,
         },
         props.className,
       )}
@@ -43,49 +45,11 @@ export const HeaderButton = memo(function HeaderButton(
       aria-label={props["aria-label"] ?? props.title}
       onClick={() => {
         // Only trigger click if this wasn't a scroll gesture
-        if (!hasMoved.current && !props.disabled && props.onClick) {
+        if (shouldFireClick() && props.onClick) {
           props.onClick();
         }
       }}
-      onTouchStart={(e) => {
-        if (props.disabled) return;
-        const touch = e.touches[0];
-        if (!touch) return;
-        touchStartPos.current = { x: touch.clientX, y: touch.clientY };
-        hasMoved.current = false;
-        setIsPressed(true);
-      }}
-      onTouchMove={(e) => {
-        if (props.disabled || !touchStartPos.current) return;
-        const touch = e.touches[0];
-        if (!touch) return;
-        const deltaX = Math.abs(touch.clientX - touchStartPos.current.x);
-        const deltaY = Math.abs(touch.clientY - touchStartPos.current.y);
-
-        // If moved more than 10px, consider it a scroll gesture
-        if (deltaX > 10 || deltaY > 10) {
-          hasMoved.current = true;
-          setIsPressed(false);
-        }
-      }}
-      onTouchEnd={() => {
-        if (props.disabled) return;
-        setIsPressed(false);
-        // Reset after a short delay to allow click to process
-        setTimeout(() => {
-          hasMoved.current = false;
-          touchStartPos.current = null;
-        }, 100);
-      }}
-      onTouchCancel={() => {
-        if (props.disabled) return;
-        setIsPressed(false);
-        hasMoved.current = false;
-        touchStartPos.current = null;
-      }}
-      onMouseDown={() => !props.disabled && setIsPressed(true)}
-      onMouseUp={() => setIsPressed(false)}
-      onMouseLeave={() => setIsPressed(false)}
+      {...handlers}
     >
       <span
         className="wui-header-button-content flex items-center justify-center"

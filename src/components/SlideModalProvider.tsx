@@ -5,6 +5,7 @@ import {
   useSyncExternalStore,
   ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import {
   SlideModalContext,
   SlideModalManager,
@@ -103,22 +104,28 @@ export const SlideModalProvider = ({ children }: { children: ReactNode }) => {
   return (
     <SlideModalContext.Provider value={manager}>
       {children}
-      <div
-        data-testid="modal-overlay"
-        data-focus-trap-exempt
-        className="fixed inset-0 z-40 bg-black/60 transition-opacity duration-200 ease-in-out"
-        style={{
-          opacity: activeModalId === null ? 0 : 1,
-          pointerEvents: activeModalId === null ? "none" : "auto",
-        }}
-        onClick={() => {
-          const ownerId = getOverlayOwnerId();
-          const owner =
-            ownerId === null ? undefined : modals.current.get(ownerId);
-          if (owner && !owner.blocking) owner.closeFunction();
-        }}
-        aria-hidden="true"
-      />
+      {/* Body-level so focus isolation never makes the scrim inert, including
+          for modals that are themselves portaled out of the app root. */}
+      {typeof document !== "undefined" &&
+        createPortal(
+          <div
+            data-testid="modal-overlay"
+            data-focus-trap-exempt
+            className="fixed inset-0 z-40 bg-black/60 transition-opacity duration-200 ease-in-out"
+            style={{
+              opacity: activeModalId === null ? 0 : 1,
+              pointerEvents: activeModalId === null ? "none" : "auto",
+            }}
+            onClick={() => {
+              const ownerId = getOverlayOwnerId();
+              const owner =
+                ownerId === null ? undefined : modals.current.get(ownerId);
+              if (owner && !owner.blocking) owner.closeFunction();
+            }}
+            aria-hidden="true"
+          />,
+          document.body,
+        )}
     </SlideModalContext.Provider>
   );
 };

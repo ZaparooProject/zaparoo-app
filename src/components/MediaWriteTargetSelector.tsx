@@ -1,6 +1,6 @@
 import { useId, type ReactNode } from "react";
 import classNames from "classnames";
-import { FileCode, Folder, Tag } from "lucide-react";
+import { FileCodeIcon, FolderIcon, TagIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/wui/Badge";
 import { TagBadge } from "@/components/TagBadge";
@@ -47,8 +47,8 @@ function WriteTargetOption(props: {
         className={classNames(
           "peer-focus-visible:ring-ring flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-all duration-200 peer-focus-visible:ring-2",
           {
-            "border-foreground/30 bg-foreground/10": selected,
-            "border-foreground/10 bg-foreground/5 hover:bg-foreground/[0.07]":
+            "border-input bg-surface-highlight": selected,
+            "border-border bg-surface-inset hover:bg-surface-highlight":
               !selected,
           },
         )}
@@ -79,7 +79,7 @@ function WriteTargetOption(props: {
             "flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all",
             {
               "border-foreground bg-foreground": selected,
-              "border-foreground/30": !selected,
+              "border-input": !selected,
             },
           )}
         >
@@ -114,7 +114,7 @@ export function MediaWriteTargetSelector(props: {
       {visibleTags.length > 0 && (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
           <div className="flex items-center gap-2 sm:min-w-[100px]">
-            <Tag size={16} className="text-muted-foreground" />
+            <TagIcon size={16} className="text-muted-foreground" />
             <span className="text-muted-foreground text-sm">
               {t("create.search.tagsLabel")}
             </span>
@@ -192,7 +192,7 @@ export function MediaWriteTargetSelector(props: {
                   name={radioGroupName}
                   mode={mode}
                   icon={
-                    <Folder
+                    <FolderIcon
                       size={16}
                       className="text-muted-foreground flex-shrink-0"
                     />
@@ -214,7 +214,7 @@ export function MediaWriteTargetSelector(props: {
                   name={radioGroupName}
                   mode={mode}
                   icon={
-                    <FileCode
+                    <FileCodeIcon
                       size={16}
                       className="text-muted-foreground flex-shrink-0"
                     />

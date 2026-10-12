@@ -1,13 +1,10 @@
 import { useId } from "react";
-import { Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import classNames from "classnames";
 import type { SystemReleasePeriod, SystemSort } from "@/lib/systemFilters";
-import { handleRadioGroupKeyDown } from "@/lib/radioGroup";
 import { SlideModal } from "@/components/SlideModal";
 import { Button } from "@/components/wui/Button";
 import { ModalActionBar } from "@/components/wui/ModalActionBar";
-import { useHapticPress } from "@/hooks/useHapticPress";
+import { LibrarySortOptionList } from "@/components/library/LibrarySortOptionList";
 import { Select } from "@/components/wui/Select";
 
 const SORT_OPTIONS: Array<{ value: SystemSort; labelKey: string }> = [
@@ -45,7 +42,6 @@ export function LibrarySystemFiltersModal(props: {
   onApply: () => void;
 }) {
   const { t } = useTranslation();
-  const handleHapticPress = useHapticPress();
   const manufacturerId = useId();
   const releasePeriodId = useId();
   const hasDraftOptions =
@@ -81,43 +77,15 @@ export function LibrarySystemFiltersModal(props: {
       footer={footer}
     >
       <div className="flex flex-col gap-5 py-3">
-        <section className="flex flex-col gap-2">
-          <h2 className="font-semibold">{t("library.sortSystems")}</h2>
-          <div
-            role="radiogroup"
-            aria-label={t("library.sortSystems")}
-            onKeyDown={handleRadioGroupKeyDown}
-            tabIndex={-1}
-          >
-            {SORT_OPTIONS.map((option, index) => {
-              const selected = props.sort === option.value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  tabIndex={selected ? 0 : -1}
-                  className={classNames(
-                    "focus-visible:ring-ring flex min-h-12 w-full items-center justify-between gap-3 px-2 py-3 text-left focus-visible:ring-2 focus-visible:outline-none",
-                    {
-                      "border-border border-b": index < SORT_OPTIONS.length - 1,
-                      "bg-foreground/10": selected,
-                    },
-                  )}
-                  onPointerUp={handleHapticPress}
-                  onClick={() => props.onSortChange(option.value)}
-                >
-                  <span>{t(option.labelKey)}</span>
-                  {selected && <Check size={20} aria-hidden="true" />}
-                </button>
-              );
-            })}
-          </div>
-        </section>
+        <LibrarySortOptionList
+          label={t("library.sortSystems")}
+          options={SORT_OPTIONS}
+          value={props.sort}
+          onChange={props.onSortChange}
+        />
 
         <section className="flex flex-col gap-2">
-          <label htmlFor={manufacturerId} className="font-semibold">
+          <label htmlFor={manufacturerId} className="text-lg font-semibold">
             {t("library.manufacturer")}
           </label>
           <Select
@@ -138,7 +106,7 @@ export function LibrarySystemFiltersModal(props: {
         </section>
 
         <section className="flex flex-col gap-2">
-          <label htmlFor={releasePeriodId} className="font-semibold">
+          <label htmlFor={releasePeriodId} className="text-lg font-semibold">
             {t("library.releasePeriod")}
           </label>
           <Select

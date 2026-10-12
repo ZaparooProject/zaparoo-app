@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, render, screen, waitFor } from "@/test-utils";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
 import {
   credentialKeyForRecord,
@@ -229,6 +230,66 @@ describe("Settings Devices Route", () => {
     expect(
       await screen.findByLabelText("settings.activeDevice"),
     ).toBeInTheDocument();
+  });
+
+  it("should show the lock icon once a device is paired from this page", async () => {
+    const [record] = await seedRecords(
+      [{ address: "192.168.1.10", name: "Living room" }],
+      0,
+    );
+    renderRoute();
+    await screen.findByText("Living room");
+    expect(
+      screen.queryByLabelText("connection.encrypted"),
+    ).not.toBeInTheDocument();
+
+    // Pairing stores the credential, then the restarted connection settles.
+    await credentialStore.set(
+      credentialKeyForRecord(record!.recordId),
+      credentials,
+    );
+    act(() => {
+      useStatusStore.setState({ encryptionState: "encrypted" });
+    });
+
+    expect(
+      await screen.findByLabelText("connection.encrypted"),
+    ).toBeInTheDocument();
+  });
+
+  it("should expose the active device marker as an image", async () => {
+    await seedRecords([{ address: "192.168.1.10", name: "Active" }], 0);
+    renderRoute();
+
+    expect(
+      await screen.findByRole("img", { name: "settings.activeDevice" }),
+    ).toBeInTheDocument();
+  });
+
+  it("should use settings section headings, not the Home status heading", async () => {
+    await seedRecords([{ address: "192.168.1.10", name: "Alpha" }]);
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+    try {
+      renderRoute();
+
+      expect(
+        await screen.findByRole("heading", {
+          level: 2,
+          name: "settings.networkScan.title",
+        }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", {
+          level: 2,
+          name: "settings.savedDevices",
+        }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("heading", { level: 3 }),
+      ).not.toBeInTheDocument();
+    } finally {
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
+    }
   });
 
   it("should show the lock icon only on rows whose record holds credentials", async () => {

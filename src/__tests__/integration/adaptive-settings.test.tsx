@@ -8,7 +8,6 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import {
-  act,
   findA11yViolations,
   render,
   screen,
@@ -28,6 +27,7 @@ import { ConnectionState, useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { seedActiveDevice } from "@/test-utils/deviceRegistry";
 import { mockReaderInfo } from "@/test-utils/factories";
+import { responsiveWindow } from "@/test-utils/responsiveWindow";
 
 vi.mock("@/lib/mfaAuthentication", () => ({
   MfaAuthentication: {
@@ -36,34 +36,6 @@ vi.mock("@/lib/mfaAuthentication", () => ({
     cancelSignIn: vi.fn().mockResolvedValue(undefined),
   },
 }));
-
-function responsiveWindow(initialWidth: number) {
-  let width = initialWidth;
-  const listeners = new Set<() => void>();
-  vi.spyOn(window, "matchMedia").mockImplementation((query) => ({
-    get matches() {
-      const minimum = /min-width:\s*(\d+)px/.exec(query);
-      return minimum ? width >= Number(minimum[1]) : false;
-    },
-    media: query,
-    onchange: null,
-    addEventListener: (_type: string, listener: unknown) => {
-      listeners.add(listener as () => void);
-    },
-    removeEventListener: (_type: string, listener: unknown) => {
-      listeners.delete(listener as () => void);
-    },
-    addListener: () => {},
-    removeListener: () => {},
-    dispatchEvent: () => true,
-  }));
-  return async (next: number) => {
-    await act(() => {
-      width = next;
-      listeners.forEach((listener) => listener());
-    });
-  };
-}
 
 async function renderSettings(path: string, basepath?: string) {
   const root = createRootRoute({ component: RootLayout });

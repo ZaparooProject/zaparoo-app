@@ -13,7 +13,18 @@ import { logger } from "@/lib/logger";
 import { useNfcWriter, WriteAction, WriteMethod } from "@/lib/writeNfcHook";
 import type { ReaderActivityState } from "@/components/ReaderActivityControl";
 
-/** A visible action owns its write until it settles or its context is dismissed. */
+const START_FAILED_KEYS: Record<WriteAction, string> = {
+  [WriteAction.Write]: "spinner.writeFailed",
+  [WriteAction.Read]: "spinner.readFailed",
+  [WriteAction.Format]: "spinner.formatFailed",
+  [WriteAction.Erase]: "spinner.eraseFailed",
+  [WriteAction.MakeReadOnly]: "spinner.makeReadOnlyFailed",
+};
+
+/**
+ * A visible action owns its reader work until it settles or its context is
+ * dismissed. Writes are the default; reads and tag tools pass their action.
+ */
 export function useContextualNfcWrite(
   contextKey: string | null,
   enabled: boolean,
@@ -32,6 +43,7 @@ export function useContextualNfcWrite(
     getVerifyError,
     verifyError,
     retapRequired,
+    result,
   } = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
   const [active, setActive] = useState(false);
   const operationRef = useRef<AbortController | null>(null);
@@ -68,11 +80,11 @@ export function useContextualNfcWrite(
   );
 
   const start = useCallback(
-    async (text: string) => {
+    async (text: string, action: WriteAction = WriteAction.Write) => {
       const globalState = useStatusStore.getState();
       if (
         !enabled ||
-        !text ||
+        (action === WriteAction.Write && !text) ||
         operationRef.current ||
         endingRef.current ||
         globalState.writeOpen ||
@@ -84,20 +96,20 @@ export function useContextualNfcWrite(
       inFlightRef.current = true;
       setActive(true);
       try {
-        // A deliberate write takes over from Home's continuous read session.
+        // A deliberate action takes over from Home's continuous read session.
         if (sessionManager.isScanning) {
           await cancelSession();
           if (!(await waitForSessionRelease())) throw new NfcSessionBusyError();
         }
         if (operation.signal.aborted) return;
-        await write(WriteAction.Write, text);
+        await write(action, action === WriteAction.Write ? text : undefined);
       } catch (error) {
         if (operation.signal.aborted) return;
         logger.error("Failed to start contextual NFC write", error, {
           category: "nfc",
           action: "contextualWrite",
         });
-        toast.error(t("spinner.writeFailed"));
+        toast.error(t(START_FAILED_KEYS[action]));
       } finally {
         if (operationRef.current === operation) {
           inFlightRef.current = false;
@@ -135,5 +147,21 @@ export function useContextualNfcWrite(
       : retapRequired
         ? "attention"
         : "waiting";
-  return { state, active, externalWriteActive, start, cancel, retry };
+  return {
+    state,
+    active,
+    externalWriteActive,
+    /** Tag data from the last completed operation; null while one is pending. */
+    result,
+    start,
+    cancel,
+    retry,
+    // Ready-made props for ReaderActivityControl and MediaDetailsModal.
+    activeLabel: retapRequired
+      ? t("spinner.retapTag")
+      : t("spinner.holdTagReader"),
+    errorMessage: verifyError ? t("spinner.verifyFailedRetry") : undefined,
+    onCancel: () => void cancel(),
+    onRetry: () => void retry(),
+  };
 }

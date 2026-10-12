@@ -344,9 +344,7 @@ describe("Settings Readers Route", () => {
       renderComponent();
 
       expect(
-        screen.getByRole("button", {
-          name: "Help for settings.readers.scanMode",
-        }),
+        screen.getByRole("radiogroup", { name: "settings.readers.scanMode" }),
       ).toBeInTheDocument();
     });
 
@@ -414,10 +412,11 @@ describe("Settings Readers Route", () => {
       renderComponent();
 
       // Wait for buttons to be available
+      // The group stays mounted but unavailable until settings have loaded.
       await waitFor(() => {
         expect(
           screen.getByRole("radio", { name: /settings.insertMode/i }),
-        ).toBeInTheDocument();
+        ).toBeEnabled();
       });
 
       const holdButton = screen.getByRole("radio", {
@@ -439,20 +438,16 @@ describe("Settings Readers Route", () => {
       renderComponent();
 
       expect(
-        screen.getByRole("button", {
-          name: "Help for settings.readers.audioFeedback",
-        }),
-      ).toBeInTheDocument();
+        screen.getAllByText("settings.readers.audioFeedback").length,
+      ).toBeGreaterThan(0);
     });
 
     it("should render auto-detect readers toggle", () => {
       renderComponent();
 
       expect(
-        screen.getByRole("button", {
-          name: "Help for settings.readers.autoDetectReaders",
-        }),
-      ).toBeInTheDocument();
+        screen.getAllByText("settings.readers.autoDetectReaders").length,
+      ).toBeGreaterThan(0);
     });
   });
 
@@ -461,10 +456,8 @@ describe("Settings Readers Route", () => {
       renderComponent();
 
       expect(
-        screen.getByRole("button", {
-          name: "Help for settings.readers.continuousScan",
-        }),
-      ).toBeInTheDocument();
+        screen.getAllByText("settings.readers.continuousScan").length,
+      ).toBeGreaterThan(0);
     });
   });
 });

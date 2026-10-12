@@ -78,7 +78,7 @@ export function AccessibilitySettings() {
         </h1>
       }
     >
-      <Card className="flex flex-col gap-5">
+      <Card className="flex flex-col gap-4">
         <RadioGroup
           label={t("settings.accessibility.appearance")}
           value={theme}
@@ -111,22 +111,22 @@ export function AccessibilitySettings() {
           />
         )}
 
-        <div className="flex flex-col">
-          <ToggleSwitch
-            label={t("settings.accessibility.accessibleLists")}
-            value={accessibleLists}
-            setValue={setAccessibleLists}
-          />
+        <ToggleSwitch
+          reflow
+          label={t("settings.accessibility.accessibleLists")}
+          value={accessibleLists}
+          setValue={setAccessibleLists}
+        />
 
-          {/* Haptic Feedback - native only */}
-          {appUi.enabled && (
-            <ToggleSwitch
-              label={t("settings.accessibility.haptics")}
-              value={hapticsEnabled}
-              setValue={setHapticsEnabled}
-            />
-          )}
-        </div>
+        {/* Haptic Feedback - native only */}
+        {appUi.enabled && (
+          <ToggleSwitch
+            reflow
+            label={t("settings.accessibility.haptics")}
+            value={hapticsEnabled}
+            setValue={setHapticsEnabled}
+          />
+        )}
       </Card>
     </PageFrame>
   );

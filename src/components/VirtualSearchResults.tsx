@@ -6,7 +6,7 @@ import React, {
   RefObject,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { Heart } from "lucide-react";
+import { HeartIcon } from "lucide-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Link } from "@tanstack/react-router";
 import classNames from "classnames";
@@ -14,10 +14,13 @@ import { SearchResultGame } from "@/lib/models.ts";
 import { useStatusStore } from "@/lib/store.ts";
 import { usePreferencesStore } from "@/lib/preferencesStore.ts";
 import { filenameFromPath } from "@/lib/path.ts";
-import { hasFavoriteTag } from "@/lib/libraryMedia";
+import { hasFavoriteTag, searchResultToBrowseEntry } from "@/lib/libraryMedia";
+import { LibraryMediaRow } from "@/components/library/LibraryMediaRow";
+import { libraryMediaRowGeometry } from "@/components/library/libraryMediaRowGeometry";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { Card } from "@/components/wui/Card.tsx";
 import { NextIcon, SettingsIcon, WarningIcon } from "@/lib/images.tsx";
-import { LoadingSpinner } from "@/components/ui/loading-spinner.tsx";
+import { InlineLoading } from "@/components/InlineLoading.tsx";
 import { DelayedLoading } from "@/components/DelayedLoading.tsx";
 import { Button } from "@/components/wui/Button.tsx";
 import { EmptyState } from "@/components/wui/EmptyState.tsx";
@@ -39,12 +42,17 @@ export interface VirtualSearchResultsProps {
   searchSystem?: string;
   searchTags?: string[];
   onClearFilters?: () => void;
-  isSearching?: boolean;
-  onSearchComplete?: () => void;
+  /** Reports whether the first page of the current search is loading. */
+  onLoadingChange?: (loading: boolean) => void;
   scrollContainerRef?: RefObject<HTMLDivElement | null>;
   loadingDelayMs?: number;
   compactEmptyState?: boolean;
   selectionPresentation?: "modal" | "pane";
+  /**
+   * "library" renders the artwork rows of Library browse and collection
+   * lists, so a Library page keeps one row design when it switches to search.
+   */
+  rowVariant?: "plain" | "library";
 }
 
 export function VirtualSearchResults({
@@ -58,11 +66,11 @@ export function VirtualSearchResults({
   searchSystem = "all",
   searchTags = [],
   onClearFilters,
-  isSearching = false,
-  onSearchComplete,
+  onLoadingChange,
   scrollContainerRef,
   loadingDelayMs = 0,
   compactEmptyState = false,
+  rowVariant = "plain",
 }: VirtualSearchResultsProps) {
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const { t } = useTranslation();
@@ -70,6 +78,14 @@ export function VirtualSearchResults({
   const accessibleResultsRef = useRef<HTMLDivElement>(null);
   const loadMoreStartRef = useRef<number | null>(null);
   const resolveSystemName = useSystemNameResolver();
+  const libraryRows = rowVariant === "library";
+  const deviceKey = useActiveDeviceKey();
+  const showFilenames = usePreferencesStore((state) => state.showFilenames);
+  const corePlatform = useStatusStore((state) => state.corePlatform);
+  const textZoomLevel =
+    usePreferencesStore((state) => state.textZoomLevel) ?? 1;
+  // Library rows always show the system, so they use that list's row height.
+  const libraryGeometry = libraryMediaRowGeometry(true, textZoomLevel);
 
   const {
     allItems,
@@ -89,17 +105,24 @@ export function VirtualSearchResults({
     enabled: hasSearched && gamesIndex.exists,
   });
 
-  // Call onSearchComplete when loading finishes
+  const searchLoading = hasSearched && isLoading;
   useEffect(() => {
-    if (!isLoading && hasSearched && onSearchComplete) {
-      onSearchComplete();
-    }
-  }, [isLoading, hasSearched, onSearchComplete]);
+    onLoadingChange?.(searchLoading);
+  }, [onLoadingChange, searchLoading]);
+
+  const libraryRowHeight = libraryGeometry.rowHeight;
+  const libraryLeadingInset = libraryGeometry.leadingInset;
+  const libraryRowMinHeight = useCallback(
+    (index: number) =>
+      index === 0 ? libraryRowHeight - libraryLeadingInset : libraryRowHeight,
+    [libraryLeadingInset, libraryRowHeight],
+  );
 
   // Calculate estimated item height based on whether displayed tags are shown.
   const estimateSize = useCallback(
     (index: number) => {
       if (index >= allItems.length) return 60; // Loading item
+      if (libraryRows) return libraryRowMinHeight(index);
       const item = allItems[index];
       // Increased estimates to accommodate wrapped text and reduce layout shifts
       // Base height: 32px (pt-3 pb-5) + content + 1px border = total (gap handled by virtualizer)
@@ -108,7 +131,7 @@ export function VirtualSearchResults({
       const displayTags = item?.disambiguatingTags;
       return displayTags && displayTags.length > 0 ? 113 : 93;
     },
-    [allItems],
+    [allItems, libraryRows, libraryRowMinHeight],
   );
 
   const initialScrollOffset = useInitialPageScrollOffset();
@@ -131,8 +154,9 @@ export function VirtualSearchResults({
     scrollPaddingStart,
     initialOffset: initialScrollOffset,
     // Leading row space belongs to the list, not its page-scroll origin.
-    paddingStart: 8,
-    gap: 8,
+    // Library rows carry their own spacing and start at the page inset.
+    paddingStart: libraryRows ? 0 : 8,
+    gap: libraryRows ? 0 : 8,
   });
 
   // Fetch next page when approaching the end
@@ -142,7 +166,7 @@ export function VirtualSearchResults({
     // Cached route data can mount before TanStack Virtual's initial observer
     // update rerenders the list, so force one post-attachment range update.
     virtualizer.measure();
-  }, [virtualizer]);
+  }, [libraryRows, textZoomLevel, virtualizer]);
 
   useEffect(() => {
     const [lastItem] = [...virtualItems].reverse();
@@ -181,23 +205,13 @@ export function VirtualSearchResults({
       requestAnimationFrame(() => {
         accessibleResultsRef.current
           ?.querySelector<HTMLButtonElement>(
-            `[data-testid="result-${focusIndex}"]`,
+            `[data-result-index="${focusIndex}"] button`,
           )
           ?.focus({ preventScroll: true });
       });
     }
     loadMoreStartRef.current = null;
   }, [allItems.length, hasNextPage, isFetchingNextPage]);
-
-  // Screen reader announcement for search results
-  const getAriaLiveMessage = () => {
-    if (isLoading) return t("create.search.loading");
-    if (isError) return t("create.search.searchError");
-    if (totalCount > 0) {
-      return t("create.search.resultsFound", { count: totalCount });
-    }
-    return "";
-  };
 
   if (!gamesIndex.exists) {
     return (
@@ -239,16 +253,10 @@ export function VirtualSearchResults({
   }
 
   // Show loading spinner when searching initially
-  if (isLoading || isSearching) {
+  if (isLoading) {
     return (
       <DelayedLoading delayMs={loadingDelayMs}>
-        <div
-          className="text-muted-foreground mt-6 flex items-center justify-center gap-2"
-          role="status"
-        >
-          <LoadingSpinner size={16} className="text-primary" decorative />
-          <span>{t("create.search.loading")}</span>
-        </div>
+        <InlineLoading label={t("create.search.loading")} />
       </DelayedLoading>
     );
   }
@@ -313,11 +321,54 @@ export function VirtualSearchResults({
     );
   }
 
+  const isSelected = (game: SearchResultGame) =>
+    selectionPresentation === "pane" &&
+    selectedResult?.path === game.path &&
+    selectedResult.system.id === game.system.id;
+  // The one place a result row is chosen: plain list rows, or Library's
+  // artwork rows built from the same entry the Library details use.
+  const renderRow = (
+    game: SearchResultGame,
+    index: number,
+    isLast: boolean,
+    deferImages: boolean,
+  ) =>
+    libraryRows ? (
+      <LibraryMediaRow
+        entry={searchResultToBrowseEntry(game)}
+        systemId={game.system.id}
+        deviceKey={deviceKey}
+        showFilenames={showFilenames}
+        corePlatform={corePlatform}
+        imagesPaused={false}
+        interactionDisabled={false}
+        deferImages={deferImages}
+        textZoomed={libraryGeometry.textZoomed}
+        minHeight={libraryRowHeight}
+        leadingInset={index === 0 ? libraryLeadingInset : undefined}
+        showSystemName
+        selected={isSelected(game)}
+        hasDivider={!isLast}
+        onSelect={() => setSelectedResult(game)}
+      />
+    ) : (
+      <SearchResultItem
+        game={game}
+        systemName={resolveSystemName(game.system.id, game.system.name)}
+        selected={isSelected(game)}
+        setSelectedResult={setSelectedResult}
+        isLast={isLast}
+        index={index}
+      />
+    );
+  const rowWrapperMinHeight = (index: number) =>
+    libraryRows ? `${libraryRowMinHeight(index)}px` : undefined;
+
   return (
     <>
       {/* Screen reader announcements */}
       <div aria-live="polite" aria-atomic="true" className="sr-only">
-        {getAriaLiveMessage()}
+        {t("create.search.resultsFound", { count: totalCount })}
       </div>
 
       {accessibleLists ? (
@@ -327,21 +378,17 @@ export function VirtualSearchResults({
               <div
                 key={`${game.system.id}:${game.path}:${index}`}
                 role="listitem"
+                data-result-index={index}
                 aria-posinset={index + 1}
                 aria-setsize={hasNextPage ? undefined : totalCount}
+                style={{ minHeight: rowWrapperMinHeight(index) }}
               >
-                <SearchResultItem
-                  game={game}
-                  systemName={resolveSystemName(
-                    game.system.id,
-                    game.system.name,
-                  )}
-                  selectedResult={selectedResult}
-                  setSelectedResult={setSelectedResult}
-                  docked={selectionPresentation === "pane"}
-                  isLast={!hasNextPage && index === allItems.length - 1}
-                  index={index}
-                />
+                {renderRow(
+                  game,
+                  index,
+                  !hasNextPage && index === allItems.length - 1,
+                  true,
+                )}
               </div>
             ))}
           </div>
@@ -384,7 +431,6 @@ export function VirtualSearchResults({
               return loadingDelayMs === 0 || isFetchingNextPage ? (
                 <div
                   key={virtualItem.key}
-                  role="status"
                   style={{
                     position: "absolute",
                     width: "100%",
@@ -392,14 +438,7 @@ export function VirtualSearchResults({
                   }}
                 >
                   <DelayedLoading delayMs={loadingDelayMs}>
-                    <div className="text-muted-foreground flex items-center justify-center gap-2">
-                      <LoadingSpinner
-                        size={16}
-                        className="text-primary"
-                        decorative
-                      />
-                      <span>{t("create.search.loading")}</span>
-                    </div>
+                    <InlineLoading label={t("create.search.loading")} />
                   </DelayedLoading>
                 </div>
               ) : null;
@@ -419,21 +458,16 @@ export function VirtualSearchResults({
                   top: 0,
                   left: 0,
                   width: "100%",
+                  minHeight: rowWrapperMinHeight(virtualItem.index),
                   transform: `translateY(${virtualItem.start - scrollMargin}px)`,
                 }}
               >
-                <SearchResultItem
-                  game={game}
-                  systemName={resolveSystemName(
-                    game.system.id,
-                    game.system.name,
-                  )}
-                  selectedResult={selectedResult}
-                  setSelectedResult={setSelectedResult}
-                  docked={selectionPresentation === "pane"}
-                  isLast={virtualItem.index === totalCount - 1}
-                  index={virtualItem.index}
-                />
+                {renderRow(
+                  game,
+                  virtualItem.index,
+                  virtualItem.index === totalCount - 1,
+                  false,
+                )}
               </div>
             );
           })}
@@ -446,21 +480,19 @@ export function VirtualSearchResults({
 interface SearchResultItemProps {
   game: SearchResultGame;
   systemName: string;
-  selectedResult: SearchResultGame | null;
+  selected: boolean;
   setSelectedResult: (game: SearchResultGame | null) => void;
   isLast: boolean;
   index: number;
-  docked: boolean;
 }
 
 const SearchResultItem = React.memo(function SearchResultItem({
   game,
   systemName,
-  selectedResult,
+  selected,
   setSelectedResult,
   isLast,
   index,
-  docked,
 }: SearchResultItemProps) {
   const { t } = useTranslation();
   const showFilenames = usePreferencesStore((s) => s.showFilenames);
@@ -473,23 +505,6 @@ const SearchResultItem = React.memo(function SearchResultItem({
 
   const displayTags = game.disambiguatingTags ?? [];
 
-  const handleGameSelect = () => {
-    if (docked) {
-      setSelectedResult(game);
-      return;
-    }
-    if (selectedResult && selectedResult.path === game.path) {
-      setSelectedResult(null);
-    } else if (selectedResult && selectedResult.path !== game.path) {
-      setSelectedResult(null);
-      setTimeout(() => {
-        setSelectedResult(game);
-      }, 150);
-    } else {
-      setSelectedResult(game);
-    }
-  };
-
   return (
     <button
       type="button"
@@ -498,18 +513,10 @@ const SearchResultItem = React.memo(function SearchResultItem({
         { "border-border border-b": !isLast },
       )}
       data-testid={`result-${index}`}
-      aria-current={
-        docked &&
-        selectedResult?.path === game.path &&
-        selectedResult.system.id === game.system.id
-          ? "true"
-          : undefined
-      }
+      aria-current={selected ? "true" : undefined}
       onPointerUp={handleHapticPress}
-      onClick={(e) => {
-        e.preventDefault();
-        handleGameSelect();
-      }}
+      // A modal selection covers the list, so a row can only ever select.
+      onClick={() => setSelectedResult(game)}
     >
       <div className="flex min-w-0 flex-1 flex-col">
         <p className="font-semibold">{displayName}</p>
@@ -519,7 +526,7 @@ const SearchResultItem = React.memo(function SearchResultItem({
       <div className="flex shrink-0 items-center gap-2">
         {hasFavoriteTag(game.tags) && (
           <span role="img" aria-label={t("library.favorite")}>
-            <Heart size={18} fill="currentColor" aria-hidden="true" />
+            <HeartIcon size={18} fill="currentColor" aria-hidden="true" />
           </span>
         )}
         <span aria-hidden="true" className="text-muted-foreground shrink-0">

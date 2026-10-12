@@ -1,8 +1,8 @@
 import type { ReactElement } from "react";
 import { useEffect, useRef } from "react";
 import classNames from "classnames";
-import { NfcIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { NfcIcon } from "@/lib/images";
 import { useAnnouncer } from "@/components/A11yAnnouncer";
 import {
   Button,
@@ -82,7 +82,7 @@ export function ReaderActivityControl({
   return (
     <div className={classNames("w-full", className)}>
       {state === "error" ? (
-        <div className="wui-reader-actions grid w-full grid-cols-[repeat(auto-fit,minmax(min(100%,9rem),1fr))] gap-2">
+        <div className="wui-reader-actions wui-action-grid w-full">
           <div
             className="wui-reader-button-shell min-w-0"
             data-reader-state="error"

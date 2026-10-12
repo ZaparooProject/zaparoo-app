@@ -13,6 +13,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { render, screen, waitFor, act } from "../../test-utils";
 import userEvent from "@testing-library/user-event";
+import toast from "react-hot-toast";
 import { useStatusStore, ConnectionState } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { SystemsResponse } from "@/lib/models";
@@ -162,6 +163,11 @@ const {
   mockNfcWriter: {
     write: vi.fn(),
     end: vi.fn(),
+    retry: vi.fn(),
+    getVerifyError: () => null,
+    verifyError: null,
+    retapRequired: false,
+    result: null,
     status: null as string | null,
   },
 }));
@@ -364,8 +370,11 @@ describe("Create Search Integration", () => {
     mockSelectorCallbacks.onClearFilters = null;
 
     // Reset NFC writer mock
-    mockNfcWriter.write.mockClear();
-    mockNfcWriter.end.mockClear();
+    // A write stays pending (tag not yet presented) for the whole test.
+    mockNfcWriter.write.mockReset();
+    mockNfcWriter.write.mockImplementation(() => new Promise<void>(() => {}));
+    mockNfcWriter.end.mockReset();
+    mockNfcWriter.end.mockResolvedValue(undefined);
     mockNfcWriter.status = null;
 
     // Reset preferences mock
@@ -872,9 +881,11 @@ describe("Create Search Integration", () => {
       });
       await user.click(writeButton);
 
-      expect(mockNfcWriter.write).toHaveBeenCalledWith(
-        "write",
-        "**launch:nes/smb",
+      await waitFor(() =>
+        expect(mockNfcWriter.write).toHaveBeenCalledWith(
+          "write",
+          "**launch:nes/smb",
+        ),
       );
     });
 
@@ -893,9 +904,11 @@ describe("Create Search Integration", () => {
       });
       await user.click(writeButton);
 
-      expect(mockNfcWriter.write).toHaveBeenCalledWith(
-        "write",
-        "/games/nes/smb.nes",
+      await waitFor(() =>
+        expect(mockNfcWriter.write).toHaveBeenCalledWith(
+          "write",
+          "/games/nes/smb.nes",
+        ),
       );
     });
 
@@ -914,6 +927,33 @@ describe("Create Search Integration", () => {
       await waitFor(() => {
         expect(mockClipboardWriteText).toHaveBeenCalledWith("**launch:nes/smb");
       });
+    });
+
+    it("should confirm a successful copy", async () => {
+      const success = vi.spyOn(toast, "success");
+      const user = userEvent.setup();
+      render(<Search />);
+
+      await selectGame(mockGameWithZapscript);
+      await user.click(
+        screen.getByRole("button", { name: /create.search.copyLabel/i }),
+      );
+
+      await waitFor(() => expect(success).toHaveBeenCalledWith("copied"));
+    });
+
+    it("should report a failed copy", async () => {
+      const error = vi.spyOn(toast, "error");
+      mockClipboardWriteText.mockRejectedValueOnce(new Error("denied"));
+      const user = userEvent.setup();
+      render(<Search />);
+
+      await selectGame(mockGameWithZapscript);
+      await user.click(
+        screen.getByRole("button", { name: /create.search.copyLabel/i }),
+      );
+
+      await waitFor(() => expect(error).toHaveBeenCalledWith("copyFailed"));
     });
 
     it("should copy path to clipboard when copy button clicked in path mode", async () => {
