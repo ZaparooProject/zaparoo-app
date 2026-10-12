@@ -68,7 +68,7 @@ export const CopyButton = (props: {
         aria-hidden="true"
         size={size}
         className={classNames(
-          "absolute inset-0 m-auto transition-all duration-200",
+          "absolute inset-0 m-auto transition-[opacity,scale] duration-200",
           copied ? "scale-75 opacity-0" : "scale-100 opacity-100",
         )}
       />
@@ -76,7 +76,7 @@ export const CopyButton = (props: {
         aria-hidden="true"
         size={size}
         className={classNames(
-          "text-success absolute inset-0 m-auto transition-all duration-200",
+          "text-success absolute inset-0 m-auto transition-[opacity,scale] duration-200",
           copied ? "scale-100 opacity-100" : "scale-75 opacity-0",
         )}
       />

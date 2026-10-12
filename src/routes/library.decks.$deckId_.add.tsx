@@ -21,6 +21,7 @@ import { DelayedLoading } from "@/components/DelayedLoading";
 import { InlineLoading } from "@/components/InlineLoading";
 import { ZapScriptInput } from "@/components/ZapScriptInput";
 import { BackIcon } from "@/lib/images";
+import { useLibraryCollectionBreadcrumbs } from "@/components/library/useLibraryBreadcrumbs";
 
 export const Route = createFileRoute("/library/decks/$deckId_/add")({
   component: AddDeckItem,
@@ -50,6 +51,7 @@ export function AddDeckItem() {
   const [script, setScript] = useState("");
   const [cardId, setCardId] = useState("");
   const [saving, setSaving] = useState(false);
+  const collectionBreadcrumbs = useLibraryCollectionBreadcrumbs();
   const goBack = () =>
     void navigate({
       to: "/library/decks/$deckId",
@@ -99,7 +101,7 @@ export function AddDeckItem() {
     <PageFrame
       headerMode="content-wide"
       breadcrumbs={[
-        { to: "/library", label: t("library.title") },
+        ...collectionBreadcrumbs,
         {
           to: "/library/decks/$deckId",
           params: { deckId },

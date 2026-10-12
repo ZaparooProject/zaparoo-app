@@ -1,9 +1,20 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Trash2Icon } from "lucide-react";
 import { CoreAPI, logRunFailure } from "@/lib/coreApi";
 import { deckItemLaunchText } from "@/lib/decks";
-import type { DeckItem } from "@/lib/models";
+import type { DeckItem, MediaBrowseEntry } from "@/lib/models";
+import {
+  collectLibraryMetadata,
+  organizeLibraryDetailTags,
+} from "@/lib/libraryMedia";
+import { useSystemNameResolver } from "@/hooks/useSystemName";
+import {
+  LibraryFactRows,
+  LibraryMediaFacts,
+  TechnicalDetails,
+} from "@/components/library/LibraryMediaFacts";
+import { useLibraryMediaMeta } from "@/components/library/useLibraryMediaFacts";
 import { ConnectionState, useStatusStore } from "@/lib/store";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { SlideModal } from "@/components/SlideModal";
@@ -24,6 +35,7 @@ export function DeckItemDetailsModal({
   canRemove,
   onRemove,
   writeAvailable,
+  docked = false,
 }: {
   item: DeckItem | null;
   deckId: string;
@@ -32,6 +44,8 @@ export function DeckItemDetailsModal({
   canRemove: boolean;
   onRemove: (item: DeckItem) => void;
   writeAvailable: boolean;
+  /** Shown in the page's details pane instead of as a dialog. */
+  docked?: boolean;
 }) {
   const { t } = useTranslation();
   const [launching, setLaunching] = useState(false);
@@ -50,6 +64,42 @@ export function DeckItemDetailsModal({
     JSON.stringify([deviceKey, deckId, item?.id, launchText]),
     isOpen,
   );
+  // An indexed game behind the item gets the same facts as Library details.
+  const mediaEntry = useMemo<MediaBrowseEntry | null>(
+    () =>
+      item?.media?.available
+        ? {
+            name: item.media.name,
+            path: item.media.path,
+            type: "media",
+            systemId: item.media.system,
+          }
+        : null,
+    [item],
+  );
+  const mediaSystemId = item?.media?.system ?? "";
+  const metadata = useLibraryMediaMeta(
+    mediaEntry,
+    mediaSystemId,
+    deviceKey,
+    isOpen,
+  ).data?.media;
+  const resolveSystemName = useSystemNameResolver();
+  const factView = useMemo(
+    () =>
+      organizeLibraryDetailTags(
+        metadata ? collectLibraryMetadata(metadata).tags : [],
+      ),
+    [metadata],
+  );
+  const linkTarget =
+    mediaEntry && metadata
+      ? {
+          entry: mediaEntry,
+          systemId: metadata.title.system.id || mediaSystemId,
+          deviceKey,
+        }
+      : null;
   const closeDetails = () => {
     void writeActivity.cancel();
     close();
@@ -76,6 +126,7 @@ export function DeckItemDetailsModal({
       isOpen={isOpen}
       close={closeDetails}
       title={title}
+      presentation={docked ? "pane" : "modal"}
       footerSkipLabel={t("accessibility.skipToActions")}
       footer={
         <ContextualWriteRail
@@ -144,6 +195,27 @@ export function DeckItemDetailsModal({
             {t("decks.noPlayAction")}
           </p>
         ) : null}
+        {linkTarget && metadata && (
+          <>
+            <LibraryMediaFacts
+              target={linkTarget}
+              systemName={resolveSystemName(
+                linkTarget.systemId,
+                metadata.title.system.name || linkTarget.systemId,
+              )}
+              facts={factView.facts}
+              tags={factView.tags}
+            />
+            {factView.technicalFacts.length > 0 && (
+              <TechnicalDetails>
+                <LibraryFactRows
+                  target={linkTarget}
+                  facts={factView.technicalFacts}
+                />
+              </TechnicalDetails>
+            )}
+          </>
+        )}
       </div>
     </SlideModal>
   );

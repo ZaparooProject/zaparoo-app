@@ -76,7 +76,7 @@ export function MediaSearchForm({
         <div
           role="search"
           aria-label={labels.region}
-          className={`${layout}-search-filters flex flex-col gap-3`}
+          className={`${layout}-search-filters`}
         >
           <TextInput
             label={labels.input}
@@ -94,62 +94,71 @@ export function MediaSearchForm({
             }}
           />
 
-          <div
-            className={
-              layout === "media"
-                ? "flex flex-col gap-3"
-                : `${layout}-search-filter-selectors`
-            }
-          >
-            <div className="flex flex-col md:flex-1">
-              <span id={systemLabelId} className="text-foreground mb-1">
-                {t("create.search.systemInput")}
-              </span>
-              {systemPicker === "native" ? (
-                <SimpleSystemSelect
-                  aria-labelledby={systemLabelId}
-                  value={form.system}
-                  onSelect={form.setSystem}
-                  includeAllOption
-                  disabled={fieldsDisabled}
-                />
-              ) : (
-                <SystemSelectorTrigger
-                  aria-labelledby={systemLabelId}
-                  selectedSystems={form.system === "all" ? [] : [form.system]}
-                  systemsData={form.systemsData}
-                  placeholder={t("create.search.allSystems")}
-                  mode="single"
-                  onClick={() => form.setSystemSelectorOpen(true)}
-                  disabled={fieldsDisabled}
-                />
+          {/* Filters and the action stay together when the row wraps. */}
+          <div className={`${layout}-search-filter-controls`}>
+            <div
+              className={
+                layout === "media"
+                  ? "flex flex-col gap-3"
+                  : `${layout}-search-filter-selectors`
+              }
+            >
+              <div className="flex flex-col">
+                <span
+                  id={systemLabelId}
+                  className="mb-2 block text-sm font-medium"
+                >
+                  {t("create.search.systemInput")}
+                </span>
+                {systemPicker === "native" ? (
+                  <SimpleSystemSelect
+                    aria-labelledby={systemLabelId}
+                    value={form.system}
+                    onSelect={form.setSystem}
+                    includeAllOption
+                    disabled={fieldsDisabled}
+                  />
+                ) : (
+                  <SystemSelectorTrigger
+                    aria-labelledby={systemLabelId}
+                    selectedSystems={form.system === "all" ? [] : [form.system]}
+                    systemsData={form.systemsData}
+                    placeholder={t("create.search.allSystems")}
+                    mode="single"
+                    onClick={() => form.setSystemSelectorOpen(true)}
+                    disabled={fieldsDisabled}
+                  />
+                )}
+              </div>
+
+              {form.mediaTagsAvailable && (
+                <div className="flex flex-col">
+                  <span
+                    id={tagsLabelId}
+                    className="mb-2 block text-sm font-medium"
+                  >
+                    {t("create.search.tagsInput")}
+                  </span>
+                  <TagSelectorTrigger
+                    aria-labelledby={tagsLabelId}
+                    selectedTags={form.tags}
+                    placeholder={t("create.search.allTags")}
+                    onClick={() => form.setTagSelectorOpen(true)}
+                    disabled={fieldsDisabled}
+                  />
+                </div>
               )}
             </div>
 
-            {form.mediaTagsAvailable && (
-              <div className="flex flex-col md:flex-1">
-                <span id={tagsLabelId} className="text-foreground mb-1">
-                  {t("create.search.tagsInput")}
-                </span>
-                <TagSelectorTrigger
-                  aria-labelledby={tagsLabelId}
-                  selectedTags={form.tags}
-                  placeholder={t("create.search.allTags")}
-                  onClick={() => form.setTagSelectorOpen(true)}
-                  disabled={fieldsDisabled}
-                />
-              </div>
-            )}
+            <Button
+              label={labels.action}
+              icon={<SearchIcon size="20" />}
+              onClick={form.submit}
+              disabled={!form.canSubmit || form.resultsLoading}
+              disabledAppearance={form.resultsLoading ? "busy" : "unavailable"}
+              className={layout === "media" ? "w-full" : "w-full md:w-auto"}
+            />
           </div>
-
-          <Button
-            label={labels.action}
-            icon={<SearchIcon size="20" />}
-            onClick={form.submit}
-            disabled={!form.canSubmit || form.resultsLoading}
-            disabledAppearance={form.resultsLoading ? "busy" : "unavailable"}
-            className="w-full"
-          />
         </div>
 
         <div className={`${layout}-search-results`}>

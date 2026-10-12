@@ -705,7 +705,7 @@
     }
     .library-detail-row {
       flex-direction: row;
-      align-items: flex-start;
+      align-items: baseline;
       gap: 0.75rem;
     }
   }
@@ -779,8 +779,10 @@
     }
   }
   @media (min-width: 760px) {
+    /* Navigation chrome already frames the left edge; reserve only the
+       scrollbar side so the page margin is the same on both sides. */
     .page-frame-scroll {
-      scrollbar-gutter: stable both-edges;
+      scrollbar-gutter: stable;
     }
   }
   :root,
@@ -850,9 +852,13 @@
     height: 5rem;
   }
   @media (min-width: 760px) {
+    /* The title sits in a 48px row for its controls, so its text starts 16px
+       below the row's top. The padding here makes up the rest of the side
+       gutter, so the gap above the title equals the gap beside it. */
     .page-frame-content-wide-header .page-frame-scroll-with-header {
       padding-top: calc(
-        var(--page-content-safe-top, var(--page-scroll-safe-top, 0px)) + 1rem
+        var(--page-content-safe-top, var(--page-scroll-safe-top, 0px)) +
+          var(--page-header-top-gap, 0px)
       );
     }
     .page-frame-content-wide-header .page-header-shell {
@@ -989,14 +995,17 @@
     }
   }
 
-  .library-details-panel .library-detail-row {
-    flex-direction: column;
-    gap: 0.5rem;
+  /* The selected row keeps its face: its title and chevron take the
+     interaction colour, and the chevron is drawn solid (RowSelectionChevron). */
+  .library-browse-row {
+    cursor: pointer;
   }
-  /* Selected rows read as pressed in, like the active dock tab: no colour. */
-  .library-browse-row[aria-current="true"] {
-    background: var(--surface-inset);
-    box-shadow: inset 0 1px 3px var(--material-shadow);
+  .library-browse-row-chevron {
+    color: var(--muted-foreground);
+  }
+  .library-browse-row[aria-current="true"]
+    :is(.library-browse-row-title, .library-browse-row-chevron) {
+    color: var(--interaction);
   }
   .app-sidebar[hidden] {
     display: none;
@@ -1082,6 +1091,19 @@
     padding-left: calc(1.5rem + 22px);
     font-size: 0.875rem;
     font-weight: 500;
+  }
+  .sidebar-child-group-label {
+    display: block;
+    padding: 1rem 0.75rem 0.25rem calc(1.5rem + 22px);
+    color: var(--text-muted);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    overflow-wrap: anywhere;
+  }
+  .sidebar-children ul .sidebar-child-link {
+    padding-left: calc(2.5rem + 22px);
   }
   .sidebar-root-link[aria-current],
   .sidebar-child-link[aria-current] {
@@ -1170,7 +1192,7 @@
   @media (min-width: 1100px) {
     .page-frame-with-pane {
       --page-content-safe-right: 0px;
-      --library-detail-width: calc(320px + var(--app-safe-right, 0px));
+      --library-detail-width: calc(400px + var(--app-safe-right, 0px));
       display: grid;
       grid-template-columns: minmax(0, 1fr) var(--library-detail-width);
       grid-template-rows: minmax(0, 1fr);
@@ -1206,8 +1228,21 @@
       width: calc(100% - var(--app-navigation-width));
       margin-left: var(--app-navigation-width);
     }
+    /* Beside the sidebar the content needs a little more air than the 16px
+       viewport-edge margin, clearing the sidebar's shadow. */
+    .adaptive-app-main .page-frame-scroll {
+      padding-left: 1.5rem;
+    }
+    .adaptive-app-main .page-frame-scroll-with-header {
+      --page-header-top-gap: 0.5rem;
+    }
     .page-frame-with-pane {
-      --library-detail-width: calc(340px + var(--app-safe-right, 0px));
+      --library-detail-width: calc(460px + var(--app-safe-right, 0px));
+    }
+  }
+  @media (min-width: 1600px) {
+    .page-frame-with-pane {
+      --library-detail-width: calc(520px + var(--app-safe-right, 0px));
     }
   }
   .library-collections {
@@ -1245,24 +1280,26 @@
       margin-inline: 0;
     }
   }
-  @media (min-width: 1024px) {
-    .library-collections-with-decks {
-      flex-direction: row;
-      flex-wrap: wrap;
-      align-items: flex-start;
+  /* Collections and Decks are two stacked sections at every width: the
+     tiles run across the page, the deck list sits beneath at full width. */
+  @media (min-width: 760px) {
+    .library-collections {
       gap: 1.5rem;
     }
     .library-collection-links {
-      flex: 1 1 20rem;
-      max-width: var(--content-bound);
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
-    .library-collections:not(.library-collections-with-decks)
-      .library-collection-links {
-      width: 100%;
-      margin-inline: auto;
+  }
+  @media (min-width: 1024px) {
+    .library-decks-toolbar > .wui-button {
+      flex: 0 0 12rem;
     }
-    .library-decks {
-      flex: 3 1 30rem;
+  }
+  @media (min-width: 1280px) {
+    .library-collection-links {
+      grid-auto-columns: minmax(0, 1fr);
+      grid-auto-flow: column;
+      grid-template-columns: none;
     }
   }
   .library-search-workspace,
@@ -1270,6 +1307,19 @@
     display: flex;
     flex-direction: column;
     min-width: 0;
+  }
+  .library-search-workspace {
+    gap: 1rem;
+  }
+  .library-search-filters,
+  .create-search-filters,
+  .media-search-filters,
+  .library-search-filter-controls,
+  .create-search-filter-controls,
+  .media-search-filter-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
   }
   .library-search-filters {
     width: 100%;
@@ -1281,7 +1331,8 @@
   .deck-items {
     min-width: 0;
   }
-  .library-search-filter-selectors {
+  .library-search-filter-selectors,
+  .create-search-filter-selectors {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
@@ -1298,37 +1349,53 @@
   .deck-items {
     display: contents;
   }
+  /* From 760px the search form is one toolbar row above full-width results:
+     the title field stretches, the selectors keep a fixed basis and Search is
+     its natural size. Short of room, the selectors and Search wrap beneath
+     the title together. */
   @media (min-width: 760px) {
-    .library-search-filter-selectors {
-      flex-direction: row;
-    }
-  }
-  @media (min-width: 1024px) {
-    .library-search-workspace,
-    .deck-workspace {
+    .library-search-filters,
+    .create-search-filters {
+      max-width: none;
       flex-direction: row;
       flex-wrap: wrap;
-      align-items: flex-start;
-      gap: 1.5rem;
+      align-items: flex-end;
     }
-    .library-search-filters,
-    .deck-context {
-      flex: 1 1 20rem;
-      max-width: var(--content-bound);
-      align-self: auto;
+    .library-search-filters > :first-child,
+    .create-search-filters > :first-child {
+      min-width: 0;
+      flex: 1 1 18rem;
     }
-    .library-search-results,
-    .deck-items {
-      flex: 3 1 30rem;
+    .library-search-filter-controls,
+    .create-search-filter-controls {
+      min-width: 0;
+      flex: 1 1 auto;
+      flex-direction: row;
+      align-items: flex-end;
     }
-    .library-search-filter-selectors {
-      flex-direction: column;
+    .library-search-filter-selectors,
+    .create-search-filter-selectors {
+      min-width: 0;
+      flex: 1 1 auto;
+      flex-direction: row;
     }
-    .deck-context,
-    .deck-items {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
+    .library-search-filter-selectors > *,
+    .create-search-filter-selectors > * {
+      min-width: 0;
+      flex: 1 0 13.75rem;
+    }
+    .library-search-filter-controls > .wui-button,
+    .create-search-filter-controls > .wui-button {
+      flex: 0 0 auto;
+      margin-inline: 0;
+    }
+  }
+  /* A deck is one column at every width: description, its action row, then
+     the items at full width. The action row stays compact, not page-wide. */
+  @media (min-width: 760px) {
+    .deck-workspace > .deck-context > .wui-modal-action-rail {
+      width: 100%;
+      max-width: 28rem;
     }
   }
   .zapscript-input .wui-button {
@@ -1400,11 +1467,6 @@
   .create-search-results {
     min-width: 0;
   }
-  .create-search-filter-selectors {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
   .mapping-list-toolbar {
     display: flex;
     flex-direction: column;
@@ -1416,13 +1478,11 @@
     gap: 1rem;
   }
   @media (min-width: 760px) {
-    .create-search-filter-selectors {
-      flex-direction: row;
+    .create-search-workspace {
+      max-width: none;
+      gap: 1rem;
     }
-  }
-  @media (min-width: 760px) {
     .create-overview-page .page-header-surface,
-    .create-search-page .page-header-surface,
     .nfc-workspace-page .page-header-surface {
       max-width: var(--content-bound);
       margin-inline: auto;
@@ -1438,7 +1498,6 @@
   }
   @media (min-width: 1024px) {
     .create-overview-page .page-header-surface,
-    .create-search-page .page-header-surface,
     .nfc-workspace-page .page-header-surface {
       max-width: none;
     }
@@ -1449,16 +1508,6 @@
     }
     .create-destinations > a > .wui-card {
       height: 100%;
-    }
-    .create-search-workspace {
-      display: grid;
-      max-width: none;
-      grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
-      align-items: start;
-      gap: 1.5rem;
-    }
-    .create-search-filter-selectors {
-      flex-direction: column;
     }
     .nfc-workspace {
       max-width: none;

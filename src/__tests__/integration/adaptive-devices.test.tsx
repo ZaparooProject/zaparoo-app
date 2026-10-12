@@ -86,9 +86,7 @@ describe("Adaptive Devices destination", () => {
       name: "nav.mainNavigation",
     });
     await user.click(
-      within(navigation).getByRole("link", {
-        name: "scan.deviceSheetAllDevices",
-      }),
+      within(navigation).getByRole("link", { name: "nav.devices" }),
     );
     await screen.findByRole("heading", { name: "scan.deviceSheetAllDevices" });
     expect(router.state.location.pathname).toBe("/settings/devices");
@@ -102,9 +100,7 @@ describe("Adaptive Devices destination", () => {
       screen.getByRole("region", { name: "settings.savedDevices" }),
     ).toBeVisible();
     expect(
-      within(navigation).getByRole("link", {
-        name: "scan.deviceSheetAllDevices",
-      }),
+      within(navigation).getByRole("link", { name: "nav.devices" }),
     ).toHaveAttribute("aria-current", "page");
     expect(
       screen.queryByRole("button", { name: "scan.devicePill" }),

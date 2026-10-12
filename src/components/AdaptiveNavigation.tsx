@@ -44,10 +44,11 @@ export function AdaptiveNavigation({ children }: { children: ReactNode }) {
   const [lastMode, setLastMode] = useState({ wide, desktop });
   const [navigation, setNavigation] = useState<{
     pathname: string;
-    expanded: Partial<Record<BottomTabId, boolean>>;
+    // One section is open at a time, so the sidebar stays short.
+    expanded: BottomTabId | null;
   }>({
     pathname,
-    expanded: { [bottomTabForPath(pathname) ?? "zap"]: true },
+    expanded: bottomTabForPath(pathname) ?? "zap",
   });
   // Width changes release the drawer; they never change the route or reset groups.
   if (lastMode.wide !== wide || lastMode.desktop !== desktop) {
@@ -56,10 +57,9 @@ export function AdaptiveNavigation({ children }: { children: ReactNode }) {
   }
   if (navigation.pathname !== pathname) {
     setRestoreOnClose(false);
-    const group = bottomTabForPath(pathname);
     setNavigation({
       pathname,
-      expanded: { ...navigation.expanded, ...(group ? { [group]: true } : {}) },
+      expanded: bottomTabForPath(pathname) ?? navigation.expanded,
     });
     setOpen(false);
   }
@@ -179,10 +179,7 @@ export function AdaptiveNavigation({ children }: { children: ReactNode }) {
                   onToggle={(group) =>
                     setNavigation((current) => ({
                       ...current,
-                      expanded: {
-                        ...current.expanded,
-                        [group]: !current.expanded[group],
-                      },
+                      expanded: current.expanded === group ? null : group,
                     }))
                   }
                   onNavigate={(to) => {

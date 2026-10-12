@@ -147,6 +147,63 @@ describe("HistoryModal", () => {
     });
   });
 
+  describe("played entry details", () => {
+    const playedEntry = {
+      systemId: "SNES",
+      systemName: "Super Nintendo",
+      mediaName: "Super Mario World",
+      mediaPath: "/games/mario.sfc",
+      startedAt: "2026-09-20T08:00:00.000Z",
+      playTime: 90,
+    };
+
+    it("should hand the played entry to its owner for details", async () => {
+      const user = userEvent.setup();
+      const onSelectMedia = vi.fn();
+      vi.mocked(CoreAPI.mediaHistory).mockResolvedValue({
+        entries: [playedEntry],
+      });
+      render(
+        <HistoryModal
+          {...defaultProps}
+          historyData={{ entries: [] }}
+          onSelectMedia={onSelectMedia}
+        />,
+      );
+
+      await user.click(
+        screen.getByRole("tab", { name: "scan.historyTabPlayed" }),
+      );
+      await user.click(
+        await screen.findByRole("button", { name: "scan.coverRowDetails" }),
+      );
+
+      expect(onSelectMedia).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "Super Mario World",
+          path: "/games/mario.sfc",
+        }),
+      );
+    });
+
+    it("should offer no details control without an owner", async () => {
+      const user = userEvent.setup();
+      vi.mocked(CoreAPI.mediaHistory).mockResolvedValue({
+        entries: [playedEntry],
+      });
+      render(<HistoryModal {...defaultProps} historyData={{ entries: [] }} />);
+
+      await user.click(
+        screen.getByRole("tab", { name: "scan.historyTabPlayed" }),
+      );
+
+      await screen.findByRole("button", { name: "scan.coverRowLaunch" });
+      expect(
+        screen.queryByRole("button", { name: "scan.coverRowDetails" }),
+      ).not.toBeInTheDocument();
+    });
+  });
+
   describe("empty state", () => {
     it("should say there are no scans when history has no entries", () => {
       render(<HistoryModal {...defaultProps} historyData={{ entries: [] }} />);

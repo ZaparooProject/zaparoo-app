@@ -9,10 +9,12 @@ import { formatAppDateTime } from "@/lib/formatDate";
 function ScanHistoryRow({
   item,
   connected,
+  flush,
   onReplay,
 }: {
   item: HistoryResponseEntry;
   connected: boolean;
+  flush?: boolean;
   onReplay: (item: HistoryResponseEntry) => void;
 }) {
   const { t } = useTranslation();
@@ -28,6 +30,7 @@ function ScanHistoryRow({
 
   return (
     <HistoryListRow
+      flush={flush}
       title={
         <>
           <span className="min-w-0 break-all">{primaryValue}</span>
@@ -85,10 +88,13 @@ function ScanHistoryRow({
 export function ScanHistoryList({
   entries,
   connected,
+  flush,
   onReplay,
 }: {
   entries: HistoryResponseEntry[];
   connected: boolean;
+  /** Page presentation: rows align with the page title. */
+  flush?: boolean;
   onReplay: (entry: HistoryResponseEntry) => void;
 }) {
   return (
@@ -98,6 +104,7 @@ export function ScanHistoryList({
           key={`${item.time}:${item.type}:${item.uid}:${index}`}
           item={item}
           connected={connected}
+          flush={flush}
           onReplay={onReplay}
         />
       ))}

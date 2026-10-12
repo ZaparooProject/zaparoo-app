@@ -45,7 +45,7 @@ function WriteTargetOption(props: {
         htmlFor={props.id}
         aria-label={`${props.label}: ${props.value}${selected ? `, ${props.selectedLabel}` : ""}`}
         className={classNames(
-          "peer-focus-visible:ring-ring flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-all duration-200 peer-focus-visible:ring-2",
+          "peer-focus-visible:ring-ring flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-colors duration-200 peer-focus-visible:ring-2",
           {
             "border-input bg-surface-highlight": selected,
             "border-border bg-surface-inset hover:bg-surface-highlight":
@@ -76,7 +76,7 @@ function WriteTargetOption(props: {
         <div
           aria-hidden="true"
           className={classNames(
-            "flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all",
+            "flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition-colors",
             {
               "border-foreground bg-foreground": selected,
               "border-input": !selected,

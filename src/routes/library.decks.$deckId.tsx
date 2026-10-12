@@ -69,10 +69,13 @@ import { HeaderButton } from "@/components/wui/HeaderButton";
 import { TextInput } from "@/components/wui/TextInput";
 import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
+import { Card } from "@/components/wui/Card";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { DelayedLoading } from "@/components/DelayedLoading";
 import { InlineLoading } from "@/components/InlineLoading";
 import { BackIcon, PlayIcon } from "@/lib/images";
+import { useLibraryCollectionBreadcrumbs } from "@/components/library/useLibraryBreadcrumbs";
 
 export const Route = createFileRoute("/library/decks/$deckId")({
   component: DeckDetails,
@@ -169,6 +172,7 @@ function DeckDetailsContent({ deviceKey }: { deviceKey: string }) {
     setActiveDragId(null);
   };
   const goBack = () => void navigate(appBackNavigationOptions("/library"));
+  const collectionBreadcrumbs = useLibraryCollectionBreadcrumbs();
 
   const update = async (params: Omit<DeckUpdateParams, "deckId">) => {
     if (!deck || !connected || !canEditDeck(deck) || busy) return false;
@@ -281,6 +285,12 @@ function DeckDetailsContent({ deviceKey }: { deviceKey: string }) {
   const items =
     pendingOrder?.deckId === deckId ? pendingOrder.items : (deck?.items ?? []);
   const selectedItem = items.find((item) => item.id === selectedItemId) ?? null;
+  // Matches the CSS threshold where PageFrame reserves its supporting pane.
+  const docked = useMediaQuery("(min-width: 1100px)");
+  // The pane shows the selection for as long as there is one; the sheet also
+  // needs to have been opened.
+  const itemDetailsShown =
+    selectedItem !== null && !editing && (docked || itemDetailsOpen);
   const activeDragItem = items.find((item) => item.id === activeDragId);
   const editable = Boolean(connected && deck && canEditDeck(deck));
   const deviceBusy = opening || playing;
@@ -328,8 +338,30 @@ function DeckDetailsContent({ deviceKey }: { deviceKey: string }) {
       <PageFrame
         layout="workspace"
         headerMode="content-wide"
-        breadcrumbs={[{ to: "/library", label: t("library.title") }]}
+        breadcrumbs={collectionBreadcrumbs}
         scrollRef={pageScrollRef}
+        supportingPane={
+          <>
+            {docked && !itemDetailsShown && (
+              <Card className="flex min-h-0 w-full items-center justify-center">
+                <EmptyState title={t("decks.selectItem")} />
+              </Card>
+            )}
+            <DeckItemDetailsModal
+              item={selectedItem}
+              deckId={deckId}
+              isOpen={itemDetailsShown}
+              close={() => {
+                setItemDetailsOpen(false);
+                if (docked) setSelectedItemId(null);
+              }}
+              canRemove={editable}
+              onRemove={setRemoveItem}
+              writeAvailable={Boolean(connected && writeAvailable)}
+              docked={docked}
+            />
+          </>
+        }
         onSwipeBack={goBack}
         headerLeft={
           <HeaderButton
@@ -522,6 +554,9 @@ function DeckDetailsContent({ deviceKey }: { deviceKey: string }) {
                           editable={editable && editing}
                           busy={busy}
                           accessibleLists={accessibleLists}
+                          selected={
+                            itemDetailsShown && item.id === selectedItemId
+                          }
                           onSelect={(selected) => {
                             setSelectedItemId(selected.id);
                             setItemDetailsOpen(true);
@@ -640,15 +675,6 @@ function DeckDetailsContent({ deviceKey }: { deviceKey: string }) {
         deckId={deckId}
         isOpen={shareOpen}
         close={() => setShareOpen(false)}
-      />
-      <DeckItemDetailsModal
-        item={selectedItem}
-        deckId={deckId}
-        isOpen={itemDetailsOpen && selectedItem !== null}
-        close={() => setItemDetailsOpen(false)}
-        canRemove={editable}
-        onRemove={setRemoveItem}
-        writeAvailable={Boolean(connected && writeAvailable)}
       />
       {removeItem && (
         <SlideModal

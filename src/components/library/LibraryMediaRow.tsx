@@ -11,7 +11,7 @@ import {
   libraryEntryTags,
 } from "@/lib/libraryMedia";
 import type { MediaBrowseEntry } from "@/lib/models";
-import { NextIcon } from "@/lib/images";
+import { RowSelectionChevron } from "@/components/RowSelectionChevron";
 import { useSystemNameResolver } from "@/hooks/useSystemName";
 import { useHapticPress } from "@/hooks/useHapticPress";
 import { TagList } from "@/components/TagList";
@@ -57,11 +57,14 @@ function AdaptiveLibraryTitle({
         {title}
       </span>
       <span
-        className={classNames("font-semibold break-words", {
-          "leading-5": allowWrap,
-          "line-clamp-2 text-sm leading-4": compact && !allowWrap,
-          "truncate leading-5": !compact && !allowWrap,
-        })}
+        className={classNames(
+          "library-browse-row-title font-semibold break-words",
+          {
+            "leading-5": allowWrap,
+            "line-clamp-2 text-sm leading-4": compact && !allowWrap,
+            "truncate leading-5": !compact && !allowWrap,
+          },
+        )}
       >
         {title}
       </span>
@@ -211,9 +214,7 @@ export function LibraryMediaRow(props: {
             <HeartIcon size={18} fill="currentColor" aria-hidden="true" />
           </span>
         )}
-        <span aria-hidden="true" className="text-muted-foreground shrink-0">
-          <NextIcon size="20" />
-        </span>
+        <RowSelectionChevron selected={Boolean(props.selected)} />
       </span>
     </button>
   );

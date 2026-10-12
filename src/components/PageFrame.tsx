@@ -82,7 +82,8 @@ export function PageHeader({
     <div
       className={classNames("grid min-h-14 items-center", {
         "grid-cols-[auto_minmax(0,1fr)_auto]": !contentWide,
-        "page-header-content-row": contentWide,
+        // In-flow titles need only the 48px control row from 760px.
+        "page-header-content-row md:min-h-12": contentWide,
       })}
     >
       <div

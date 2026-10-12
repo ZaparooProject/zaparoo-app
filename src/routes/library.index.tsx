@@ -27,6 +27,7 @@ import {
 } from "@/lib/librarySessionStore";
 import { useTabSessionStore } from "@/lib/tabSessionStore";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useSystemsWithDisplayNames } from "@/hooks/useSystemName";
 import { PageFrame } from "@/components/PageFrame";
@@ -153,6 +154,10 @@ export function Library() {
     "library-view-tab",
   );
   const selectedView = favoritesFeature.available ? view : "systems";
+  // The persistent sidebar lists Systems and Collections as destinations, so
+  // the page shows the chosen view under its own heading instead of tabs.
+  const sidebarViews = useMediaQuery("(min-width: 1280px)");
+  const viewTabs = favoritesFeature.available && !sidebarViews;
 
   const openOptions = () => {
     setDraftManufacturer(manufacturerFilter);
@@ -174,7 +179,7 @@ export function Library() {
 
   const withLibrarySections = (systemsContent: ReactNode) => (
     <div className="flex flex-col gap-4">
-      {favoritesFeature.available && (
+      {viewTabs && (
         <TabBar
           label={t("library.browseBy")}
           role="tab"
@@ -198,24 +203,16 @@ export function Library() {
         />
       )}
       <section
-        id={
-          favoritesFeature.available
-            ? getTabBarPanelId(systemsViewTabId)
-            : undefined
-        }
-        role={favoritesFeature.available ? "tabpanel" : undefined}
+        id={viewTabs ? getTabBarPanelId(systemsViewTabId) : undefined}
+        role={viewTabs ? "tabpanel" : undefined}
         aria-labelledby={
-          favoritesFeature.available
-            ? systemsViewTabId
-            : "library-systems-heading"
+          viewTabs ? systemsViewTabId : "library-systems-heading"
         }
         hidden={selectedView !== "systems"}
       >
         <h2
           id="library-systems-heading"
-          className={
-            favoritesFeature.available ? "sr-only" : "text-lg font-semibold"
-          }
+          className={viewTabs ? "sr-only" : "text-lg font-semibold"}
         >
           {t("library.systems")}
         </h2>
@@ -223,11 +220,22 @@ export function Library() {
       </section>
       {favoritesFeature.available && (
         <section
-          id={getTabBarPanelId(collectionsViewTabId)}
-          role="tabpanel"
-          aria-labelledby={collectionsViewTabId}
+          id={viewTabs ? getTabBarPanelId(collectionsViewTabId) : undefined}
+          role={viewTabs ? "tabpanel" : undefined}
+          aria-labelledby={
+            viewTabs ? collectionsViewTabId : "library-collections-heading"
+          }
           hidden={selectedView !== "collections"}
+          className={viewTabs ? undefined : "flex flex-col gap-2"}
         >
+          {!viewTabs && (
+            <h2
+              id="library-collections-heading"
+              className="text-lg font-semibold"
+            >
+              {t("library.collections")}
+            </h2>
+          )}
           <LibraryCollectionList
             preferencesAvailable={preferencesFeature.available}
           />

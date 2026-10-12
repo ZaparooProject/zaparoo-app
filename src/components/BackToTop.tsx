@@ -11,7 +11,10 @@ import { useTranslation } from "react-i18next";
 import { useDebouncedCallback } from "use-debounce";
 import { useStatusStore } from "@/lib/store";
 import { useTactilePress } from "@/hooks/useTactilePress";
-import { measurePageRightGap } from "@/components/BackToTop.geometry";
+import {
+  measureDialogScrollbar,
+  measurePageRightGap,
+} from "@/components/BackToTop.geometry";
 
 /** Inset from the right and bottom edges, so the button sits evenly in its corner. */
 const EDGE_MARGIN = "1rem";
@@ -95,7 +98,8 @@ export function BackToTop({
       setDialogGap(null);
       return;
     }
-    setPageRightGap(0);
+    // Keeps the button clear of a classic scrollbar; 0 where scrollbars overlay.
+    setPageRightGap(measureDialogScrollbar(container));
     const blockBottom =
       fixedContainingBlock(wrapper)?.getBoundingClientRect().bottom ??
       window.innerHeight;

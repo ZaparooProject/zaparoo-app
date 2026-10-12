@@ -5,28 +5,36 @@ import { Button } from "@/components/wui/Button";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { useSystemName } from "@/hooks/useSystemName";
 import { historyEntryToBrowseEntry } from "@/lib/mediaHistory";
-import type { MediaHistoryEntry } from "@/lib/models";
+import type { MediaBrowseEntry, MediaHistoryEntry } from "@/lib/models";
 import { PlayIcon } from "@/lib/images";
 import { formatAppDateTime } from "@/lib/formatDate";
 
 function PlayedHistoryRow({
   entry,
   connected,
+  flush,
   onLaunch,
+  onSelect,
 }: {
   entry: MediaHistoryEntry;
   connected: boolean;
+  flush?: boolean;
+  onSelect?: (entry: MediaBrowseEntry) => void;
   onLaunch: (entry: MediaHistoryEntry) => void;
 }) {
   const { t } = useTranslation();
   const deviceKey = useActiveDeviceKey();
   const systemName = useSystemName(entry.systemId, entry.systemName);
+  const browseEntry = historyEntryToBrowseEntry(entry);
 
   return (
     <HistoryListRow
+      flush={flush}
+      onSelect={onSelect ? () => onSelect(browseEntry) : undefined}
+      selectLabel={t("scan.coverRowDetails", { media: entry.mediaName })}
       leading={
         <LibraryArtworkFrame
-          entry={historyEntryToBrowseEntry(entry)}
+          entry={browseEntry}
           systemId={entry.systemId}
           deviceKey={deviceKey}
           maxSize={128}
@@ -61,12 +69,18 @@ interface PlayedHistoryListProps {
   entries: MediaHistoryEntry[];
   /** A launch can reach a live Core session right now. */
   launchAvailable: boolean;
+  /** Page presentation: rows align with the page title. */
+  flush?: boolean;
+  /** Opens the shared game details for a row's artwork and title. */
+  onSelect?: (entry: MediaBrowseEntry) => void;
   onLaunch: (entry: MediaHistoryEntry) => void;
 }
 
 export function PlayedHistoryList({
   entries,
   launchAvailable,
+  flush,
+  onSelect,
   onLaunch,
 }: PlayedHistoryListProps) {
   return (
@@ -76,6 +90,8 @@ export function PlayedHistoryList({
           key={`${entry.systemId}:${entry.mediaPath}:${index}`}
           entry={entry}
           connected={launchAvailable}
+          flush={flush}
+          onSelect={onSelect}
           onLaunch={onLaunch}
         />
       ))}

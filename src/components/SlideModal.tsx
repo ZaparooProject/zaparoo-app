@@ -497,6 +497,8 @@ export function SlideModal(props: {
                     ? "60rem"
                     : undefined,
                 // Closed floating dialogs cannot rely on translating below the viewport.
+                // Children must not transition `visibility` (no `transition-all`),
+                // or they linger on screen after the dialog has gone.
                 visibility: wideDialog && !surfaceOpen ? "hidden" : undefined,
                 transform: modalTransform(surfaceOpen, wideDialog),
                 transition: wideDialog ? "none" : DRAG_TRANSITION,

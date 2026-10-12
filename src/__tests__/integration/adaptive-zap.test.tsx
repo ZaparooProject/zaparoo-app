@@ -144,7 +144,7 @@ describe("Adaptive Zap", () => {
     ).toBeInTheDocument();
   });
 
-  it("should keep expanded Zap destinations available when visiting Settings", async () => {
+  it("should open the Settings destinations and close Zap when visiting Settings", async () => {
     responsiveWindow(1440);
     const user = userEvent.setup();
     const { router } = await renderZap();
@@ -163,12 +163,10 @@ describe("Adaptive Zap", () => {
     await screen.findByRole("heading", { name: "settings.title" });
     expect(router.state.location.pathname).toBe("/settings");
     expect(
-      within(navigation).getByRole("link", { name: "scan.scanHistoryTitle" }),
-    ).toBeInTheDocument();
+      within(navigation).queryByRole("link", { name: "scan.scanHistoryTitle" }),
+    ).not.toBeInTheDocument();
     expect(
-      within(navigation).getByRole("link", {
-        name: "scan.deviceSheetAllDevices",
-      }),
+      within(navigation).getByRole("link", { name: "nav.devices" }),
     ).toHaveAttribute("href", "/settings/devices");
     expect(
       within(navigation).getByRole("link", { name: "nav.index" }),
@@ -311,6 +309,33 @@ describe("Adaptive Zap", () => {
     expect(
       screen.getByRole("link", { name: "scan.playHistoryTitle" }),
     ).toHaveAttribute("aria-current", "page");
+  });
+
+  it("should open game details from a play history row", async () => {
+    responsiveWindow(1440);
+    const user = userEvent.setup();
+    vi.mocked(CoreAPI.mediaHistory).mockResolvedValueOnce({
+      entries: [
+        {
+          systemId: "SNES",
+          systemName: "SNES",
+          mediaName: "Detail Game",
+          mediaPath: "/games/detail.rom",
+          playTime: 60,
+          startedAt: "2026-01-02T12:00:00Z",
+        },
+      ],
+      pagination: { hasNextPage: false, nextCursor: null, pageSize: 50 },
+    });
+    await renderZap("/zap/play-history");
+
+    await user.click(
+      await screen.findByRole("button", { name: "scan.coverRowDetails" }),
+    );
+
+    expect(
+      await screen.findByRole("dialog", { name: "Detail Game" }),
+    ).toBeInTheDocument();
   });
 
   it("should refresh real phone History data on each opening", async () => {

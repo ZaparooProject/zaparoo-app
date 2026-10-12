@@ -208,6 +208,62 @@ describe("Adaptive Library pages", () => {
   afterEach(() => vi.restoreAllMocks());
 
   it.each([
+    { path: "/library/favorites", heading: "library.favorites" },
+    { path: `/library/decks/${deck.deckId}`, heading: deck.name },
+  ])(
+    "leads back to the Collections view from the breadcrumb on $path",
+    async ({ path, heading }) => {
+      responsiveWindow(1440);
+      const user = userEvent.setup();
+      useLibrarySessionStore.getState().setView("systems");
+      const { router } = await renderLibrary(path);
+      await screen.findByRole("heading", { name: heading, level: 1 });
+      const breadcrumb = within(
+        screen.getByRole("navigation", { name: "nav.breadcrumbs" }),
+      );
+      expect(
+        breadcrumb.getAllByRole("link").map((link) => link.textContent),
+      ).toEqual(["library.title", "library.collections"]);
+
+      await user.click(
+        breadcrumb.getByRole("link", { name: "library.collections" }),
+      );
+      await waitFor(() =>
+        expect(router.state.location.pathname).toBe("/library"),
+      );
+      expect(useLibrarySessionStore.getState().view).toBe("collections");
+    },
+  );
+
+  it("shows a selected deck item in the docked pane on desktop and in a sheet when narrower", async () => {
+    const resize = responsiveWindow(1440);
+    const user = userEvent.setup();
+    await renderLibrary(`/library/decks/${deck.deckId}`);
+    await screen.findByRole("heading", { name: deck.name, level: 1 });
+    expect(screen.getByText("decks.selectItem")).toBeVisible();
+
+    const row = screen.getByRole("button", { name: /^Alpha/ });
+    await user.click(row);
+    expect(await screen.findByRole("region", { name: "Alpha" })).toBeVisible();
+    expect(screen.queryByRole("dialog", { name: "Alpha" })).toBeNull();
+    expect(row).toHaveAttribute("aria-current", "true");
+    expect(screen.queryByText("decks.selectItem")).not.toBeInTheDocument();
+
+    await user.click(
+      within(screen.getByRole("region", { name: "Alpha" })).getByRole(
+        "button",
+        { name: "nav.close" },
+      ),
+    );
+    expect(row).not.toHaveAttribute("aria-current");
+    expect(screen.getByText("decks.selectItem")).toBeVisible();
+
+    await resize(820);
+    await user.click(screen.getByRole("button", { name: /^Alpha/ }));
+    expect(await screen.findByRole("dialog", { name: "Alpha" })).toBeVisible();
+  });
+
+  it.each([
     { path: "/library/favorites", title: "library.favorites" },
     { path: "/library/recent", title: "library.recentlyPlayed" },
     { path: "/library/top", title: "library.topPlayed" },
@@ -266,7 +322,7 @@ describe("Adaptive Library pages", () => {
   );
 
   it("keeps root title, actions and Systems/Collections choice through resize", async () => {
-    const resize = responsiveWindow(1440);
+    const resize = responsiveWindow(820);
     const user = userEvent.setup();
     const { baseElement } = await renderLibrary("/library");
     const heading = await screen.findByRole("heading", {
@@ -278,9 +334,6 @@ describe("Adaptive Library pages", () => {
       name: "library.searchTitle",
     });
     await user.click(screen.getByRole("tab", { name: "library.collections" }));
-    const collections = screen.getByRole("tab", {
-      name: "library.collections",
-    });
     const deckSearch = await screen.findByRole("searchbox", {
       name: "decks.search",
     });
@@ -289,7 +342,7 @@ describe("Adaptive Library pages", () => {
       screen.getByRole("region", { name: "decks.title" }),
     ).findByRole("link", { name: /^Weekend/ });
     const deckRequests = vi.mocked(CoreAPI.decks).mock.calls.length;
-    for (const width of [820, 390, 1440]) {
+    for (const width of [1440, 390, 820]) {
       await resize(width);
       expect(
         screen.getByRole("heading", { name: "library.title", level: 1 }),
@@ -297,10 +350,20 @@ describe("Adaptive Library pages", () => {
       expect(
         within(scroll).getByRole("button", { name: "library.searchTitle" }),
       ).toBe(search);
-      expect(screen.getByRole("tab", { name: "library.collections" })).toBe(
-        collections,
-      );
-      expect(collections).toHaveAttribute("aria-selected", "true");
+      if (width < 1280) {
+        expect(
+          screen.getByRole("tab", { name: "library.collections" }),
+        ).toHaveAttribute("aria-selected", "true");
+      } else {
+        // The sidebar lists both views, so the page names the chosen one.
+        expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+        expect(
+          screen.getByRole("heading", {
+            name: "library.collections",
+            level: 2,
+          }),
+        ).toBeVisible();
+      }
       expect(screen.getByRole("searchbox", { name: "decks.search" })).toBe(
         deckSearch,
       );

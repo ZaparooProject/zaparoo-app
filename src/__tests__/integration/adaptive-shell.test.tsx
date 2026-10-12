@@ -341,16 +341,22 @@ describe("Adaptive application shell", () => {
     );
   });
 
-  it("should expand groups without navigating and retain them independently across routes", async () => {
+  it("should expand a group without navigating and keep one group open at a time", async () => {
     responsiveWindow(1440);
     const user = userEvent.setup();
     const { router, baseElement } = await renderShell();
     const navigation = screen.getByRole("navigation", {
       name: "nav.mainNavigation",
     });
+    const library = within(navigation).getByRole("listitem", {
+      name: "nav.library",
+    });
     const create = within(navigation).getByRole("listitem", {
       name: "nav.create",
     });
+    expect(
+      within(library).getByRole("link", { name: "nav.search" }),
+    ).toBeVisible();
     await user.click(
       within(create).getByRole("button", { name: "nav.expandSection" }),
     );
@@ -358,37 +364,154 @@ describe("Adaptive application shell", () => {
     expect(
       within(create).getByRole("link", { name: "create.customHeading" }),
     ).toHaveAttribute("href", "/create/custom");
+    expect(
+      within(library).queryByRole("link", { name: "nav.search" }),
+    ).not.toBeInTheDocument();
     await user.click(
       within(navigation).getByRole("link", { name: "nav.settings" }),
     );
     await screen.findByRole("heading", { name: "settings.title" });
-    expect(
-      within(create).getByRole("button", {
-        name: "nav.collapseSection",
-      }),
-    ).toHaveAttribute("aria-expanded", "true");
     const settings = within(navigation).getByRole("listitem", {
       name: "nav.settings",
     });
     expect(
-      within(settings).getByRole("button", {
-        name: "nav.collapseSection",
-      }),
+      within(settings).getByRole("button", { name: "nav.collapseSection" }),
     ).toHaveAttribute("aria-expanded", "true");
-    await user.click(
-      within(create).getByRole("button", {
-        name: "nav.collapseSection",
-      }),
-    );
     expect(
       within(create).queryByRole("link", { name: "create.customHeading" }),
     ).not.toBeInTheDocument();
     expect(
-      within(settings).getByRole("link", {
-        name: "scan.deviceSheetAllDevices",
+      within(settings).getByRole("link", { name: "nav.devices" }),
+    ).toBeVisible();
+    await user.click(
+      within(settings).getByRole("button", { name: "nav.collapseSection" }),
+    );
+    expect(
+      within(navigation).queryByRole("button", { name: "nav.collapseSection" }),
+    ).not.toBeInTheDocument();
+    expect(await findA11yViolations(baseElement)).toEqual([]);
+  });
+
+  it("should list sidebar destinations in landing-page order under their groups", async () => {
+    responsiveWindow(1440);
+    await enableLibrary();
+    const user = userEvent.setup();
+    await renderShell();
+    const navigation = screen.getByRole("navigation", {
+      name: "nav.mainNavigation",
+    });
+    const names = (section: string) =>
+      within(within(navigation).getByRole("listitem", { name: section }))
+        .getAllByRole("link")
+        .slice(1)
+        .map((link) => link.textContent);
+    const library = within(navigation).getByRole("listitem", {
+      name: "nav.library",
+    });
+
+    expect(names("nav.library")).toEqual([
+      "nav.search",
+      "library.systems",
+      "nav.all",
+      "library.favorites",
+      "library.playLater",
+      "library.liked",
+      "library.disliked",
+      "library.recentlyPlayed",
+      "library.topPlayed",
+    ]);
+    expect(
+      within(
+        within(library).getByRole("list", { name: "library.collections" }),
+      ).getAllByRole("link"),
+    ).toHaveLength(7);
+
+    const expand = (section: string) =>
+      user.click(
+        within(
+          within(navigation).getByRole("listitem", { name: section }),
+        ).getByRole("button", { name: "nav.expandSection" }),
+      );
+    await expand("nav.create");
+    expect(names("nav.create")).toEqual([
+      "create.searchGameHeading",
+      "decks.new",
+      "create.mappingsHeading",
+      "create.customHeading",
+      "create.nfcHeading",
+    ]);
+
+    await expand("nav.settings");
+    const settings = within(
+      within(navigation).getByRole("listitem", { name: "nav.settings" }),
+    );
+    const grouped = (group: string) =>
+      within(settings.getByRole("list", { name: group }))
+        .getAllByRole("link")
+        .map((link) => link.textContent);
+    expect(grouped("settings.groups.app")).toEqual([
+      "settings.languageRegion.title",
+      "settings.accessibility.title",
+      "online.title",
+    ]);
+    expect(grouped("settings.groups.device")).toEqual([
+      "nav.devices",
+      "nav.media",
+      "settings.readers.title",
+      "settings.playControls.title",
+      "settings.advanced.title",
+    ]);
+    expect(grouped("settings.groups.support")).toEqual([
+      "settings.help.title",
+      "settings.about.title",
+    ]);
+  });
+
+  it("should switch between the Library systems and collections views from the sidebar", async () => {
+    responsiveWindow(1440);
+    await enableLibrary();
+    const user = userEvent.setup();
+    const { router } = await renderShell();
+    const navigation = within(
+      screen.getByRole("navigation", { name: "nav.mainNavigation" }),
+    );
+    const systems = navigation.getByRole("link", { name: "library.systems" });
+    const collections = navigation.getByRole("link", { name: "nav.all" });
+    expect(systems).toHaveAttribute("aria-current", "page");
+    expect(collections).not.toHaveAttribute("aria-current");
+    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "library.systems", level: 2 }),
+    ).toBeVisible();
+
+    await user.click(collections);
+    expect(router.state.location.pathname).toBe("/library");
+    expect(
+      await screen.findByRole("heading", {
+        name: "library.collections",
+        level: 2,
       }),
     ).toBeVisible();
-    expect(await findA11yViolations(baseElement)).toEqual([]);
+    expect(collections).toHaveAttribute("aria-current", "page");
+    expect(systems).not.toHaveAttribute("aria-current");
+
+    await user.click(systems);
+    expect(
+      screen.getByRole("heading", { name: "library.systems", level: 2 }),
+    ).toBeVisible();
+    expect(systems).toHaveAttribute("aria-current", "page");
+
+    // The section link itself always opens the Systems view on desktop.
+    await user.click(collections);
+    await screen.findByRole("heading", {
+      name: "library.collections",
+      level: 2,
+    });
+    await user.click(navigation.getByRole("link", { name: "nav.library" }));
+    expect(
+      await screen.findByRole("heading", { name: "library.systems", level: 2 }),
+    ).toBeVisible();
+    expect(systems).toHaveAttribute("aria-current", "page");
   });
 
   it("should focus the destination after drawer navigation and keep desktop navigation nonmodal", async () => {
@@ -791,6 +914,11 @@ describe("Adaptive application shell", () => {
       within(navigation).getByRole("link", { name: "nav.create" }),
     );
     await waitFor(() => expect(router.state.location.pathname).toBe("/create"));
+    await user.click(
+      within(
+        within(navigation).getByRole("listitem", { name: "nav.library" }),
+      ).getByRole("button", { name: "nav.expandSection" }),
+    );
     await user.click(
       within(navigation).getByRole("link", { name: "library.favorites" }),
     );

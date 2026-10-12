@@ -23,6 +23,13 @@ interface AppSectionChildDefinition {
   to: string;
   /** Translation key. */
   label: string;
+  /**
+   * Translation key of the group this destination is listed under. Groups
+   * follow the section's landing page; consecutive children share one label.
+   */
+  group?: string;
+  /** The destination is the section root showing this Library view. */
+  libraryView?: "systems" | "collections";
   /** The destination is omitted when this gate is closed. */
   visibleWhen?: AppSectionGate;
   /** The destination stays listed but unavailable when any gate is closed. */
@@ -64,36 +71,50 @@ const sections = [
     label: "nav.library",
     Icon: LibraryBigIcon,
     children: [
-      { to: "/library/search", label: "library.searchTitle" },
+      { to: "/library/search", label: "nav.search" },
+      { to: "/library", label: "library.systems", libraryView: "systems" },
       {
-        to: "/library/favorites",
-        label: "library.favorites",
+        to: "/library",
+        label: "nav.all",
+        libraryView: "collections",
+        group: "library.collections",
         visibleWhen: "favorites",
       },
       {
-        to: "/library/recent",
-        label: "library.recentlyPlayed",
-        visibleWhen: "playHistory",
-      },
-      {
-        to: "/library/top",
-        label: "library.topPlayed",
-        visibleWhen: "playHistory",
-      },
-      {
-        to: "/library/liked",
-        label: "library.liked",
-        visibleWhen: "preferences",
+        to: "/library/favorites",
+        label: "library.favorites",
+        group: "library.collections",
+        visibleWhen: "favorites",
       },
       {
         to: "/library/play-later",
         label: "library.playLater",
+        group: "library.collections",
+        visibleWhen: "preferences",
+      },
+      {
+        to: "/library/liked",
+        label: "library.liked",
+        group: "library.collections",
         visibleWhen: "preferences",
       },
       {
         to: "/library/disliked",
         label: "library.disliked",
+        group: "library.collections",
         visibleWhen: "preferences",
+      },
+      {
+        to: "/library/recent",
+        label: "library.recentlyPlayed",
+        group: "library.collections",
+        visibleWhen: "playHistory",
+      },
+      {
+        to: "/library/top",
+        label: "library.topPlayed",
+        group: "library.collections",
+        visibleWhen: "playHistory",
       },
     ],
   },
@@ -103,17 +124,11 @@ const sections = [
     pathPrefix: "/create",
     label: "nav.create",
     Icon: SquarePenIcon,
-    // Availability mirrors the Create landing cards.
+    // Order and availability mirror the Create landing cards.
     children: [
       {
         to: "/create/search",
         label: "create.searchGameHeading",
-        enabledWhen: ["connected"],
-      },
-      { to: "/create/custom", label: "create.customHeading" },
-      {
-        to: "/create/mappings",
-        label: "create.mappingsHeading",
         enabledWhen: ["connected"],
       },
       {
@@ -122,6 +137,12 @@ const sections = [
         visibleWhen: "decks",
         enabledWhen: ["connected"],
       },
+      {
+        to: "/create/mappings",
+        label: "create.mappingsHeading",
+        enabledWhen: ["connected"],
+      },
+      { to: "/create/custom", label: "create.customHeading" },
       { to: "/create/nfc", label: "create.nfcHeading", enabledWhen: ["nfc"] },
     ],
   },
@@ -131,24 +152,59 @@ const sections = [
     pathPrefix: "/settings",
     label: "nav.settings",
     Icon: SettingsIcon,
+    // Groups and order mirror the Settings landing page.
     children: [
-      { to: "/settings/devices", label: "scan.deviceSheetAllDevices" },
-      { to: "/settings/readers", label: "settings.readers.title" },
-      {
-        to: "/settings/media",
-        label: "settings.media.title",
-        visibleWhen: "scrapers",
-      },
-      { to: "/settings/play-controls", label: "settings.playControls.title" },
       {
         to: "/settings/language-region",
         label: "settings.languageRegion.title",
+        group: "settings.groups.app",
       },
-      { to: "/settings/accessibility", label: "settings.accessibility.title" },
-      { to: "/settings/online", label: "online.title" },
-      { to: "/settings/advanced", label: "settings.advanced.title" },
-      { to: "/settings/help", label: "settings.help.title" },
-      { to: "/settings/about", label: "settings.about.title" },
+      {
+        to: "/settings/accessibility",
+        label: "settings.accessibility.title",
+        group: "settings.groups.app",
+      },
+      {
+        to: "/settings/online",
+        label: "online.title",
+        group: "settings.groups.app",
+      },
+      {
+        to: "/settings/devices",
+        label: "nav.devices",
+        group: "settings.groups.device",
+      },
+      {
+        to: "/settings/media",
+        label: "nav.media",
+        group: "settings.groups.device",
+        visibleWhen: "scrapers",
+      },
+      {
+        to: "/settings/readers",
+        label: "settings.readers.title",
+        group: "settings.groups.device",
+      },
+      {
+        to: "/settings/play-controls",
+        label: "settings.playControls.title",
+        group: "settings.groups.device",
+      },
+      {
+        to: "/settings/advanced",
+        label: "settings.advanced.title",
+        group: "settings.groups.device",
+      },
+      {
+        to: "/settings/help",
+        label: "settings.help.title",
+        group: "settings.groups.support",
+      },
+      {
+        to: "/settings/about",
+        label: "settings.about.title",
+        group: "settings.groups.support",
+      },
     ],
   },
 ] as const satisfies readonly AppSectionDefinition[];

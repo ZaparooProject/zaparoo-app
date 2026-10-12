@@ -105,6 +105,11 @@ interface LibrarySessionState {
   ) => void;
   resetNavigation: () => void;
   activateDevice: (deviceAddress: string) => void;
+  /**
+   * Chooses the Library root view from outside that page. The device is
+   * activated first, so the page's own activation does not reset the choice.
+   */
+  showView: (deviceAddress: string, view: LibraryView) => void;
   reset: () => void;
 }
 
@@ -236,6 +241,12 @@ export const useLibrarySessionStore = create<LibrarySessionState>()((set) => ({
       state.deviceAddress === deviceAddress
         ? state
         : { ...initialLibrarySessionState, deviceAddress },
+    ),
+  showView: (deviceAddress, view) =>
+    set((state) =>
+      state.deviceAddress === deviceAddress
+        ? { view }
+        : { ...initialLibrarySessionState, deviceAddress, view },
     ),
   reset: () => set(initialLibrarySessionState),
 }));

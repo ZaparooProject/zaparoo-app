@@ -24,12 +24,32 @@ import { LibraryLinkButton } from "@/components/library/LibraryLinkButton";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { TextInput } from "@/components/wui/TextInput";
 
+// Lists the user builds come first, then the ones play history fills in.
+// The sidebar lists them in the same order (`src/lib/appSections.ts`).
 const collections = [
   {
     to: "/library/favorites",
     label: "library.favorites",
     Icon: HeartIcon,
     scope: "favorites",
+  },
+  {
+    to: "/library/play-later",
+    label: "library.playLater",
+    Icon: BookmarkIcon,
+    scope: "play-later",
+  },
+  {
+    to: "/library/liked",
+    label: "library.liked",
+    Icon: ThumbsUpIcon,
+    scope: "liked",
+  },
+  {
+    to: "/library/disliked",
+    label: "library.disliked",
+    Icon: ThumbsDownIcon,
+    scope: "disliked",
   },
   {
     to: "/library/recent",
@@ -42,24 +62,6 @@ const collections = [
     label: "library.topPlayed",
     Icon: TrophyIcon,
     scope: "top",
-  },
-  {
-    to: "/library/liked",
-    label: "library.liked",
-    Icon: ThumbsUpIcon,
-    scope: "liked",
-  },
-  {
-    to: "/library/play-later",
-    label: "library.playLater",
-    Icon: BookmarkIcon,
-    scope: "play-later",
-  },
-  {
-    to: "/library/disliked",
-    label: "library.disliked",
-    Icon: ThumbsDownIcon,
-    scope: "disliked",
   },
 ] as const;
 
@@ -92,13 +94,7 @@ export function LibraryCollectionList({
   );
 
   return (
-    <div
-      className={
-        decksFeature.available
-          ? "library-collections library-collections-with-decks"
-          : "library-collections"
-      }
-    >
+    <div className="library-collections">
       {visible.length > 0 && (
         <nav
           aria-label={t("library.collections")}

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronRightIcon } from "lucide-react";
 import { CoreAPI, logRunFailure } from "@/lib/coreApi";
 import type { System } from "@/lib/models";
 import { ConnectionState, useStatusStore } from "@/lib/store";
@@ -12,7 +11,10 @@ import {
   ContextualWriteRail,
   LaunchButton,
 } from "@/components/library/ContextualWriteRail";
-import { DetailRow } from "@/components/library/LibraryMediaDetailsModal";
+import {
+  DetailRow,
+  TechnicalDetails,
+} from "@/components/library/LibraryMediaFacts";
 
 /**
  * Actions for a Core virtual system. It has no media to browse, so the Library
@@ -96,25 +98,9 @@ export function LibraryLaunchableModal(props: {
               {props.system.category}
             </p>
           )}
-          <details className="group border-border border-t pt-2">
-            <summary className="focus-visible:ring-ring flex min-h-12 cursor-pointer list-none items-center justify-between rounded-md px-1 focus-visible:ring-2 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
-              <span className="font-medium">
-                {t("library.technicalDetails")}
-              </span>
-              <ChevronRightIcon
-                size={20}
-                className="text-muted-foreground transition-transform group-open:rotate-90"
-                aria-hidden="true"
-              />
-            </summary>
-            <div className="flex flex-col gap-3 px-1 pt-2">
-              <DetailRow
-                label={t("library.zapScript")}
-                value={zapScript}
-                mono
-              />
-            </div>
-          </details>
+          <TechnicalDetails>
+            <DetailRow label={t("library.zapScript")} value={zapScript} mono />
+          </TechnicalDetails>
         </div>
       )}
     </SlideModal>

@@ -7,7 +7,7 @@ import type { DeckItem } from "@/lib/models";
 import { useHapticPress } from "@/hooks/useHapticPress";
 import { useSystemNameResolver } from "@/hooks/useSystemName";
 import { Button } from "@/components/wui/Button";
-import { NextIcon } from "@/lib/images";
+import { RowSelectionChevron } from "@/components/RowSelectionChevron";
 import { DeckArtwork } from "@/components/library/DeckArtwork";
 
 export function SortableDeckItemRow({
@@ -18,6 +18,7 @@ export function SortableDeckItemRow({
   editable,
   busy,
   accessibleLists,
+  selected = false,
   onSelect,
   onMove,
 }: {
@@ -29,6 +30,8 @@ export function SortableDeckItemRow({
   editable: boolean;
   busy: boolean;
   accessibleLists: boolean;
+  /** The item shown in the docked details pane. */
+  selected?: boolean;
   onSelect: (item: DeckItem) => void;
   onMove: (index: number, target: number) => void;
 }) {
@@ -63,7 +66,9 @@ export function SortableDeckItemRow({
     <>
       <DeckArtwork item={item} />
       <span className="min-w-0">
-        <span className="block font-medium break-words">{name}</span>
+        <span className="library-browse-row-title block font-medium break-words">
+          {name}
+        </span>
         <span className="text-muted-foreground block text-sm">
           {item.kind === "card"
             ? t("decks.card")
@@ -110,17 +115,13 @@ export function SortableDeckItemRow({
         ) : (
           <button
             type="button"
-            className="focus-visible:ring-ring flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-visible:ring-2 focus-visible:outline-none"
+            className="library-browse-row focus-visible:ring-ring flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-visible:ring-2 focus-visible:outline-none"
+            aria-current={selected ? "true" : undefined}
             onPointerUp={handleHapticPress}
             onClick={() => onSelect(item)}
           >
             {content}
-            <span
-              aria-hidden="true"
-              className="text-muted-foreground ml-auto shrink-0"
-            >
-              <NextIcon size="20" />
-            </span>
+            <RowSelectionChevron selected={selected} className="ml-auto" />
           </button>
         )}
         {editable && (

@@ -83,7 +83,7 @@ export function NowPlayingTransport({
     shape: "square" as const,
     size: "sm" as const,
     className:
-      "min-[1024px]:min-h-16 min-[1024px]:w-auto min-[1024px]:max-w-none min-[1024px]:flex-1",
+      "min-[1024px]:min-h-16 min-[1024px]:w-auto min-[1024px]:max-w-20 min-[1024px]:flex-1",
   };
 
   return (

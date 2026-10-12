@@ -2,7 +2,10 @@ import { render, screen, fireEvent, waitFor } from "../../../test-utils";
 import { useRef } from "react";
 import { afterEach, vi, describe, it, expect } from "vitest";
 import { BackToTop } from "@/components/BackToTop";
-import { measurePageRightGap } from "@/components/BackToTop.geometry";
+import {
+  measureDialogScrollbar,
+  measurePageRightGap,
+} from "@/components/BackToTop.geometry";
 
 // Mock lodash debounce
 vi.mock("lodash", () => ({
@@ -286,6 +289,19 @@ describe("BackToTop", () => {
     clientLeft = 2;
     clientWidth = 827;
     expect(measurePageRightGap(container, 1440)).toBe(355);
+  });
+
+  it("clears a dialog's classic scrollbar and leaves overlay scrollbars alone", () => {
+    const container = document.createElement("div");
+    let clientWidth = 485;
+    Object.defineProperties(container, {
+      offsetWidth: { get: () => 500 },
+      clientWidth: { get: () => clientWidth },
+      clientLeft: { get: () => 0 },
+    });
+    expect(measureDialogScrollbar(container)).toBe(15);
+    clientWidth = 500;
+    expect(measureDialogScrollbar(container)).toBe(0);
   });
 
   it("keeps an equal margin above the end of a dialog's scroll area", () => {

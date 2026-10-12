@@ -418,21 +418,18 @@ describe("LibraryMediaDetailsModal", () => {
     expect(screen.getByText("library.playerCount")).toBeVisible();
     expect(screen.getByText("library.developer")).toBeVisible();
     expect(screen.getByText("Studio")).toBeVisible();
-    expect(
-      screen.getByText("edition:Special Edition").closest("[aria-label]"),
-    ).toHaveAttribute("aria-label", "edition special");
+    expect(screen.getByText("tagSelector.type.edition")).toBeVisible();
+    expect(screen.getByText("Special Edition")).toBeVisible();
     expect(screen.getByText("library.publisher")).toBeVisible();
     expect(screen.getByText("Publisher")).toBeVisible();
     expect(screen.getByText("library.genre")).toBeVisible();
     expect(screen.getByText("Platformer")).toBeVisible();
     expect(screen.getByText("library.rating")).toBeVisible();
     expect(screen.getByText("0.8")).toBeVisible();
-    expect(screen.getByText("library.tags")).toBeVisible();
-    expect(screen.getAllByLabelText("region us")).toHaveLength(1);
-    expect(
-      screen.getByText("region:library.tagValues.region.us"),
-    ).toBeVisible();
-    expect(screen.getByText("lang:library.tagValues.lang.en")).toBeVisible();
+    expect(screen.getByText("tagSelector.type.region")).toBeVisible();
+    expect(screen.getAllByText("library.tagValues.region.us")).toHaveLength(1);
+    expect(screen.getByText("tagSelector.type.lang")).toBeVisible();
+    expect(screen.getByText("library.tagValues.lang.en")).toBeVisible();
     expect(screen.queryByText("super-game-alt")).not.toBeInTheDocument();
     expect(screen.queryByText("/roms/SNES")).not.toBeInTheDocument();
     expect(

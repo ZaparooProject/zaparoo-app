@@ -1,15 +1,48 @@
-import { type MouseEvent } from "react";
-import { Link, useLocation } from "@tanstack/react-router";
+import { type ComponentProps, type MouseEvent, type ReactNode } from "react";
+import {
+  Link,
+  useLinkProps,
+  useLocation,
+  type LinkProps,
+} from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { ChevronDownIcon } from "lucide-react";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { useAppUi } from "@/hooks/useAppUi";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { useHaptics } from "@/hooks/useHaptics";
-import { APP_SECTIONS, type AppSectionGate } from "@/lib/appSections";
+import {
+  APP_SECTIONS,
+  type AppSection,
+  type AppSectionChild,
+  type AppSectionGate,
+} from "@/lib/appSections";
+import { useLibrarySessionStore } from "@/lib/librarySessionStore";
 import { bottomTabForPath, type BottomTabId } from "@/lib/tabSessionStore";
 import { useStatusStore } from "@/lib/store";
 import { NotificationBadge } from "@/components/NotificationBadge";
 import { PAGE_SCROLL_RESTORATION_SELECTOR } from "@/components/PageFrame";
+
+/**
+ * The router marks every exact path match as the current page. A destination
+ * that is one view of its route decides that for itself.
+ */
+function SidebarChildLink({
+  current,
+  children,
+  ...options
+}: LinkProps &
+  Pick<ComponentProps<"a">, "className" | "aria-disabled" | "onClick"> & {
+    current: "page" | "true" | undefined;
+    children: ReactNode;
+  }) {
+  const props = useLinkProps(options);
+  return (
+    <a {...props} aria-current={current}>
+      {children}
+    </a>
+  );
+}
 
 export function SidebarNavigation({
   desktop = false,
@@ -18,7 +51,8 @@ export function SidebarNavigation({
   onNavigate,
 }: {
   desktop?: boolean;
-  expanded: Partial<Record<BottomTabId, boolean>>;
+  /** The one open section; opening another closes it. */
+  expanded: BottomTabId | null;
   onToggle: (group: BottomTabId) => void;
   /** Called with the activated destination's route path. */
   onNavigate: (to: string) => void;
@@ -39,6 +73,9 @@ export function SidebarNavigation({
   });
   const inbox = useCoreFeature("inbox");
   const inboxCount = useStatusStore((s) => s.inboxMessages.length);
+  const libraryView = useLibrarySessionStore((state) => state.view);
+  const showLibraryView = useLibrarySessionStore((state) => state.showView);
+  const deviceKey = useActiveDeviceKey();
   const gates: Record<AppSectionGate, boolean> = {
     playHistory: history.available,
     favorites: favorites.available,
@@ -74,10 +111,73 @@ export function SidebarNavigation({
     onNavigate(to);
   };
 
+  // "page" is the destination itself; "true" marks the listed ancestor of a
+  // deeper route such as an editor.
+  const childCurrent = (section: AppSection, child: AppSectionChild) => {
+    if (!child.libraryView) {
+      if (normalized === child.to) return "page";
+      return normalized.startsWith(`${child.to}/`) ? "true" : undefined;
+    }
+    // Without collections the Library landing has no views to choose between.
+    const view = favorites.available ? libraryView : "systems";
+    if (normalized === child.to) {
+      return view === child.libraryView ? "page" : undefined;
+    }
+    // Decks belong to the collections view. A system's own pages sit directly
+    // under the section root, beside the listed collections.
+    const deeper = normalized.startsWith(`${child.to}/`);
+    const decks = normalized.startsWith(`${child.to}/decks`);
+    if (child.libraryView === "collections") return decks ? "true" : undefined;
+    const listed = section.children.some(
+      (other) =>
+        other.to !== child.to &&
+        (normalized === other.to || normalized.startsWith(`${other.to}/`)),
+    );
+    return deeper && !decks && !listed ? "true" : undefined;
+  };
+  const renderChildLink = (section: AppSection, child: AppSectionChild) => {
+    const unavailable =
+      child.enabledWhen?.some((gate) => !gates[gate]) ?? false;
+    return (
+      <SidebarChildLink
+        to={child.to}
+        disabled={unavailable}
+        aria-disabled={unavailable || undefined}
+        resetScroll={desktop}
+        replace={desktop && normalized === child.to}
+        state={desktop ? { appNavigationSource: "desktop-sidebar" } : undefined}
+        activeOptions={{ exact: true }}
+        className="sidebar-child-link"
+        current={childCurrent(section, child)}
+        onClick={(event) => {
+          if (unavailable) return;
+          if (child.libraryView) showLibraryView(deviceKey, child.libraryView);
+          navigateDestination(event, child.to);
+        }}
+      >
+        {t(child.label)}
+      </SidebarChildLink>
+    );
+  };
+  const renderChild = (section: AppSection, child: AppSectionChild) => (
+    <li key={`${child.to}:${child.libraryView ?? ""}`}>
+      {renderChildLink(section, child)}
+    </li>
+  );
+
   return (
     <ul className="sidebar-groups">
-      {APP_SECTIONS.map(({ id, to, label, Icon, children }) => {
-        const open = Boolean(expanded[id]);
+      {APP_SECTIONS.map((section) => {
+        const { id, to, label, Icon } = section;
+        const open = expanded === id;
+        // Consecutive children of one group are listed under its label.
+        const runs: { group?: string; children: AppSectionChild[] }[] = [];
+        for (const child of section.children) {
+          if (child.visibleWhen && !gates[child.visibleWhen]) continue;
+          const last = runs.at(-1);
+          if (last && last.group === child.group) last.children.push(child);
+          else runs.push({ group: child.group, children: [child] });
+        }
         const current = normalized === to;
         // Matches the phone dock: Settings shows its own Inbox entry point.
         const count =
@@ -113,7 +213,14 @@ export function SidebarNavigation({
                     ? t("nav.settingsWithNotifications", { count })
                     : undefined
                 }
-                onClick={(event) => navigateDestination(event, to)}
+                onClick={(event) => {
+                  // Beside the persistent sidebar the Library root has no
+                  // tabs, so its section link always opens the first view.
+                  if (desktop && id === "library") {
+                    showLibraryView(deviceKey, "systems");
+                  }
+                  navigateDestination(event, to);
+                }}
               >
                 <span className="relative shrink-0" aria-hidden="true">
                   <Icon size={22} className="sidebar-root-icon" />
@@ -146,45 +253,22 @@ export function SidebarNavigation({
               className="sidebar-children"
               hidden={!open}
             >
-              {children
-                .filter(({ visibleWhen }) => !visibleWhen || gates[visibleWhen])
-                .map((child) => {
-                  const unavailable =
-                    child.enabledWhen?.some((gate) => !gates[gate]) ?? false;
-                  return (
-                    <li key={child.to}>
-                      <Link
-                        to={child.to}
-                        disabled={unavailable}
-                        aria-disabled={unavailable || undefined}
-                        resetScroll={desktop}
-                        replace={desktop && normalized === child.to}
-                        state={
-                          desktop
-                            ? { appNavigationSource: "desktop-sidebar" }
-                            : undefined
-                        }
-                        activeOptions={{ exact: true }}
-                        className="sidebar-child-link"
-                        // "page" is the destination itself; "true" marks the
-                        // listed ancestor of a deeper route such as an editor.
-                        aria-current={
-                          normalized === child.to
-                            ? "page"
-                            : normalized.startsWith(`${child.to}/`)
-                              ? "true"
-                              : undefined
-                        }
-                        onClick={(event) => {
-                          if (!unavailable)
-                            navigateDestination(event, child.to);
-                        }}
-                      >
-                        {t(child.label)}
-                      </Link>
-                    </li>
-                  );
-                })}
+              {runs.map(({ group, children }) => {
+                if (!group) {
+                  return children.map((child) => renderChild(section, child));
+                }
+                const headingId = `sidebar-${id}-${group}`;
+                return (
+                  <li key={group}>
+                    <span id={headingId} className="sidebar-child-group-label">
+                      {t(group)}
+                    </span>
+                    <ul aria-labelledby={headingId}>
+                      {children.map((child) => renderChild(section, child))}
+                    </ul>
+                  </li>
+                );
+              })}
             </ul>
           </li>
         );

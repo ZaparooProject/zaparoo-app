@@ -563,8 +563,10 @@ describe("deck routes", () => {
     expect(
       within(details).getByText("**launch.title:NES/Game"),
     ).toBeInTheDocument();
+    // The indexed game supplies its facts, never the item's title or action.
+    expect(await within(details).findByText("library.system")).toBeVisible();
+    expect(meta).toHaveBeenCalled();
     expect(within(details).queryByText("A good game")).not.toBeInTheDocument();
-    expect(meta).not.toHaveBeenCalled();
     await userEvent
       .setup()
       .click(within(details).getByRole("button", { name: "decks.play" }));

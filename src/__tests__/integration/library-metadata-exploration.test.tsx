@@ -180,14 +180,14 @@ describe("game metadata exploration", () => {
       ["library.genre: Platformer", "genre:platformer"],
       ["library.releaseYear: 1994", "year:1994"],
       ["library.players: library.playerCount", "players:2"],
-      ["library.tags: region:library.tagValues.region.us", "region:us"],
-      ["library.tags: lang:library.tagValues.lang.en", "lang:en"],
+      ["tagSelector.type.region: library.tagValues.region.us", "region:us"],
+      ["tagSelector.type.lang: library.tagValues.lang.en", "lang:en"],
       [
-        "library.tags: edition:library.tagValues.edition.special",
+        "tagSelector.type.edition: library.tagValues.edition.special",
         "edition:special",
       ],
-      ["library.tags: custom:unknown-value", "custom:unknown-value"],
-    ]) {
+      [/^library\.tags: custom:/, "custom:unknown-value"],
+    ] as const) {
       const link = within(details).getByRole("link", { name });
       const target = new URL(link.getAttribute("href")!, "https://app.invalid");
       expect(target.pathname).toBe("/app/library/search");

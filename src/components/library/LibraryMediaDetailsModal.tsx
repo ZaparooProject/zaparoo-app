@@ -1,25 +1,21 @@
-import {
-  Fragment,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronRightIcon, ListPlusIcon } from "lucide-react";
+import { ListPlusIcon } from "lucide-react";
+import type { MetadataLinkTarget } from "@/components/library/LibraryMetadataLink";
 import {
-  LibraryMetadataLink,
-  type MetadataLinkTarget,
-} from "@/components/library/LibraryMetadataLink";
-import { libraryTagDisplayLabel } from "@/lib/libraryTagLabels";
+  DetailRow,
+  LibraryFactRows,
+  LibraryMediaFacts,
+  TechnicalDetails,
+} from "@/components/library/LibraryMediaFacts";
+import {
+  useLibraryFactValueLabel,
+  useLibraryMediaMeta,
+} from "@/components/library/useLibraryMediaFacts";
 import { CoreAPI, logRunFailure } from "@/lib/coreApi";
 import { logger } from "@/lib/logger";
 import {
   collectLibraryMetadata,
-  fetchLibraryMediaMeta,
-  LIBRARY_QUERY_KEYS,
   libraryEntryDisplayName,
   mediaRefKey,
   mergeLibraryTags,
@@ -28,16 +24,14 @@ import {
   resolveLibraryLaunchText,
   resolveLibraryWriteText,
 } from "@/lib/libraryMedia";
-import type { MediaBrowseEntry, TagInfo } from "@/lib/models";
+import type { MediaBrowseEntry } from "@/lib/models";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { ConnectionState, useStatusStore } from "@/lib/store";
 import { useSystemNameResolver } from "@/hooks/useSystemName";
 import { useNfcWriteAvailable } from "@/hooks/useNfcWriteAvailable";
 import { useContextualNfcWrite } from "@/hooks/useContextualNfcWrite";
-import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { SlideModal } from "@/components/SlideModal";
-import { TagBadge } from "@/components/TagBadge";
 import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { DelayedLoading } from "@/components/DelayedLoading";
@@ -57,49 +51,7 @@ import {
   shouldSelectMediaWriteTarget,
 } from "@/lib/mediaWriteTarget";
 
-/** Label/value row; stacks on phones and inside the docked details pane. */
-export function DetailRow(props: {
-  label: string;
-  value?: string;
-  children?: ReactNode;
-  mono?: boolean;
-}) {
-  if (!props.value && !props.children) return null;
-  return (
-    <div className="library-detail-row">
-      <span className="text-muted-foreground text-sm sm:min-w-[120px]">
-        {props.label}
-      </span>
-      <span
-        className={`min-w-0 flex-1 break-words ${props.mono ? "font-mono text-sm" : "font-medium"}`}
-      >
-        {props.children ?? props.value}
-      </span>
-    </div>
-  );
-}
-
-function metadataFactLabelKey(type: LibraryDetailFactType): string {
-  switch (type) {
-    case "year":
-      return "library.releaseYear";
-    case "players":
-      return "library.players";
-    case "developer":
-      return "library.developer";
-    case "publisher":
-      return "library.publisher";
-    case "genre":
-      return "library.genre";
-    case "rating":
-      return "library.rating";
-    case "gamefamily":
-      return "library.gameFamily";
-    case "arcadeboard":
-      return "library.arcadeBoard";
-  }
-}
-
+/** Facts repeated as a plain caption beneath the artwork. */
 const SUMMARY_FACT_TYPES: readonly LibraryDetailFactType[] = [
   "year",
   "players",
@@ -116,12 +68,7 @@ export function LibraryMediaDetailsModal(props: {
   docked?: boolean;
 }) {
   const { t } = useTranslation();
-  const metadataSearchFeature = useCoreFeature("mediaTags", {
-    requireKnownSupport: true,
-  });
-  const libraryFeature = useCoreFeature("mediaLibrary", {
-    requireKnownSupport: true,
-  });
+  const factValueLabel = useLibraryFactValueLabel();
   const showFilenames = usePreferencesStore((state) => state.showFilenames);
   const resolveSystemName = useSystemNameResolver();
   // `connected` stays true while reconnecting so cached data remains usable.
@@ -165,21 +112,12 @@ export function LibraryMediaDetailsModal(props: {
     setRetainedSelection({ entry: props.entry, systemId: props.systemId });
   }, [props.entry, props.systemId]);
 
-  const metadataQuery = useQuery({
-    queryKey: [
-      LIBRARY_QUERY_KEYS.meta,
-      props.deviceKey,
-      ...(entry ? mediaRefKey(entry, systemId) : [null, "", ""]),
-    ],
-    queryFn: ({ signal }) => {
-      if (!entry) throw new Error("Media selection is unavailable");
-      return fetchLibraryMediaMeta(entry, systemId, signal);
-    },
-    enabled: props.isOpen && entry !== null,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    retry: false,
-  });
+  const metadataQuery = useLibraryMediaMeta(
+    entry,
+    systemId,
+    props.deviceKey,
+    props.isOpen,
+  );
   const writeAvailable = useNfcWriteAvailable(props.deviceKey, props.isOpen);
   const metadata = metadataQuery.data?.media;
   const metadataWritePath =
@@ -361,21 +299,10 @@ export function LibraryMediaDetailsModal(props: {
   const summaryFacts = detailTagView.facts.filter((fact) =>
     SUMMARY_FACT_TYPES.includes(fact.type),
   );
-  const detailFacts = detailTagView.facts.filter(
-    (fact) => !SUMMARY_FACT_TYPES.includes(fact.type),
-  );
   const resolvedSystemName = resolveSystemName(
     metadata?.title.system.id || systemId,
     metadata?.title.system.name || systemId,
   );
-  const factValueLabel = (type: LibraryDetailFactType, tag: TagInfo) => {
-    const value = libraryTagDisplayLabel(tag, t);
-    if (type !== "players") return value;
-    const count = Number(value);
-    return Number.isInteger(count) && count >= 0
-      ? t("library.playerCount", { count })
-      : t("library.playersValue", { value });
-  };
   const linkTarget: MetadataLinkTarget | null = entry
     ? {
         entry,
@@ -384,29 +311,6 @@ export function LibraryMediaDetailsModal(props: {
         owner: props.returnOwner,
       }
     : null;
-  const canExploreTags =
-    libraryFeature.available && metadataSearchFeature.available;
-  const factLinks = (
-    target: MetadataLinkTarget,
-    type: LibraryDetailFactType,
-    tags: readonly TagInfo[],
-  ) =>
-    tags.map((tag, index) => {
-      const value = factValueLabel(type, tag);
-      return {
-        key: `${tag.type}:${tag.tag}:${index}`,
-        link: (
-          <LibraryMetadataLink
-            {...target}
-            tag={tag}
-            enabled={canExploreTags}
-            label={`${t(metadataFactLabelKey(type))}: ${value}`}
-          >
-            {value}
-          </LibraryMetadataLink>
-        ),
-      };
-    });
   const footer = entry ? (
     <ContextualWriteRail
       aria-label={t("library.mediaActions")}
@@ -478,25 +382,14 @@ export function LibraryMediaDetailsModal(props: {
               metadata={metadata}
             />
 
-            <div className="text-muted-foreground flex flex-wrap items-center justify-center gap-x-2 text-center text-sm">
-              <LibraryMetadataLink
-                {...linkTarget}
-                enabled={libraryFeature.available}
-                label={`${t("library.system")}: ${resolvedSystemName}`}
-              >
-                {resolvedSystemName}
-              </LibraryMetadataLink>
-              {summaryFacts.flatMap((fact) =>
-                factLinks(linkTarget, fact.type, fact.tags).map(
-                  ({ key, link }) => (
-                    <span key={key} className="inline-flex items-center gap-2">
-                      <span aria-hidden="true">•</span>
-                      {link}
-                    </span>
-                  ),
+            <p className="text-muted-foreground text-center text-sm">
+              {[
+                resolvedSystemName,
+                ...summaryFacts.flatMap((fact) =>
+                  fact.tags.map((tag) => factValueLabel(fact.type, tag)),
                 ),
-              )}
-            </div>
+              ].join(" • ")}
+            </p>
 
             {metadataQuery.isLoading && (
               <DelayedLoading>
@@ -526,77 +419,30 @@ export function LibraryMediaDetailsModal(props: {
               </p>
             )}
 
-            {(detailFacts.length > 0 || detailTagView.tags.length > 0) && (
-              <section className="flex flex-col gap-3">
-                <h2 className="text-lg font-semibold">
-                  {t("library.details")}
-                </h2>
-                {detailFacts.map((fact) => (
-                  <DetailRow
-                    key={fact.type}
-                    label={t(metadataFactLabelKey(fact.type))}
-                  >
-                    <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
-                      {factLinks(linkTarget, fact.type, fact.tags).map(
-                        ({ key, link }) => (
-                          <Fragment key={key}>{link}</Fragment>
-                        ),
-                      )}
-                    </span>
-                  </DetailRow>
-                ))}
-                {detailTagView.tags.length > 0 && (
-                  <DetailRow label={t("library.tags")}>
-                    <span className="flex flex-wrap gap-1.5">
-                      {detailTagView.tags.map((tag, index) => {
-                        const displayTag = `${tag.type}:${libraryTagDisplayLabel(tag, t)}`;
-                        return (
-                          <LibraryMetadataLink
-                            key={`${tag.type}:${tag.tag}:${index}`}
-                            {...linkTarget}
-                            tag={tag}
-                            enabled={canExploreTags}
-                            label={`${t("library.tags")}: ${displayTag}`}
-                          >
-                            <TagBadge
-                              type={tag.type}
-                              tag={tag.tag}
-                              displayTag={displayTag}
-                            />
-                          </LibraryMetadataLink>
-                        );
-                      })}
-                    </span>
-                  </DetailRow>
-                )}
-              </section>
-            )}
+            <LibraryMediaFacts
+              target={linkTarget}
+              systemName={resolvedSystemName}
+              facts={detailTagView.facts}
+              tags={detailTagView.tags}
+            />
 
-            <details className="group border-border border-t pt-2">
-              <summary className="focus-visible:ring-ring flex min-h-12 cursor-pointer list-none items-center justify-between rounded-md px-1 focus-visible:ring-2 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
-                <span className="font-medium">
-                  {t("library.technicalDetails")}
-                </span>
-                <ChevronRightIcon
-                  size={20}
-                  className="text-muted-foreground transition-transform group-open:rotate-90"
-                  aria-hidden="true"
-                />
-              </summary>
-              <div className="flex flex-col gap-3 px-1 pt-2">
+            <TechnicalDetails>
+              <LibraryFactRows
+                target={linkTarget}
+                facts={detailTagView.technicalFacts}
+              />
+              <DetailRow
+                label={t("library.path")}
+                value={metadata?.path || entry.path}
+                mono
+              />
+              {metadata?.launcherOverride && (
                 <DetailRow
-                  label={t("library.path")}
-                  value={metadata?.path || entry.path}
-                  mono
+                  label={t("library.launcher")}
+                  value={metadata.launcherOverride}
                 />
-                {metadata?.launcherOverride && (
-                  <DetailRow
-                    label={t("library.launcher")}
-                    value={metadata.launcherOverride}
-                  />
-                )}
-              </div>
-            </details>
+              )}
+            </TechnicalDetails>
           </div>
         )}
       </SlideModal>

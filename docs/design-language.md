@@ -32,8 +32,8 @@ Widths are CSS px. Tailwind `md` is redefined to 760px (`--breakpoint-md: 47.5re
 | 640px  | `sm` | Default page content is bounded to 42rem and centered. Phone-sheet action rails use inline icon/caption and sit beside the primary action (640–759px only).                                                                                                                                       |
 | 760px  | `md` | Wide layout. Bottom dock gives way to the top bar and drawer; navigation precedes `<main>`. `content-wide` headers scroll with content and show breadcrumbs. Sheets become centered dialogs. Full-width buttons cap at 20rem. Zap leads with playback and scan tiles. Toolbars wrap side by side. |
 | 1024px | —    | Two-column compositions: `settings-panel-layout`, Settings overview, Zap main/supporting, Create destinations and search, Library collections and search, deck detail, NFC panel grids.                                                                                                           |
-| 1100px | —    | Selected Library media uses the docked 320px details pane instead of a sheet.                                                                                                                                                                                                                     |
-| 1280px | —    | Persistent 256px sidebar replaces the top bar and drawer; the details pane is 340px.                                                                                                                                                                                                              |
+| 1100px | —    | Selected Library media uses the docked 400px details pane instead of a sheet.                                                                                                                                                                                                                     |
+| 1280px | —    | Persistent 256px sidebar replaces the top bar and drawer; the details pane is 460px (520px from 1600px); the page's left margin beside the sidebar is 24px.                                                                                                                                       |
 
 "Phone" means below 760px, "tablet" 760–1279px, "desktop" from 1280px. Resizing only changes presentation: one route outlet and one mounted tree per feature survive every width, so drafts, focus, reader work, pending requests and scroll owners are never reset, restarted or duplicated by a width change.
 
@@ -59,7 +59,7 @@ Use semantic roles from `src/styles/theme.css` through existing Tailwind aliases
 
 The components layer (`components.css`) owns the border, typography, material and disabled treatment of `Button`, `Card` and inputs through `.wui-button`, `.wui-card` and `.wui-input`. Do not put color, border or font utilities on those primitives; call sites pass layout only. Disabled primitives fade to 50% opacity, except a Button's default recessed "unavailable" state (see Button).
 
-Selection is shown by a recessed face (`--surface-inset` plus the inset material shadow), weight or neutral contrast. There are no blue selection stripes anywhere.
+Selected controls (dock tab, tab faces) show a recessed face (`--surface-inset` plus the inset material shadow), weight or neutral contrast. A selected list row keeps its face unchanged and is marked on its content instead (see Library rows). There are no blue selection stripes, tinted row fills or raised row cards anywhere.
 
 Do not hardcode new colors unless matching a nearby existing hardcoded pattern. Prefer app tokens and WUI components.
 
@@ -69,7 +69,7 @@ Font is locally bundled variable Outfit (100–900), with platform system-font f
 
 Common hierarchy:
 
-- Existing translated page titles retain their source casing during this visual migration; new copy follows Online sentence case. Examples: `Manage Media`, `Play Controls`, `Create a New Tag`.
+- Page titles and navigation labels use sentence case: `Manage media`, `Play controls`, `Recently played`, `Language & region`. Product names keep their capitals (`Zaparoo Online`, `Custom ZapScript`). Other older strings retain their source casing until they are next touched; new copy is sentence case.
 - Section headings and field labels use sentence case: `Media database`, `Metadata scraper`, `Playtime limits`, `Session reset timeout`.
 - Page titles are left-aligned Outfit, 20px (`text-xl`)/600, tight tracking and natural wrapping. `PageHeader` owns the typography; programmatic heading focus remains, without a decorative outline.
   - Seen across settings, create, search, logs, devices.
@@ -158,8 +158,15 @@ Layout:
 - phone: 64px-minimum bottom dock plus bottom safe inset, four destinations, uppercase 12px labels, recessed active tab. Translated or enlarged captions may grow the dock; page clearance follows its measured height. The dock lives in the footer slot
 - tablet: compact top bar with menu control and branding; the menu opens the labeled hierarchy in a side drawer, a dialog named by `nav.menu`, not an icon rail. The top bar owns its top safe inset
 - desktop: persistent 256px sidebar plus left safe inset
+- from 760px the in-flow page title (breadcrumbs or heading) sits in a 48px row, and the space above its text equals the page's side margin: 16px below the tablet top bar, 24px from the top of the window beside the desktop sidebar. Do not add top padding that makes the title sit lower than it sits in from the side
 - from 760px the navigation precedes `<main>` in DOM and tab order; the phone dock stays in the footer
-- parent labels are uppercase 14px/600 links to section roots; child links are 14px/500 in source casing. Heading, chevron and submenu form one unframed group: no inset surface, shadow, separate submenu box or filled row
+- parent labels are uppercase 14px/600 links to section roots; child links are 14px/500 in sentence case. Heading, chevron and submenu form one unframed group: no inset surface, shadow, separate submenu box or filled row
+- children follow their section's phone landing page: the same order and the same groups. Library lists Search and Systems, then `Collections` with All first and the six collections after it; Settings lists its destinations under `App`, `Device` and `Support`, with Devices first under Device. Decks are user content and are not listed
+- group labels are unlinked uppercase 11px/700 muted text with 1px tracking, aligned with ungrouped child links; the links in a group are indented a further 16px beneath their label, so the group reads as a nested level. Every group is headed the same way: a group's own landing view is an `All` link inside it, never a clickable heading. No divider lines
+- pages under the Collections view (each collection, a deck, adding to a deck, a new deck opened from Library) carry `Library › Collections` as ancestor breadcrumbs (`useLibraryCollectionBreadcrumbs`). Collections opens the Library root on that view, as the sidebar's All does
+- collections keep one order everywhere: the lists a user builds (Favorites, Play later, Liked, Disliked), then the ones play history fills in (Recently played, Top played)
+- sidebar labels are short nouns (`Search`, `Devices`, `Media`) even where the page heading is longer. Systems and the Collections group's All both open the Library root, each on its own view, and each is the current page only while its view shows. Systems is the listed ancestor of a system's own pages, All of deck pages. On desktop the Library section link itself always opens the Systems view; in the tablet drawer, where the page keeps its tab bar, it returns to the last view
+- from 1280px, where the sidebar is always present, the Library root drops its Systems/Collections tab bar and shows the chosen view under a `Systems` or `Collections` heading instead. Below 1280px the tab bar remains the way to switch
 - the active section's icon uses interaction blue, including on child routes; text stays neutral, and the current child uses brighter text at 600 weight. Fine-pointer hover is a faint neutral wash; keyboard focus keeps its outline
 - a passive block near the bottom (`SidebarDeviceStatus`) shows device name, connection state and address. It is not a button; Devices is the destination for connecting and managing devices
 - the whole sidebar or drawer scrolls in short windows; controls do not shrink
@@ -167,7 +174,7 @@ Layout:
 
 Behaviour:
 
-- section labels navigate; independent chevrons expand or collapse children without navigating (`aria-expanded`). The current branch opens on navigation; other branches stay as chosen. Ordinary links and disclosure buttons, not an ARIA menu, tree or tab widget
+- section labels navigate; independent chevrons expand or collapse children without navigating (`aria-expanded`). One section is open at a time: opening one closes the others, navigation opens the current branch, and the open section's chevron can close it. Ordinary links and disclosure buttons, not an ARIA menu, tree or tab widget
 - `aria-current="page"` marks only the exact destination. A child link that is an ancestor of the current route, such as a list above its editor, carries `aria-current="true"`
 - gated children are omitted (`visibleWhen`) or, for Create tools that need a connection or NFC, listed but disabled (`enabledWhen`)
 - the Settings unread count uses `NotificationBadge` on dock and sidebar and hides while inside Settings, where Inbox has its own entry
@@ -184,7 +191,7 @@ Global connection status uses `ConnectionStatusBar`, an in-layout strip above bo
 - Settings landing relies on its contextual connection summary instead of duplicating the visible strip; Home does not, because its device pill carries identity rather than connection state
 - restored status appears briefly only after a connection issue was presented
 
-`BackToTop` is the only floating page utility. Use it only on long, scrollable result or reference surfaces where returning to controls or the list start would otherwise require substantial reverse scrolling. It is a flat 48px square with 8px corners, a neutral `surface-raised` face and a semantic border; no raised material, depth shadow or press travel. Keep haptic feedback and a visible focus ring. It sits 1rem above the measured footer clearance, matching its right-edge margin. It respects reduced motion and returns keyboard focus with the viewport. Do not introduce additional floating actions or use primary action colour for this utility.
+`BackToTop` is the only floating page utility. Use it only on long, scrollable result or reference surfaces where returning to controls or the list start would otherwise require substantial reverse scrolling. It is a flat 48px square with 8px corners, a neutral `surface-raised` face and a semantic border; no raised material, depth shadow or press travel. Keep haptic feedback and a visible focus ring. It sits 1rem above the measured footer clearance, matching its right-edge margin. Inside a dialog whose scroll area has a classic (space-taking) scrollbar, it moves in by the scrollbar's width so it never covers it; overlay scrollbars, as on phones, leave it at the plain 1rem margin. It respects reduced motion and returns keyboard focus with the viewport. Do not introduce additional floating actions or use primary action colour for this utility.
 
 Do not use these styles for ordinary page content.
 
@@ -217,6 +224,7 @@ Shape and material are owned by Button and `.wui-button`:
 - pointer hover lowers caps by 2px; press lowers them by 4px, without scaling/fading
 - touch targets remain at least 48px; compact labels do not shrink the hit target
 - reduced-motion settings disable transitions, and disabled controls do not travel
+- every enabled button, `role="button"` element and select shows the pointer cursor, from one base rule in `src/index.css`. Do not add `cursor-pointer` per component; disabled and unavailable states set `not-allowed` themselves
 - disabled appearance communicates why the control is unavailable:
   - `disabledAppearance="unavailable"` is the default recessed/sunken state. Use it when a prerequisite, capability, selection, connection, or current media state is absent.
   - `disabledAppearance="busy"` keeps the raised material at 50% opacity. Use it only while an in-flight action (launching, saving, pairing, searching, deleting) temporarily locks the control. A loading label or spinner should continue to explain the work.
@@ -510,7 +518,9 @@ Real use: language and region selects, Advanced, Online backup schedule, scraper
 - role `search`
 - `TextInput` for query with `type="search"`
 - system and tag selector triggers
-- full-width Search button
+- Search button: full width on phone and in the dialog, natural width in the toolbar row
+- field labels share one style (`text-sm font-medium`, 8px above the control), so they line up when the fields sit side by side
+- on the Create and Library search pages, from 760px the form is one toolbar row above full-width results: the query field stretches, System and Tags keep a 220px basis, and Search sits at the end. When that does not fit (tablet, or beside the details pane) the query takes the first row and System, Tags and Search share the second. Never a side column of filters. The layout lives in `.library-search-*`/`.create-search-*`, not utility classes on the form
 
 Do not build another search form or copy its fields into a page.
 
@@ -551,10 +561,11 @@ Presentation:
 - content-sized by default and capped at 80% of viewport height and the available safe space; keyboard and notch insets participate. `fixedHeight` requests cannot exceed those caps
 - opaque raised surface with semantic border and material highlight; 16px shell gutter matching page content. Body wrappers add no second horizontal gutter; padding inside rows, cards and fields stays component-owned
 - closed sheets stay mounted for lifecycle and transitions but suppress their upward shadow while off-screen, so stacked closed sheets never paint a gradient over the dock
+- closed floating dialogs hide with `visibility`, so nothing inside a dialog may use `transition-all`: it would animate visibility and leave that element on screen for a moment after the dialog closes. Name the properties (`transition-colors`, `transition-[opacity,scale]`)
 - header, scrollable body, and persistent footer form distinct zones; focus trap and Android back handling are built in
 - one mounted title/body/footer tree survives sheet/dialog resize; widening cancels an in-flight drag without dismissing
 
-Workspace bodies reuse existing controls and scrolling ownership. Media search uses intrinsic 20rem/30rem filter/result stacks from 1024px; available width and enlarged text determine wrapping. Command categories use intrinsic 24rem tracks from 760px. Forms, confirmations, Profiles, pairing, and system/tag selectors stay bounded; do not widen them just because viewport space is available.
+Workspace bodies reuse existing controls and scrolling ownership. The media search dialog uses intrinsic 20rem/30rem filter/result stacks from 1024px; available width and enlarged text determine wrapping. The search pages use the toolbar row described under the search form. Command categories use intrinsic 24rem tracks from 760px. Forms, confirmations, Profiles, pairing, and system/tag selectors stay bounded; do not widen them just because viewport space is available.
 
 Use `dismissible={false}` only for mandatory blocking flows. It keeps the scrim but disables overlay-click, drag, Escape, Android-back, and close-button dismissal while preserving explicit completion/logout actions. Use `footerSkipLabel` when long content needs direct keyboard/screen-reader navigation to actions.
 
@@ -582,14 +593,14 @@ Library preserves Systems/Collections, system/folder browsing, searches, tagged 
 Layout:
 
 - root, browse, collection, search, deck detail and deck-item editor use `headerMode="content-wide"` with breadcrumbs to Library; the deck-item editor also links to its deck. Folder/search ancestors are session-owned buttons, not fake route links
-- collection tiles are `outline` buttons in a two-column grid (`library-collection-links`). From 1024px Collections separates tiles and Decks into independently sized stacks; the deck filter/New deck toolbar wraps from 760px
+- collection tiles are `outline` buttons in a grid (`library-collection-links`): two columns on phone, three from 760px, one row of equal tiles from 1280px. Collections and Decks are stacked sections at every width, never side-by-side columns; the deck list runs the full width beneath the tiles. The deck filter and New deck share one line from 760px, with New deck at a fixed 12rem from 1024px
 - Favorites, Liked, Play later and Disliked (`LibraryTaggedCollection`) and `/library/recent` and `/library/top` (`LibraryHistoryCollection`) all render through `LibraryCollectionPage`. History rows add a muted detail line (last played, or total play time)
 - the first list row sits at the standard page inset on collections and system browse; do not pull lists up with negative margins
-- the selected row is recessed (`--surface-inset` plus the inset material shadow, `.library-browse-row[aria-current="true"]`), with no colour stripe
-- Library search separates bounded filters and flexible results from 1024px using 20rem/30rem flex bases; available width, including space taken by the details pane and enlarged text, decides whether they sit side by side
-- deck detail uses independent context/items stacks from 1024px, with one drag/edit owner and the contextual rail. Metadata fields and description stay bounded to 42rem
+- the selected row (`.library-browse-row[aria-current="true"]`) has no background, border or stripe. Its title takes the interaction colour and its trailing chevron becomes a solid arrow in the same colour (`RowSelectionChevron`). The shape change is required: selection must not rest on colour alone
+- Library search puts its form in a toolbar row above full-width results from 760px; available width, including space taken by the details pane and enlarged text, decides whether the row wraps to two
+- deck detail is one column at every width: description, the contextual rail (capped at 28rem from 760px, not stretched across the page), then the items at full width, with one drag/edit owner. Metadata fields and description stay bounded to 42rem. From 1100px a selected item shows in the docked details pane like other Library lists, its row marked as selected; smaller windows keep the sheet. Editing the deck closes the pane
 - from 1100px selected-media details occupy the docked pane (see Breakpoints): a labeled nonmodal region with its own scroll; no backdrop, focus trap, inert background, swipe-dismiss, or modal-priority Back. Smaller windows keep the sheet
-- in the docked pane, detail label/value rows and the tags row stack; the footer stacks the action rail above full-width Launch
+- in the docked pane, detail rows keep labels beside values as they do in the sheet; the footer stacks the action rail above Launch, which keeps the standard button width
 - pending game-detail artwork keeps its 16rem height in a roughly 4:3 stand-in capped at 21.333rem; loaded images keep their natural aspect ratio
 - virtual lists measure their origin within the actual page scroller, including preceding headers/filters, and measure natural row height so larger text wraps without overlap. Letter jumps honor measured scroll padding
 
@@ -598,8 +609,8 @@ Behaviour:
 - one mounted details feature and presentation host survive resize, including carousel state, contextual NFC work, and child-dialog drafts. Wide selection keeps list focus; the narrow sheet traps focus
 - selection stays scoped to device and browse/search/collection context in session memory; it neither launches media nor creates a URL/history entry. Closing or invalidating a selection cancels its owned work; changing presentation does not. Modified ancestor-link clicks do not clear it
 - child dialogs retain takeover behavior and the mounted underlying context
-- game metadata is an exploration surface: each developer/publisher/genre/rating/family/board value, expanded tag, and system/year/player summary value links to Library results with a trailing chevron. The whole value is the target; field labels stay static. Descriptions, paths, and launcher identifiers remain reference text
-- metadata links use exact raw `type:tag` filters and current system/device context; friendly labels never rewrite queries. Core labels take precedence, then translated known region/language/edition/revision fallbacks; unknown codes stay raw
+- game metadata is an exploration surface. The Details list has one labelled row per fact: System first, then every canonical tag type with a display name (year, players, developer, publisher, genre, region, language, edition, revision and the rest), using the tag type's name as the label. Each value is an inline `text-primary` link to Library results: no chevron, no enlarged box, underline on hover; label and value share a baseline. Several values in one row are comma-separated. Dump and hardware facts (extension, dump status, MAME parent, video, media, protection and similar) sit with Path and Launcher under Technical details. The rows are one shared implementation (`LibraryMediaFacts`, `LibraryFactRows`, `TechnicalDetails`) used by game details, Now Playing details and deck items that have an indexed game. Tags of types without a display name stay in a Tags row as ordinary badges that are themselves the link, with no chevron or added padding. The caption beneath the artwork (system • year • players) is plain text, not links. Field labels stay static. Descriptions, paths, and launcher identifiers remain reference text. Collapsible sections (Technical details) use a down chevron that turns up when open, as the sidebar does; right chevrons mean navigation
+- metadata links use exact raw `type:tag` filters and current system/device context; friendly labels never rewrite queries. Core labels take precedence, then translated names for known vocabulary values only (genres, region, language, edition, revision, players, input and the other closed vocabularies in `libraryTagLabels.ts`). Free text and any value outside those vocabularies is shown exactly as Core sent it; never reformat it
 - `/library/search` accepts validated optional system/tag parameters and auto-runs supported filters. Each exploration history entry owns its search/scroll/selection session; at most 20 are kept per device, and the least recently visited are forgotten along with their scroll
 - metadata navigation remembers the originating details per history entry. Back (browser, page, swipe, Android) returns to those details and Forward restores results; a history entry's return marker outranks the scope's later selection. Explicit close or selection clears the marker; device changes invalidate it. Modified/middle/new-tab clicks do not mutate the source
 
@@ -716,8 +727,8 @@ Patterns:
 - Main/supporting wrappers stay mounted at every width and become `display: contents` below the two-column threshold so phone order stays reader-first. Layout ownership stays separate from feature/session ownership; customization editor, visibility preferences, drag handles, and arbitrary resizing are not implemented.
 - Now playing, Controls, and Readers use the same outside-card Home heading. Docked Controls owns its body material, not its section heading. Omit the Controls launcher while the pane is visible. Docked Controls does not repeat disconnected copy: global connection status and disabled live controls suffice. Standalone phone dialog keeps its recovery hint; actual input/capture errors remain visible.
 - From 760px scan actions form a row of equal square-ish tiles with icons above captions, matching 24px icons, and a 10rem minimum height. Tracks grow from 10rem to 12rem and wrap when space or text sizing requires it; a single capability stays one tile rather than stretching across the column. Aspect ratio is a preference, not a fixed height: translated labels and active status can grow the row. NFC retains its primary material and camera its neutral secondary material; activity feedback stays within the existing mounted control. Phone scan geometry remains unchanged.
-- The scan bank opts nested reader wrappers out of the Button width cap, not just the outer button. Queued/deep-link writes still replace scanning with the contextual reader control and its retry/cancel recovery bank; from 760px that control is full-width with inline captions and at least 72px height. Playback artwork expands to 96×128 CSS px at default text size, with a full-width transport bank and 64px minimum key height. Remote D-pad and secondary keys retain 64px targets; their horizontal grouping wraps when width or text size requires it.
-- Scan history and Play history are real Zap child routes (`ZapHistory.tsx`), accessible directly at any width, with content-wide breadcrumb headers to Zap; phone keeps pinned Back/Refresh. They share rows, states and replay with the phone History sheet. Play history lists chronological sessions, including repeated games, with cursor pagination; Library Recently played remains a deduplicated collection. Page queries are device-scoped, and play history is gated on Core support.
+- The scan bank opts nested reader wrappers out of the Button width cap, not just the outer button. Queued/deep-link writes still replace scanning with the contextual reader control and its retry/cancel recovery bank; from 760px that control is full-width with inline captions and at least 72px height. Playback artwork expands to 96×128 CSS px at default text size, with a full-width recessed transport bank whose keys are centred, 64px tall at minimum and capped at 80px wide. Remote D-pad and secondary keys retain 64px targets; their horizontal grouping wraps when width or text size requires it.
+- Scan history and Play history are real Zap child routes (`ZapHistory.tsx`), accessible directly at any width, with content-wide breadcrumb headers to Zap; phone keeps pinned Back/Refresh. They share rows, states and replay with the phone History sheet. Play history lists chronological sessions, including repeated games, with cursor pagination; Library Recently played remains a deduplicated collection. Page queries are device-scoped, and play history is gated on Core support. On the pages, row text aligns with the page title (`flush` rows); the sheet keeps row padding. A played row's artwork and title are one control that opens the shared game details (the sheet hands the entry to Zap, which swaps the sheets); the trailing Play stays a separate quick launch. Scan rows are tag contents and open nothing.
 - Devices combines the shared connection/discovery/manual-entry flow with saved-device management and direct connection actions, in `settings-panel-layout` columns from 1024px. The phone DeviceSheet hosts the same connection feature with its existing footer/focus behavior. Width changes do not restart discovery or clear address drafts. Where the Core is too old to link to Zaparoo Online, device linking is plain muted text, not a disabled button.
 - One Home/session tree and one Controls controller remain mounted. Controls use the existing nonmodal pane on wide screens and the existing phone modal intent below the threshold; width alone does not open a previously closed phone modal.
 - Keyboard mode/case, focused surviving controls, screenshot results, and in-flight captures survive presentation changes. Captured exports remain usable offline.
@@ -754,7 +765,7 @@ Library search opts into `rowVariant="library"`, which renders the same artwork 
 - metadata `text-sm`, muted filename when needed
 - `NextIcon` right
 
-Do not wrap search results in new cards. Create search keeps its bounded filter/results stack below 1024px; from 1024px, filters occupy a 20rem supporting column alongside flexible results. Both use the same page scroll owner. Selection retains the write-focused detail modal rather than introducing another details owner.
+Do not wrap search results in new cards. Create search keeps its bounded stack on phone; from 760px it uses the same full-width toolbar row and results as Library search. Both use the same page scroll owner. Selection retains the write-focused detail modal rather than introducing another details owner.
 
 ### Recent searches
 

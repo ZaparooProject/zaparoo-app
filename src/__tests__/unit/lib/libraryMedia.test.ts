@@ -401,11 +401,25 @@ describe("Library media helpers", () => {
         type: "developer",
         tags: [{ type: "developer", tag: "studio", label: "Studio" }],
       },
+      { type: "region", tags: [{ type: "region", tag: "us" }] },
     ]);
-    expect(result.tags).toEqual([
-      { type: "region", tag: "us" },
-      { type: "user", tag: "hidden" },
+    expect(result.tags).toEqual([{ type: "user", tag: "hidden" }]);
+  });
+
+  it("should keep dump and hardware facts for the technical section", () => {
+    const result = organizeLibraryDetailTags([
+      { type: "genre", tag: "action" },
+      { type: "extension", tag: "sfc" },
+      { type: "dump", tag: "verified" },
+      { type: "custom", tag: "thing" },
     ]);
+
+    expect(result.facts.map((fact) => fact.type)).toEqual(["genre"]);
+    expect(result.technicalFacts.map((fact) => fact.type)).toEqual([
+      "dump",
+      "extension",
+    ]);
+    expect(result.tags).toEqual([{ type: "custom", tag: "thing" }]);
   });
 
   it("should detect and build favorite updates without displaying user tags", () => {

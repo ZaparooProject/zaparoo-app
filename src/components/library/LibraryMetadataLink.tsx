@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
-import { ChevronRightIcon } from "lucide-react";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { useHapticPress } from "@/hooks/useHapticPress";
 import { useMetadataHistoryKey } from "@/hooks/useMetadataDetailsReturn";
@@ -20,6 +19,8 @@ export function LibraryMetadataLink(
     label: string;
     children?: ReactNode;
     enabled: boolean;
+    /** A badge keeps its own face; text values read as inline links. */
+    variant?: "text" | "badge";
   },
 ) {
   const router = useRouter({ warn: false });
@@ -38,7 +39,11 @@ export function LibraryMetadataLink(
       resetScroll
       state={{ appMetadataOrigin: historyKey }}
       aria-label={props.label}
-      className="text-primary focus-visible:ring-ring inline-flex min-h-12 max-w-full min-w-12 cursor-pointer items-center gap-1 rounded-sm wrap-anywhere hover:underline focus-visible:ring-2 focus-visible:outline-none"
+      className={
+        props.variant === "badge"
+          ? "focus-visible:ring-ring [@media(hover:hover)_and_(pointer:fine)]:hover:[&>span]:border-input [@media(hover:hover)_and_(pointer:fine)]:hover:[&>span]:bg-surface-highlight inline-flex max-w-full cursor-pointer rounded-sm focus-visible:ring-2 focus-visible:outline-none [&>span]:max-w-full"
+          : "text-primary focus-visible:ring-ring -my-2 inline-block max-w-full cursor-pointer rounded-sm py-2 wrap-anywhere hover:underline focus-visible:ring-2 focus-visible:outline-none"
+      }
       onPointerUp={press}
       onClick={(event) => {
         if (
@@ -63,8 +68,7 @@ export function LibraryMetadataLink(
         }
       }}
     >
-      <span className="min-w-0 [&>span]:max-w-full">{value}</span>
-      <ChevronRightIcon size={16} className="shrink-0" aria-hidden="true" />
+      {value}
     </Link>
   );
 }

@@ -12,7 +12,7 @@ import {
   historyPageLimit,
   MEDIA_HISTORY_QUERY_KEYS,
 } from "@/lib/mediaHistory";
-import type { HistoryResponse } from "@/lib/models";
+import type { HistoryResponse, MediaBrowseEntry } from "@/lib/models";
 import { useStatusStore } from "@/lib/store";
 import { SlideModal } from "../SlideModal";
 import { HistoryQueryState } from "./HistoryQueryState";
@@ -31,6 +31,8 @@ interface HistoryModalProps {
   /** The scan history request failed. */
   historyError?: boolean;
   onRetryHistory?: () => unknown;
+  /** Opens game details for a played entry; the owner swaps the sheets. */
+  onSelectMedia?: (entry: MediaBrowseEntry) => void;
 }
 
 export const HistoryModal = memo(function HistoryModal({
@@ -39,6 +41,7 @@ export const HistoryModal = memo(function HistoryModal({
   historyData,
   historyError = false,
   onRetryHistory,
+  onSelectMedia,
 }: HistoryModalProps) {
   const { t } = useTranslation();
   const connected = useStatusStore((state) => state.connected);
@@ -124,6 +127,7 @@ export const HistoryModal = memo(function HistoryModal({
             <PlayedHistoryList
               entries={playedEntries}
               launchAvailable={replay.available}
+              onSelect={onSelectMedia}
               onLaunch={replay.launchMedia}
             />
           </HistoryQueryState>

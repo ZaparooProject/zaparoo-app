@@ -23,7 +23,7 @@ import { CoreAPI } from "@/lib/coreApi";
 import { entrySystemId } from "@/lib/libraryMedia";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
-import type { MediaBrowseEntry, PlayingResponse } from "@/lib/models";
+import type { PlayingResponse } from "@/lib/models";
 import { HistoryIcon, NfcIcon, ZapLogo } from "@/lib/images";
 import { useStatusStore } from "@/lib/store";
 import { Button } from "@/components/wui/Button";
@@ -39,7 +39,7 @@ import { NowPlayingCard } from "@/components/home/NowPlayingCard";
 import { ReaderStrip } from "@/components/home/ReaderStrip";
 import { HistoryModal } from "@/components/home/HistoryModal";
 import { LibraryMediaDetailsModal } from "@/components/library/LibraryMediaDetailsModal";
-import { useMetadataDetailsReturn } from "@/hooks/useMetadataDetailsReturn";
+import { useReturnableMediaDetails } from "@/hooks/useReturnableMediaDetails";
 import { StopConfirmModal } from "@/components/home/StopConfirmModal";
 import { RemoteKeyboardModal } from "@/components/RemoteKeyboardModal";
 import { useScanOperations } from "@/hooks/useScanOperations";
@@ -116,18 +116,8 @@ export function Index() {
     setOpen: setDeviceSheetOpen,
     shared: sharedDeviceSheet,
   } = useDeviceSheetController();
-  const { entry: returnedCoverEntry, forget: forgetCoverReturn } =
-    useMetadataDetailsReturn("home-covers", deviceKey);
-  const [selectedCoverEntry, setCoverEntry] = useState<MediaBrowseEntry | null>(
-    () => returnedCoverEntry,
-  );
-  const setSelectedCoverEntry = useCallback(
-    (entry: MediaBrowseEntry | null) => {
-      forgetCoverReturn();
-      setCoverEntry(entry);
-    },
-    [forgetCoverReturn],
-  );
+  const { entry: selectedCoverEntry, select: setSelectedCoverEntry } =
+    useReturnableMediaDetails("home-covers", deviceKey);
   const [remoteKeyboardOpen, setRemoteKeyboardOpen] = useState(false);
   const { available: backgroundMediaAvailable } = useCoreFeature(
     "backgroundMediaSlot",
@@ -467,6 +457,10 @@ export function Index() {
         historyData={history.data}
         historyError={history.isError}
         onRetryHistory={history.refetch}
+        onSelectMedia={(entry) => {
+          setHistoryOpen(false);
+          setSelectedCoverEntry(entry);
+        }}
       />
       {purchaseModal}
       <StopConfirmModal

@@ -60,6 +60,15 @@
     @apply border-border outline-ring/50;
   }
 
+  /* Tailwind resets buttons to the default arrow. Anything clickable shows
+     the pointer; disabled treatments in later layers still override it. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  select:not(:disabled) {
+    cursor: pointer;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-app);

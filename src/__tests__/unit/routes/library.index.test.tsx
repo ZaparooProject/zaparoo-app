@@ -258,11 +258,11 @@ describe("Library index route", () => {
         .map((link) => link.textContent),
     ).toEqual([
       "library.favorites",
+      "library.playLater",
+      "library.liked",
+      "library.disliked",
       "library.recentlyPlayedShort",
       "library.topPlayed",
-      "library.liked",
-      "library.playLater",
-      "library.disliked",
     ]);
 
     await user.type(

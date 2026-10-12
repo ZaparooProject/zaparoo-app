@@ -19,6 +19,7 @@ import { EmptyState } from "@/components/wui/EmptyState";
 import { Button } from "@/components/wui/Button";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { LibraryBrowseList } from "@/components/library/LibraryBrowseList";
+import { useLibraryCollectionBreadcrumbs } from "@/components/library/useLibraryBreadcrumbs";
 import { LibraryDetailsSurface } from "@/components/library/LibraryDetailsSurface";
 import {
   LibrarySearchBody,
@@ -76,6 +77,9 @@ export function LibraryCollectionPage(props: {
     (state) => state.coreVersionPending,
   );
   const { entry: selectedEntry, selectEntry: setSelectedEntry } = selection;
+  const collectionBreadcrumbs = useLibraryCollectionBreadcrumbs(() =>
+    setSelectedEntry(null),
+  );
   const searchOpen = search?.open ?? false;
   const closeSearch = search?.onClose;
 
@@ -160,11 +164,7 @@ export function LibraryCollectionPage(props: {
       <PageFrame
         headerMode="content-wide"
         breadcrumbs={[
-          {
-            to: "/library",
-            label: t("library.title"),
-            onNavigate: () => setSelectedEntry(null),
-          },
+          ...collectionBreadcrumbs,
           ...(searchOpen ? [{ label: t(labels.title), onClick: goBack }] : []),
         ]}
         layout="workspace"

@@ -19,7 +19,8 @@ import { LibraryMediaRow } from "@/components/library/LibraryMediaRow";
 import { libraryMediaRowGeometry } from "@/components/library/libraryMediaRowGeometry";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { Card } from "@/components/wui/Card.tsx";
-import { NextIcon, SettingsIcon, WarningIcon } from "@/lib/images.tsx";
+import { SettingsIcon, WarningIcon } from "@/lib/images.tsx";
+import { RowSelectionChevron } from "@/components/RowSelectionChevron";
 import { InlineLoading } from "@/components/InlineLoading.tsx";
 import { DelayedLoading } from "@/components/DelayedLoading.tsx";
 import { Button } from "@/components/wui/Button.tsx";
@@ -509,7 +510,7 @@ const SearchResultItem = React.memo(function SearchResultItem({
     <button
       type="button"
       className={classNames(
-        "library-browse-row focus-visible:ring-ring flex w-full cursor-pointer flex-row items-center justify-between gap-1 px-1 pt-3 pb-5 text-left focus-visible:ring-2 focus-visible:outline-none",
+        "library-browse-row focus-visible:ring-ring flex w-full flex-row items-center justify-between gap-1 px-1 pt-3 pb-5 text-left focus-visible:ring-2 focus-visible:outline-none",
         { "border-border border-b": !isLast },
       )}
       data-testid={`result-${index}`}
@@ -519,7 +520,7 @@ const SearchResultItem = React.memo(function SearchResultItem({
       onClick={() => setSelectedResult(game)}
     >
       <div className="flex min-w-0 flex-1 flex-col">
-        <p className="font-semibold">{displayName}</p>
+        <p className="library-browse-row-title font-semibold">{displayName}</p>
         <p className="text-sm">{systemName}</p>
         <TagList tags={displayTags} preserveOrder />
       </div>
@@ -529,9 +530,7 @@ const SearchResultItem = React.memo(function SearchResultItem({
             <HeartIcon size={18} fill="currentColor" aria-hidden="true" />
           </span>
         )}
-        <span aria-hidden="true" className="text-muted-foreground shrink-0">
-          <NextIcon size="20" />
-        </span>
+        <RowSelectionChevron selected={selected} />
       </div>
     </button>
   );

@@ -197,7 +197,9 @@ describe("Now Playing preferences", () => {
     await userEvent.setup().click(details);
     const dialog = screen.getByRole("dialog", { name: "Game" });
     expect(within(dialog).getByText("Platformer")).toBeInTheDocument();
-    expect(within(dialog).getByLabelText("region us")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("library.tagValues.region.us"),
+    ).toBeInTheDocument();
     expect(within(dialog).getByText("Nintendo")).toBeInTheDocument();
     expect(
       within(dialog).queryByLabelText("user favorite"),
@@ -268,7 +270,9 @@ describe("Now Playing preferences", () => {
       .setup()
       .click(screen.getByRole("button", { name: "library.details: Game" }));
     expect(
-      within(screen.getByRole("dialog", { name: "Game" })).getByText("Puzzle"),
+      within(screen.getByRole("dialog", { name: "Game" })).getByText(
+        "library.tagValues.genre.puzzle",
+      ),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "scan.stopPlayingButton" }),
@@ -399,7 +403,9 @@ describe("Now Playing preferences", () => {
       .setup()
       .click(screen.getByRole("button", { name: "library.details: Game" }));
     expect(
-      within(screen.getByRole("dialog", { name: "Game" })).getByText("Puzzle"),
+      within(screen.getByRole("dialog", { name: "Game" })).getByText(
+        "library.tagValues.genre.puzzle",
+      ),
     ).toBeInTheDocument();
     await act(async () =>
       finish(
