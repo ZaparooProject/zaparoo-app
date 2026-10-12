@@ -86,7 +86,7 @@ export function LanguageRegionSettings() {
         </h1>
       }
     >
-      <Card className="flex flex-col gap-4">
+      <Card className="settings-form-rows flex flex-col gap-4">
         <Select
           id="settings-language"
           label={t("settings.languageRegion.appLanguage")}

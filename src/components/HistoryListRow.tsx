@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import classNames from "classnames";
 import { useTactilePress } from "@/hooks/useTactilePress";
+import { RowSelectionChevron } from "@/components/RowSelectionChevron";
 
 interface HistoryListRowProps {
   leading?: ReactNode;
@@ -10,7 +11,10 @@ interface HistoryListRowProps {
   action: ReactNode;
   /** Page lists align row content with the page title; sheets keep padding. */
   flush?: boolean;
-  /** Makes the leading artwork and text one control that opens details. */
+  /**
+   * Makes the row open details, as the Library's rows do: everything but the
+   * trailing action is one control, marked by a chevron at the far end.
+   */
   onSelect?: () => void;
   selectLabel?: string;
 }
@@ -42,13 +46,15 @@ export function HistoryListRow({
     <li
       className={classNames(
         "border-border flex items-center gap-3 border-b border-solid py-3 last:border-b-0",
-        { "px-3": !flush },
+        { "px-3": !flush, relative: onSelect !== undefined },
       )}
     >
       {onSelect ? (
         <button
           type="button"
-          className="focus-visible:ring-ring focus-visible:ring-offset-background [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-highlight -m-1 flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-md p-1 text-left focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          // The control's hit area is the whole row (`after`); the action
+          // sits above it and the chevron lets clicks through to it.
+          className="focus-visible:ring-ring focus-visible:ring-offset-background -m-1 flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-md p-1 text-left after:absolute after:inset-0 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           aria-label={selectLabel}
           onClick={() => {
             if (tactilePress.shouldFireClick()) onSelect();
@@ -64,7 +70,10 @@ export function HistoryListRow({
           {text}
         </>
       )}
-      <div className="shrink-0">{action}</div>
+      <div className={classNames("shrink-0", { "relative z-[1]": onSelect })}>
+        {action}
+      </div>
+      {onSelect && <RowSelectionChevron selected={false} />}
     </li>
   );
 }

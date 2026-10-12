@@ -70,11 +70,18 @@ async function renderDialogs(path = "/create/custom") {
   return { ...render(<RouterProvider router={router} />), router };
 }
 
-function scriptEditor() {
+// Narrow layouts open the editor on its step view, with the textarea on the
+// Text tab; wide ones show both side by side and have no tabs.
+async function openScriptEditor(user: ReturnType<typeof userEvent.setup>) {
+  const textTab = screen.queryByRole("tab", { name: "zapscript.builder.text" });
+  if (textTab) await user.click(textTab);
   return screen.getByRole("textbox", {
     name: "create.custom.textareaLabel",
   }) as HTMLTextAreaElement;
 }
+
+// A command's button is named by its description and its name.
+const stopCommand = /(^|\s)stop(\s|$)/;
 
 function startSheetDrag(target: HTMLElement) {
   fireEvent.touchStart(target, {
@@ -164,7 +171,7 @@ describe("Adaptive dialogs", () => {
     const resize = responsiveWindow(1440);
     const user = userEvent.setup();
     const { baseElement } = await renderDialogs();
-    const editor = scriptEditor();
+    const editor = await openScriptEditor(user);
     await user.type(editor, "A|B");
     editor.setSelectionRange(1, 1);
     fireEvent.select(editor);
@@ -174,14 +181,14 @@ describe("Adaptive dialogs", () => {
     const dialog = await screen.findByRole("dialog", {
       name: "create.custom.commandsTitle",
     });
-    const command = within(dialog).getByRole("button", { name: "stop" });
+    const command = within(dialog).getByRole("button", { name: stopCommand });
     await act(() => command.focus());
     for (const width of [820, 390, 1440]) {
       await resize(width);
       expect(
         screen.getByRole("dialog", { name: "create.custom.commandsTitle" }),
       ).toBe(dialog);
-      expect(within(dialog).getByRole("button", { name: "stop" })).toBe(
+      expect(within(dialog).getByRole("button", { name: stopCommand })).toBe(
         command,
       );
       expect(command).toHaveFocus();
@@ -190,8 +197,9 @@ describe("Adaptive dialogs", () => {
     expect(await findA11yViolations(baseElement)).toEqual([]);
     await user.click(command);
     await waitFor(() => expect(editor).toHaveFocus());
-    expect(editor).toHaveValue("A**stop|B");
-    expect(editor.selectionStart).toBe("A**stop".length);
+    // A command is a step of its own, so it is set apart on both sides.
+    expect(editor).toHaveValue("A||**stop|||B");
+    expect(editor.selectionStart).toBe("A||**stop".length);
     expect(editor.selectionEnd).toBe(editor.selectionStart);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(CoreAPI.run).not.toHaveBeenCalled();
@@ -201,7 +209,7 @@ describe("Adaptive dialogs", () => {
     const resize = responsiveWindow(390);
     const user = userEvent.setup();
     const { router } = await renderDialogs();
-    const editor = scriptEditor();
+    const editor = await openScriptEditor(user);
     await user.type(editor, "A|B");
     const trigger = screen.getByRole("button", {
       name: "create.custom.insertCommand",
@@ -241,7 +249,7 @@ describe("Adaptive dialogs", () => {
     const resize = responsiveWindow(1440);
     const user = userEvent.setup();
     const { router } = await renderDialogs();
-    const editor = scriptEditor();
+    const editor = await openScriptEditor(user);
     await user.type(editor, "Keep this draft");
     const trigger = screen.getByRole("button", { name: "create.custom.clear" });
     await user.click(trigger);
@@ -283,9 +291,9 @@ describe("Adaptive dialogs", () => {
       }),
     );
     await renderDialogs();
-    const editor = scriptEditor();
-    await user.type(editor, "A|B");
-    editor.setSelectionRange(1, 1);
+    const editor = await openScriptEditor(user);
+    await user.type(editor, "a:|B");
+    editor.setSelectionRange(2, 2);
     fireEvent.select(editor);
     await user.click(
       screen.getByRole("button", { name: "create.custom.insertMedia" }),
@@ -391,7 +399,7 @@ describe("Adaptive dialogs", () => {
       expect(
         within(details).getByRole("button", { name: "create.custom.insert" }),
       ).toBe(insert);
-      expect(editor).toHaveValue("A|B");
+      expect(editor).toHaveValue("a:|B");
     }
     await user.keyboard("{Escape}");
     expect(screen.getByRole("dialog", { name: "create.search.title" })).toBe(
@@ -409,7 +417,8 @@ describe("Adaptive dialogs", () => {
         { name: "create.custom.insert" },
       ),
     );
-    expect(editor).toHaveValue("ANES/Mario.nes|B");
+    // Straight after `:` the media is that command's argument: no separator.
+    expect(editor).toHaveValue("a:NES/Mario.nes|B");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(CoreAPI.mediaSearch).toHaveBeenCalledTimes(1);
     expect(CoreAPI.run).not.toHaveBeenCalled();

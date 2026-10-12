@@ -901,22 +901,11 @@
         "selectSystem": "Systeem",
         "zapscriptHelp": "Help",
         "clearConfirmTitle": "ZapScript wissen?",
-        "commandPalette": "Commandopalet",
-        "insertCommandStart": "Begin van commando invoegen",
-        "insertCommandSeparator": "Commandoscheidingsteken invoegen",
         "insertMedia": "Mediapad invoegen",
         "insert": "Invoegen",
         "insertSystem": "Systeem invoegen",
         "insertCommand": "Commando invoegen",
-        "runZapScript": "ZapScript uitvoeren",
-        "commandCategories": {
-          "launch": "Starten",
-          "input": "Invoer",
-          "playlist": "Afspeellijst",
-          "mister": "MiSTer",
-          "http": "HTTP",
-          "other": "Overig"
-        }
+        "runZapScript": "ZapScript uitvoeren"
       },
       "nfc": {
         "title": "NFC-hulpprogramma's",
@@ -1662,6 +1651,14 @@
       "multipleSelected": "Geselecteerde systemen: {{count}}",
       "clearAll": "Alles wissen"
     },
+    "launcherSelector": {
+      "title": "Launcher selecteren",
+      "search": "Launchers zoeken",
+      "loadError": "Kan launchers niet laden",
+      "noResults": "Geen launchers gevonden",
+      "noLaunchers": "Geen launchers beschikbaar",
+      "unavailable": "Niet beschikbaar op dit apparaat"
+    },
     "tagSelector": {
       "expandAll": "Alles uitklappen",
       "collapseAll": "Alles inklappen",
@@ -1778,7 +1775,8 @@
       "onlineLibrarySync": "Zaparoo Online-bibliotheeksynchronisatie",
       "profiles": "Profielen",
       "mediaRecents": "Recent gespeeld",
-      "mediaHistoryDistinct": "Afspeelgeschiedenis zonder duplicaten"
+      "mediaHistoryDistinct": "Afspeelgeschiedenis zonder duplicaten",
+      "launchers": "Launcherlijst"
     },
     "inbox": {
       "title": "Meldingen",
@@ -1898,6 +1896,215 @@
         "back": "Terug",
         "next": "Volgende",
         "finish": "Voltooien"
+      }
+    },
+    "zapscript": {
+      "builder": {
+        "view": "Editorweergave",
+        "steps": "Stappen",
+        "text": "Tekst",
+        "addStep": "Stap toevoegen",
+        "empty": "Nog geen stappen",
+        "emptyHint": "Voeg een stap toe om te kiezen wat er gebeurt bij het scannen",
+        "stepLabel": "Stap {{position}}: {{name}}",
+        "moveUp": "Stap {{position}} omhoog verplaatsen",
+        "moveDown": "Stap {{position}} omlaag verplaatsen",
+        "remove": "Stap {{position}} verwijderen",
+        "options": "Geavanceerd",
+        "textStep": "ZapScript-tekst",
+        "textStepDescription": "Deze stap gebruikt syntaxis die alleen als tekst kan worden bewerkt",
+        "textStepField": "ZapScript voor stap {{position}}",
+        "textOnly": "Dit script kan alleen als tekst worden bewerkt",
+        "textOnlyHint": "Het gebruikt syntaxis die de stappenweergave niet in stappen kan opdelen",
+        "editAsText": "Als tekst bewerken",
+        "noChoice": "Niet ingesteld",
+        "searchMediaFor": "Media zoeken voor {{field}}",
+        "chooseSystemFor": "Een systeem kiezen voor {{field}}",
+        "chooseLauncherFor": "Een launcher kiezen voor {{field}}",
+        "searchCommands": "Opdrachten zoeken",
+        "noCommands": "Geen opdrachten gevonden"
+      },
+      "groups": {
+        "launch": "Starten",
+        "playlist": "Afspeellijst",
+        "input": "Invoer",
+        "ui": "Op het scherm",
+        "profile": "Profielen",
+        "mister": "MiSTer",
+        "http": "Webverzoeken",
+        "utility": "Hulpmiddelen"
+      },
+      "commands": {
+        "launch": {
+          "description": "Media starten via een pad of titel"
+        },
+        "launch_system": {
+          "description": "Een systeem openen zonder media te laden"
+        },
+        "launch_random": {
+          "description": "Een willekeurige game van een systeem starten"
+        },
+        "launch_search": {
+          "description": "De eerste media starten die bij een zoekopdracht past"
+        },
+        "launch_title": {
+          "description": "Media starten op basis van systeem en titel"
+        },
+        "launch_last": {
+          "description": "Onlangs gespeelde media starten"
+        },
+        "playlist_play": {
+          "description": "Een afspeellijst starten of de gepauzeerde hervatten"
+        },
+        "playlist_stop": {
+          "description": "De afspeellijst stoppen en sluiten"
+        },
+        "playlist_next": {
+          "description": "Naar het volgende item in de afspeellijst gaan"
+        },
+        "playlist_previous": {
+          "description": "Naar het vorige item in de afspeellijst gaan"
+        },
+        "playlist_goto": {
+          "description": "Naar een bepaald item in de afspeellijst springen"
+        },
+        "playlist_pause": {
+          "description": "De afspeellijst pauzeren"
+        },
+        "playlist_load": {
+          "description": "Een afspeellijst laden zonder deze te starten"
+        },
+        "playlist_open": {
+          "description": "Een afspeellijst op het scherm tonen om een item te kiezen"
+        },
+        "execute": {
+          "description": "Een opdracht op het apparaat uitvoeren"
+        },
+        "delay": {
+          "description": "Wachten voordat de volgende stap wordt uitgevoerd"
+        },
+        "evaluate": {
+          "description": "Een ander stuk ZapScript uitvoeren"
+        },
+        "write": {
+          "description": "Tekst schrijven naar de volgende tag die wordt gescand"
+        },
+        "stop": {
+          "description": "De media die wordt afgespeeld stoppen"
+        },
+        "echo": {
+          "description": "Een bericht naar het Zaparoo-logboek schrijven"
+        },
+        "control": {
+          "description": "De media die wordt afgespeeld bedienen, zoals pauzeren of opslaan"
+        },
+        "screenshot": {
+          "description": "Een schermafbeelding maken"
+        },
+        "mister_ini": {
+          "description": "Overschakelen naar een ander MiSTer INI-bestand"
+        },
+        "mister_core": {
+          "description": "Een MiSTer-core starten"
+        },
+        "mister_script": {
+          "description": "Een script uit de MiSTer Scripts-map uitvoeren"
+        },
+        "mister_mgl": {
+          "description": "Starten met MiSTer MGL-inhoud"
+        },
+        "mister_wallpaper": {
+          "description": "De achtergrond van het MiSTer-menu instellen of wissen"
+        },
+        "http_get": {
+          "description": "Een webadres op de achtergrond openen"
+        },
+        "http_post": {
+          "description": "Gegevens naar een webadres sturen"
+        },
+        "input_keyboard": {
+          "description": "Toetsenbordtoetsen indrukken"
+        },
+        "input_gamepad": {
+          "description": "Gamepadknoppen indrukken"
+        },
+        "input_text": {
+          "description": "Tekst typen op het toetsenbord"
+        },
+        "input_coinp1": {
+          "description": "Munten inwerpen voor speler 1"
+        },
+        "input_coinp2": {
+          "description": "Munten inwerpen voor speler 2"
+        },
+        "input_coinp3": {
+          "description": "Munten inwerpen voor speler 3"
+        },
+        "input_coinp4": {
+          "description": "Munten inwerpen voor speler 4"
+        },
+        "ui_notice": {
+          "description": "Een melding op het scherm tonen"
+        },
+        "ui_picker": {
+          "description": "Een keuzelijst op het scherm tonen"
+        },
+        "traits": {
+          "description": "Extra gegevens aan dit script toevoegen"
+        },
+        "profile": {
+          "description": "Overschakelen naar een profiel"
+        },
+        "profile_clear": {
+          "description": "Het actieve profiel uitschakelen"
+        },
+        "playtime_extend": {
+          "description": "Extra speeltijd geven"
+        }
+      },
+      "args": {
+        "system": "Systeem",
+        "media": "Media",
+        "search": "Zoektekst",
+        "title": "Titel",
+        "historyOffset": "Hoeveel terug",
+        "playlist": "Afspeellijst",
+        "position": "Itemnummer",
+        "command": "Opdracht",
+        "duration": "Wachttijd",
+        "text": "Tekst",
+        "controlAction": "Actie",
+        "iniNumber": "INI-nummer",
+        "corePath": "Core-pad",
+        "script": "Script",
+        "mgl": "MGL-inhoud",
+        "wallpaper": "Achtergrondbestand",
+        "url": "Webadres",
+        "contentType": "Inhoudstype",
+        "body": "Te verzenden gegevens",
+        "keys": "Toetsen",
+        "buttons": "Knoppen",
+        "coins": "Munten",
+        "profileId": "Profielwissel-ID",
+        "extraTime": "Extra tijd",
+        "keyCode": "Toetscode"
+      },
+      "advArgs": {
+        "when": "Alleen uitvoeren wanneer",
+        "launcher": "Launcher",
+        "system": "Systeem",
+        "action": "Actie",
+        "name": "Naam",
+        "pre_notice": "Melding vóór het starten",
+        "slot": "Mediaslot",
+        "tags": "Tags",
+        "set_name": "Setnaam",
+        "set_name_same_dir": "Gamemap behouden bij de setnaam",
+        "mode": "Afspeelvolgorde",
+        "repeat": "Herhalen",
+        "speed": "Tijd tussen toetsaanslagen",
+        "hidden": "Verborgen uitvoeren",
+        "profile": "Autoriserend profiel"
       }
     }
   }

@@ -47,7 +47,7 @@ export function LibraryLinkButton<
       data-icon-only={false}
       data-shape="round"
       className={classNames(
-        "wui-button flex min-h-12 min-w-12 shrink-0 cursor-pointer touch-manipulation flex-row items-center justify-center gap-2 border border-solid border-transparent px-5 py-3 text-sm font-bold tracking-wider uppercase",
+        "wui-button flex min-h-12 min-w-12 shrink-0 cursor-pointer touch-manipulation flex-row items-center justify-center gap-2 px-5 py-3 text-sm font-bold tracking-wider uppercase",
         className as string | undefined,
       )}
       onPointerUp={(event) => {

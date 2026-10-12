@@ -901,22 +901,11 @@
         "selectSystem": "시스템",
         "zapscriptHelp": "도움말",
         "clearConfirmTitle": "ZapScript를 지울까요?",
-        "commandPalette": "명령 팔레트",
-        "insertCommandStart": "명령 시작 삽입",
-        "insertCommandSeparator": "명령 구분 기호 삽입",
         "insertMedia": "미디어 경로 삽입",
         "insert": "삽입",
         "insertSystem": "시스템 삽입",
         "insertCommand": "명령 삽입",
-        "runZapScript": "ZapScript 실행",
-        "commandCategories": {
-          "launch": "실행",
-          "input": "입력",
-          "playlist": "재생 목록",
-          "mister": "MiSTer",
-          "http": "HTTP",
-          "other": "기타"
-        }
+        "runZapScript": "ZapScript 실행"
       },
       "nfc": {
         "title": "NFC 도구",
@@ -1662,6 +1651,14 @@
       "multipleSelected": "시스템 {{count}}개 선택됨",
       "clearAll": "모두 지우기"
     },
+    "launcherSelector": {
+      "title": "런처 선택",
+      "search": "런처 검색",
+      "loadError": "런처를 불러올 수 없습니다",
+      "noResults": "런처를 찾을 수 없습니다",
+      "noLaunchers": "사용 가능한 런처가 없습니다",
+      "unavailable": "이 기기에서 사용할 수 없음"
+    },
     "tagSelector": {
       "expandAll": "모두 펼치기",
       "collapseAll": "모두 접기",
@@ -1778,7 +1775,8 @@
       "onlineLibrarySync": "Zaparoo Online 라이브러리 동기화",
       "profiles": "프로필",
       "mediaRecents": "최근 플레이",
-      "mediaHistoryDistinct": "중복 없는 재생 기록"
+      "mediaHistoryDistinct": "중복 없는 재생 기록",
+      "launchers": "런처 목록"
     },
     "inbox": {
       "title": "알림",
@@ -1898,6 +1896,215 @@
         "back": "뒤로",
         "next": "다음",
         "finish": "완료"
+      }
+    },
+    "zapscript": {
+      "builder": {
+        "view": "편집기 보기",
+        "steps": "단계",
+        "text": "텍스트",
+        "addStep": "단계 추가",
+        "empty": "아직 단계가 없습니다",
+        "emptyHint": "단계를 추가해 스캔 시 동작을 선택하세요",
+        "stepLabel": "{{position}}단계: {{name}}",
+        "moveUp": "{{position}}단계를 위로 이동",
+        "moveDown": "{{position}}단계를 아래로 이동",
+        "remove": "{{position}}단계 삭제",
+        "options": "고급",
+        "textStep": "ZapScript 텍스트",
+        "textStepDescription": "이 단계는 텍스트로만 편집할 수 있는 구문을 사용합니다",
+        "textStepField": "{{position}}단계의 ZapScript",
+        "textOnly": "이 스크립트는 텍스트로만 편집할 수 있습니다",
+        "textOnlyHint": "단계 보기에서 나눌 수 없는 구문을 사용합니다",
+        "editAsText": "텍스트로 편집",
+        "noChoice": "설정 안 함",
+        "searchMediaFor": "{{field}}에 사용할 미디어 검색",
+        "chooseSystemFor": "{{field}}에 사용할 시스템 선택",
+        "chooseLauncherFor": "{{field}}에 사용할 런처 선택",
+        "searchCommands": "명령 검색",
+        "noCommands": "명령을 찾을 수 없습니다"
+      },
+      "groups": {
+        "launch": "실행",
+        "playlist": "재생 목록",
+        "input": "입력",
+        "ui": "화면 표시",
+        "profile": "프로필",
+        "mister": "MiSTer",
+        "http": "웹 요청",
+        "utility": "유틸리티"
+      },
+      "commands": {
+        "launch": {
+          "description": "경로 또는 제목으로 미디어 실행"
+        },
+        "launch_system": {
+          "description": "미디어를 불러오지 않고 시스템 열기"
+        },
+        "launch_random": {
+          "description": "시스템에서 무작위 게임 실행"
+        },
+        "launch_search": {
+          "description": "검색과 일치하는 첫 번째 미디어 실행"
+        },
+        "launch_title": {
+          "description": "시스템과 제목으로 미디어 실행"
+        },
+        "launch_last": {
+          "description": "최근에 재생한 미디어 실행"
+        },
+        "playlist_play": {
+          "description": "재생 목록을 시작하거나 일시 정지된 목록 다시 재생"
+        },
+        "playlist_stop": {
+          "description": "재생 목록을 정지하고 닫기"
+        },
+        "playlist_next": {
+          "description": "재생 목록의 다음 항목으로 이동"
+        },
+        "playlist_previous": {
+          "description": "재생 목록의 이전 항목으로 이동"
+        },
+        "playlist_goto": {
+          "description": "재생 목록에서 지정한 번호의 항목으로 이동"
+        },
+        "playlist_pause": {
+          "description": "재생 목록 일시 정지"
+        },
+        "playlist_load": {
+          "description": "재생 목록을 시작하지 않고 불러오기"
+        },
+        "playlist_open": {
+          "description": "재생 목록을 화면에 표시하여 항목 선택"
+        },
+        "execute": {
+          "description": "기기에서 명령 실행"
+        },
+        "delay": {
+          "description": "다음 단계를 실행하기 전에 대기"
+        },
+        "evaluate": {
+          "description": "다른 ZapScript 실행"
+        },
+        "write": {
+          "description": "다음에 스캔하는 태그에 텍스트 쓰기"
+        },
+        "stop": {
+          "description": "재생 중인 미디어 정지"
+        },
+        "echo": {
+          "description": "Zaparoo 로그에 메시지 기록"
+        },
+        "control": {
+          "description": "일시 정지나 저장 등 재생 중인 미디어 제어"
+        },
+        "screenshot": {
+          "description": "스크린샷 찍기"
+        },
+        "mister_ini": {
+          "description": "다른 MiSTer INI 파일로 전환"
+        },
+        "mister_core": {
+          "description": "MiSTer 코어 실행"
+        },
+        "mister_script": {
+          "description": "MiSTer Scripts 폴더의 스크립트 실행"
+        },
+        "mister_mgl": {
+          "description": "MiSTer MGL 내용으로 실행"
+        },
+        "mister_wallpaper": {
+          "description": "MiSTer 메뉴 배경 화면 설정 또는 해제"
+        },
+        "http_get": {
+          "description": "백그라운드에서 웹 주소 열기"
+        },
+        "http_post": {
+          "description": "웹 주소로 데이터 보내기"
+        },
+        "input_keyboard": {
+          "description": "키보드 키 누르기"
+        },
+        "input_gamepad": {
+          "description": "게임패드 버튼 누르기"
+        },
+        "input_text": {
+          "description": "키보드로 텍스트 입력"
+        },
+        "input_coinp1": {
+          "description": "플레이어 1 코인 넣기"
+        },
+        "input_coinp2": {
+          "description": "플레이어 2 코인 넣기"
+        },
+        "input_coinp3": {
+          "description": "플레이어 3 코인 넣기"
+        },
+        "input_coinp4": {
+          "description": "플레이어 4 코인 넣기"
+        },
+        "ui_notice": {
+          "description": "화면에 알림 표시"
+        },
+        "ui_picker": {
+          "description": "화면에 선택 목록 표시"
+        },
+        "traits": {
+          "description": "이 스크립트에 추가 정보 첨부"
+        },
+        "profile": {
+          "description": "프로필로 전환"
+        },
+        "profile_clear": {
+          "description": "활성 프로필 해제"
+        },
+        "playtime_extend": {
+          "description": "플레이 시간 추가"
+        }
+      },
+      "args": {
+        "system": "시스템",
+        "media": "미디어",
+        "search": "검색어",
+        "title": "제목",
+        "historyOffset": "몇 번째 전",
+        "playlist": "재생 목록",
+        "position": "항목 번호",
+        "command": "명령",
+        "duration": "대기 시간",
+        "text": "텍스트",
+        "controlAction": "동작",
+        "iniNumber": "INI 번호",
+        "corePath": "코어 경로",
+        "script": "스크립트",
+        "mgl": "MGL 내용",
+        "wallpaper": "배경 화면 파일",
+        "url": "웹 주소",
+        "contentType": "콘텐츠 유형",
+        "body": "보낼 데이터",
+        "keys": "키",
+        "buttons": "버튼",
+        "coins": "코인 수",
+        "profileId": "프로필 전환 ID",
+        "extraTime": "추가 시간",
+        "keyCode": "키 코드"
+      },
+      "advArgs": {
+        "when": "실행 조건",
+        "launcher": "런처",
+        "system": "시스템",
+        "action": "동작",
+        "name": "이름",
+        "pre_notice": "실행 전 알림",
+        "slot": "미디어 슬롯",
+        "tags": "태그",
+        "set_name": "세트 이름",
+        "set_name_same_dir": "세트 이름 사용 시 게임 폴더 유지",
+        "mode": "재생 순서",
+        "repeat": "반복",
+        "speed": "누름 간격",
+        "hidden": "숨김 상태로 실행",
+        "profile": "승인하는 프로필"
       }
     }
   }

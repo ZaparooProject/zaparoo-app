@@ -133,7 +133,7 @@ export function LibraryCollectionList({
               variant="fill"
               icon={<PlusIcon size={20} />}
               label={t("decks.new")}
-              className="w-full"
+              className="w-full max-w-none"
             />
           </div>
           {decksQuery.isError ? (

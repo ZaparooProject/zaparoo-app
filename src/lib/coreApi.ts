@@ -78,6 +78,7 @@ import {
   SettingsResponse,
   SystemsParams,
   SystemsResponse,
+  LaunchersResponse,
   TokensResponse,
   UpdateMappingRequest,
   UpdateSettingsRequest,
@@ -238,6 +239,17 @@ function isSystem(value: unknown): boolean {
     hasOptionalType(value, "manufacturer", "string") &&
     hasOptionalType(value, "zapScript", "string") &&
     hasOptionalType(value, "mediaCount", "number")
+  );
+}
+
+function isLauncher(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    value.id !== "" &&
+    typeof value.available === "boolean" &&
+    hasOptionalType(value, "systemId", "string") &&
+    hasOptionalType(value, "systemName", "string")
   );
 }
 
@@ -2708,6 +2720,41 @@ class CoreApi {
         })
         .catch((error) => {
           logger.error("Readers write cancel API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
+  launchers(): Promise<LaunchersResponse> {
+    return new Promise<LaunchersResponse>((resolve, reject) => {
+      this.call(Method.Launchers)
+        .then((result) => {
+          if (isCancelled(result)) {
+            reject(
+              new RequestCancelledError("Launchers request was cancelled"),
+            );
+            return;
+          }
+          try {
+            const response = requireArrayPropertyResponse<LaunchersResponse>(
+              result,
+              "launchers",
+              "launchers",
+              isLauncher,
+            );
+            logger.debug(response);
+            resolve(response);
+          } catch (e) {
+            logger.error("Error processing launchers response:", e);
+            reject(
+              new Error(
+                `Failed to process launchers response: ${e instanceof Error ? e.message : String(e)}`,
+              ),
+            );
+          }
+        })
+        .catch((error) => {
+          logger.error("Launchers API call failed:", error);
           reject(error);
         });
     });

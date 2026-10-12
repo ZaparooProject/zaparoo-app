@@ -9,6 +9,14 @@
   .bg-transparent {
     background: transparent !important;
   }
+  /* Here rather than in components.css so it outranks the Button's own
+     `min-w-12`: a content-width page action keeps a comfortable minimum. */
+  @media (min-width: 760px) {
+    .wui-button.w-full,
+    .site-button.w-full {
+      min-width: min(10rem, 100%);
+    }
+  }
 }
 
 @theme inline {

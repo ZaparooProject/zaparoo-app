@@ -6,6 +6,7 @@ import { render, screen, waitFor, within } from "../../../test-utils";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { activeAddressOf, deviceRegistry } from "@/lib/devices/deviceRegistry";
 import { usePurchasePreviewStore } from "@/lib/purchasePreviewStore";
+import { responsiveWindow } from "../../../test-utils/responsiveWindow";
 
 // Mock stores
 const mockUseStatusStore = vi.fn();
@@ -138,6 +139,7 @@ describe("Settings Index Route", () => {
     vi.clearAllMocks();
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
     mockProAccess = false;
+    responsiveWindow(390);
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -200,6 +202,46 @@ describe("Settings Index Route", () => {
       expect(mockRouterNavigate).toHaveBeenCalledWith({
         to: "/settings/media",
       });
+    });
+
+    it("shows status panels instead of page links beside the sidebar", () => {
+      responsiveWindow(1440);
+      renderComponent();
+
+      expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+      for (const name of [
+        "settings.groups.device",
+        "settings.media.databaseTitle",
+        "online.title",
+        "settings.groups.app",
+      ]) {
+        expect(
+          screen.getByRole("heading", { level: 2, name }),
+        ).toBeInTheDocument();
+      }
+      expect(
+        screen.getByRole("button", { name: "settings.deviceSetup.connect" }),
+      ).toBeVisible();
+      expect(screen.getByTestId("media-database-card")).toBeInTheDocument();
+      const online = within(
+        screen.getByRole("region", { name: "online.title" }),
+      );
+      expect(
+        online.getByText("online.settingsStatusSignedOut"),
+      ).toBeInTheDocument();
+      expect(
+        online.getByRole("link", { name: "online.login" }),
+      ).toHaveAttribute("href", "/settings/online");
+      const app = within(
+        screen.getByRole("region", { name: "settings.groups.app" }),
+      );
+      expect(app.getByText("settings.about.version")).toBeInTheDocument();
+      expect(
+        app.getByRole("button", { name: "settings.getApp" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("link", { name: "settings.readers.title" }),
+      ).not.toBeInTheDocument();
     });
 
     it("should render navigation links to settings subpages", () => {

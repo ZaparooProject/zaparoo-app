@@ -183,7 +183,7 @@ export function Mappings() {
                 label={t("create.mappings.list.newMapping")}
                 intent="primary"
                 onClick={goToNew}
-                className="w-full"
+                className="w-full max-w-none"
               />
             </div>
             {filteredMappings.length === 0 ? (

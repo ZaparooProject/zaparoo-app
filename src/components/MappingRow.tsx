@@ -70,8 +70,8 @@ export function MappingRow({ mapping, onTap, isLast }: MappingRowProps) {
       )}
     >
       {isInteractive && <span className="sr-only">{accessibleName}</span>}
-      <div className="flex min-w-0 flex-col gap-1">
-        <div className="flex items-center gap-2">
+      <div className="mapping-row-body">
+        <div className="flex min-w-0 items-center gap-2">
           <span
             className={classNames("min-w-0 truncate font-medium", {
               "text-muted-foreground": !mapping.enabled,
@@ -88,7 +88,7 @@ export function MappingRow({ mapping, onTap, isLast }: MappingRowProps) {
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex min-w-0 items-center gap-1.5">
           <Badge>{typeLabel}</Badge>
           <Badge>{matchLabel}</Badge>
           {mapping.label.trim() !== "" && mapping.pattern && (
@@ -98,7 +98,7 @@ export function MappingRow({ mapping, onTap, isLast }: MappingRowProps) {
           )}
         </div>
         <div
-          className={classNames("truncate font-mono text-sm", {
+          className={classNames("min-w-0 truncate font-mono text-sm", {
             "text-muted-foreground": !mapping.enabled,
           })}
         >

@@ -901,22 +901,11 @@
         "selectSystem": "システム",
         "zapscriptHelp": "ヘルプ",
         "clearConfirmTitle": "ZapScriptをクリアしますか？",
-        "commandPalette": "コマンドパレット",
-        "insertCommandStart": "コマンド開始を挿入",
-        "insertCommandSeparator": "コマンド区切りを挿入",
         "insertMedia": "メディアパスを挿入",
         "insert": "挿入",
         "insertSystem": "システムを挿入",
         "insertCommand": "コマンドを挿入",
-        "runZapScript": "ZapScriptを実行",
-        "commandCategories": {
-          "launch": "起動",
-          "input": "入力",
-          "playlist": "プレイリスト",
-          "mister": "MiSTer",
-          "http": "HTTP",
-          "other": "その他"
-        }
+        "runZapScript": "ZapScriptを実行"
       },
       "nfc": {
         "title": "NFCユーティリティ",
@@ -1662,6 +1651,14 @@
       "multipleSelected": "{{count}}システムを選択中",
       "clearAll": "すべてクリア"
     },
+    "launcherSelector": {
+      "title": "ランチャーを選択",
+      "search": "ランチャーを検索",
+      "loadError": "ランチャーを読み込めませんでした",
+      "noResults": "ランチャーが見つかりません",
+      "noLaunchers": "利用できるランチャーがありません",
+      "unavailable": "このデバイスでは利用できません"
+    },
     "tagSelector": {
       "expandAll": "すべて展開",
       "collapseAll": "すべて折りたたむ",
@@ -1778,7 +1775,8 @@
       "onlineLibrarySync": "Zaparoo Onlineのライブラリ同期",
       "profiles": "プロフィール",
       "mediaRecents": "最近プレイした",
-      "mediaHistoryDistinct": "重複のない再生履歴"
+      "mediaHistoryDistinct": "重複のない再生履歴",
+      "launchers": "ランチャー一覧"
     },
     "inbox": {
       "title": "通知",
@@ -1898,6 +1896,215 @@
         "back": "戻る",
         "next": "次へ",
         "finish": "完了"
+      }
+    },
+    "zapscript": {
+      "builder": {
+        "view": "エディターの表示",
+        "steps": "ステップ",
+        "text": "テキスト",
+        "addStep": "ステップを追加",
+        "empty": "ステップはまだありません",
+        "emptyHint": "ステップを追加して、スキャン時の動作を選びます",
+        "stepLabel": "ステップ{{position}}: {{name}}",
+        "moveUp": "ステップ{{position}}を上へ移動",
+        "moveDown": "ステップ{{position}}を下へ移動",
+        "remove": "ステップ{{position}}を削除",
+        "options": "詳細",
+        "textStep": "ZapScriptテキスト",
+        "textStepDescription": "このステップはテキストでのみ編集できる構文を使用しています",
+        "textStepField": "ステップ{{position}}のZapScript",
+        "textOnly": "このスクリプトはテキストでのみ編集できます",
+        "textOnlyHint": "ステップ表示では分割できない構文を使用しています",
+        "editAsText": "テキストとして編集",
+        "noChoice": "未設定",
+        "searchMediaFor": "{{field}}のメディアを検索",
+        "chooseSystemFor": "{{field}}のシステムを選択",
+        "chooseLauncherFor": "{{field}}のランチャーを選択",
+        "searchCommands": "コマンドを検索",
+        "noCommands": "コマンドが見つかりません"
+      },
+      "groups": {
+        "launch": "起動",
+        "playlist": "プレイリスト",
+        "input": "入力",
+        "ui": "画面表示",
+        "profile": "プロフィール",
+        "mister": "MiSTer",
+        "http": "ウェブリクエスト",
+        "utility": "ユーティリティ"
+      },
+      "commands": {
+        "launch": {
+          "description": "パスまたはタイトルからメディアを起動する"
+        },
+        "launch_system": {
+          "description": "メディアを読み込まずにシステムを開く"
+        },
+        "launch_random": {
+          "description": "システムからランダムにゲームを起動する"
+        },
+        "launch_search": {
+          "description": "検索に一致した最初のメディアを起動する"
+        },
+        "launch_title": {
+          "description": "システムとタイトルを指定してメディアを起動する"
+        },
+        "launch_last": {
+          "description": "最近プレイしたメディアを起動する"
+        },
+        "playlist_play": {
+          "description": "プレイリストを開始するか、一時停止中のものを再開する"
+        },
+        "playlist_stop": {
+          "description": "プレイリストを停止して閉じる"
+        },
+        "playlist_next": {
+          "description": "プレイリストの次の項目に進む"
+        },
+        "playlist_previous": {
+          "description": "プレイリストの前の項目に戻る"
+        },
+        "playlist_goto": {
+          "description": "プレイリストの指定した番号の項目に移動する"
+        },
+        "playlist_pause": {
+          "description": "プレイリストを一時停止する"
+        },
+        "playlist_load": {
+          "description": "プレイリストを開始せずに読み込む"
+        },
+        "playlist_open": {
+          "description": "プレイリストを画面に表示して項目を選ぶ"
+        },
+        "execute": {
+          "description": "デバイスでコマンドを実行する"
+        },
+        "delay": {
+          "description": "次のステップを実行する前に待つ"
+        },
+        "evaluate": {
+          "description": "別のZapScriptを実行する"
+        },
+        "write": {
+          "description": "次にスキャンしたタグにテキストを書き込む"
+        },
+        "stop": {
+          "description": "再生中のメディアを停止する"
+        },
+        "echo": {
+          "description": "Zaparooのログにメッセージを書き込む"
+        },
+        "control": {
+          "description": "一時停止やセーブなど、再生中のメディアを操作する"
+        },
+        "screenshot": {
+          "description": "スクリーンショットを撮る"
+        },
+        "mister_ini": {
+          "description": "別のMiSTer INIファイルに切り替える"
+        },
+        "mister_core": {
+          "description": "MiSTerコアを起動する"
+        },
+        "mister_script": {
+          "description": "MiSTerのScriptsフォルダーにあるスクリプトを実行する"
+        },
+        "mister_mgl": {
+          "description": "MiSTerのMGL内容を使って起動する"
+        },
+        "mister_wallpaper": {
+          "description": "MiSTerメニューの壁紙を設定または解除する"
+        },
+        "http_get": {
+          "description": "バックグラウンドでウェブアドレスにアクセスする"
+        },
+        "http_post": {
+          "description": "ウェブアドレスにデータを送信する"
+        },
+        "input_keyboard": {
+          "description": "キーボードのキーを押す"
+        },
+        "input_gamepad": {
+          "description": "ゲームパッドのボタンを押す"
+        },
+        "input_text": {
+          "description": "キーボードでテキストを入力する"
+        },
+        "input_coinp1": {
+          "description": "プレイヤー1のコインを入れる"
+        },
+        "input_coinp2": {
+          "description": "プレイヤー2のコインを入れる"
+        },
+        "input_coinp3": {
+          "description": "プレイヤー3のコインを入れる"
+        },
+        "input_coinp4": {
+          "description": "プレイヤー4のコインを入れる"
+        },
+        "ui_notice": {
+          "description": "画面にお知らせを表示する"
+        },
+        "ui_picker": {
+          "description": "画面に選択肢の一覧を表示する"
+        },
+        "traits": {
+          "description": "このスクリプトに追加情報を付ける"
+        },
+        "profile": {
+          "description": "プロフィールに切り替える"
+        },
+        "profile_clear": {
+          "description": "有効なプロフィールを解除する"
+        },
+        "playtime_extend": {
+          "description": "プレイ時間を延長する"
+        }
+      },
+      "args": {
+        "system": "システム",
+        "media": "メディア",
+        "search": "検索テキスト",
+        "title": "タイトル",
+        "historyOffset": "いくつ前か",
+        "playlist": "プレイリスト",
+        "position": "項目番号",
+        "command": "コマンド",
+        "duration": "待ち時間",
+        "text": "テキスト",
+        "controlAction": "アクション",
+        "iniNumber": "INI番号",
+        "corePath": "コアのパス",
+        "script": "スクリプト",
+        "mgl": "MGLの内容",
+        "wallpaper": "壁紙ファイル",
+        "url": "ウェブアドレス",
+        "contentType": "コンテンツタイプ",
+        "body": "送信するデータ",
+        "keys": "キー",
+        "buttons": "ボタン",
+        "coins": "コイン数",
+        "profileId": "プロフィール切り替えID",
+        "extraTime": "追加時間",
+        "keyCode": "キーコード"
+      },
+      "advArgs": {
+        "when": "実行する条件",
+        "launcher": "ランチャー",
+        "system": "システム",
+        "action": "アクション",
+        "name": "名前",
+        "pre_notice": "起動前のお知らせ",
+        "slot": "メディアスロット",
+        "tags": "タグ",
+        "set_name": "セット名",
+        "set_name_same_dir": "セット名でもゲームフォルダーを維持",
+        "mode": "再生順",
+        "repeat": "リピート",
+        "speed": "入力の間隔",
+        "hidden": "非表示で実行",
+        "profile": "承認するプロフィール"
       }
     }
   }

@@ -702,24 +702,39 @@ describe("Adaptive application shell", () => {
     expect(screen.getByRole("button", { name: "nav.openMenu" })).toHaveFocus();
   });
 
-  it("should preserve Settings overview navigation and heading through phone/tablet/desktop changes", async () => {
-    const resize = responsiveWindow(1440);
+  it("should preserve the Settings overview heading and cards through phone/tablet/desktop changes", async () => {
+    const resize = responsiveWindow(820);
     const { router, baseElement } = await renderShell("/settings");
     const heading = await screen.findByRole("heading", {
       name: "settings.title",
     });
-    const app = screen.getByRole("navigation", { name: "settings.groups.app" });
-    const online = within(app).getByRole("link", { name: /online.title/ });
-    expect(online).toHaveAttribute("href", "/settings/online");
-    for (const width of [820, 390, 1440]) {
+    const device = screen.getByRole("button", {
+      name: "settings.deviceHistory",
+    });
+    const tiles = () =>
+      screen.queryByRole("navigation", { name: "settings.groups.app" });
+    expect(
+      within(tiles()!).getByRole("link", { name: /online.title/ }),
+    ).toHaveAttribute("href", "/settings/online");
+    for (const width of [390, 1440, 820]) {
       await resize(width);
       expect(screen.getByRole("heading", { name: "settings.title" })).toBe(
         heading,
       );
       expect(
-        screen.getByRole("navigation", { name: "settings.groups.app" }),
-      ).toBe(app);
-      expect(online).toBeVisible();
+        screen.getByRole("button", { name: "settings.deviceHistory" }),
+      ).toBe(device);
+      // Beside the sidebar the page links are not repeated in the page.
+      if (width >= 1280) {
+        expect(tiles()).not.toBeInTheDocument();
+        expect(
+          within(
+            screen.getByRole("region", { name: "online.title" }),
+          ).getByRole("link", { name: "online.login" }),
+        ).toHaveAttribute("href", "/settings/online");
+      } else {
+        expect(tiles()).toBeVisible();
+      }
       expect(router.state.location.pathname).toBe("/settings");
     }
     expect(await findA11yViolations(baseElement)).toEqual([]);

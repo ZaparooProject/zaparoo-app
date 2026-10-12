@@ -368,7 +368,7 @@ export function MappingEditor({ id }: MappingEditorProps) {
                   )}
                   {appUi.camera && (
                     <Button
-                      className="min-h-18 w-full"
+                      className="min-h-18 w-full max-w-none"
                       variant="outline"
                       icon={<CameraIcon size="20" />}
                       onClick={startBarcodeScan}

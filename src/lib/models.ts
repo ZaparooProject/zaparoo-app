@@ -38,6 +38,7 @@ export enum Method {
   RemoteActivity = "remote.activity",
   SettingsBackupStatus = "settings.backup.status",
   SettingsLogsDownload = "settings.logs.download",
+  Launchers = "launchers",
   LaunchersRefresh = "launchers.refresh",
   Mappings = "mappings",
   MappingsNew = "mappings.new",
@@ -529,6 +530,18 @@ export interface System {
   manufacturer?: string;
   zapScript?: string;
   mediaCount?: number;
+}
+
+/** A launcher Core can start media with; `id` is what `?launcher=` takes. */
+export interface Launcher {
+  id: string;
+  systemId?: string;
+  systemName?: string;
+  available: boolean;
+}
+
+export interface LaunchersResponse {
+  launchers: Launcher[];
 }
 
 export interface SystemsParams {

@@ -269,15 +269,30 @@
       opacity: 0.35;
     }
   }
-  /* Full width means "fill the column" on phones; desktop columns are wider
-     than any single action needs, so cap and center instead of stretching. */
+  /* Full width means "fill the column" on phones. On wider layouts a page
+     action is as wide as its content and starts at the column edge, in line
+     with the text and fields above it (its minimum width is set beside the
+     utilities in index.css). A cell that owns its button's width (a toolbar
+     or a grid of actions) opts out with `max-w-none`. Dialogs are narrow
+     columns of their own, so their actions, like reader controls, keep a
+     centred 20rem cap. */
   @media (min-width: 760px) {
     .wui-button.w-full,
-    .site-button.w-full,
+    .site-button.w-full {
+      max-width: max-content;
+      margin-inline: 0;
+    }
+    [role="dialog"] .wui-button.w-full,
+    [role="dialog"] .site-button.w-full,
     .wui-reader-button-shell,
     .wui-reader-actions {
       max-width: 20rem;
       margin-inline: auto;
+    }
+    /* The reader shell is the capped box; its button fills it. */
+    .wui-reader-button-shell .wui-button.w-full,
+    .wui-reader-actions .wui-button.w-full {
+      max-width: none;
     }
   }
   .wui-button:disabled {
@@ -303,6 +318,8 @@
     background: transparent;
     transform: translateY(0);
     box-shadow: none;
+    /* No face to recess, so the content fades instead. */
+    opacity: 0.5;
   }
   .wui-button[data-disabled-appearance="busy"]:disabled {
     opacity: 0.5;
@@ -465,6 +482,42 @@
   }
   .wui-editor > textarea {
     border-radius: 4px 4px 0 0;
+  }
+  .wui-field-label {
+    margin-bottom: 0.5rem;
+  }
+  .wui-radio-field,
+  .wui-radio-options {
+    display: flex;
+    flex-direction: column;
+  }
+  .wui-radio-options[data-layout="inline"] {
+    flex-flow: row wrap;
+    column-gap: 1.5rem;
+  }
+  /* A short settings form with room: each field is a row, label on the left
+     and its control on the right, as switch rows already are. */
+  @media (min-width: 1024px) {
+    .settings-form-rows > .wui-field {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 16rem);
+      align-items: center;
+      column-gap: 1.5rem;
+    }
+    .settings-form-rows > .wui-field > .wui-field-label {
+      margin-bottom: 0;
+    }
+    .settings-form-rows > .wui-field:has(> .wui-radio-options) {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+    .settings-form-rows > .wui-field > .wui-radio-options {
+      flex-flow: row wrap;
+      justify-content: flex-end;
+      column-gap: 1.5rem;
+    }
+    .settings-form-rows > .wui-field > .wui-field-help {
+      grid-column: 1 / -1;
+    }
   }
   .wui-toggle-track {
     background: var(--surface-inset);
@@ -1398,6 +1451,49 @@
       max-width: 28rem;
     }
   }
+  .zapscript-step {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem 0.5rem 0.75rem 0.75rem;
+    border: 1px solid var(--edge-default);
+    border-radius: 6px;
+    background: var(--surface-raised);
+  }
+  .zapscript-step-fields {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+    align-items: end;
+    gap: 0.75rem;
+    padding-right: 0.25rem;
+  }
+  /* The page-level editor: steps and text side by side when there is room. */
+  .zapscript-input-split {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    align-items: start;
+    gap: 1.5rem;
+  }
+  .custom-zapscript-page {
+    width: 100%;
+    max-width: var(--content-bound);
+    margin-inline: auto;
+  }
+  @media (min-width: 1024px) {
+    .custom-zapscript-page {
+      max-width: none;
+    }
+  }
+  .zapscript-input-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
   .zapscript-input .wui-button {
     max-width: 100%;
     flex-wrap: wrap;
@@ -1471,6 +1567,13 @@
     display: flex;
     flex-direction: column;
   }
+  .mapping-row-body {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
   .nfc-read-grid,
   .nfc-tools-grid {
     display: flex;
@@ -1487,13 +1590,29 @@
       max-width: var(--content-bound);
       margin-inline: auto;
     }
+    /* Filter stretches; the action keeps a fixed width at the list's edge,
+       as the Decks toolbar does. */
     .mapping-list-toolbar {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
-      align-items: end;
+      flex-direction: row;
+      align-items: flex-end;
+    }
+    .mapping-list-toolbar > :first-child {
+      min-width: 0;
+      flex: 1;
     }
     .mapping-list-toolbar .wui-button.w-full {
+      flex: 0 0 12rem;
       margin-inline: 0;
+    }
+  }
+  /* With room, a mapping reads across one line in aligned columns: name and
+     status, type and match, then its ZapScript. */
+  @media (min-width: 1024px) {
+    .mapping-row-body {
+      display: grid;
+      grid-template-columns: minmax(0, 20rem) minmax(0, 14rem) minmax(0, 1fr);
+      align-items: center;
+      column-gap: 1.5rem;
     }
   }
   @media (min-width: 1024px) {
@@ -1562,6 +1681,12 @@
     .settings-panel-page .page-header-surface {
       max-width: none;
     }
+    /* A bounded page keeps its width but starts at the left edge, so titles
+       do not move sideways between pages. */
+    .page-frame-content-wide-header:not(.page-frame-workspace)
+      .page-header-surface {
+      margin-inline: 0;
+    }
     .settings-panel-stack {
       max-width: none;
     }
@@ -1607,6 +1732,59 @@
     .settings-overview-context {
       grid-column: 2;
       grid-row: 1;
+    }
+  }
+  /* The Settings landing page beside the sidebar: status panels, no menu. */
+  .settings-overview-panels {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 1.5rem;
+  }
+  .settings-overview-panel {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  /* The panels are the grid's own cells there; below, they stack as before. */
+  .settings-overview-panels > .settings-overview-context {
+    display: contents;
+  }
+  .settings-overview > .settings-overview-context > .settings-overview-panel {
+    gap: 1.25rem;
+  }
+  /* Logs: stacked on phones; with room, Upload, the filter box, the level
+     chips and the count share one line, and an upload link takes the next. */
+  .logs-toolbar,
+  .logs-toolbar-upload {
+    display: flex;
+    flex-direction: column;
+  }
+  .logs-toolbar {
+    gap: 0.75rem;
+  }
+  .logs-toolbar-upload {
+    gap: 0.5rem;
+  }
+  .logs-toolbar-result {
+    display: flex;
+    gap: 0.5rem;
+  }
+  @media (min-width: 1024px) {
+    .logs-toolbar {
+      flex-flow: row wrap;
+      align-items: center;
+    }
+    .logs-toolbar-upload {
+      display: contents;
+    }
+    .logs-toolbar-search {
+      flex: 1 1 14rem;
+    }
+    .logs-toolbar-result {
+      order: 1;
+      flex: 1 0 100%;
     }
   }
   .settings-navigation-grid {

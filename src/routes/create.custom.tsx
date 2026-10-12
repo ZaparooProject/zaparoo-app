@@ -33,6 +33,7 @@ export function CustomText() {
     <>
       <PageFrame
         headerMode="content-wide"
+        layout="workspace"
         breadcrumbs={[{ to: "/create", label: t("create.title") }]}
         onSwipeBack={goBack}
         headerLeft={
@@ -48,11 +49,11 @@ export function CustomText() {
           </h1>
         }
       >
-        <div className="flex flex-col gap-4">
+        <div className="custom-zapscript-page flex flex-col gap-4">
           <ZapScriptInput
+            split
             value={customText}
             setValue={setCustomText}
-            showPalette
             rows={5}
             // The tag gets the text captured at press time, so it cannot
             // change underneath a pending write or its retry.

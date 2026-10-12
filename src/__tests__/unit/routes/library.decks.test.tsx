@@ -50,6 +50,14 @@ const deck: Deck = {
   ],
 };
 
+// The ZapScript editor opens on its step view; the textarea is on the Text tab.
+async function openScriptText(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(
+    await screen.findByRole("tab", { name: "zapscript.builder.text" }),
+  );
+  return screen.getByRole("textbox", { name: "decks.script" });
+}
+
 describe("deck routes", () => {
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -1094,10 +1102,7 @@ describe("deck routes", () => {
       await screen.findByRole("textbox", { name: "decks.itemName" }),
       "Random game",
     );
-    await user.type(
-      screen.getByRole("textbox", { name: "decks.script" }),
-      "**launch.random:SNES",
-    );
+    await user.type(await openScriptText(user), "**launch.random:SNES");
     await user.click(screen.getByRole("button", { name: "decks.addItem" }));
     await waitFor(() =>
       expect(update).toHaveBeenCalledWith({
@@ -1122,11 +1127,8 @@ describe("deck routes", () => {
   it("lets the full-page ZapScript editor open its own search modal", async () => {
     render(<AddDeckItem />);
     const user = userEvent.setup();
-    const editor = await screen.findByRole("textbox", { name: "decks.script" });
+    const editor = await openScriptText(user);
     expect(editor.closest('[role="dialog"]')).toBeNull();
-    await user.click(
-      screen.getByRole("button", { name: "create.custom.commandPalette" }),
-    );
     await user.click(
       screen.getByRole("button", { name: "create.custom.insertMedia" }),
     );

@@ -36,6 +36,10 @@ import {
   usePurchasePreviewStore,
 } from "@/lib/purchasePreviewStore";
 import { useHapticPress } from "@/hooks/useHapticPress";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { Card } from "@/components/wui/Card";
+import { LibraryLinkButton } from "@/components/library/LibraryLinkButton";
+import { getReleaseDisplayVersion } from "@/lib/whatsNew";
 
 export const Route = createFileRoute("/settings/")({
   component: Settings,
@@ -71,6 +75,15 @@ export function Settings() {
   const appUi = useAppUi();
   const showNativePurchaseUI = appUi.enabled || purchasePreviewEnabled;
   const { available: showMediaScraper } = useKnownCoreFeature("mediaScrapers");
+  // The sidebar already lists every settings page from this width, so the
+  // landing page shows status panels instead of repeating those links.
+  const sidebar = useMediaQuery("(min-width: 1280px)");
+  const onlineStatus =
+    loggedInUser === null && !purchasePreviewEnabled
+      ? t("online.settingsStatusSignedOut")
+      : displayedOnlinePremiumAccess === true
+        ? t("online.settingsStatusWarpActive")
+        : t("online.settingsStatusSignedIn");
   const navigationGroups = [
     {
       id: "app",
@@ -90,12 +103,7 @@ export function Settings() {
           to: "/settings/online",
           label: t("online.title"),
           icon: CloudIcon,
-          status:
-            loggedInUser === null && !purchasePreviewEnabled
-              ? t("online.settingsStatusSignedOut")
-              : displayedOnlinePremiumAccess === true
-                ? t("online.settingsStatusWarpActive")
-                : t("online.settingsStatusSignedIn"),
+          status: onlineStatus,
         },
       ],
     },
@@ -147,6 +155,59 @@ export function Settings() {
     },
   ] as const;
 
+  const appActions = (
+    <>
+      {!appUi.enabled && (
+        <div>
+          <Button
+            label={t("settings.getApp")}
+            variant="secondary"
+            className="w-full"
+            icon={<ExternalIcon size="20" />}
+            onClick={() => Browser.open({ url: "https://zaparoo.app" })}
+          />
+        </div>
+      )}
+
+      {showNativePurchaseUI &&
+        displayedOnlinePremiumAccess === false &&
+        (displayedProAccess ? (
+          <p
+            role="status"
+            className="text-success flex min-h-12 items-center gap-2 text-sm font-medium"
+          >
+            <CheckIcon size={20} aria-hidden="true" />
+            {t("settings.app.proActive")}
+          </p>
+        ) : (
+          <Button
+            label={t("scan.purchaseProAction")}
+            intent="pro"
+            className="w-full"
+            onClick={
+              purchasePreviewEnabled
+                ? () => undefined
+                : () => setProPurchaseModalOpen(true)
+            }
+          />
+        ))}
+
+      {appUi.enabled &&
+        !displayedProAccess &&
+        displayedOnlinePremiumAccess !== true && (
+          <PurchaseSupportActions variant="restoreOnly" />
+        )}
+    </>
+  );
+  const mediaDatabase = (
+    <MediaDatabaseCard
+      onViewScrapeDetails={() =>
+        void router.navigate({ to: "/settings/media" })
+      }
+    />
+  );
+  const panelHeading = "text-foreground text-lg font-semibold";
+
   return (
     <>
       <PageFrame
@@ -164,99 +225,120 @@ export function Settings() {
           </GatedFeature>
         }
       >
-        <div className="settings-overview">
+        {/* One tree at every width, so the cards keep their state on resize. */}
+        <div
+          className={sidebar ? "settings-overview-panels" : "settings-overview"}
+        >
           <div className="settings-overview-context">
-            <div data-tour="device-address">
-              <DeviceConnectionSummary />
-            </div>
-
-            <CoreOutdatedNotice />
-
-            <MediaDatabaseCard
-              onViewScrapeDetails={() =>
-                void router.navigate({ to: "/settings/media" })
-              }
-            />
-
-            {!appUi.enabled && (
-              <div>
-                <Button
-                  label={t("settings.getApp")}
-                  variant="secondary"
-                  className="w-full"
-                  icon={<ExternalIcon size="20" />}
-                  onClick={() => Browser.open({ url: "https://zaparoo.app" })}
-                />
-              </div>
-            )}
-
-            {showNativePurchaseUI &&
-              displayedOnlinePremiumAccess === false &&
-              (displayedProAccess ? (
-                <p
-                  role="status"
-                  className="text-success flex min-h-12 items-center gap-2 text-sm font-medium"
-                >
-                  <CheckIcon size={20} aria-hidden="true" />
-                  {t("settings.app.proActive")}
-                </p>
-              ) : (
-                <Button
-                  label={t("scan.purchaseProAction")}
-                  intent="pro"
-                  className="w-full"
-                  onClick={
-                    purchasePreviewEnabled
-                      ? () => undefined
-                      : () => setProPurchaseModalOpen(true)
-                  }
-                />
-              ))}
-
-            {appUi.enabled &&
-              !displayedProAccess &&
-              displayedOnlinePremiumAccess !== true && (
-                <PurchaseSupportActions variant="restoreOnly" />
+            <div className="settings-overview-panel">
+              {sidebar && (
+                <h2 className={panelHeading}>{t("settings.groups.device")}</h2>
               )}
-          </div>
-          <div className="settings-overview-destinations">
-            {navigationGroups.map((group) => (
-              <nav
-                key={group.id}
-                aria-labelledby={`settings-${group.id}-heading`}
-                className="flex flex-col gap-2"
-              >
-                <h2
-                  id={`settings-${group.id}-heading`}
-                  className="text-foreground text-lg font-semibold"
-                >
-                  {group.label}
+              <div data-tour="device-address">
+                <DeviceConnectionSummary />
+              </div>
+              <CoreOutdatedNotice />
+            </div>
+            <div className="settings-overview-panel">
+              {sidebar && (
+                <h2 className={panelHeading}>
+                  {t("settings.media.databaseTitle")}
                 </h2>
-                <div className="settings-navigation-grid">
-                  {group.destinations.map((destination) => (
-                    <Link
-                      key={destination.to}
-                      to={destination.to}
-                      onPointerUp={handleHapticPress}
-                      className={`site-button site-button-outline flex min-h-14 min-w-0 touch-manipulation items-center gap-2 px-3 py-2 text-left text-sm tracking-normal ${"status" in destination ? "col-span-full flex-wrap" : ""}`}
-                    >
-                      <destination.icon
-                        size={20}
-                        className="text-muted-foreground shrink-0"
-                        aria-hidden="true"
-                      />
-                      <span className="min-w-0 grow">{destination.label}</span>
-                      {"status" in destination && (
-                        <span className="text-muted-foreground ml-auto min-w-0 text-right text-sm font-normal normal-case">
-                          {destination.status}
-                        </span>
+              )}
+              {mediaDatabase}
+            </div>
+            {sidebar ? (
+              <>
+                <section
+                  aria-labelledby="settings-online-panel-heading"
+                  className="settings-overview-panel"
+                >
+                  <h2
+                    id="settings-online-panel-heading"
+                    className={panelHeading}
+                  >
+                    {t("online.title")}
+                  </h2>
+                  <Card className="flex flex-col gap-3">
+                    <p className="text-sm font-medium">{onlineStatus}</p>
+                    <LibraryLinkButton
+                      to="/settings/online"
+                      label={t(
+                        loggedInUser === null
+                          ? "online.login"
+                          : "online.account",
                       )}
-                    </Link>
-                  ))}
-                </div>
-              </nav>
-            ))}
+                      icon={<CloudIcon size={20} />}
+                      className="w-full"
+                    />
+                  </Card>
+                </section>
+                <section
+                  aria-labelledby="settings-app-panel-heading"
+                  className="settings-overview-panel"
+                >
+                  <h2 id="settings-app-panel-heading" className={panelHeading}>
+                    {t("settings.groups.app")}
+                  </h2>
+                  <Card className="flex flex-col gap-3">
+                    <p className="text-sm font-medium">
+                      {t("settings.about.version", {
+                        version: getReleaseDisplayVersion(
+                          import.meta.env.VITE_RELEASE_KEY,
+                          import.meta.env.VITE_VERSION,
+                        ),
+                      })}
+                    </p>
+                    {appActions}
+                  </Card>
+                </section>
+              </>
+            ) : (
+              appActions
+            )}
           </div>
+          {!sidebar && (
+            <div className="settings-overview-destinations">
+              {navigationGroups.map((group) => (
+                <nav
+                  key={group.id}
+                  aria-labelledby={`settings-${group.id}-heading`}
+                  className="flex flex-col gap-2"
+                >
+                  <h2
+                    id={`settings-${group.id}-heading`}
+                    className="text-foreground text-lg font-semibold"
+                  >
+                    {group.label}
+                  </h2>
+                  <div className="settings-navigation-grid">
+                    {group.destinations.map((destination) => (
+                      <Link
+                        key={destination.to}
+                        to={destination.to}
+                        onPointerUp={handleHapticPress}
+                        className={`site-button site-button-outline flex min-h-14 min-w-0 touch-manipulation items-center gap-2 px-3 py-2 text-left text-sm tracking-normal ${"status" in destination ? "col-span-full flex-wrap" : ""}`}
+                      >
+                        <destination.icon
+                          size={20}
+                          className="text-muted-foreground shrink-0"
+                          aria-hidden="true"
+                        />
+                        <span className="min-w-0 grow">
+                          {destination.label}
+                        </span>
+                        {"status" in destination && (
+                          <span className="text-muted-foreground ml-auto min-w-0 text-right text-sm font-normal normal-case">
+                            {destination.status}
+                          </span>
+                        )}
+                      </Link>
+                    ))}
+                  </div>
+                </nav>
+              ))}
+            </div>
+          )}
         </div>
       </PageFrame>
 

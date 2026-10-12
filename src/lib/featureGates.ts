@@ -92,6 +92,11 @@ export const FEATURE_GATES: Record<string, FeatureGate> = {
     marquee: true,
     labelKey: "features.remoteInput",
   },
+  launchers: {
+    since: "2.12.0",
+    marquee: false,
+    labelKey: "features.launchers",
+  },
   mediaRecents: {
     since: "2.12.0",
     marquee: false,

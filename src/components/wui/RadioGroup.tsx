@@ -36,10 +36,10 @@ export function RadioGroup<T extends string>({
   const helpNode = typeof help === "string" ? undefined : help;
 
   return (
-    <div className="flex min-w-0 flex-col">
+    <div className="wui-field wui-radio-field min-w-0">
       <div
         className={classNames("flex items-center gap-1", {
-          "mb-2": !labelHidden,
+          "wui-field-label": !labelHidden,
         })}
       >
         <span
@@ -58,10 +58,8 @@ export function RadioGroup<T extends string>({
         tabIndex={-1}
         aria-describedby={helpText ? helpId : undefined}
         onKeyDown={handleRadioGroupKeyDown}
-        className={classNames(
-          "flex",
-          inline ? "flex-wrap gap-x-6" : "flex-col",
-        )}
+        data-layout={inline ? "inline" : "stack"}
+        className="wui-radio-options"
       >
         {options.map((option, index) => {
           const active = option.value === value;
@@ -101,7 +99,10 @@ export function RadioGroup<T extends string>({
         })}
       </div>
       {helpText && (
-        <span id={helpId} className="text-muted-foreground mt-1 text-sm">
+        <span
+          id={helpId}
+          className="wui-field-help text-muted-foreground mt-1 text-sm"
+        >
           {helpText}
         </span>
       )}

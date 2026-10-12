@@ -17,7 +17,9 @@ export function ResponsiveContainer({
       className={classNames(
         "w-full",
         {
-          "sm:mx-auto sm:max-w-2xl": maxWidth === "app", // 672px max-width on 640px+ screens
+          // 672px max-width on 640px+ screens; from 1024px it starts at the left
+          // edge so every page's title sits in the same place beside the sidebar.
+          "sm:mx-auto sm:max-w-2xl lg:mx-0": maxWidth === "app",
           "sm:mx-auto sm:max-w-lg": maxWidth === "nav", // 512px max-width on 640px+ screens
           // "full" uses no max-width constraints
         },

@@ -126,7 +126,7 @@ export function About() {
           <Button
             label={t("settings.about.joinPatreon")}
             icon={<ExternalIcon size="20" />}
-            className="w-full"
+            className="mx-auto w-full"
             intent="pro"
             onClick={() =>
               Browser.open({

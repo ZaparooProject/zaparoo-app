@@ -901,22 +901,11 @@
         "selectSystem": "System",
         "zapscriptHelp": "Hilfe",
         "clearConfirmTitle": "ZapScript löschen?",
-        "commandPalette": "Befehlspalette",
-        "insertCommandStart": "Befehlsanfang einfügen",
-        "insertCommandSeparator": "Befehlstrennzeichen einfügen",
         "insertMedia": "Medienpfad einfügen",
         "insert": "Einfügen",
         "insertSystem": "System einfügen",
         "insertCommand": "Befehl einfügen",
-        "runZapScript": "ZapScript ausführen",
-        "commandCategories": {
-          "launch": "Start",
-          "input": "Eingabe",
-          "playlist": "Wiedergabeliste",
-          "mister": "MiSTer",
-          "http": "HTTP",
-          "other": "Sonstiges"
-        }
+        "runZapScript": "ZapScript ausführen"
       },
       "nfc": {
         "title": "NFC-Werkzeuge",
@@ -1662,6 +1651,14 @@
       "multipleSelected": "Ausgewählte Systeme: {{count}}",
       "clearAll": "Alle löschen"
     },
+    "launcherSelector": {
+      "title": "Launcher auswählen",
+      "search": "Launcher suchen",
+      "loadError": "Launcher konnten nicht geladen werden",
+      "noResults": "Keine Launcher gefunden",
+      "noLaunchers": "Keine Launcher verfügbar",
+      "unavailable": "Auf diesem Gerät nicht verfügbar"
+    },
     "tagSelector": {
       "expandAll": "Alle erweitern",
       "collapseAll": "Alle einklappen",
@@ -1778,7 +1775,8 @@
       "onlineLibrarySync": "Zaparoo-Online-Bibliothekssynchronisierung",
       "profiles": "Profile",
       "mediaRecents": "Zuletzt gespielt",
-      "mediaHistoryDistinct": "Deduplizierter Wiedergabeverlauf"
+      "mediaHistoryDistinct": "Deduplizierter Wiedergabeverlauf",
+      "launchers": "Launcher-Liste"
     },
     "inbox": {
       "title": "Benachrichtigungen",
@@ -1898,6 +1896,215 @@
         "back": "Zurück",
         "next": "Weiter",
         "finish": "Fertig"
+      }
+    },
+    "zapscript": {
+      "builder": {
+        "view": "Editoransicht",
+        "steps": "Schritte",
+        "text": "Text",
+        "addStep": "Schritt hinzufügen",
+        "empty": "Noch keine Schritte",
+        "emptyHint": "Füge einen Schritt hinzu, um festzulegen, was beim Scannen passiert",
+        "stepLabel": "Schritt {{position}}: {{name}}",
+        "moveUp": "Schritt {{position}} nach oben verschieben",
+        "moveDown": "Schritt {{position}} nach unten verschieben",
+        "remove": "Schritt {{position}} entfernen",
+        "options": "Erweitert",
+        "textStep": "ZapScript-Text",
+        "textStepDescription": "Dieser Schritt verwendet Syntax, die nur als Text bearbeitet werden kann",
+        "textStepField": "ZapScript für Schritt {{position}}",
+        "textOnly": "Dieses Skript kann nur als Text bearbeitet werden",
+        "textOnlyHint": "Es verwendet Syntax, die die Schrittansicht nicht in Schritte aufteilen kann",
+        "editAsText": "Als Text bearbeiten",
+        "noChoice": "Nicht festgelegt",
+        "searchMediaFor": "Medien für {{field}} suchen",
+        "chooseSystemFor": "System für {{field}} auswählen",
+        "chooseLauncherFor": "Launcher für {{field}} auswählen",
+        "searchCommands": "Befehle suchen",
+        "noCommands": "Keine Befehle gefunden"
+      },
+      "groups": {
+        "launch": "Starten",
+        "playlist": "Playlist",
+        "input": "Eingabe",
+        "ui": "Bildschirm",
+        "profile": "Profile",
+        "mister": "MiSTer",
+        "http": "Web-Anfragen",
+        "utility": "Werkzeuge"
+      },
+      "commands": {
+        "launch": {
+          "description": "Medien über einen Pfad oder Titel starten"
+        },
+        "launch_system": {
+          "description": "Ein System öffnen, ohne Medien zu laden"
+        },
+        "launch_random": {
+          "description": "Ein zufälliges Spiel eines Systems starten"
+        },
+        "launch_search": {
+          "description": "Das erste Medium starten, das zu einer Suche passt"
+        },
+        "launch_title": {
+          "description": "Medien anhand von System und Titel starten"
+        },
+        "launch_last": {
+          "description": "Kürzlich gespielte Medien starten"
+        },
+        "playlist_play": {
+          "description": "Eine Playlist starten oder die pausierte fortsetzen"
+        },
+        "playlist_stop": {
+          "description": "Die Playlist stoppen und schließen"
+        },
+        "playlist_next": {
+          "description": "Zum nächsten Eintrag der Playlist wechseln"
+        },
+        "playlist_previous": {
+          "description": "Zum vorherigen Eintrag der Playlist wechseln"
+        },
+        "playlist_goto": {
+          "description": "Zu einem bestimmten Eintrag der Playlist springen"
+        },
+        "playlist_pause": {
+          "description": "Die Playlist pausieren"
+        },
+        "playlist_load": {
+          "description": "Eine Playlist laden, ohne sie zu starten"
+        },
+        "playlist_open": {
+          "description": "Eine Playlist auf dem Bildschirm anzeigen, um einen Eintrag auszuwählen"
+        },
+        "execute": {
+          "description": "Einen Befehl auf dem Gerät ausführen"
+        },
+        "delay": {
+          "description": "Vor dem nächsten Schritt warten"
+        },
+        "evaluate": {
+          "description": "Ein weiteres ZapScript ausführen"
+        },
+        "write": {
+          "description": "Text auf den nächsten gescannten Tag schreiben"
+        },
+        "stop": {
+          "description": "Die laufenden Medien stoppen"
+        },
+        "echo": {
+          "description": "Eine Nachricht in das Zaparoo-Protokoll schreiben"
+        },
+        "control": {
+          "description": "Die laufenden Medien steuern, etwa pausieren oder speichern"
+        },
+        "screenshot": {
+          "description": "Einen Screenshot aufnehmen"
+        },
+        "mister_ini": {
+          "description": "Zu einer anderen MiSTer-INI-Datei wechseln"
+        },
+        "mister_core": {
+          "description": "Einen MiSTer-Core starten"
+        },
+        "mister_script": {
+          "description": "Ein Skript aus dem MiSTer-Scripts-Ordner ausführen"
+        },
+        "mister_mgl": {
+          "description": "Mit MiSTer-MGL-Inhalt starten"
+        },
+        "mister_wallpaper": {
+          "description": "Das Hintergrundbild des MiSTer-Menüs festlegen oder entfernen"
+        },
+        "http_get": {
+          "description": "Eine Webadresse im Hintergrund aufrufen"
+        },
+        "http_post": {
+          "description": "Daten an eine Webadresse senden"
+        },
+        "input_keyboard": {
+          "description": "Tastaturtasten drücken"
+        },
+        "input_gamepad": {
+          "description": "Gamepad-Tasten drücken"
+        },
+        "input_text": {
+          "description": "Text über die Tastatur eingeben"
+        },
+        "input_coinp1": {
+          "description": "Münzen für Spieler 1 einwerfen"
+        },
+        "input_coinp2": {
+          "description": "Münzen für Spieler 2 einwerfen"
+        },
+        "input_coinp3": {
+          "description": "Münzen für Spieler 3 einwerfen"
+        },
+        "input_coinp4": {
+          "description": "Münzen für Spieler 4 einwerfen"
+        },
+        "ui_notice": {
+          "description": "Einen Hinweis auf dem Bildschirm anzeigen"
+        },
+        "ui_picker": {
+          "description": "Eine Auswahlliste auf dem Bildschirm anzeigen"
+        },
+        "traits": {
+          "description": "Diesem Skript zusätzliche Angaben hinzufügen"
+        },
+        "profile": {
+          "description": "Zu einem Profil wechseln"
+        },
+        "profile_clear": {
+          "description": "Das aktive Profil deaktivieren"
+        },
+        "playtime_extend": {
+          "description": "Zusätzliche Spielzeit gewähren"
+        }
+      },
+      "args": {
+        "system": "System",
+        "media": "Medium",
+        "search": "Suchtext",
+        "title": "Titel",
+        "historyOffset": "Wie viele zurück",
+        "playlist": "Playlist",
+        "position": "Eintragsnummer",
+        "command": "Befehl",
+        "duration": "Wartezeit",
+        "text": "Text",
+        "controlAction": "Aktion",
+        "iniNumber": "INI-Nummer",
+        "corePath": "Core-Pfad",
+        "script": "Skript",
+        "mgl": "MGL-Inhalt",
+        "wallpaper": "Hintergrundbild-Datei",
+        "url": "Webadresse",
+        "contentType": "Inhaltstyp",
+        "body": "Zu sendende Daten",
+        "keys": "Tasten",
+        "buttons": "Tasten",
+        "coins": "Münzen",
+        "profileId": "Profil-Wechsel-ID",
+        "extraTime": "Zusätzliche Zeit",
+        "keyCode": "Tastencode"
+      },
+      "advArgs": {
+        "when": "Nur ausführen, wenn",
+        "launcher": "Launcher",
+        "system": "System",
+        "action": "Aktion",
+        "name": "Name",
+        "pre_notice": "Hinweis vor dem Start",
+        "slot": "Medien-Slot",
+        "tags": "Tags",
+        "set_name": "Set-Name",
+        "set_name_same_dir": "Spielordner beim Set-Namen beibehalten",
+        "mode": "Wiedergabereihenfolge",
+        "repeat": "Wiederholen",
+        "speed": "Zeit zwischen Tastendrücken",
+        "hidden": "Verborgen ausführen",
+        "profile": "Autorisierendes Profil"
       }
     }
   }

@@ -1,11 +1,12 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { Browser } from "@capacitor/browser";
 import { useTranslation } from "react-i18next";
-import { Button } from "@/components/wui/Button";
+import { Card } from "@/components/wui/Card";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { PageFrame } from "@/components/PageFrame";
 import { BackIcon, ExternalIcon } from "@/lib/images";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
+import { useHapticPress } from "@/hooks/useHapticPress";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 
 export const Route = createFileRoute("/settings/help")({
@@ -20,6 +21,21 @@ export function Help() {
   const router = useRouter();
   const goBack = () =>
     void router.navigate(appBackNavigationOptions("/settings"));
+  const handleHapticPress = useHapticPress();
+  // Every entry leaves the app, so each row carries the external-link icon.
+  const link = (label: string, url: string) => (
+    <button
+      type="button"
+      className="settings-nav-row w-full text-left"
+      onPointerUp={handleHapticPress}
+      onClick={() => Browser.open({ url })}
+    >
+      <span>{t(label)}</span>
+      <span aria-hidden="true" className="text-muted-foreground shrink-0">
+        <ExternalIcon size="20" />
+      </span>
+    </button>
+  );
 
   return (
     <PageFrame
@@ -39,107 +55,52 @@ export function Help() {
         </h1>
       }
     >
-      <div className="flex flex-col gap-4">
-        <Button
-          label={t("settings.help.main")}
-          icon={<ExternalIcon size="20" />}
-          className="w-full"
-          variant="outline"
-          onClick={() =>
-            Browser.open({
-              url: "https://zaparoo.org/",
-            })
-          }
-        />
-        <div className="flex flex-col gap-4">
-          <h2 className="text-center text-lg font-semibold">
+      <div className="flex flex-col gap-5">
+        <Card className="flex flex-col">
+          {link("settings.help.main", "https://zaparoo.org/")}
+        </Card>
+        <section className="flex flex-col gap-2">
+          <h2 className="text-lg font-semibold">
             {t("settings.help.documentationLabel")}
           </h2>
-          <Button
-            label={t("settings.help.taptoWiki")}
-            icon={<ExternalIcon size="20" />}
-            className="w-full"
-            variant="outline"
-            onClick={() =>
-              Browser.open({
-                url: "https://zaparoo.org/docs/",
-              })
-            }
-          />
-          <Button
-            label={t("settings.help.gettingStarted")}
-            icon={<ExternalIcon size="20" />}
-            className="w-full"
-            variant="outline"
-            onClick={() =>
-              Browser.open({
-                url: "https://zaparoo.org/docs/getting-started/",
-              })
-            }
-          />
-          <Button
-            label={t("settings.help.commandReference")}
-            icon={<ExternalIcon size="20" />}
-            className="w-full"
-            variant="outline"
-            onClick={() =>
-              Browser.open({
-                url: "https://zaparoo.org/docs/zapscript/",
-              })
-            }
-          />
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <h2 className="text-center text-lg font-semibold">
+          <Card className="flex flex-col">
+            {link("settings.help.taptoWiki", "https://zaparoo.org/docs/")}
+            {link(
+              "settings.help.gettingStarted",
+              "https://zaparoo.org/docs/getting-started/",
+            )}
+            {link(
+              "settings.help.commandReference",
+              "https://zaparoo.org/docs/zapscript/",
+            )}
+          </Card>
+        </section>
+        <section className="flex flex-col gap-2">
+          <h2 className="text-lg font-semibold">
             {t("settings.help.communityLabel")}
           </h2>
-          <Button
-            label={t("settings.help.discord")}
-            icon={<ExternalIcon size="20" />}
-            className="w-full"
-            variant="outline"
-            onClick={() =>
-              Browser.open({
-                url: "https://zaparoo.org/discord",
-              })
-            }
-          />
-          <Button
-            label={t("settings.help.reddit")}
-            icon={<ExternalIcon size="20" />}
-            className="w-full"
-            variant="outline"
-            onClick={() =>
-              Browser.open({
-                url: "https://reddit.com/r/Zaparoo",
-              })
-            }
-          />
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <h2 className="text-center text-lg font-semibold">
+          <Card className="flex flex-col">
+            {link("settings.help.discord", "https://zaparoo.org/discord")}
+            {link("settings.help.reddit", "https://reddit.com/r/Zaparoo")}
+          </Card>
+        </section>
+        <section className="flex flex-col gap-2">
+          <h2 className="text-lg font-semibold">
             {t("settings.help.technicalSupport")}
           </h2>
-          <Button
-            label={t("settings.help.reportIssue")}
-            icon={<ExternalIcon size="20" />}
-            className="w-full"
-            variant="outline"
-            onClick={() =>
-              Browser.open({
-                url: "https://github.com/ZaparooProject/zaparoo-app/issues/new",
-              })
-            }
-          />
-          <p className="text-center">
+          <Card className="flex flex-col">
+            {link(
+              "settings.help.reportIssue",
+              "https://github.com/ZaparooProject/zaparoo-app/issues/new",
+            )}
+          </Card>
+          <p className="text-sm">
             {t("settings.help.emailLabel")}{" "}
             <a className="underline" href="mailto:support@zaparoo.com">
               support@zaparoo.com
             </a>
           </p>
-        </div>
+        </section>
       </div>
     </PageFrame>
   );

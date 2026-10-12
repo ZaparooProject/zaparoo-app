@@ -349,7 +349,6 @@ export function ReadersSettings() {
                 <ZapScriptInput
                   value={shakeZapscript}
                   setValue={setShakeZapscript}
-                  showPalette={false}
                   rows={2}
                 />
               )}

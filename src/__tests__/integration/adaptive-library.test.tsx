@@ -704,6 +704,9 @@ describe("Adaptive Library pages", () => {
     });
     expect(parent).toHaveAttribute("href", `/app/library/decks/${deck.deckId}`);
     await user.type(name, "Custom");
+    await user.click(
+      screen.getByRole("tab", { name: "zapscript.builder.text" }),
+    );
     const script = screen.getByRole("textbox", {
       name: "decks.script",
     });

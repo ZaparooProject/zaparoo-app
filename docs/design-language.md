@@ -27,13 +27,13 @@ Use these before creating or changing UI:
 
 Widths are CSS px. Tailwind `md` is redefined to 760px (`--breakpoint-md: 47.5rem`); `sm` is 640px. Other sections name a breakpoint and refer here rather than restating what changes.
 
-| From   | Name | What changes                                                                                                                                                                                                                                                                                      |
-| ------ | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 640px  | `sm` | Default page content is bounded to 42rem and centered. Phone-sheet action rails use inline icon/caption and sit beside the primary action (640–759px only).                                                                                                                                       |
-| 760px  | `md` | Wide layout. Bottom dock gives way to the top bar and drawer; navigation precedes `<main>`. `content-wide` headers scroll with content and show breadcrumbs. Sheets become centered dialogs. Full-width buttons cap at 20rem. Zap leads with playback and scan tiles. Toolbars wrap side by side. |
-| 1024px | —    | Two-column compositions: `settings-panel-layout`, Settings overview, Zap main/supporting, Create destinations and search, Library collections and search, deck detail, NFC panel grids.                                                                                                           |
-| 1100px | —    | Selected Library media uses the docked 400px details pane instead of a sheet.                                                                                                                                                                                                                     |
-| 1280px | —    | Persistent 256px sidebar replaces the top bar and drawer; the details pane is 460px (520px from 1600px); the page's left margin beside the sidebar is 24px.                                                                                                                                       |
+| From   | Name | What changes                                                                                                                                                                                                                                                                                                                                    |
+| ------ | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 640px  | `sm` | Default page content is bounded to 42rem and centered. Phone-sheet action rails use inline icon/caption and sit beside the primary action (640–759px only).                                                                                                                                                                                     |
+| 760px  | `md` | Wide layout. Bottom dock gives way to the top bar and drawer; navigation precedes `<main>`. `content-wide` headers scroll with content and show breadcrumbs. Sheets become centered dialogs. Full-width page buttons shrink to their content; in dialogs they cap at 20rem. Zap leads with playback and scan tiles. Toolbars wrap side by side. |
+| 1024px | —    | Two-column compositions: `settings-panel-layout`, Settings overview, Zap main/supporting, Create destinations and search, Library collections and search, deck detail, NFC panel grids.                                                                                                                                                         |
+| 1100px | —    | Selected Library media uses the docked 400px details pane instead of a sheet.                                                                                                                                                                                                                                                                   |
+| 1280px | —    | Persistent 256px sidebar replaces the top bar and drawer; the details pane is 460px (520px from 1600px); the page's left margin beside the sidebar is 24px.                                                                                                                                                                                     |
 
 "Phone" means below 760px, "tablet" 760–1279px, "desktop" from 1280px. Resizing only changes presentation: one route outlet and one mounted tree per feature survive every width, so drafts, focus, reader work, pending requests and scroll owners are never reset, restarted or duplicated by a width change.
 
@@ -103,7 +103,7 @@ Use `PageFrame` for pages. It owns:
 
 `ResponsiveContainer` constrains content on larger screens:
 
-- default form/reference content: `sm:mx-auto sm:max-w-2xl` (672px)
+- default form/reference content: `sm:mx-auto sm:max-w-2xl` (672px). From 1024px the bounded column and its header start at the left edge instead of centring, so a page title sits in the same place on every page
 - `PageFrame layout="workspace"`: intentionally full-width browse content, not a global removal of form bounds
 - phone nav content: `sm:mx-auto sm:max-w-lg`; hierarchical sidebar/drawer content fills its own chrome
 
@@ -117,12 +117,16 @@ Settings pages get their stack from layout classes in `components.css`, not from
 - `settings-panel-stack`: one bounded column of panels, 1.25rem (`gap-5`) apart
 - `settings-panel-layout`: the same column until 1024px, then a two-column grid with a 1.5rem gap; `settings-reader-panels`, `settings-play-panels` and `settings-online-panels` adjust its tracks
 - `settings-overview`: the Settings landing stack
+- `settings-form-rows` on a settings `Card`: from 1024px each labelled `Select` or `RadioGroup` in it becomes a row, label on the left and control on the right (a 16rem select; radio options side by side, wrapping when they do not fit), matching the switch rows. Below 1024px the fields stack as usual. Used by Language & region, Accessibility and Advanced
+- Help is headed groups of external-link rows (`settings-nav-row` with a trailing `ExternalIcon`) in Cards, left-aligned like the other settings pages; it has no stack of buttons
+- `logs-toolbar`: stacked on phones; from 1024px Upload, the filter box, the level chips and the entry count share one line, and an upload link takes the line below
+- `settings-overview-panels`: the Settings landing page from 1280px, where the sidebar already lists every settings page. The destination tiles are not rendered; the page is a two-column grid of status panels (Device, Media database, Zaparoo Online, App), each a `text-lg font-semibold` heading over a `Card` with its status and one action. Do not repeat sidebar links here. Below 1280px the tiles are the way into the settings pages and stay
 
 Inside a settings `Card` the form stack is `flex flex-col gap-4`. `gap-5` is only the distance between panels.
 
 Other stacks:
 
-- Help: `flex flex-col gap-4` page and sections. About: `flex flex-col gap-8` with inner `gap-2` / `gap-3` groups.
+- Help: `flex flex-col gap-5` page of sections, each a heading over a Card of link rows. About: `flex flex-col gap-8` with inner `gap-2` / `gap-3` groups.
 - Create landing: `create-destinations`. NFC tabs: `nfc-workspace` with `nfc-read-grid` / `nfc-tools-grid`.
 - Modal content: `SlideModal` owns the horizontal gutter and title-to-body gap; body wrappers add no shell-level padding.
 
@@ -226,11 +230,11 @@ Shape and material are owned by Button and `.wui-button`:
 - reduced-motion settings disable transitions, and disabled controls do not travel
 - every enabled button, `role="button"` element and select shows the pointer cursor, from one base rule in `src/index.css`. Do not add `cursor-pointer` per component; disabled and unavailable states set `not-allowed` themselves
 - disabled appearance communicates why the control is unavailable:
-  - `disabledAppearance="unavailable"` is the default recessed/sunken state. Use it when a prerequisite, capability, selection, connection, or current media state is absent.
+  - `disabledAppearance="unavailable"` is the default recessed/sunken state. Use it when a prerequisite, capability, selection, connection, or current media state is absent. `ghost` and `text` buttons have no face to recess, so their content turns muted and fades to 50% opacity instead.
   - `disabledAppearance="busy"` keeps the raised material at 50% opacity. Use it only while an in-flight action (launching, saving, pairing, searching, deleting) temporarily locks the control. A loading label or spinner should continue to explain the work.
 - haptics derive from `intent`: default light, primary and pro medium, destructive heavy
 
-Width: use `className="w-full"` for full-width primary page actions and complex-modal primary actions, and say it explicitly rather than relying on flex-column stretch. From 760px a full-width button caps at 20rem and centers, so a page action does not stretch across a desktop column. A lone `ModalActionBar` action and `ReaderActivityControl` follow the same cap; `ModalActionBar` pairs and `ModalActionRail` items opt out. This is the only statement of the cap; other sections refer to it. Use `className="flex-1"` only for equal-width confirmation actions sharing one footer row.
+Width: use `className="w-full"` for full-width primary page actions and complex-modal primary actions, and say it explicitly rather than relying on flex-column stretch. From 760px a full-width button on a page is as wide as its content (never under 10rem) and starts at the column edge, in line with the text and fields above it; it does not stretch or float in the middle of a desktop column. A cell that owns its button's width (a toolbar slot, a grid of actions) adds `max-w-none`. A centred composition (Help, About) adds `mx-auto`. Inside dialogs, which are narrow columns of their own, a full-width button keeps a centred 20rem cap, as do a lone `ModalActionBar` action and `ReaderActivityControl` (the reader's button fills that capped shell); `ModalActionBar` pairs and `ModalActionRail` items opt out. This is the only statement of the rule; other sections refer to it. Use `className="flex-1"` only for equal-width confirmation actions sharing one footer row.
 
 Button layout is inline by default. `layout="responsive"` is reserved for compact action-rail items (see SlideModal). Standalone primary buttons keep their inline layout.
 
@@ -364,7 +368,7 @@ Real use: readers with no detected readers, mappings empty/search empty, search 
 Use `RadioGroup` for one setting/form value among mutually exclusive choices. Its circular recessed indicators and selected dots must not look like navigation tabs. No shared tray, raised option faces, or blue CTA buttons.
 
 - Default to stacked 48px rows. Use this for three or more options, long labels, and choices that reveal related form fields: appearance, text size, shake mode, profile role/PIN/limits, the profile switch picker, mapping type/match, and deck item type.
-- `layout="inline"` is only for two short choices without conditional form fields, currently reader Tap/Hold and Warp Annual/Monthly. Options share a line only while their content fits; translated labels and text zoom can push them onto separate rows. Do not squeeze, truncate, or horizontally scroll radio choices.
+- `layout="inline"` is only for two short choices without conditional form fields, currently reader Tap/Hold and Warp Annual/Monthly. The one other place options share a line is a `settings-form-rows` card from 1024px. Options share a line only while their content fits; translated labels and text zoom can push them onto separate rows. Do not squeeze, truncate, or horizontally scroll radio choices.
 - Long labels wrap, with the indicator aligned to the first text line.
 - Group help is either a string, rendered as muted text beneath and tied to the group with `aria-describedby`, or a `SettingHelp` node rendered beside the label.
 - Arrow/Home/End selection and roving focus remain; an unselected group still has a keyboard entry point. Disabled groups cannot activate or receive keyboard focus.
@@ -728,7 +732,7 @@ Patterns:
 - Now playing, Controls, and Readers use the same outside-card Home heading. Docked Controls owns its body material, not its section heading. Omit the Controls launcher while the pane is visible. Docked Controls does not repeat disconnected copy: global connection status and disabled live controls suffice. Standalone phone dialog keeps its recovery hint; actual input/capture errors remain visible.
 - From 760px scan actions form a row of equal square-ish tiles with icons above captions, matching 24px icons, and a 10rem minimum height. Tracks grow from 10rem to 12rem and wrap when space or text sizing requires it; a single capability stays one tile rather than stretching across the column. Aspect ratio is a preference, not a fixed height: translated labels and active status can grow the row. NFC retains its primary material and camera its neutral secondary material; activity feedback stays within the existing mounted control. Phone scan geometry remains unchanged.
 - The scan bank opts nested reader wrappers out of the Button width cap, not just the outer button. Queued/deep-link writes still replace scanning with the contextual reader control and its retry/cancel recovery bank; from 760px that control is full-width with inline captions and at least 72px height. Playback artwork expands to 96×128 CSS px at default text size, with a full-width recessed transport bank whose keys are centred, 64px tall at minimum and capped at 80px wide. Remote D-pad and secondary keys retain 64px targets; their horizontal grouping wraps when width or text size requires it.
-- Scan history and Play history are real Zap child routes (`ZapHistory.tsx`), accessible directly at any width, with content-wide breadcrumb headers to Zap; phone keeps pinned Back/Refresh. They share rows, states and replay with the phone History sheet. Play history lists chronological sessions, including repeated games, with cursor pagination; Library Recently played remains a deduplicated collection. Page queries are device-scoped, and play history is gated on Core support. On the pages, row text aligns with the page title (`flush` rows); the sheet keeps row padding. A played row's artwork and title are one control that opens the shared game details (the sheet hands the entry to Zap, which swaps the sheets); the trailing Play stays a separate quick launch. Scan rows are tag contents and open nothing.
+- Scan history and Play history are real Zap child routes (`ZapHistory.tsx`), accessible directly at any width, with content-wide breadcrumb headers to Zap; phone keeps pinned Back/Refresh. They share rows, states and replay with the phone History sheet. Play history lists chronological sessions, including repeated games, with cursor pagination; Library Recently played remains a deduplicated collection. Page queries are device-scoped, and play history is gated on Core support. On the pages, row text aligns with the page title (`flush` rows); the sheet keeps row padding. A played row opens the shared game details the way a Library row does: the whole row is the control (pointer cursor, trailing `RowSelectionChevron`, no hover fill), and the sheet hands the entry to Zap, which swaps the sheets. Play stays a separate quick-launch button just before the chevron. Scan rows are tag contents and open nothing.
 - Devices combines the shared connection/discovery/manual-entry flow with saved-device management and direct connection actions, in `settings-panel-layout` columns from 1024px. The phone DeviceSheet hosts the same connection feature with its existing footer/focus behavior. Width changes do not restart discovery or clear address drafts. Where the Core is too old to link to Zaparoo Online, device linking is plain muted text, not a disabled button.
 - One Home/session tree and one Controls controller remain mounted. Controls use the existing nonmodal pane on wide screens and the existing phone modal intent below the threshold; width alone does not open a previously closed phone modal.
 - Keyboard mode/case, focused surviving controls, screenshot results, and in-flight captures survive presentation changes. Captured exports remain usable offline.
@@ -808,15 +812,17 @@ Mapping editor uses a plain `flex flex-col gap-4` form stack:
 - `ToggleSwitch` for enabled
 - Save is primary; Delete beside it is `variant="outline" intent="destructive"` with no icon
 
-`ZapScriptInput` is its own compound editor:
+`ZapScriptInput` is the ZapScript builder, shared by Custom ZapScript, the mapping editor, adding to a deck and reader settings. Its value is always the ZapScript text; it offers two views of it through a `TabBar`:
 
-- recessed monospace textarea with the shared input focus/error vocabulary
-- raised attached toolbar with matching boundary and 4px lower corners; utility rows wrap at narrow/zoomed widths
-- character count muted small text; the ZapScript help link uses `ExternalIcon`
-- command palette uses existing `Button variant="outline"` grid/flex rows, localized category headings, and `BackToTop` for its long command list
-- clear action uses `ConfirmClearModal`
+- **Steps** (the default whenever the script can be split): one bordered `surface-raised` card per command (`ZapScriptSteps`). The card leads with the command's plain-language description in semibold, with the command name beneath in muted monospace; ghost icon buttons move it up, move it down and remove it. Under that sits the command's form, one field per argument from the catalogue: text and number fields, a `Select` for fixed choices, and for media, system and launcher values a field with a square outline search-icon button beside it (the same icon for all three) that opens the media search, the system picker or the launcher list (`LauncherSelector`; the button is left out on a Core too old to list its launchers). Named options (`?name=value`) sit under an `Advanced` disclosure, open when the step already has one. An expression, `[[ ... ]]`, can be typed into any field and is written exactly as typed. `Add step` (outline) opens the command catalogue. An empty script shows a compact `EmptyState` with the same button
+- **Text**: the recessed monospace textarea with the shared input focus/error vocabulary and its raised attached toolbar (matching boundary, 4px lower corners; utility rows wrap at narrow/zoomed widths) always showing four buttons: insert media, a system or a command, plus the ZapScript help link with `ExternalIcon`. There is no toggle and no `**`/`||` buttons: an inserted command, or media that is not an argument of the command being written (straight after `:` or `,`), is set apart from the text around it with `||` automatically
+- under both views: the character count in muted small text, Clear (`ConfirmClearModal`) and Run
+- the command catalogue (`CommandsModal`) is searchable and grouped under localized headings; each row leads with the plain-language description and shows the command name beneath. It uses the selector row geometry and `BackToTop`. Deprecated commands and ones Core does not run on their own are recognised when read but never offered
+- pages where the editor is the main content pass `split`: from 1024px the steps and the text sit side by side (3:2) with no tabs, the text updating live. Embedded editors keep the tabs at every width
+- fidelity rules, which are not negotiable: a step keeps the exact text it was read from until the user edits that step; anything the builder has no form for (JSON arguments, an escaped `^[` that would read as an expression, `@System/Title` shorthand, unknown commands, more arguments than the form has fields) is a text step edited as ZapScript; a script that cannot be split reliably opens in Text with a note in Steps. The builder never rewrites what it does not understand
+- the catalogue (`src/lib/zapscript/catalog.ts`) is the app's copy of the commands in the ZapScript library Core pins. `scripts/sync-zapscript-commands.mjs` regenerates `commandNames.json` from that library and `catalog.test.ts` fails when a command is added or removed there. Descriptions and field labels live under `zapscript.*` in the locale files
 
-Do not replace ZapScript editing with a plain `TextInput`. Custom text, mapping and shared new-deck forms stay bounded to 672px; extra width is not a reason to split dependent fields or expand attached editing controls.
+Do not replace ZapScript editing with a plain `TextInput`. Mapping and shared new-deck forms stay bounded to 672px; extra width is not a reason to split dependent fields or expand attached editing controls.
 
 ### NFC tabs
 
@@ -857,7 +863,7 @@ Mapping rows use:
 - mono override preview `font-mono text-sm`
 - `NextIcon` right
 
-Use this style for mapping-like data rows. Mapping lists and editors show delayed `InlineLoading`, an explicit retryable load error, and `BackToTop` on long mapping lists. Token capture in the editor is one outline `ReaderActivityControl` beside a mounted outline Camera button, each shown only when the app has that capability and only for the ID type; leaving ID cancels a waiting capture. Save remains the primary action.
+Use this style for mapping-like data rows. From 1024px a mapping reads across one line in aligned columns (name and status badges, type and match badges, ZapScript); narrower windows stack the three. The list toolbar matches Decks: the filter stretches and New mapping keeps a fixed 12rem at the list's right edge from 760px. Editable rows end in the standard chevron; read-only rows have none and are not interactive. Mapping lists and editors show delayed `InlineLoading`, an explicit retryable load error, and `BackToTop` on long mapping lists. Token capture in the editor is one outline `ReaderActivityControl` beside a mounted outline Camera button, each shown only when the app has that capability and only for the ID type; leaving ID cancels a waiting capture. Save remains the primary action.
 
 ## Settings support pages
 

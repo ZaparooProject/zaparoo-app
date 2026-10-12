@@ -300,9 +300,9 @@ export function Logs() {
       >
         <div className="flex h-full flex-col gap-3">
           {/* Control Bar */}
-          <div className="flex flex-col gap-3">
+          <div className="logs-toolbar">
             {logsQuery.data && (
-              <div className="flex flex-col gap-2">
+              <div className="logs-toolbar-upload">
                 <Button
                   className="w-full"
                   intent="primary"
@@ -324,7 +324,7 @@ export function Logs() {
                 />
 
                 {uploadMutation.data && (
-                  <div className="flex gap-2" aria-live="polite">
+                  <div className="logs-toolbar-result" aria-live="polite">
                     <TextInput
                       className="min-w-0 flex-1"
                       type="url"
@@ -346,6 +346,7 @@ export function Logs() {
 
             {/* Search */}
             <TextInput
+              className="logs-toolbar-search"
               label=""
               aria-label={t("settings.logs.searchPlaceholder")}
               placeholder={t("settings.logs.searchPlaceholder")}
@@ -354,7 +355,7 @@ export function Logs() {
             />
 
             {/* Filters and Entry Count */}
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+            <div className="logs-toolbar-filters flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
               <div className="flex flex-row flex-wrap gap-1.5">
                 <ToggleChip
                   label={t("settings.logs.levelDebug")}

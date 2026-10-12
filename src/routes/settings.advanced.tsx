@@ -122,7 +122,7 @@ export function AdvancedSettings() {
         </h1>
       }
     >
-      <Card className="flex flex-col gap-4">
+      <Card className="settings-form-rows flex flex-col gap-4">
         <ToggleSwitch
           reflow
           label={t("settings.advanced.errorReporting")}

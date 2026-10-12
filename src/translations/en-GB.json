@@ -901,22 +901,11 @@
         "selectSystem": "System",
         "zapscriptHelp": "Help",
         "clearConfirmTitle": "Clear ZapScript?",
-        "commandPalette": "Command palette",
-        "insertCommandStart": "Insert command start",
-        "insertCommandSeparator": "Insert command separator",
         "insertMedia": "Insert media path",
         "insert": "Insert",
         "insertSystem": "Insert system",
         "insertCommand": "Insert command",
-        "runZapScript": "Run ZapScript",
-        "commandCategories": {
-          "launch": "Launch",
-          "input": "Input",
-          "playlist": "Playlist",
-          "mister": "MiSTer",
-          "http": "HTTP",
-          "other": "Other"
-        }
+        "runZapScript": "Run ZapScript"
       },
       "nfc": {
         "title": "NFC Utilities",
@@ -1662,6 +1651,14 @@
       "multipleSelected": "{{count}} systems selected",
       "clearAll": "Clear all"
     },
+    "launcherSelector": {
+      "title": "Select launcher",
+      "search": "Search launchers",
+      "loadError": "Could not load launchers",
+      "noResults": "No launchers found",
+      "noLaunchers": "No launchers available",
+      "unavailable": "Not available on this device"
+    },
     "tagSelector": {
       "expandAll": "Expand all",
       "collapseAll": "Collapse all",
@@ -1778,7 +1775,8 @@
       "onlineLibrarySync": "Zaparoo Online library sync",
       "profiles": "Profiles",
       "mediaRecents": "Recently played",
-      "mediaHistoryDistinct": "Deduplicated play history"
+      "mediaHistoryDistinct": "Deduplicated play history",
+      "launchers": "Launcher list"
     },
     "inbox": {
       "title": "Notifications",
@@ -1898,6 +1896,215 @@
         "back": "Back",
         "next": "Next",
         "finish": "Finish"
+      }
+    },
+    "zapscript": {
+      "builder": {
+        "view": "Editor view",
+        "steps": "Steps",
+        "text": "Text",
+        "addStep": "Add step",
+        "empty": "No steps yet",
+        "emptyHint": "Add a step to choose what happens when this is scanned",
+        "stepLabel": "Step {{position}}: {{name}}",
+        "moveUp": "Move step {{position}} up",
+        "moveDown": "Move step {{position}} down",
+        "remove": "Remove step {{position}}",
+        "options": "Advanced",
+        "textStep": "ZapScript text",
+        "textStepDescription": "This step uses syntax that can only be edited as text",
+        "textStepField": "ZapScript for step {{position}}",
+        "textOnly": "This script can only be edited as text",
+        "textOnlyHint": "It uses syntax the step view cannot split into steps",
+        "editAsText": "Edit as text",
+        "noChoice": "Not set",
+        "searchMediaFor": "Search media for {{field}}",
+        "chooseSystemFor": "Choose a system for {{field}}",
+        "chooseLauncherFor": "Choose a launcher for {{field}}",
+        "searchCommands": "Search commands",
+        "noCommands": "No commands found"
+      },
+      "groups": {
+        "launch": "Launch",
+        "playlist": "Playlist",
+        "input": "Input",
+        "ui": "On screen",
+        "profile": "Profiles",
+        "mister": "MiSTer",
+        "http": "Web requests",
+        "utility": "Utility"
+      },
+      "commands": {
+        "launch": {
+          "description": "Launch media from a path or title"
+        },
+        "launch_system": {
+          "description": "Open a system without loading any media"
+        },
+        "launch_random": {
+          "description": "Launch a random game from a system"
+        },
+        "launch_search": {
+          "description": "Launch the first media that matches a search"
+        },
+        "launch_title": {
+          "description": "Launch media by its system and title"
+        },
+        "launch_last": {
+          "description": "Launch media that was played recently"
+        },
+        "playlist_play": {
+          "description": "Start a playlist, or resume the paused one"
+        },
+        "playlist_stop": {
+          "description": "Stop the playlist and close it"
+        },
+        "playlist_next": {
+          "description": "Go to the next item in the playlist"
+        },
+        "playlist_previous": {
+          "description": "Go to the previous item in the playlist"
+        },
+        "playlist_goto": {
+          "description": "Jump to a numbered item in the playlist"
+        },
+        "playlist_pause": {
+          "description": "Pause the playlist"
+        },
+        "playlist_load": {
+          "description": "Load a playlist without starting it"
+        },
+        "playlist_open": {
+          "description": "Show a playlist on screen to pick an item from"
+        },
+        "execute": {
+          "description": "Run a command on the device"
+        },
+        "delay": {
+          "description": "Wait before running the next step"
+        },
+        "evaluate": {
+          "description": "Run another piece of ZapScript"
+        },
+        "write": {
+          "description": "Write text to the next tag that is scanned"
+        },
+        "stop": {
+          "description": "Stop the media that is playing"
+        },
+        "echo": {
+          "description": "Write a message to the Zaparoo log"
+        },
+        "control": {
+          "description": "Control the media that is playing, such as pausing or saving"
+        },
+        "screenshot": {
+          "description": "Take a screenshot"
+        },
+        "mister_ini": {
+          "description": "Switch to another MiSTer INI file"
+        },
+        "mister_core": {
+          "description": "Launch a MiSTer core"
+        },
+        "mister_script": {
+          "description": "Run a script from the MiSTer Scripts folder"
+        },
+        "mister_mgl": {
+          "description": "Launch using MiSTer MGL content"
+        },
+        "mister_wallpaper": {
+          "description": "Set or clear the MiSTer menu wallpaper"
+        },
+        "http_get": {
+          "description": "Open a web address in the background"
+        },
+        "http_post": {
+          "description": "Send data to a web address"
+        },
+        "input_keyboard": {
+          "description": "Press keyboard keys"
+        },
+        "input_gamepad": {
+          "description": "Press gamepad buttons"
+        },
+        "input_text": {
+          "description": "Type text on the keyboard"
+        },
+        "input_coinp1": {
+          "description": "Insert coins for player 1"
+        },
+        "input_coinp2": {
+          "description": "Insert coins for player 2"
+        },
+        "input_coinp3": {
+          "description": "Insert coins for player 3"
+        },
+        "input_coinp4": {
+          "description": "Insert coins for player 4"
+        },
+        "ui_notice": {
+          "description": "Show a notice on screen"
+        },
+        "ui_picker": {
+          "description": "Show a list of choices on screen"
+        },
+        "traits": {
+          "description": "Attach extra details to this script"
+        },
+        "profile": {
+          "description": "Switch to a profile"
+        },
+        "profile_clear": {
+          "description": "Switch off the active profile"
+        },
+        "playtime_extend": {
+          "description": "Give extra play time"
+        }
+      },
+      "args": {
+        "system": "System",
+        "media": "Media",
+        "search": "Search text",
+        "title": "Title",
+        "historyOffset": "How many back",
+        "playlist": "Playlist",
+        "position": "Item number",
+        "command": "Command",
+        "duration": "Wait time",
+        "text": "Text",
+        "controlAction": "Action",
+        "iniNumber": "INI number",
+        "corePath": "Core path",
+        "script": "Script",
+        "mgl": "MGL content",
+        "wallpaper": "Wallpaper file",
+        "url": "Web address",
+        "contentType": "Content type",
+        "body": "Data to send",
+        "keys": "Keys",
+        "buttons": "Buttons",
+        "coins": "Coins",
+        "profileId": "Profile switch ID",
+        "extraTime": "Extra time",
+        "keyCode": "Key code"
+      },
+      "advArgs": {
+        "when": "Only run when",
+        "launcher": "Launcher",
+        "system": "System",
+        "action": "Action",
+        "name": "Name",
+        "pre_notice": "Notice before launch",
+        "slot": "Media slot",
+        "tags": "Tags",
+        "set_name": "Set name",
+        "set_name_same_dir": "Keep the game folder with the set name",
+        "mode": "Play order",
+        "repeat": "Repeat",
+        "speed": "Time between presses",
+        "hidden": "Run hidden",
+        "profile": "Authorising profile"
       }
     }
   }

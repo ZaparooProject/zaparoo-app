@@ -48,8 +48,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     if (!label) return field;
 
     return (
-      <div className="w-full">
-        <div className="mb-2 flex items-center gap-1">
+      <div className="wui-field w-full">
+        <div className="wui-field-label flex items-center gap-1">
           <label htmlFor={selectId} className="block text-sm font-medium">
             {label}
           </label>

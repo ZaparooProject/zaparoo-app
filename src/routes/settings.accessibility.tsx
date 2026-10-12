@@ -78,7 +78,7 @@ export function AccessibilitySettings() {
         </h1>
       }
     >
-      <Card className="flex flex-col gap-4">
+      <Card className="settings-form-rows flex flex-col gap-4">
         <RadioGroup
           label={t("settings.accessibility.appearance")}
           value={theme}
