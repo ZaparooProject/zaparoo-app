@@ -200,6 +200,7 @@ describe("SlideModal", () => {
     expect(dialog).toHaveStyle({
       transform: "translate3d(0, 100%, 0)",
       transition: "transform 0.2s ease-in-out",
+      boxShadow: "none",
     });
 
     rerender(<SlideModal {...mockProps} isOpen />);
@@ -209,6 +210,7 @@ describe("SlideModal", () => {
       transform: "translate3d(0, 0, 0)",
       transition: "transform 0.2s ease-in-out",
     });
+    expect(dialog.style.boxShadow).toBe("");
   });
 
   it("caps content-sized and requested-height modals at 80 percent", () => {
@@ -244,12 +246,70 @@ describe("SlideModal", () => {
     const closeMock = vi.fn();
     render(<SlideModal {...mockProps} isOpen={true} close={closeMock} />);
 
-    // There are two close buttons (drag handle on mobile, X button on desktop)
-    const closeButtons = screen.getAllByRole("button", { name: "nav.close" });
-    expect(closeButtons.length).toBe(2);
-    await user.click(closeButtons[0]!);
+    // A phone sheet has exactly one close control: its drag handle.
+    await user.click(screen.getByRole("button", { name: "nav.close" }));
 
     expect(closeMock).toHaveBeenCalled();
+  });
+
+  it("should offer exactly one close control as a floating dialog from 760px", async () => {
+    vi.spyOn(window, "matchMedia").mockImplementation(
+      (query) =>
+        ({
+          matches: query === "(min-width: 760px)",
+          media: query,
+          addEventListener: () => {},
+          removeEventListener: () => {},
+          addListener: () => {},
+          removeListener: () => {},
+        }) as unknown as MediaQueryList,
+    );
+    const user = userEvent.setup();
+    const closeMock = vi.fn();
+    render(<SlideModal {...mockProps} isOpen={true} close={closeMock} />);
+
+    await user.click(screen.getByRole("button", { name: "nav.close" }));
+
+    expect(closeMock).toHaveBeenCalled();
+  });
+
+  it("should stay registered across rerenders with a new inline close callback", () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    const { rerender } = render(
+      <>
+        <SlideModal {...mockProps} isOpen close={() => {}} title="Other" />
+        <SlideModal {...mockProps} isOpen close={first} />
+      </>,
+    );
+    first.mockClear();
+
+    // Rerendering an open modal must not re-run the handoff that closes the
+    // other registered surfaces.
+    const otherClose = vi.fn();
+    rerender(
+      <>
+        <SlideModal {...mockProps} isOpen close={otherClose} title="Other" />
+        <SlideModal {...mockProps} isOpen close={second} />
+      </>,
+    );
+
+    expect(first).not.toHaveBeenCalled();
+    expect(second).not.toHaveBeenCalled();
+  });
+
+  it("keeps one shared backdrop and invokes the current close callback after rerender", () => {
+    const oldClose = vi.fn();
+    const currentClose = vi.fn();
+    const { rerender } = render(
+      <SlideModal {...mockProps} isOpen close={oldClose} />,
+    );
+    const overlay = screen.getByTestId("modal-overlay");
+    rerender(<SlideModal {...mockProps} isOpen close={currentClose} />);
+    expect(screen.getByTestId("modal-overlay")).toBe(overlay);
+    fireEvent.click(overlay);
+    expect(currentClose).toHaveBeenCalledOnce();
+    expect(oldClose).not.toHaveBeenCalled();
   });
 
   it("keeps a blocking modal active when a later modal is requested", async () => {
@@ -699,8 +759,11 @@ describe("SlideModal", () => {
     const footerButton = screen.getByRole("button", { name: "Footer Button" });
     expect(scrollRef.current).not.toContainElement(footerButton);
 
-    await user.click(screen.getByRole("link", { name: "Skip to actions" }));
-    expect(footerButton.parentElement).toHaveFocus();
+    const skipLink = screen.getByRole("link", { name: "Skip to actions" });
+    const footerId = skipLink.getAttribute("href")!.slice(1);
+    await user.click(skipLink);
+    expect(document.getElementById(footerId)).toHaveFocus();
+    expect(document.getElementById(footerId)).toContainElement(footerButton);
 
     await user.click(footerButton);
     expect(action).toHaveBeenCalledTimes(1);

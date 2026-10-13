@@ -143,6 +143,54 @@ describe("Root Layout Integration", () => {
       expect(screen.getByRole("main")).toBeInTheDocument();
     });
 
+    it("publishes the measured footer clearance on the document root", () => {
+      const { unmount } = render(<RootLayout />);
+
+      const root = document.documentElement;
+      expect(
+        root.style.getPropertyValue("--app-footer-overlay-clearance"),
+      ).toBe("64px");
+      expect(root.style.getPropertyValue("--app-footer-overlay-height")).toBe(
+        "64px",
+      );
+
+      unmount();
+      expect(
+        root.style.getPropertyValue("--app-footer-overlay-clearance"),
+      ).toBe("");
+    });
+
+    it("should publish every safe-area inset on the shell for navigation chrome", () => {
+      useStatusStore.setState({
+        safeInsets: {
+          top: "47px",
+          bottom: "34px",
+          left: "10px",
+          right: "12px",
+        },
+      });
+
+      render(<RootLayout />);
+
+      // The dock, sidebar and tablet bar read these instead of CSS env().
+      const shell = screen.getByRole("main").parentElement!;
+      expect(shell.style.getPropertyValue("--app-safe-top")).toBe("47px");
+      expect(shell.style.getPropertyValue("--app-safe-bottom")).toBe("34px");
+      expect(shell.style.getPropertyValue("--app-safe-left")).toBe("10px");
+      expect(shell.style.getPropertyValue("--app-safe-right")).toBe("12px");
+    });
+
+    it("should place navigation ahead of the page in reading order", () => {
+      render(<RootLayout />);
+
+      const navigation = screen.getByTestId("bottom-nav");
+      expect(
+        navigation.compareDocumentPosition(screen.getByRole("main")) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(screen.getByRole("contentinfo")).not.toContainElement(navigation);
+    });
+
     it("should render the Outlet for child routes", () => {
       render(<RootLayout />);
 
@@ -154,6 +202,16 @@ describe("Root Layout Integration", () => {
 
       const footer = screen.getByRole("contentinfo");
       expect(footer).toBeInTheDocument();
+      expect(
+        footer.parentElement?.style.getPropertyValue(
+          "--app-footer-overlay-height",
+        ),
+      ).toBe("64px");
+      expect(
+        footer.parentElement?.style.getPropertyValue(
+          "--app-footer-overlay-clearance",
+        ),
+      ).toBe("64px");
       expect(within(footer).getByRole("status")).toHaveTextContent("");
       expect(screen.getByTestId("bottom-nav")).toBeInTheDocument();
     });
@@ -389,13 +447,6 @@ describe("Root Layout Integration", () => {
       expect(screen.getByTestId("tour-initializer")).toBeInTheDocument();
       expect(screen.getByTestId("bottom-nav")).toBeInTheDocument();
       expect(screen.getByRole("main")).toBeInTheDocument();
-    });
-
-    it("should have proper layout with flex column", () => {
-      render(<RootLayout />);
-
-      const container = screen.getByRole("main").parentElement;
-      expect(container).toHaveClass("flex", "flex-col");
     });
   });
 });

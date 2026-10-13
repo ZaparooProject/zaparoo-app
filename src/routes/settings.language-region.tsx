@@ -1,5 +1,6 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
+import { Card } from "@/components/wui/Card";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { PageFrame } from "@/components/PageFrame";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
@@ -8,6 +9,7 @@ import { BackIcon } from "@/lib/images";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import type { SystemNameRegionPreference } from "@/lib/systemNames";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
+import { Select } from "@/components/wui/Select";
 
 export const Route = createFileRoute("/settings/language-region")({
   component: LanguageRegionSettings,
@@ -68,6 +70,8 @@ export function LanguageRegionSettings() {
 
   return (
     <PageFrame
+      headerMode="content-wide"
+      breadcrumbs={[{ to: "/settings", label: t("settings.title") }]}
       onSwipeBack={goBack}
       headerLeft={
         <HeaderButton
@@ -82,47 +86,37 @@ export function LanguageRegionSettings() {
         </h1>
       }
     >
-      <div className="flex flex-col gap-5">
-        <div>
-          <label htmlFor="settings-language" className="mb-1 block">
-            {t("settings.languageRegion.appLanguage")}
-          </label>
-          <select
-            id="settings-language"
-            className="border-bd-input bg-background text-foreground w-full rounded-md border border-solid p-3"
-            value={selectedLanguage}
-            onChange={(event) => i18n.changeLanguage(event.target.value)}
-          >
-            {LANGUAGE_OPTIONS.map(({ value, label }) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </div>
+      <Card className="settings-form-rows flex flex-col gap-4">
+        <Select
+          id="settings-language"
+          label={t("settings.languageRegion.appLanguage")}
+          value={selectedLanguage}
+          onChange={(event) => i18n.changeLanguage(event.target.value)}
+        >
+          {LANGUAGE_OPTIONS.map(({ value, label }) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </Select>
 
-        <div>
-          <label htmlFor="settings-system-names" className="mb-1 block">
-            {t("settings.systemNames.label")}
-          </label>
-          <select
-            id="settings-system-names"
-            className="border-bd-input bg-background text-foreground w-full rounded-md border border-solid p-3"
-            value={systemNameRegion}
-            onChange={(event) =>
-              setSystemNameRegion(
-                event.target.value as SystemNameRegionPreference,
-              )
-            }
-          >
-            {SYSTEM_NAME_REGION_OPTIONS.map(({ value, labelKey }) => (
-              <option key={value} value={value}>
-                {t(labelKey)}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+        <Select
+          id="settings-system-names"
+          label={t("settings.systemNames.label")}
+          value={systemNameRegion}
+          onChange={(event) =>
+            setSystemNameRegion(
+              event.target.value as SystemNameRegionPreference,
+            )
+          }
+        >
+          {SYSTEM_NAME_REGION_OPTIONS.map(({ value, labelKey }) => (
+            <option key={value} value={value}>
+              {t(labelKey)}
+            </option>
+          ))}
+        </Select>
+      </Card>
     </PageFrame>
   );
 }

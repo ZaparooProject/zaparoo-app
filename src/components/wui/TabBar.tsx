@@ -8,8 +8,6 @@ import {
 } from "react";
 import { getTabBarPanelId, getTabBarTabId } from "./tabBarIds";
 
-type TabBarRole = "radio" | "tab";
-
 export interface TabBarOption<T extends string> {
   value: T;
   label: ReactNode;
@@ -22,7 +20,7 @@ interface TabBarProps<T extends string> {
   value: T;
   onChange: (next: T) => void;
   disabled?: boolean;
-  role?: TabBarRole;
+  role?: "tab";
   layout?: "grid" | "scroll";
   containerProps?: HTMLAttributes<HTMLDivElement> & {
     ref?: Ref<HTMLDivElement>;
@@ -35,11 +33,12 @@ export function TabBar<T extends string>({
   value,
   onChange,
   disabled = false,
-  role = "radio",
+  role = "tab",
   layout = "grid",
   containerProps,
 }: TabBarProps<T>) {
   const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const selectedIndex = options.findIndex((option) => option.value === value);
 
   const focusAndSelect = (index: number) => {
     const target = options[index];
@@ -82,16 +81,19 @@ export function TabBar<T extends string>({
 
   return (
     <div
-      role={role === "tab" ? "tablist" : "radiogroup"}
+      role="tablist"
       aria-label={label}
       className={classNames(
-        "gap-1 rounded-md border border-solid border-white/15 p-1",
+        "border-border bg-surface-inset inset-shadow-material gap-1 rounded-lg border border-solid p-0.5",
         layout === "grid" ? "grid" : "flex",
         className,
       )}
       style={{
         ...(layout === "grid"
-          ? { gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }
+          ? {
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(min(100%, 4rem), 1fr))",
+            }
           : {}),
         ...containerStyle,
       }}
@@ -104,31 +106,44 @@ export function TabBar<T extends string>({
         return (
           <button
             key={option.value}
-            id={role === "tab" ? tabId : undefined}
+            id={tabId}
             ref={(el) => {
               buttonRefs.current[index] = el;
             }}
             type="button"
             role={role}
             disabled={disabled}
-            aria-checked={role === "radio" ? active : undefined}
-            aria-selected={role === "tab" ? active : undefined}
-            aria-controls={role === "tab" ? panelId : undefined}
-            tabIndex={active ? 0 : -1}
+            aria-selected={active}
+            aria-controls={panelId}
+            tabIndex={
+              !disabled && (active || (selectedIndex === -1 && index === 0))
+                ? 0
+                : -1
+            }
             onClick={() => onChange(option.value)}
             onKeyDown={(event) => onKeyDown(event, index)}
             className={classNames(
-              "cursor-pointer rounded-sm px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors",
-              "focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none",
-              layout === "scroll" && "shrink-0",
+              "group min-h-12 min-w-0 cursor-pointer rounded-md p-1 text-center text-sm leading-snug font-semibold break-words",
+              "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",
+              layout === "scroll" && "shrink-0 whitespace-nowrap",
+              "uppercase",
               {
-                "bg-button-pattern text-primary-foreground": active,
-                "text-muted-foreground": !active,
-                "cursor-not-allowed opacity-60": disabled,
+                "cursor-not-allowed opacity-50": disabled,
               },
             )}
           >
-            {option.label}
+            <span
+              className={classNames(
+                "flex min-h-10 w-full items-center justify-center rounded-md border border-transparent px-2 py-1 transition-colors",
+                {
+                  "border-border bg-surface-raised text-foreground shadow-[0_2px_0_var(--tab-lip),var(--tab-lift),inset_0_1px_0_var(--material-highlight)]":
+                    active,
+                  "text-muted-foreground group-hover:bg-foreground/5": !active,
+                },
+              )}
+            >
+              {option.label}
+            </span>
           </button>
         );
       })}

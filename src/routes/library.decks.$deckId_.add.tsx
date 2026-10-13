@@ -15,10 +15,13 @@ import { PageFrame } from "@/components/PageFrame";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { TextInput } from "@/components/wui/TextInput";
-import { Segmented } from "@/components/wui/Segmented";
+import { RadioGroup } from "@/components/wui/RadioGroup";
 import { Button } from "@/components/wui/Button";
+import { DelayedLoading } from "@/components/DelayedLoading";
+import { InlineLoading } from "@/components/InlineLoading";
 import { ZapScriptInput } from "@/components/ZapScriptInput";
 import { BackIcon } from "@/lib/images";
+import { useLibraryCollectionBreadcrumbs } from "@/components/library/useLibraryBreadcrumbs";
 
 export const Route = createFileRoute("/library/decks/$deckId_/add")({
   component: AddDeckItem,
@@ -48,6 +51,7 @@ export function AddDeckItem() {
   const [script, setScript] = useState("");
   const [cardId, setCardId] = useState("");
   const [saving, setSaving] = useState(false);
+  const collectionBreadcrumbs = useLibraryCollectionBreadcrumbs();
   const goBack = () =>
     void navigate({
       to: "/library/decks/$deckId",
@@ -95,6 +99,15 @@ export function AddDeckItem() {
 
   return (
     <PageFrame
+      headerMode="content-wide"
+      breadcrumbs={[
+        ...collectionBreadcrumbs,
+        {
+          to: "/library/decks/$deckId",
+          params: { deckId },
+          label: deck?.name ?? t("decks.title"),
+        },
+      ]}
       onSwipeBack={goBack}
       headerLeft={
         <HeaderButton
@@ -119,9 +132,9 @@ export function AddDeckItem() {
           })}
         />
       ) : deckQuery.isLoading ? (
-        <p role="status" className="text-muted-foreground">
-          {t("decks.loading")}
-        </p>
+        <DelayedLoading>
+          <InlineLoading label={t("decks.loading")} />
+        </DelayedLoading>
       ) : deckQuery.isError || !deck ? (
         <EmptyState
           title={t("decks.loadError")}
@@ -141,7 +154,7 @@ export function AddDeckItem() {
         <EmptyState title={t("decks.full")} />
       ) : (
         <div className="flex flex-col gap-4">
-          <Segmented
+          <RadioGroup
             label={t("decks.itemType")}
             options={[
               { value: "script", label: t("decks.script") },
@@ -175,7 +188,7 @@ export function AddDeckItem() {
           <div className="flex gap-2">
             <Button
               label={t("nav.cancel")}
-              variant="outline"
+              variant="secondary"
               className="flex-1"
               onClick={goBack}
             />
@@ -189,6 +202,7 @@ export function AddDeckItem() {
                   ? !name.trim() || !script.trim()
                   : !cardId.trim())
               }
+              disabledAppearance={saving ? "busy" : "unavailable"}
               onClick={() => void save()}
             />
           </div>

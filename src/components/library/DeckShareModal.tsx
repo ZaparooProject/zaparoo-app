@@ -54,6 +54,7 @@ export function DeckShareModal({
           intent="primary"
           className="w-full"
           disabled={copying}
+          disabledAppearance="busy"
           onClick={() => void copy()}
         />
       }

@@ -369,6 +369,15 @@ describe("CoreAPI API Contract", () => {
       expect(sentData.params).toBeUndefined();
     });
 
+    it("mediaTags should not report a cancelled request as an error", async () => {
+      const errorSpy = vi.spyOn(logger, "error");
+      const promise = CoreAPI.mediaTags();
+      simulateError(mockSend, "Request cancelled: connection reset");
+
+      await expect(promise).rejects.toThrow("connection reset");
+      expect(errorSpy).not.toHaveBeenCalled();
+    });
+
     it("mediaTags should not report unsupported API errors", async () => {
       const errorSpy = vi.spyOn(logger, "error");
       const warnSpy = vi.spyOn(logger, "warn");
@@ -652,6 +661,13 @@ describe("CoreAPI API Contract", () => {
       expect(entry.uid).toBe("abc123");
       expect(entry.text).toBe("**launch.system:snes");
       expect(entry.success).toBe(true);
+    });
+
+    it("should return an empty list when Core reports no history as null", async () => {
+      const resultPromise = CoreAPI.history();
+      simulateResponse(mockSend, { entries: null });
+
+      await expect(resultPromise).resolves.toEqual({ entries: [] });
     });
   });
 

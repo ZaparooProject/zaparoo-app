@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "../../../../test-utils";
 import { ToolsTab } from "@/components/nfc/ToolsTab";
 
@@ -10,23 +10,28 @@ vi.mock("@capacitor/core", () => ({
 }));
 
 describe("ToolsTab on iOS", () => {
-  const mockOnToolAction = vi.fn();
+  it("should hide Format tool on iOS platform", () => {
+    render(
+      <ToolsTab
+        renderToolControl={({ label }) => (
+          <button type="button">{label}</button>
+        )}
+      />,
+    );
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+    // Format is Android-only.
+    expect(
+      screen.queryByRole("heading", { name: "create.nfc.format" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "create.nfc.format" }),
+    ).not.toBeInTheDocument();
 
-  describe("platform-specific filtering", () => {
-    it("should hide Format tool on iOS platform", () => {
-      render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />);
-
-      // The "Format" tool should not be visible on iOS (it's Android-only)
-      // Using translation keys since global mock returns keys as-is
-      expect(screen.queryByText("create.nfc.format")).not.toBeInTheDocument();
-
-      // The other tools should be visible (they support both platforms)
-      expect(screen.getAllByText("create.nfc.erase")).toHaveLength(2); // heading + button
-      expect(screen.getAllByText("create.nfc.makeReadOnly")).toHaveLength(2); // heading + button
-    });
+    expect(
+      screen.getByRole("button", { name: "create.nfc.erase" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "create.nfc.makeReadOnly" }),
+    ).toBeInTheDocument();
   });
 });

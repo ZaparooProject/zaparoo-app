@@ -7,6 +7,8 @@ import { DeviceLinkButton } from "@/components/DeviceLinkButton";
 import { SlideModal } from "@/components/SlideModal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/wui/Button";
+import { Card } from "@/components/wui/Card";
+import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { SettingHelp } from "@/components/wui/SettingHelp";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
 import { useClientCapability } from "@/hooks/useClientCapability";
@@ -27,6 +29,11 @@ import {
   type RemoteControlState,
   type UpdateSettingsRequest,
 } from "@/lib/models";
+import { Select } from "@/components/wui/Select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useHaptics } from "@/hooks/useHaptics";
+import { useCoreSettingsQueryKey } from "@/hooks/useCoreSettingsUpdate";
+import { formatAppDate } from "@/lib/formatDate";
 
 interface OnlineDeviceSetupProps {
   connected: boolean;
@@ -90,23 +97,13 @@ function isOnlineSettingsPermissionError(error: unknown): boolean {
   );
 }
 
-function formatBackupDate(
-  value: string | undefined,
-  language: string,
-): string | null {
-  if (!value) return null;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? null
-    : date.toLocaleDateString(language, { dateStyle: "medium" });
-}
-
 export function OnlineDeviceSetup({
   connected,
   warpActive,
   onSignIn,
 }: OnlineDeviceSetupProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const { impact } = useHaptics();
   const router = useRouter();
   const queryClient = useQueryClient();
   const remoteControlFeature = useCoreFeature("onlineRemoteControl", {
@@ -146,13 +143,14 @@ export function OnlineDeviceSetup({
     }
   }, [linkState]);
 
+  const settingsQueryKey = useCoreSettingsQueryKey();
   const settingsQuery = useQuery({
-    queryKey: ["settings", "online"],
+    queryKey: settingsQueryKey,
     queryFn: () => CoreAPI.settings(),
     enabled: connected && linked && canWriteCoreSettings,
   });
   const backupStatusQuery = useQuery({
-    queryKey: ["settings", "backup", "status"],
+    queryKey: [...settingsQueryKey, "backup", "status"],
     queryFn: () => CoreAPI.settingsBackupStatus(),
     enabled: connected && linked,
     refetchInterval: (query) => {
@@ -205,11 +203,13 @@ export function OnlineDeviceSetup({
   const backupStatusLabel = getBackupStatusLabel(
     remoteStatus,
     backupStatusQuery.data?.activeOperation,
-    i18n.language,
     t,
   );
+  // The link check and the settings read share one loading treatment: the
+  // same rows, with their switches pending.
   const settingsLoading =
-    canWriteCoreSettings && linked && settingsQuery.isPending;
+    featuresPending ||
+    (canWriteCoreSettings && linked && settingsQuery.isPending);
   const actionsDisabled = updateSettings.isPending;
   const cloudAvailable =
     warpActive === true || remoteStatus?.availability === "available";
@@ -268,19 +268,17 @@ export function OnlineDeviceSetup({
       ...(!on || cloudAvailable ? { backupRemoteEnabled: on } : {}),
     });
 
-  const linkedSince = formatBackupDate(remoteStatus?.linkedAt, i18n.language);
-  const warpLabel =
-    warpActive === true || remoteStatus?.availability === "available"
-      ? t("online.deviceLink.warpActive")
-      : remoteStatus?.availability === "unavailable"
-        ? t("online.deviceLink.warpInactive")
-        : t("online.deviceLink.warpChecking");
+  const linkedSince = formatAppDate(remoteStatus?.linkedAt);
+  const warpLabel = cloudAvailable
+    ? t("online.deviceLink.warpActive")
+    : remoteStatus?.availability === "unavailable"
+      ? t("online.deviceLink.warpInactive")
+      : t("online.deviceLink.warpChecking");
   const remoteState = remoteActivityQuery.data?.status.state ?? "unknown";
 
   const backupStatusRow = (
-    <div className="flex min-h-[48px] items-center justify-between gap-4">
-      <span>{t("online.features.backupStatus")}</span>
-      <span className="text-muted-foreground text-right text-sm">
+    <div className="text-muted-foreground text-sm" role="status">
+      <span>
         {backupStatusQuery.isPending
           ? t("online.features.checkingStatus")
           : backupStatusQuery.isError
@@ -291,10 +289,9 @@ export function OnlineDeviceSetup({
   );
 
   const remoteStatusRow = remoteControlFeature.available ? (
-    <div className="flex flex-col gap-1">
-      <div className="flex min-h-[48px] items-center justify-between gap-4">
-        <span>{t("online.features.remoteStatus")}</span>
-        <span className="text-muted-foreground text-right text-sm">
+    <div className="-mt-1 flex flex-col gap-1 pb-2">
+      <div className="text-muted-foreground text-sm" role="status">
+        <span>
           {remoteActivityQuery.isPending
             ? t("online.features.checkingStatus")
             : remoteActivityQuery.isError
@@ -315,333 +312,335 @@ export function OnlineDeviceSetup({
 
   return (
     <>
-      <section
-        className="flex w-full flex-col gap-3"
-        aria-labelledby="online-device-title"
-      >
-        <div className="flex items-center">
-          <h2
-            id="online-device-title"
-            className="text-lg font-medium text-white"
-          >
-            {t("online.deviceLink.title")}
-          </h2>
-          <SettingHelp
-            title={t("online.deviceLink.title")}
-            description={t("online.deviceLink.help")}
-          />
-        </div>
-        <DeviceLinkButton
-          enabled={connected}
-          onStateChange={setLinkState}
-          onSignIn={onSignIn}
-        />
-        {linked && (
-          <div className="flex flex-col">
-            {remoteStatus?.deviceName && (
-              <div className="flex min-h-[48px] items-center justify-between gap-4">
-                <span>{t("online.deviceLink.linkedAs")}</span>
-                <span className="text-muted-foreground text-right text-sm break-all">
-                  {remoteStatus.deviceName}
-                </span>
-              </div>
-            )}
-            {linkedSince && (
-              <div className="flex min-h-[48px] items-center justify-between gap-4">
-                <span>{t("online.deviceLink.linkedSince")}</span>
-                <span className="text-muted-foreground text-right text-sm">
-                  {linkedSince}
-                </span>
-              </div>
-            )}
-            <div className="flex min-h-[48px] items-center justify-between gap-4">
-              <span>{t("online.deviceLink.warp")}</span>
-              <span className="text-muted-foreground text-right text-sm">
-                {backupStatusQuery.isPending
-                  ? t("online.deviceLink.warpChecking")
-                  : warpLabel}
-              </span>
-            </div>
-            {canWriteCoreSettings && (
-              <Button
-                label={t("online.deviceLink.unlink")}
-                variant="outline"
-                intent="destructive"
-                onClick={() => setUnlinkOpen(true)}
-                disabled={unlink.isPending}
-                className="border-error text-error mt-2 w-full"
-              />
-            )}
-          </div>
-        )}
-        {!connected && (
-          <div className="flex flex-col gap-3">
-            <p className="text-muted-foreground text-sm">
-              {t("online.deviceLink.disconnected")}
-            </p>
-            <Button
-              label={t("online.deviceLink.backToSettings")}
-              variant="outline"
-              onClick={() => void router.navigate({ to: "/settings" })}
-              className="w-full"
-            />
-          </div>
-        )}
-      </section>
-
-      {(featuresPending || linked) && (
+      <Card>
         <section
           className="flex w-full flex-col gap-4"
-          aria-labelledby="online-features-title"
+          aria-labelledby="online-device-title"
         >
-          <h2
-            ref={featuresHeadingRef}
-            id="online-features-title"
-            tabIndex={-1}
-            className="rounded-sm text-lg font-medium text-white outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-          >
-            {t("online.features.title")}
-          </h2>
-
-          {featuresPending ? (
-            <div
-              className="flex flex-col gap-5"
-              role="status"
-              aria-label={t("online.features.loading")}
+          <div className="flex items-center">
+            <h2
+              id="online-device-title"
+              className="text-foreground text-lg font-semibold"
             >
-              <Skeleton className="h-8 w-full rounded-full" />
-              <Skeleton className="h-8 w-full rounded-full" />
-              <div className="flex flex-col gap-2">
-                <Skeleton className="h-5 w-32" />
-                <Skeleton className="h-12 w-full rounded-md" />
-              </div>
-              <Skeleton className="h-12 w-full" />
-            </div>
-          ) : canWriteCoreSettings ? (
-            <div className="flex flex-col gap-5">
-              {settingsQuery.isError ? (
-                <div className="flex flex-col gap-3">
-                  <p className="text-muted-foreground text-sm" role="status">
-                    {t("online.features.settingsUnavailable")}
-                  </p>
-                  <Button
-                    label={t("online.features.retry")}
-                    variant="outline"
-                    onClick={() => settingsQuery.refetch()}
-                    className="w-full"
-                  />
+              {t("online.deviceLink.title")}
+            </h2>
+            <SettingHelp
+              title={t("online.deviceLink.title")}
+              description={t("online.deviceLink.help")}
+            />
+          </div>
+          {linked && remoteStatus?.deviceName && (
+            <p className="text-foreground font-medium break-all">
+              {remoteStatus.deviceName}
+            </p>
+          )}
+          <DeviceLinkButton
+            enabled={connected}
+            onStateChange={setLinkState}
+            onSignIn={onSignIn}
+          />
+          {linked && (
+            <div className="flex flex-col">
+              {linkedSince && (
+                <div className="flex min-h-[48px] items-center justify-between gap-4">
+                  <span className="text-sm font-medium">
+                    {t("online.deviceLink.linkedSince")}
+                  </span>
+                  <span className="text-muted-foreground text-right text-sm">
+                    {linkedSince}
+                  </span>
                 </div>
-              ) : (
-                <>
-                  <ToggleSwitch
-                    label={
-                      <span className="flex items-center">
-                        {t("online.features.allFeatures")}
+              )}
+              <div className="flex min-h-[48px] items-center justify-between gap-4">
+                <span className="text-sm font-medium">
+                  {t("online.deviceLink.warp")}
+                </span>
+                <span className="text-muted-foreground text-right text-sm">
+                  {backupStatusQuery.isPending
+                    ? t("online.deviceLink.warpChecking")
+                    : warpLabel}
+                </span>
+              </div>
+            </div>
+          )}
+          {linked && canWriteCoreSettings && (
+            <Button
+              label={t("online.deviceLink.unlink")}
+              variant="outline"
+              intent="destructive"
+              onClick={() => setUnlinkOpen(true)}
+              disabled={unlink.isPending}
+              disabledAppearance="busy"
+              className="w-full"
+            />
+          )}
+          {!connected && (
+            <div className="flex flex-col gap-3">
+              <p className="text-muted-foreground text-sm">
+                {t("online.deviceLink.disconnected")}
+              </p>
+              <Button
+                label={t("online.deviceLink.backToSettings")}
+                variant="outline"
+                onClick={() => void router.navigate({ to: "/settings" })}
+                className="w-full"
+              />
+            </div>
+          )}
+        </section>
+      </Card>
+
+      {(featuresPending || linked) && (
+        <Card>
+          <section
+            className="flex w-full flex-col gap-4"
+            aria-labelledby="online-features-title"
+          >
+            <h2
+              ref={featuresHeadingRef}
+              id="online-features-title"
+              tabIndex={-1}
+              className="text-foreground focus-visible:ring-ring rounded-sm text-lg font-semibold outline-none focus-visible:ring-2"
+            >
+              {t("online.features.title")}
+            </h2>
+
+            {featuresPending || canWriteCoreSettings ? (
+              <div
+                className="flex flex-col"
+                role={featuresPending ? "status" : undefined}
+                aria-label={
+                  featuresPending ? t("online.features.loading") : undefined
+                }
+              >
+                {settingsQuery.isError ? (
+                  <div className="flex flex-col gap-3">
+                    <p className="text-muted-foreground text-sm" role="status">
+                      {t("online.features.settingsUnavailable")}
+                    </p>
+                    <Button
+                      label={t("online.features.retry")}
+                      variant="outline"
+                      onClick={() => settingsQuery.refetch()}
+                      className="w-full"
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex min-h-12 items-center justify-between gap-4">
+                      <div className="flex min-w-0 items-center">
+                        <label
+                          htmlFor="online-all-features"
+                          className="cursor-pointer text-sm leading-6 font-medium"
+                        >
+                          {t("online.features.allFeatures")}
+                        </label>
                         <SettingHelp
                           title={t("online.features.allFeatures")}
                           description={t("online.features.allFeaturesHelp")}
                         />
-                      </span>
-                    }
-                    value={allFeaturesOn}
-                    setValue={setAllFeatures}
-                    disabled={actionsDisabled}
-                    loading={settingsLoading}
-                    suffix={
-                      someFeaturesOn ? (
-                        <span className="text-muted-foreground ml-2 text-xs">
-                          {t("online.features.someOn")}
-                        </span>
-                      ) : undefined
-                    }
-                  />
-
-                  {remoteControlFeature.available && (
-                    <ToggleSwitch
-                      label={
-                        <span className="flex items-center">
-                          {t("online.features.remoteControl")}
-                          <SettingHelp
-                            title={t("online.features.remoteControl")}
-                            description={t("online.features.remoteControlHelp")}
+                      </div>
+                      {settingsLoading ? (
+                        <Skeleton className="size-6 shrink-0 rounded" />
+                      ) : (
+                        <label
+                          className="flex size-12 shrink-0 cursor-pointer items-center justify-center"
+                          htmlFor="online-all-features"
+                        >
+                          <Checkbox
+                            id="online-all-features"
+                            checked={
+                              someFeaturesOn ? "indeterminate" : allFeaturesOn
+                            }
+                            onCheckedChange={(checked) => {
+                              impact("medium");
+                              setAllFeatures(checked === true);
+                            }}
+                            disabled={actionsDisabled}
                           />
-                        </span>
-                      }
-                      value={settings?.remoteControlEnabled ?? false}
-                      setValue={(value) =>
-                        updateSettings.mutate({ remoteControlEnabled: value })
-                      }
-                      disabled={actionsDisabled}
-                      loading={settingsLoading}
-                    />
-                  )}
+                        </label>
+                      )}
+                    </div>
 
-                  <ToggleSwitch
-                    label={
-                      <span className="flex items-center">
-                        {t("online.features.playHistory")}
+                    {remoteControlFeature.available && (
+                      <div className="flex flex-col">
+                        <ToggleSwitch
+                          reflow
+                          label={t("online.features.remoteControl")}
+                          help={
+                            <SettingHelp
+                              title={t("online.features.remoteControl")}
+                              description={t(
+                                "online.features.remoteControlHelp",
+                              )}
+                            />
+                          }
+                          value={settings?.remoteControlEnabled ?? false}
+                          setValue={(value) =>
+                            updateSettings.mutate({
+                              remoteControlEnabled: value,
+                            })
+                          }
+                          disabled={actionsDisabled}
+                          loading={settingsLoading}
+                        />
+                        {remoteStatusRow}
+                      </div>
+                    )}
+
+                    <ToggleSwitch
+                      reflow
+                      label={t("online.features.playHistory")}
+                      help={
                         <SettingHelp
                           title={t("online.features.playHistory")}
                           description={t("online.features.playHistoryHelp")}
                         />
-                      </span>
-                    }
-                    value={settingsQuery.data?.playtimeSyncEnabled ?? false}
-                    setValue={(value) =>
-                      updateSettings.mutate({ playtimeSyncEnabled: value })
-                    }
-                    disabled={actionsDisabled}
-                    loading={settingsLoading}
-                    suffix={
-                      <span className="text-muted-foreground ml-2 text-xs">
-                        {t("online.features.free")}
-                      </span>
-                    }
-                  />
-
-                  {librarySyncFeature.available && (
-                    <ToggleSwitch
-                      label={
-                        <span className="flex items-center">
-                          {t("online.features.librarySync")}
-                          <SettingHelp
-                            title={t("online.features.librarySync")}
-                            description={t("online.features.librarySyncHelp")}
-                          />
-                        </span>
                       }
-                      value={settings?.librarySyncEnabled ?? false}
+                      value={settings?.playtimeSyncEnabled ?? false}
                       setValue={(value) =>
-                        updateSettings.mutate({ librarySyncEnabled: value })
+                        updateSettings.mutate({ playtimeSyncEnabled: value })
                       }
                       disabled={actionsDisabled}
                       loading={settingsLoading}
                     />
-                  )}
 
-                  <ToggleSwitch
-                    label={
-                      <span className="flex items-center">
-                        {t("online.features.automaticBackup")}
-                        <SettingHelp
-                          title={t("online.features.automaticBackup")}
-                          description={t("online.features.automaticBackupHelp")}
-                        />
-                      </span>
-                    }
-                    value={settingsQuery.data?.backupRemoteEnabled ?? false}
-                    setValue={(value) =>
-                      updateSettings.mutate({ backupRemoteEnabled: value })
-                    }
-                    disabled={actionsDisabled || !cloudAvailable}
-                    loading={settingsLoading}
-                    suffix={
-                      !cloudAvailable ? (
-                        <span className="text-muted-foreground ml-2 text-xs">
-                          {cloudAvailabilityPending
-                            ? t("online.features.checkingWarp")
-                            : t("online.features.requiresWarp")}
-                        </span>
-                      ) : undefined
-                    }
-                  />
+                    {librarySyncFeature.available && (
+                      <ToggleSwitch
+                        reflow
+                        label={t("online.features.librarySync")}
+                        help={
+                          <SettingHelp
+                            title={t("online.features.librarySync")}
+                            description={t("online.features.librarySyncHelp")}
+                          />
+                        }
+                        value={settings?.librarySyncEnabled ?? false}
+                        setValue={(value) =>
+                          updateSettings.mutate({ librarySyncEnabled: value })
+                        }
+                        disabled={actionsDisabled}
+                        loading={settingsLoading}
+                      />
+                    )}
 
-                  {settingsLoading ? (
-                    <div className="flex flex-col gap-2">
-                      <Skeleton className="h-5 w-32" />
-                      <Skeleton className="h-12 w-full rounded-md" />
+                    <div className="flex flex-col gap-3">
+                      <ToggleSwitch
+                        reflow
+                        label={t("online.features.automaticBackup")}
+                        help={
+                          <SettingHelp
+                            title={t("online.features.automaticBackup")}
+                            description={t(
+                              "online.features.automaticBackupHelp",
+                            )}
+                          />
+                        }
+                        value={settings?.backupRemoteEnabled ?? false}
+                        setValue={(value) =>
+                          updateSettings.mutate({ backupRemoteEnabled: value })
+                        }
+                        disabled={actionsDisabled || !cloudAvailable}
+                        loading={settingsLoading}
+                        suffix={
+                          !cloudAvailable ? (
+                            <span className="text-muted-foreground ml-2 text-xs">
+                              {cloudAvailabilityPending
+                                ? t("online.features.checkingWarp")
+                                : t("online.features.requiresWarp")}
+                            </span>
+                          ) : undefined
+                        }
+                      />
+
+                      {settingsLoading ? (
+                        <div className="flex flex-col gap-2">
+                          <Skeleton className="h-5 w-32" />
+                          <Skeleton className="h-12 w-full rounded-md" />
+                        </div>
+                      ) : (
+                        <div>
+                          <Select
+                            id="online-backup-schedule"
+                            label={t("online.features.schedule")}
+                            value={settings?.backupRemoteSchedule ?? "daily"}
+                            onChange={(event) =>
+                              updateSettings.mutate({
+                                backupRemoteSchedule: event.target.value as
+                                  | "daily"
+                                  | "weekly"
+                                  | "manual",
+                              })
+                            }
+                            disabled={
+                              actionsDisabled ||
+                              !cloudAvailable ||
+                              !settings?.backupRemoteEnabled
+                            }
+                          >
+                            <option value="daily">
+                              {t("online.features.scheduleDaily")}
+                            </option>
+                            <option value="weekly">
+                              {t("online.features.scheduleWeekly")}
+                            </option>
+                            <option value="manual">
+                              {t("online.features.scheduleManual")}
+                            </option>
+                          </Select>
+                        </div>
+                      )}
+                      {backupStatusRow}
                     </div>
-                  ) : (
-                    <div>
-                      <label
-                        htmlFor="online-backup-schedule"
-                        className="mb-1 block text-sm font-medium"
-                      >
-                        {t("online.features.schedule")}
-                      </label>
-                      <select
-                        id="online-backup-schedule"
-                        className="border-bd-input bg-background text-foreground w-full rounded-md border border-solid p-3 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
-                        value={
-                          settingsQuery.data?.backupRemoteSchedule ?? "daily"
-                        }
-                        onChange={(event) =>
-                          updateSettings.mutate({
-                            backupRemoteSchedule: event.target.value as
-                              | "daily"
-                              | "weekly"
-                              | "manual",
-                          })
-                        }
-                        disabled={
-                          actionsDisabled ||
-                          !cloudAvailable ||
-                          !settingsQuery.data?.backupRemoteEnabled
-                        }
-                      >
-                        <option value="daily">
-                          {t("online.features.scheduleDaily")}
-                        </option>
-                        <option value="weekly">
-                          {t("online.features.scheduleWeekly")}
-                        </option>
-                        <option value="manual">
-                          {t("online.features.scheduleManual")}
-                        </option>
-                      </select>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {backupStatusRow}
-              {remoteStatusRow}
-            </div>
-          ) : (
-            <div className="flex flex-col gap-4">
-              {remoteControlFeature.available && (
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {remoteControlFeature.available && (
+                  <div className="flex flex-col gap-1">
+                    <p className="text-foreground font-medium">
+                      {t("online.features.remoteControl")}
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      {t("online.features.remoteControlSummary")}
+                    </p>
+                  </div>
+                )}
                 <div className="flex flex-col gap-1">
-                  <p className="font-medium text-white">
-                    {t("online.features.remoteControl")}
+                  <p className="text-foreground font-medium">
+                    {t("online.features.playHistory")}
                   </p>
                   <p className="text-muted-foreground text-sm">
-                    {t("online.features.remoteControlSummary")}
+                    {t("online.features.playHistorySummary")}
                   </p>
                 </div>
-              )}
-              <div className="flex flex-col gap-1">
-                <p className="font-medium text-white">
-                  {t("online.features.playHistory")}
-                </p>
-                <p className="text-muted-foreground text-sm">
-                  {t("online.features.playHistorySummary")}
-                </p>
-              </div>
-              {librarySyncFeature.available && (
+                {librarySyncFeature.available && (
+                  <div className="flex flex-col gap-1">
+                    <p className="text-foreground font-medium">
+                      {t("online.features.librarySync")}
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      {t("online.features.librarySyncSummary")}
+                    </p>
+                  </div>
+                )}
                 <div className="flex flex-col gap-1">
-                  <p className="font-medium text-white">
-                    {t("online.features.librarySync")}
+                  <p className="text-foreground font-medium">
+                    {t("online.features.automaticBackup")}
                   </p>
                   <p className="text-muted-foreground text-sm">
-                    {t("online.features.librarySyncSummary")}
+                    {t("online.features.automaticBackupSummary")}
                   </p>
+                  {backupStatusRow}
                 </div>
-              )}
-              <div className="flex flex-col gap-1">
-                <p className="font-medium text-white">
-                  {t("online.features.automaticBackup")}
-                </p>
                 <p className="text-muted-foreground text-sm">
-                  {t("online.features.automaticBackupSummary")}
+                  {t("online.features.adminRequired")}
                 </p>
               </div>
-              {backupStatusRow}
-              <p className="text-muted-foreground text-sm">
-                {t("online.features.adminRequired")}
-              </p>
-            </div>
-          )}
-        </section>
+            )}
+          </section>
+        </Card>
       )}
 
       <SlideModal
@@ -652,28 +651,34 @@ export function OnlineDeviceSetup({
         dismissible={!unlink.isPending}
         title={t("online.deviceLink.unlinkConfirmTitle")}
         footer={
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              label={t("nav.cancel")}
-              onClick={() => setUnlinkOpen(false)}
-              className="flex-1"
-              disabled={unlink.isPending}
-            />
-            <Button
-              variant="outline"
-              intent="destructive"
-              label={t("online.deviceLink.unlink")}
-              onClick={() => unlink.mutate()}
-              className="border-error text-error flex-1"
-              disabled={unlink.isPending}
-            />
-          </div>
+          <ModalActionBar
+            secondaryAction={
+              <Button
+                variant="secondary"
+                label={t("nav.cancel")}
+                onClick={() => setUnlinkOpen(false)}
+                disabled={unlink.isPending}
+                disabledAppearance="busy"
+              />
+            }
+            primaryAction={
+              <Button
+                variant="outline"
+                intent="destructive"
+                label={t("online.deviceLink.unlink")}
+                onClick={() => unlink.mutate()}
+                disabled={unlink.isPending}
+                disabledAppearance="busy"
+              />
+            }
+          />
         }
       >
-        <p className="text-muted-foreground py-2 text-sm">
-          {t("online.deviceLink.unlinkConfirmMessage")}
-        </p>
+        <div className="py-4">
+          <p className="text-center">
+            {t("online.deviceLink.unlinkConfirmMessage")}
+          </p>
+        </div>
       </SlideModal>
     </>
   );
@@ -682,7 +687,6 @@ export function OnlineDeviceSetup({
 function getBackupStatusLabel(
   remote: BackupStatusEntry | undefined,
   activeOperation: string | undefined,
-  language: string,
   t: ReturnType<typeof useTranslation>["t"],
 ): string {
   if (activeOperation?.startsWith("remote")) {
@@ -692,7 +696,7 @@ function getBackupStatusLabel(
   if (remote.lastStatus === "failed") {
     return t("online.features.lastBackupFailed");
   }
-  const lastSuccess = formatBackupDate(remote.lastSuccessAt, language);
+  const lastSuccess = formatAppDate(remote.lastSuccessAt);
   if (lastSuccess) {
     return t("online.features.lastBackup", { date: lastSuccess });
   }

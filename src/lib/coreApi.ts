@@ -30,11 +30,16 @@ import {
   MediaBrowseIndexResponse,
   MediaBrowseParams,
   MediaBrowseResponse,
+  MediaHistoryEntry,
+  MediaHistoryParams,
+  MediaHistoryResponse,
+  MediaHistoryTopParams,
+  MediaHistoryTopResponse,
+  MediaLookupParams,
+  MediaLookupResponse,
   MediaCleanOrphansResponse,
   MediaImageParams,
   MediaImageResponse,
-  MediaLookupParams,
-  MediaLookupResponse,
   MediaMetaParams,
   MediaMetaResponse,
   MediaScrapeCancelResponse,
@@ -73,6 +78,7 @@ import {
   SettingsResponse,
   SystemsParams,
   SystemsResponse,
+  LaunchersResponse,
   TokensResponse,
   UpdateMappingRequest,
   UpdateSettingsRequest,
@@ -236,6 +242,17 @@ function isSystem(value: unknown): boolean {
   );
 }
 
+function isLauncher(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    value.id !== "" &&
+    typeof value.available === "boolean" &&
+    hasOptionalType(value, "systemId", "string") &&
+    hasOptionalType(value, "systemName", "string")
+  );
+}
+
 function isScraper(value: unknown): boolean {
   return (
     isRecord(value) &&
@@ -287,6 +304,14 @@ function isPlayingResponse(value: unknown): boolean {
     hasOptionalType(value, "launcherId", "string") &&
     (value.launcherControls === undefined ||
       isStringArray(value.launcherControls)) &&
+    hasOptionalType(value, "mediaId", "number") &&
+    hasOptionalType(value, "relativePath", "string") &&
+    hasOptionalType(value, "positionMs", "number") &&
+    hasOptionalType(value, "durationMs", "number") &&
+    // Validated as a plain string, never against the union: a rejected entry is
+    // dropped from the array, so an unknown future state would make Now Playing
+    // vanish rather than degrade.
+    hasOptionalType(value, "playbackState", "string") &&
     (value.slot === undefined ||
       value.slot === null ||
       value.slot === "" ||
@@ -324,6 +349,123 @@ function isPlaylistState(value: unknown): boolean {
   );
 }
 
+/**
+ * Drops playback fields Core sent in a shape this build does not understand,
+ * so an unfamiliar value degrades the progress display instead of the card.
+ */
+function normalizeActiveMedia(entry: PlayingResponse): PlayingResponse {
+  const normalized: PlayingResponse = { ...entry };
+
+  if (
+    normalized.playbackState !== undefined &&
+    normalized.playbackState !== "playing" &&
+    normalized.playbackState !== "paused" &&
+    normalized.playbackState !== "stopped"
+  ) {
+    delete normalized.playbackState;
+  }
+  for (const key of ["positionMs", "durationMs"] as const) {
+    const value = normalized[key];
+    if (value !== undefined && (!Number.isFinite(value) || value < 0)) {
+      delete normalized[key];
+    }
+  }
+
+  return normalized;
+}
+
+function isMediaHistoryEntry(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    typeof value.systemId === "string" &&
+    typeof value.systemName === "string" &&
+    typeof value.mediaName === "string" &&
+    typeof value.mediaPath === "string" &&
+    hasOptionalType(value, "mediaId", "number") &&
+    hasOptionalType(value, "relativePath", "string") &&
+    hasOptionalType(value, "hasCover", "boolean") &&
+    hasOptionalType(value, "launcherId", "string") &&
+    typeof value.startedAt === "string" &&
+    hasOptionalType(value, "endedAt", "string") &&
+    typeof value.playTime === "number"
+  );
+}
+
+function isMediaHistoryTopEntry(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    typeof value.systemId === "string" &&
+    typeof value.systemName === "string" &&
+    typeof value.mediaName === "string" &&
+    typeof value.mediaPath === "string" &&
+    hasOptionalType(value, "mediaId", "number") &&
+    hasOptionalType(value, "relativePath", "string") &&
+    typeof value.lastPlayedAt === "string" &&
+    typeof value.totalPlayTime === "number" &&
+    typeof value.sessionCount === "number"
+  );
+}
+
+function normalizeMediaHistoryTopResponse(
+  result: unknown,
+): MediaHistoryTopResponse {
+  if (!isRecord(result)) {
+    throw new Error("Invalid media history top response: expected an object");
+  }
+  const withEntries =
+    result.entries === null || result.entries === undefined
+      ? { ...result, entries: [] }
+      : result;
+  return requireArrayPropertyResponse<Record<string, unknown>>(
+    withEntries,
+    "entries",
+    "media history top",
+    isMediaHistoryTopEntry,
+  ) as unknown as MediaHistoryTopResponse;
+}
+
+function normalizeMediaHistoryResponse(result: unknown): MediaHistoryResponse {
+  if (!isRecord(result)) {
+    throw new Error("Invalid media history response: expected an object");
+  }
+  // Core omits the array rather than sending an empty one.
+  const withEntries =
+    result.entries === null || result.entries === undefined
+      ? { ...result, entries: [] }
+      : result;
+  const validated = requireArrayPropertyResponse<Record<string, unknown>>(
+    withEntries,
+    "entries",
+    "media history",
+    isMediaHistoryEntry,
+  );
+  const entries = (validated.entries as MediaHistoryEntry[]).map((entry) => ({
+    ...entry,
+    // Core treats unknown cover state as "ask for the image anyway", so older
+    // Cores that never send the flag still get artwork.
+    hasCover: entry.hasCover ?? true,
+  }));
+  return { ...(validated as unknown as MediaHistoryResponse), entries };
+}
+
+/**
+ * Core learned stable reader ids in 2.10; before that the transport id is the
+ * only identity there is, so it stands in and callers need no version check.
+ */
+function normalizeReadersResponse(result: unknown): ReadersResponse {
+  const response = result as ReadersResponse;
+  if (!isRecord(result) || !Array.isArray(response.readers)) {
+    return response;
+  }
+  return {
+    ...response,
+    readers: response.readers.map((reader) => ({
+      ...reader,
+      readerId: reader.readerId ?? reader.id,
+    })),
+  };
+}
+
 function requireMediaResponse(result: unknown): MediaResponse {
   if (!isRecord(result) || !isIndexResponse(result.database)) {
     throw new Error(
@@ -354,9 +496,11 @@ function requireMediaResponse(result: unknown): MediaResponse {
     (validatedResult.active as LegacyPlayingResponse[] | undefined) ?? []
   ).map(
     (entry): PlayingResponse =>
-      entry.slot === null || entry.slot === ""
-        ? { ...entry, slot: "primary" }
-        : (entry as PlayingResponse),
+      normalizeActiveMedia(
+        entry.slot === null || entry.slot === ""
+          ? { ...entry, slot: "primary" }
+          : (entry as PlayingResponse),
+      ),
   );
   type LegacyPlaylistState = Omit<PlaylistState, "slot"> & {
     slot?: PlaylistState["slot"] | null | "";
@@ -515,12 +659,34 @@ export function isExpectedMediaDatabaseError(error: unknown): boolean {
   );
 }
 
+/**
+ * Logs a failed API call. A cancelled request (a connection reset, a screen
+ * left behind) is expected churn, not a failure, so it stays out of the error
+ * console and error reporting.
+ */
+function logApiFailure(
+  message: string,
+  error: unknown,
+  ...details: unknown[]
+): void {
+  if (isRequestCancelledError(error)) {
+    logger.debug(message, error, ...details);
+    return;
+  }
+  logger.error(message, error, ...details);
+}
+
 function logMediaApiFailure(
   label: string,
   action: string,
   error: unknown,
   severity: "error" | "warning" = "error",
 ): void {
+  if (isRequestCancelledError(error)) {
+    logger.debug(`${label}:`, error);
+    return;
+  }
+
   if (isMalformedCoreResponseError(error)) {
     logger.warn(`${label}:`, error, {
       category: "api",
@@ -1337,7 +1503,7 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Version API call failed:", error);
+          logApiFailure("Version API call failed:", error);
           reject(error);
         });
     });
@@ -1379,7 +1545,7 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Confirm API call failed:", error);
+          logApiFailure("Confirm API call failed:", error);
           reject(error);
         });
     });
@@ -1392,7 +1558,7 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Input keyboard API call failed:", error, {
+          logApiFailure("Input keyboard API call failed:", error, {
             category: "api",
             action: "inputKeyboard",
             severity: "error",
@@ -1409,7 +1575,7 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Input gamepad API call failed:", error, {
+          logApiFailure("Input gamepad API call failed:", error, {
             category: "api",
             action: "inputGamepad",
             severity: "error",
@@ -1490,9 +1656,10 @@ class CoreApi {
       this.call(Method.History)
         .then((result) => {
           try {
-            const response = result as HistoryResponse;
+            const response = result as Partial<HistoryResponse> | null;
             logger.debug(response);
-            resolve(response);
+            // Core serialises an empty history as null, not an empty list.
+            resolve({ entries: response?.entries ?? [] });
           } catch (e) {
             logger.error("Error processing history response:", e);
             reject(
@@ -1503,7 +1670,7 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("History API call failed:", error);
+          logApiFailure("History API call failed:", error);
           reject(error);
         });
     });
@@ -1621,6 +1788,50 @@ class CoreApi {
     } catch (error) {
       if (isRequestCancelledError(error)) throw error;
       logMediaApiFailure("Media browse API call failed", "mediaBrowse", error);
+      throw error;
+    }
+  }
+
+  async mediaHistory(
+    params: MediaHistoryParams = {},
+    signal?: AbortSignal,
+  ): Promise<MediaHistoryResponse> {
+    try {
+      const result = await this.call(Method.MediaHistory, params, signal);
+      if (isCancelled(result)) {
+        throw new RequestCancelledError("Media history request was cancelled");
+      }
+      return normalizeMediaHistoryResponse(result);
+    } catch (error) {
+      if (isRequestCancelledError(error)) throw error;
+      logMediaApiFailure(
+        "Media history API call failed",
+        "mediaHistory",
+        error,
+      );
+      throw error;
+    }
+  }
+
+  async mediaHistoryTop(
+    params: MediaHistoryTopParams = {},
+    signal?: AbortSignal,
+  ): Promise<MediaHistoryTopResponse> {
+    try {
+      const result = await this.call(Method.MediaHistoryTop, params, signal);
+      if (isCancelled(result)) {
+        throw new RequestCancelledError(
+          "Media history top request was cancelled",
+        );
+      }
+      return normalizeMediaHistoryTopResponse(result);
+    } catch (error) {
+      if (isRequestCancelledError(error)) throw error;
+      logMediaApiFailure(
+        "Media history top API call failed",
+        "mediaHistoryTop",
+        error,
+      );
       throw error;
     }
   }
@@ -2023,7 +2234,7 @@ class CoreApi {
           if (isRequestCancelledError(error)) {
             logger.debug("Systems API call cancelled:", error);
           } else {
-            logger.error("Systems API call failed:", error);
+            logApiFailure("Systems API call failed:", error);
           }
           reject(error);
         });
@@ -2048,7 +2259,7 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Settings API call failed:", error);
+          logApiFailure("Settings API call failed:", error);
           reject(error);
         });
     });
@@ -2062,7 +2273,7 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Settings update API call failed:", error);
+          logApiFailure("Settings update API call failed:", error);
           reject(error);
         });
     });
@@ -2076,7 +2287,7 @@ class CoreApi {
       }
       return result as ProfilesResponse;
     } catch (error) {
-      logger.error("Profiles API call failed:", error, {
+      logApiFailure("Profiles API call failed:", error, {
         category: "api",
         action: "profiles",
         severity: "error",
@@ -2093,7 +2304,7 @@ class CoreApi {
       }
       return result as Profile;
     } catch (error) {
-      logger.error("New profile API call failed:", error, {
+      logApiFailure("New profile API call failed:", error, {
         category: "api",
         action: "newProfile",
         severity: "error",
@@ -2110,7 +2321,7 @@ class CoreApi {
       }
       return result as Profile;
     } catch (error) {
-      logger.error("Update profile API call failed:", error, {
+      logApiFailure("Update profile API call failed:", error, {
         category: "api",
         action: "updateProfile",
         severity: "error",
@@ -2128,7 +2339,7 @@ class CoreApi {
         throw new RequestCancelledError("Delete profile request was cancelled");
       }
     } catch (error) {
-      logger.error("Delete profile API call failed:", error, {
+      logApiFailure("Delete profile API call failed:", error, {
         category: "api",
         action: "deleteProfile",
         severity: "error",
@@ -2145,7 +2356,7 @@ class CoreApi {
       }
       return result as ActiveProfile | null;
     } catch (error) {
-      logger.error("Active profile API call failed:", error, {
+      logApiFailure("Active profile API call failed:", error, {
         category: "api",
         action: "activeProfile",
         severity: "error",
@@ -2164,7 +2375,7 @@ class CoreApi {
       }
       return result as ActiveProfile | null;
     } catch (error) {
-      logger.error("Switch profile API call failed:", error, {
+      logApiFailure("Switch profile API call failed:", error, {
         category: "api",
         action: "switchProfile",
         severity: "error",
@@ -2279,7 +2490,7 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Mappings API call failed:", error);
+          logApiFailure("Mappings API call failed:", error);
           reject(error);
         });
     });
@@ -2293,7 +2504,7 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("New mapping API call failed:", error);
+          logApiFailure("New mapping API call failed:", error);
           reject(error);
         });
     });
@@ -2307,7 +2518,7 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Update mapping API call failed:", error);
+          logApiFailure("Update mapping API call failed:", error);
           reject(error);
         });
     });
@@ -2321,7 +2532,7 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Delete mapping API call failed:", error);
+          logApiFailure("Delete mapping API call failed:", error);
           reject(error);
         });
     });
@@ -2334,7 +2545,7 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Mappings reload API call failed:", error);
+          logApiFailure("Mappings reload API call failed:", error);
           reject(error);
         });
     });
@@ -2386,7 +2597,7 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Tokens API call failed:", error);
+          logApiFailure("Tokens API call failed:", error);
           reject(error);
         });
     });
@@ -2399,7 +2610,7 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Stop API call failed:", error);
+          logApiFailure("Stop API call failed:", error);
           reject(error);
         });
     });
@@ -2475,7 +2686,7 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Settings reload API call failed:", error);
+          logApiFailure("Settings reload API call failed:", error);
           reject(error);
         });
     });
@@ -2485,7 +2696,7 @@ class CoreApi {
     return new Promise<ReadersResponse>((resolve, reject) => {
       this.call(Method.Readers)
         .then((result) => {
-          resolve(result as ReadersResponse);
+          resolve(normalizeReadersResponse(result));
         })
         .catch((error) => {
           logCoreApiFailure("Readers API call failed", error);
@@ -2530,7 +2741,42 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Readers write cancel API call failed:", error);
+          logApiFailure("Readers write cancel API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
+  launchers(): Promise<LaunchersResponse> {
+    return new Promise<LaunchersResponse>((resolve, reject) => {
+      this.call(Method.Launchers)
+        .then((result) => {
+          if (isCancelled(result)) {
+            reject(
+              new RequestCancelledError("Launchers request was cancelled"),
+            );
+            return;
+          }
+          try {
+            const response = requireArrayPropertyResponse<LaunchersResponse>(
+              result,
+              "launchers",
+              "launchers",
+              isLauncher,
+            );
+            logger.debug(response);
+            resolve(response);
+          } catch (e) {
+            logger.error("Error processing launchers response:", e);
+            reject(
+              new Error(
+                `Failed to process launchers response: ${e instanceof Error ? e.message : String(e)}`,
+              ),
+            );
+          }
+        })
+        .catch((error) => {
+          logApiFailure("Launchers API call failed:", error);
           reject(error);
         });
     });
@@ -2543,7 +2789,7 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Launchers refresh API call failed:", error);
+          logApiFailure("Launchers refresh API call failed:", error);
           reject(error);
         });
     });
@@ -2611,7 +2857,7 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Playtime limits update API call failed:", error);
+          logApiFailure("Playtime limits update API call failed:", error);
           reject(error);
         });
     });
@@ -2656,7 +2902,7 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Inbox delete API call failed:", error, {
+          logApiFailure("Inbox delete API call failed:", error, {
             category: "api",
             action: "inbox.delete",
             severity: "error",
@@ -2673,7 +2919,7 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Inbox clear API call failed:", error, {
+          logApiFailure("Inbox clear API call failed:", error, {
             category: "api",
             action: "inbox.clear",
             severity: "error",

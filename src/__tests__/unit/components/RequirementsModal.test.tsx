@@ -186,7 +186,9 @@ describe("RequirementsModal", () => {
         screen.getByRole("button", { name: "requirements.continue" }),
       );
 
-      expect(await screen.findByText("error")).toBeInTheDocument();
+      expect(
+        await screen.findByText("requirements.saveFailed"),
+      ).toBeInTheDocument();
       expect(screen.getByRole("dialog")).toBeInTheDocument();
       expect(logger.error).toHaveBeenCalledWith(
         "Failed to update requirements:",
@@ -490,28 +492,23 @@ describe("RequirementsModal", () => {
     expect(useRequirementsStore.getState().completionRevision).toBe(0);
   });
 
-  it("should not call Purchases.logOut when RC user is already anonymous", async () => {
+  it("should leave the RevenueCat reset to the queued identity sync", async () => {
     const { Purchases } = await import("@revenuecat/purchases-capacitor");
-    vi.mocked(Purchases.isAnonymous).mockResolvedValueOnce({
-      isAnonymous: true,
-    });
-
-    const requirements: PendingRequirement[] = [
-      {
-        type: "terms_acceptance",
-        description: "Accept terms",
-        endpoint: "/account/requirements",
-      },
-    ];
-
     useRequirementsStore.setState({
       isOpen: true,
-      pendingRequirements: requirements,
+      pendingRequirements: [
+        {
+          type: "terms_acceptance",
+          description: "Accept terms",
+          endpoint: "/account/requirements",
+        },
+      ],
     });
 
     render(<RequirementsModal />);
 
-    fireEvent.click(
+    const user = userEvent.setup();
+    await user.click(
       screen.getByRole("button", { name: /requirements\.logout/i }),
     );
 
@@ -520,28 +517,26 @@ describe("RequirementsModal", () => {
     await waitFor(() => {
       expect(FirebaseAuthentication.signOut).toHaveBeenCalled();
     });
-
+    // A direct logout here could interleave with a queued purchase or login.
+    expect(Purchases.isAnonymous).not.toHaveBeenCalled();
     expect(Purchases.logOut).not.toHaveBeenCalled();
   });
 
-  it("should ignore expected RevenueCat logout state errors", async () => {
-    const { Purchases } = await import("@revenuecat/purchases-capacitor");
-    const { logger } = await import("@/lib/logger");
-    vi.mocked(Purchases.logOut).mockRejectedValueOnce(
-      new Error("Cannot log out anonymous app user"),
+  it("should say so when signing out fails", async () => {
+    const { FirebaseAuthentication } =
+      await import("@capacitor-firebase/authentication");
+    vi.mocked(FirebaseAuthentication.signOut).mockRejectedValueOnce(
+      new Error("offline"),
     );
-
-    const requirements: PendingRequirement[] = [
-      {
-        type: "terms_acceptance",
-        description: "Accept terms",
-        endpoint: "/account/requirements",
-      },
-    ];
-
     useRequirementsStore.setState({
       isOpen: true,
-      pendingRequirements: requirements,
+      pendingRequirements: [
+        {
+          type: "terms_acceptance",
+          description: "Accept terms",
+          endpoint: "/account/requirements",
+        },
+      ],
     });
 
     render(<RequirementsModal />);
@@ -551,57 +546,8 @@ describe("RequirementsModal", () => {
       screen.getByRole("button", { name: /requirements\.logout/i }),
     );
 
-    const { FirebaseAuthentication } =
-      await import("@capacitor-firebase/authentication");
-    await waitFor(() => {
-      expect(FirebaseAuthentication.signOut).toHaveBeenCalled();
-    });
-
-    expect(logger.error).not.toHaveBeenCalledWith(
-      "RevenueCat logout failed:",
-      expect.anything(),
-      expect.anything(),
-    );
-    expect(logger.error).not.toHaveBeenCalled();
-  });
-
-  it("should log unexpected RevenueCat logout errors", async () => {
-    const { Purchases } = await import("@revenuecat/purchases-capacitor");
-    const { logger } = await import("@/lib/logger");
-    const error = new Error("network connection lost");
-    vi.mocked(Purchases.logOut).mockRejectedValueOnce(error);
-
-    const requirements: PendingRequirement[] = [
-      {
-        type: "terms_acceptance",
-        description: "Accept terms",
-        endpoint: "/account/requirements",
-      },
-    ];
-
-    useRequirementsStore.setState({
-      isOpen: true,
-      pendingRequirements: requirements,
-    });
-
-    render(<RequirementsModal />);
-
-    const user = userEvent.setup();
-    await user.click(
-      screen.getByRole("button", { name: /requirements\.logout/i }),
-    );
-
-    const { FirebaseAuthentication } =
-      await import("@capacitor-firebase/authentication");
-    await waitFor(() => {
-      expect(FirebaseAuthentication.signOut).toHaveBeenCalled();
-    });
-
-    expect(logger.error).toHaveBeenCalledWith(
-      "RevenueCat logout failed:",
-      error,
-      expect.objectContaining({ action: "logOut" }),
-    );
+    expect(await screen.findByText("online.logoutFailed")).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
   it("should send verification email when button clicked", async () => {

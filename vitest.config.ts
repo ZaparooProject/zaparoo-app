@@ -56,7 +56,6 @@ export default defineConfig({
         "**/coverage/**",
         "**/dist/**",
         "capacitor.config.ts",
-        "tailwind.config.js",
       ],
     },
   },

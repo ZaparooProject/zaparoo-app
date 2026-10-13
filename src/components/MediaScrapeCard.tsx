@@ -1,36 +1,26 @@
 import { useTranslation } from "react-i18next";
-import classNames from "classnames";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { useStatusStore, ConnectionState } from "@/lib/store";
 import { CoreAPI, isMediaOperationConflictError } from "@/lib/coreApi";
 import { logger } from "@/lib/logger";
 import { useTabSessionStore } from "@/lib/tabSessionStore";
-import { isCoreFeatureAvailable } from "@/lib/featureGates";
+import { showRateLimitedErrorToast } from "@/lib/toastUtils";
+import { useKnownCoreFeature } from "@/hooks/useKnownCoreFeature";
 import { useSystemNameResolver } from "@/hooks/useSystemName";
+import { Select } from "@/components/wui/Select";
 import { Button } from "./wui/Button";
 import { SystemSelector, SystemSelectorTrigger } from "./SystemSelector";
 import { LoadingSpinner } from "./ui/loading-spinner";
 import { ToggleSwitch } from "./wui/ToggleSwitch";
-
-function useStrictMediaScrapersFeature() {
-  const coreVersion = useStatusStore((state) => state.coreVersion);
-  const coreVersionPending = useStatusStore(
-    (state) => state.coreVersionPending,
-  );
-
-  return (
-    coreVersion !== null &&
-    !coreVersionPending &&
-    isCoreFeatureAvailable("mediaScrapers", coreVersion)
-  );
-}
+import { ProgressBar } from "./ProgressBar";
+import { StatRow } from "./StatRow";
 
 export function MediaScrapeCard() {
   const { t } = useTranslation();
   const resolveSystemName = useSystemNameResolver();
-  const featureAvailable = useStrictMediaScrapersFeature();
+  const { available: featureAvailable } = useKnownCoreFeature("mediaScrapers");
   const connected = useStatusStore((state) => state.connected);
   const deviceKey = useActiveDeviceKey();
   const connectionState = useStatusStore((state) => state.connectionState);
@@ -47,17 +37,23 @@ export function MediaScrapeCard() {
   const [cancelRequested, setCancelRequested] = useState(false);
   const [resumeRequested, setResumeRequested] = useState(false);
   const [force, setForce] = useState(false);
-  const [startError, setStartError] = useState<string | null>(null);
   const [trackedDeviceKey, setTrackedDeviceKey] = useState(deviceKey);
 
-  // Scraper choice is session-scoped by device, but system selection and
-  // transient errors belong only to the currently rendered device.
+  // Scraper choice is session-scoped by device, but system selection belongs
+  // only to the currently rendered device.
   if (deviceKey !== trackedDeviceKey) {
     setTrackedDeviceKey(deviceKey);
     setSelectedSystems([]);
-    setStartError(null);
-    setScrapingStatus(null);
   }
+
+  // The live status is shared store state, so the previous device's run is
+  // cleared after the switch commits rather than while rendering.
+  const statusDeviceKeyRef = useRef(deviceKey);
+  useEffect(() => {
+    if (statusDeviceKeyRef.current === deviceKey) return;
+    statusDeviceKeyRef.current = deviceKey;
+    setScrapingStatus(null);
+  }, [deviceKey, setScrapingStatus]);
 
   const isLiveConnected = connectionState === ConnectionState.CONNECTED;
   const isScraping = scrapingStatus?.scraping === true;
@@ -119,18 +115,22 @@ export function MediaScrapeCard() {
     }
   }, [deviceKey, scrapersData, selectedScraper, setMediaScraper]);
 
-  const { data: scrapeStatusData } = useQuery({
-    queryKey: ["mediaScrapeStatus", deviceKey],
-    queryFn: () => CoreAPI.mediaScrapeStatus(),
-    enabled: connected && featureAvailable,
-    refetchOnMount: "always",
-  });
+  const { data: scrapeStatusData, isFetchedAfterMount: scrapeStatusFresh } =
+    useQuery({
+      queryKey: ["mediaScrapeStatus", deviceKey],
+      queryFn: () => CoreAPI.mediaScrapeStatus(),
+      enabled: connected && featureAvailable,
+      refetchOnMount: "always",
+    });
 
+  // A cached answer from an earlier visit can describe a run that has since
+  // ended; writing it to the live store would resurrect that run and block
+  // the database controls until the refetch lands. Only a fresh answer counts.
   useEffect(() => {
-    if (scrapeStatusData) {
+    if (scrapeStatusData && scrapeStatusFresh) {
       setScrapingStatus(scrapeStatusData);
     }
-  }, [scrapeStatusData, setScrapingStatus]);
+  }, [scrapeStatusData, scrapeStatusFresh, setScrapingStatus]);
 
   const { data: systemsData } = useQuery({
     queryKey: ["systems", deviceKey, { all: false }],
@@ -181,6 +181,12 @@ export function MediaScrapeCard() {
     return null;
   }
 
+  const reportActionError = (error: unknown, fallback: string) => {
+    showRateLimitedErrorToast(
+      t("error", { msg: error instanceof Error ? error.message : fallback }),
+    );
+  };
+
   const handleScrape = async () => {
     const totalSystems = eligibleSystemsData?.systems?.length ?? 0;
     const systemsToScrape =
@@ -189,7 +195,6 @@ export function MediaScrapeCard() {
         : allowedSystemIds;
 
     setScrapingStatus(null);
-    setStartError(null);
     setStartRequested(true);
     try {
       await CoreAPI.mediaScrape({
@@ -205,11 +210,7 @@ export function MediaScrapeCard() {
           severity: "error",
         });
       }
-      setStartError(
-        error instanceof Error
-          ? error.message
-          : t("settings.scrapeMedia.startError"),
-      );
+      reportActionError(error, t("settings.scrapeMedia.startError"));
       setStartRequested(false);
     }
   };
@@ -224,6 +225,7 @@ export function MediaScrapeCard() {
         action: "mediaScrapeCancel",
         severity: "warning",
       });
+      reportActionError(error, t("settings.scrapeMedia.cancelError"));
       setCancelRequested(false);
     }
   };
@@ -238,6 +240,7 @@ export function MediaScrapeCard() {
         action: "mediaScrapeResume",
         severity: "warning",
       });
+      reportActionError(error, t("settings.scrapeMedia.resumeError"));
       setResumeRequested(false);
     }
   };
@@ -290,10 +293,13 @@ export function MediaScrapeCard() {
         ? t("settings.scrapeMedia.failed")
         : t("settings.scrapeMedia.cancelled");
       return (
-        <section className="space-y-2" aria-labelledby="last-scrape-title">
-          <h2 id="last-scrape-title" className="text-sm font-medium">
+        <section
+          className="flex flex-col gap-2"
+          aria-labelledby="last-scrape-title"
+        >
+          <h3 id="last-scrape-title" className="text-sm font-medium">
             {title}
-          </h2>
+          </h3>
           {isFailed && scrapingStatus?.error ? (
             <p className="text-error text-sm">{scrapingStatus.error}</p>
           ) : null}
@@ -308,34 +314,28 @@ export function MediaScrapeCard() {
         scrapingStatus?.totalScraped ?? 0
       ).toLocaleString();
       return (
-        <section className="space-y-2" aria-labelledby="last-scrape-title">
-          <h2 id="last-scrape-title" className="text-sm font-medium">
+        <section
+          className="flex flex-col gap-2"
+          aria-labelledby="last-scrape-title"
+        >
+          <h3 id="last-scrape-title" className="text-sm font-medium">
             {t("settings.scrapeMedia.lastScrapeTitle")}
-          </h2>
+          </h3>
           <p className="text-muted-foreground text-sm">
             {t("settings.scrapeMedia.done", {
               matched: scrapingStatus?.matched ?? 0,
               skipped: scrapingStatus?.skipped ?? 0,
             })}
           </p>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">
-              {t("settings.scrapeMedia.matchedLabel")}
-            </span>
-            <span>{formattedMatched}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">
-              {t("settings.scrapeMedia.skippedLabel")}
-            </span>
-            <span>{formattedSkipped}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">
-              {t("settings.scrapeMedia.scrapedLabel")}
-            </span>
-            <span>{formattedScraped}</span>
-          </div>
+          <StatRow label={t("settings.scrapeMedia.matchedLabel")}>
+            {formattedMatched}
+          </StatRow>
+          <StatRow label={t("settings.scrapeMedia.skippedLabel")}>
+            {formattedSkipped}
+          </StatRow>
+          <StatRow label={t("settings.scrapeMedia.scrapedLabel")}>
+            {formattedScraped}
+          </StatRow>
         </section>
       );
     }
@@ -379,171 +379,122 @@ export function MediaScrapeCard() {
         scrapingStatus.scraperId ??
         t("settings.scrapeMedia.details.unknown");
 
-      return (
-        <div className="flex flex-col gap-7">
-          <section className="space-y-5" aria-labelledby="scrape-status-title">
-            <div className="space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <h2 id="scrape-status-title" className="text-xl">
-                    {t("settings.scrapeMedia.activeTitle")}
-                  </h2>
-                  <p className="text-muted-foreground text-sm">
-                    {t("settings.scrapeMedia.activeDescription")}
-                  </p>
-                </div>
-                {isLiveConnected && !isPaused ? (
-                  <LoadingSpinner size={24} className="text-muted-foreground" />
-                ) : null}
-              </div>
+      const systemStarted =
+        hasSystemProgress && currentSystemProgress.processed > 0;
+      const working = isLiveConnected && !isPaused;
 
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">
-                  {t("settings.scrapeMedia.currentSystem")}
-                </span>
-                <span>{currentSystem}</span>
+      return (
+        <div className="flex flex-col gap-4">
+          <section
+            className="flex flex-col gap-3"
+            aria-labelledby="scrape-status-title"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col gap-1">
+                <h3 id="scrape-status-title" className="text-sm font-medium">
+                  {t("settings.scrapeMedia.activeTitle")}
+                </h3>
+                <p className="text-muted-foreground text-sm">
+                  {t("settings.scrapeMedia.activeDescription")}
+                </p>
               </div>
-              {(isPaused || !isLiveConnected || isThrottled) && (
-                <div className="text-muted-foreground text-sm">
-                  {isPaused
-                    ? t("settings.scrapeMedia.status.paused")
-                    : !isLiveConnected
-                      ? t("settings.scrapeMedia.status.reconnecting")
-                      : t("settings.scrapeMedia.status.throttled")}
-                </div>
-              )}
+              {working ? (
+                <LoadingSpinner
+                  size={16}
+                  className="text-muted-foreground"
+                  decorative
+                />
+              ) : null}
             </div>
 
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <div
-                  role="progressbar"
-                  aria-valuenow={roundedOverallProgressPct}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-label={t("settings.scrapeMedia.overallProgressLabel")}
-                  className="border-bd-filled bg-background h-[10px] w-full rounded-full border border-solid"
-                >
-                  <div
-                    className={classNames(
-                      "border-background bg-button-pattern h-[8px] rounded-full border border-solid",
-                      {
-                        hidden: hasOverallProgress && currentStep === 0,
-                        "animate-pulse":
-                          isLiveConnected && !isPaused && !hasOverallProgress,
-                      },
-                    )}
-                    style={{
-                      width: hasOverallProgress
-                        ? `${overallProgressPct.toFixed(2)}%`
-                        : "100%",
-                    }}
-                  />
-                </div>
-                <div className="text-muted-foreground flex items-center justify-between text-sm">
-                  <span>
-                    {hasOverallProgress
-                      ? t("settings.scrapeMedia.systemProgressCount", {
-                          current: currentStep.toLocaleString(),
-                          total: totalSteps.toLocaleString(),
-                        })
-                      : t("settings.scrapeMedia.preparing")}
-                  </span>
-                  <span>
-                    {hasOverallProgress ? `${roundedOverallProgressPct}%` : ""}
-                  </span>
-                </div>
+            <StatRow label={t("settings.scrapeMedia.currentSystem")}>
+              {currentSystem}
+            </StatRow>
+            {(isPaused || !isLiveConnected || isThrottled) && (
+              <div className="text-muted-foreground text-sm">
+                {isPaused
+                  ? t("settings.scrapeMedia.status.paused")
+                  : !isLiveConnected
+                    ? t("settings.scrapeMedia.status.reconnecting")
+                    : t("settings.scrapeMedia.status.throttled")}
               </div>
+            )}
 
-              <div className="space-y-3">
-                <div
-                  role="progressbar"
-                  aria-valuenow={roundedSystemProgressPct}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-label={t("settings.scrapeMedia.progressLabel")}
-                  className="border-bd-filled bg-background h-[10px] w-full rounded-full border border-solid"
-                >
-                  <div
-                    className={classNames(
-                      "border-background bg-button-pattern h-[8px] rounded-full border border-solid",
-                      {
-                        hidden:
-                          hasSystemProgress &&
-                          currentSystemProgress.processed === 0,
-                        "animate-pulse":
-                          isLiveConnected &&
-                          !isPaused &&
-                          (!hasSystemProgress ||
-                            currentSystemProgress.processed === 0),
-                      },
-                    )}
-                    style={{
-                      width: hasSystemProgress
-                        ? `${systemProgressPct.toFixed(2)}%`
-                        : "100%",
-                    }}
-                  />
-                </div>
-                <div className="text-muted-foreground flex items-center justify-between text-sm">
-                  <span>
-                    {hasSystemProgress
-                      ? t("settings.scrapeMedia.processedCount", {
-                          processed: formattedProcessed,
-                          total: formattedTotal,
-                        })
-                      : t("settings.scrapeMedia.preparing")}
-                  </span>
-                  <span>
-                    {hasSystemProgress ? `${roundedSystemProgressPct}%` : ""}
-                  </span>
-                </div>
+            <div className="flex flex-col gap-2">
+              <ProgressBar
+                label={t("settings.scrapeMedia.overallProgressLabel")}
+                valueNow={roundedOverallProgressPct}
+                percent={hasOverallProgress ? overallProgressPct : undefined}
+                empty={hasOverallProgress && currentStep === 0}
+                pulse={working}
+              />
+              <div className="text-muted-foreground flex items-center justify-between text-sm">
+                <span>
+                  {hasOverallProgress
+                    ? t("settings.scrapeMedia.systemProgressCount", {
+                        current: currentStep.toLocaleString(),
+                        total: totalSteps.toLocaleString(),
+                      })
+                    : t("settings.scrapeMedia.preparing")}
+                </span>
+                <span>
+                  {hasOverallProgress ? `${roundedOverallProgressPct}%` : ""}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <ProgressBar
+                label={t("settings.scrapeMedia.progressLabel")}
+                valueNow={roundedSystemProgressPct}
+                percent={systemStarted ? systemProgressPct : undefined}
+                empty={hasSystemProgress && !systemStarted}
+                pulse={working}
+              />
+              <div className="text-muted-foreground flex items-center justify-between text-sm">
+                <span>
+                  {hasSystemProgress
+                    ? t("settings.scrapeMedia.processedCount", {
+                        processed: formattedProcessed,
+                        total: formattedTotal,
+                      })
+                    : t("settings.scrapeMedia.preparing")}
+                </span>
+                <span>
+                  {hasSystemProgress ? `${roundedSystemProgressPct}%` : ""}
+                </span>
               </div>
             </div>
           </section>
 
           <section
-            className="space-y-2"
+            className="flex flex-col gap-2"
             aria-label={t("settings.scrapeMedia.statsLabel")}
           >
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">
-                {t("settings.scrapeMedia.matchedLabel")}
-              </span>
-              <span>{formattedMatched}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">
-                {t("settings.scrapeMedia.skippedLabel")}
-              </span>
-              <span>{formattedSkipped}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">
-                {t("settings.scrapeMedia.scrapedLabel")}
-              </span>
-              <span>{formattedScraped}</span>
-            </div>
+            <StatRow label={t("settings.scrapeMedia.matchedLabel")}>
+              {formattedMatched}
+            </StatRow>
+            <StatRow label={t("settings.scrapeMedia.skippedLabel")}>
+              {formattedSkipped}
+            </StatRow>
+            <StatRow label={t("settings.scrapeMedia.scrapedLabel")}>
+              {formattedScraped}
+            </StatRow>
           </section>
 
-          <section className="space-y-2" aria-labelledby="scrape-details-title">
+          <section
+            className="flex flex-col gap-2"
+            aria-labelledby="scrape-details-title"
+          >
             <h3 id="scrape-details-title" className="text-sm font-medium">
               {t("settings.scrapeMedia.detailsTitle")}
             </h3>
-            <div className="flex justify-between gap-4 text-sm">
-              <span className="text-muted-foreground">
-                {t("settings.scrapeMedia.scraperLabel")}
-              </span>
-              <span className="text-right">{scraperName}</span>
-            </div>
-            <div className="flex justify-between gap-4 text-sm">
-              <span className="text-muted-foreground">
-                {t("settings.scrapeMedia.forceLabel")}
-              </span>
-              <span>
-                {(scrapingStatus.force ?? force) ? t("yes") : t("no")}
-              </span>
-            </div>
+            <StatRow label={t("settings.scrapeMedia.scraperLabel")}>
+              {scraperName}
+            </StatRow>
+            <StatRow label={t("settings.scrapeMedia.forceLabel")}>
+              {(scrapingStatus.force ?? force) ? t("yes") : t("no")}
+            </StatRow>
           </section>
 
           <Button
@@ -559,6 +510,9 @@ export function MediaScrapeCard() {
             variant="outline"
             className="w-full"
             disabled={!connected || (isPaused ? isResuming : isCancelling)}
+            disabledAppearance={
+              isResuming || isCancelling ? "busy" : "unavailable"
+            }
             onClick={isPaused ? handleResume : handleCancel}
           />
         </div>
@@ -590,39 +544,27 @@ export function MediaScrapeCard() {
           renderStatus()
         ) : (
           <>
-            <div className="flex flex-col gap-2">
-              <label htmlFor="scraper-select" className="text-white">
+            <Select
+              id="scraper-select"
+              label={t("settings.scrapeMedia.scraperPlaceholder")}
+              value={selectedScraper}
+              onChange={(e) => {
+                if (deviceKey) {
+                  setMediaScraper(deviceKey, e.target.value);
+                }
+                setSelectedSystems([]);
+              }}
+              disabled={controlsDisabled || scrapersLoading}
+            >
+              <option value="">
                 {t("settings.scrapeMedia.scraperPlaceholder")}
-              </label>
-              <select
-                id="scraper-select"
-                value={selectedScraper}
-                onChange={(e) => {
-                  if (deviceKey) {
-                    setMediaScraper(deviceKey, e.target.value);
-                  }
-                  setSelectedSystems([]);
-                  setStartError(null);
-                }}
-                disabled={controlsDisabled || scrapersLoading}
-                className={classNames(
-                  "border-bd-input bg-background text-foreground rounded-md border border-solid p-3",
-                  {
-                    "cursor-not-allowed opacity-50":
-                      controlsDisabled || scrapersLoading,
-                  },
-                )}
-              >
-                <option value="">
-                  {t("settings.scrapeMedia.scraperPlaceholder")}
+              </option>
+              {scrapersData?.scrapers.map((scraper) => (
+                <option key={scraper.id} value={scraper.id}>
+                  {scraper.name}
                 </option>
-                {scrapersData?.scrapers.map((scraper) => (
-                  <option key={scraper.id} value={scraper.id}>
-                    {scraper.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+              ))}
+            </Select>
 
             <SystemSelectorTrigger
               aria-label={t("settings.scrapeMedia.allSystems")}
@@ -636,6 +578,7 @@ export function MediaScrapeCard() {
             />
 
             <ToggleSwitch
+              reflow
               value={force}
               setValue={setForce}
               disabled={controlsDisabled}
@@ -655,25 +598,15 @@ export function MediaScrapeCard() {
                   : t("settings.scrapeMedia")
               }
               icon={
-                isStarting ? (
-                  <LoadingSpinner
-                    size={16}
-                    className="text-foreground-disabled"
-                  />
-                ) : undefined
+                isStarting ? <LoadingSpinner size={20} decorative /> : undefined
               }
               className="w-full"
               disabled={
                 !connected || !selectedScraper || isDatabaseBusy || isStarting
               }
+              disabledAppearance={isStarting ? "busy" : "unavailable"}
               onClick={handleScrape}
             />
-
-            {startError ? (
-              <p className="text-error text-sm">
-                {t("error", { msg: startError })}
-              </p>
-            ) : null}
 
             {renderStatus()}
           </>

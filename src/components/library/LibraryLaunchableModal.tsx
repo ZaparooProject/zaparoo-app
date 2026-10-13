@@ -1,17 +1,20 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronRightIcon, PlayIcon } from "lucide-react";
 import { CoreAPI, logRunFailure } from "@/lib/coreApi";
 import type { System } from "@/lib/models";
 import { ConnectionState, useStatusStore } from "@/lib/store";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { useNfcWriteAvailable } from "@/hooks/useNfcWriteAvailable";
+import { useContextualNfcWrite } from "@/hooks/useContextualNfcWrite";
 import { SlideModal } from "@/components/SlideModal";
-import { Button } from "@/components/wui/Button";
-import { ModalActionRail } from "@/components/wui/ModalActionRail";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { CreateIcon } from "@/lib/images";
-import { DetailRow } from "@/components/library/LibraryMediaDetailsModal";
+import {
+  ContextualWriteRail,
+  LaunchButton,
+} from "@/components/library/ContextualWriteRail";
+import {
+  DetailRow,
+  TechnicalDetails,
+} from "@/components/library/LibraryMediaFacts";
 
 /**
  * Actions for a Core virtual system. It has no media to browse, so the Library
@@ -29,13 +32,17 @@ export function LibraryLaunchableModal(props: {
   const liveConnected = useStatusStore(
     (state) => state.connectionState === ConnectionState.CONNECTED,
   );
-  const setWriteQueue = useStatusStore((state) => state.setWriteQueue);
   const writeAvailable = useNfcWriteAvailable(props.deviceKey, props.isOpen);
+  const writeActivity = useContextualNfcWrite(
+    JSON.stringify([props.deviceKey, props.system?.id]),
+    props.isOpen,
+  );
   const [launching, setLaunching] = useState(false);
   const zapScript = props.system?.zapScript?.trim() ?? "";
 
   const launch = async () => {
-    if (!zapScript || launching || !liveConnected) return;
+    if (!zapScript || launching || writeActivity.active || !liveConnected)
+      return;
     setLaunching(true);
     try {
       await CoreAPI.run({ text: zapScript });
@@ -51,38 +58,23 @@ export function LibraryLaunchableModal(props: {
 
   const write = () => {
     if (!zapScript || launching || !writeAvailable) return;
-    props.close();
-    setWriteQueue(zapScript);
+    void writeActivity.start(zapScript);
   };
 
   const footer = props.system ? (
-    <ModalActionRail
+    <ContextualWriteRail
       aria-label={t("library.mediaActions")}
-      actions={
-        <Button
-          label={t("library.writeAction")}
-          aria-label={t("library.write")}
-          icon={<CreateIcon size="20" />}
-          layout="responsive"
-          variant="text"
-          className="whitespace-nowrap"
-          disabled={!zapScript || !writeAvailable || launching}
-          onClick={write}
-        />
-      }
+      activity={writeActivity}
+      writeDisabled={!zapScript || !writeAvailable}
+      busy={launching}
+      onWrite={write}
       primaryAction={
-        <Button
-          label={launching ? t("library.launching") : t("library.launch")}
-          icon={
-            launching ? (
-              <LoadingSpinner size={20} decorative />
-            ) : (
-              <PlayIcon size={20} />
-            )
-          }
-          intent="primary"
-          disabled={!zapScript || !liveConnected || launching}
-          onClick={() => void launch()}
+        <LaunchButton
+          label={t("library.launch")}
+          launching={launching}
+          unavailable={!zapScript || !liveConnected}
+          busy={writeActivity.active}
+          onLaunch={() => void launch()}
         />
       }
     />
@@ -91,9 +83,13 @@ export function LibraryLaunchableModal(props: {
   return (
     <SlideModal
       isOpen={props.isOpen}
-      close={props.close}
+      close={() => {
+        void writeActivity.cancel();
+        props.close();
+      }}
       title={props.system?.name ?? ""}
       footer={footer}
+      footerSkipLabel={t("accessibility.skipToActions")}
     >
       {props.system && (
         <div className="flex flex-col gap-4 py-2">
@@ -102,25 +98,9 @@ export function LibraryLaunchableModal(props: {
               {props.system.category}
             </p>
           )}
-          <details className="group border-t border-white/15 pt-2">
-            <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between rounded-md px-1 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
-              <span className="font-medium">
-                {t("library.technicalDetails")}
-              </span>
-              <ChevronRightIcon
-                size={20}
-                className="text-muted-foreground transition-transform group-open:rotate-90"
-                aria-hidden="true"
-              />
-            </summary>
-            <div className="flex flex-col gap-3 px-1 pt-2">
-              <DetailRow
-                label={t("library.zapScript")}
-                value={zapScript}
-                mono
-              />
-            </div>
-          </details>
+          <TechnicalDetails>
+            <DetailRow label={t("library.zapScript")} value={zapScript} mono />
+          </TechnicalDetails>
         </div>
       )}
     </SlideModal>

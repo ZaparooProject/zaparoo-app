@@ -1,276 +1,164 @@
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useRef } from "react";
 import type { RefObject } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
-import type { SearchResultGame } from "@/lib/models";
-import { CoreAPI } from "@/lib/coreApi";
-import { useStatusStore } from "@/lib/store";
-import { useLibrarySessionStore } from "@/lib/librarySessionStore";
-import { BackIcon, SearchIcon } from "@/lib/images";
+import {
+  librarySearchScrollKey,
+  useLibrarySessionStore,
+} from "@/lib/librarySessionStore";
+import type { SessionSearchParams } from "@/lib/tabSessionStore";
+import { BackIcon } from "@/lib/images";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
+import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { PageFrame } from "@/components/PageFrame";
-import { VirtualSearchResults } from "@/components/VirtualSearchResults";
-import { BackToTop } from "@/components/BackToTop";
-import { DEFAULT_LOADING_DELAY_MS } from "@/components/DelayedLoading";
-import { TextInput } from "@/components/wui/TextInput";
-import { Button } from "@/components/wui/Button";
-import { HeaderButton } from "@/components/wui/HeaderButton";
-import { searchResultToBrowseEntry } from "@/lib/libraryMedia";
 import {
-  SystemSelector,
-  SystemSelectorTrigger,
-} from "@/components/SystemSelector";
-import { TagSelector, TagSelectorTrigger } from "@/components/TagSelector";
-import { LibraryMediaDetailsModal } from "@/components/library/LibraryMediaDetailsModal";
+  MediaSearchForm,
+  MediaSearchSelectors,
+} from "@/components/MediaSearchForm";
+import { HeaderButton } from "@/components/wui/HeaderButton";
+import { useMediaSearchForm } from "@/hooks/useMediaSearchForm";
+import { LibraryDetailsSurface } from "@/components/library/LibraryDetailsSurface";
+import {
+  LibraryMediaSelectionContext,
+  useLibraryMediaSelection,
+  useLibraryMediaSelectionContext,
+} from "@/hooks/useLibraryMediaSelection";
 
-interface LibraryGameSearchProps {
+export interface LibrarySearchBodyProps {
+  /** Page scroller that owns the virtual results. */
+  scrollRef: RefObject<HTMLDivElement | null>;
   initialSystemId?: string;
-  onBack?: () => void;
-  embedded?: boolean;
-  scrollRef?: RefObject<HTMLDivElement | null>;
+  initialSearch?: SessionSearchParams;
+  /** Tags every search in this context carries; never shown as a filter. */
   fixedTags?: string[];
   sessionScope?: string;
   title?: string;
 }
 
-export function LibraryGameSearch({
+/**
+ * Search form, results and its selector dialogs. It renders inside a page that
+ * already owns the scroller and the Library selection, so it can sit in a
+ * system or collection page as well as the standalone search route.
+ */
+export function LibrarySearchBody({
+  scrollRef,
   initialSystemId,
-  onBack,
-  embedded = false,
-  scrollRef: externalScrollRef,
+  initialSearch,
   fixedTags = [],
   sessionScope,
   title,
-}: LibraryGameSearchProps = {}) {
+}: LibrarySearchBodyProps) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const pageTitle = title ?? t("library.searchTitle");
-  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
-    embedded ? undefined : pageTitle,
-  );
-  const internalScrollRef = useRef<HTMLDivElement>(null);
-  const scrollRef = externalScrollRef ?? internalScrollRef;
-  const connected = useStatusStore((state) => state.connected);
-  const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const deviceKey = useActiveDeviceKey();
   const searchScope = sessionScope ?? initialSystemId ?? "all";
   const savedSearch = useLibrarySessionStore((state) =>
     state.deviceAddress === deviceKey ? state.searches[searchScope] : undefined,
   );
   const setSessionSearch = useLibrarySessionStore((state) => state.setSearch);
-  const activateLibraryDevice = useLibrarySessionStore(
-    (state) => state.activateDevice,
-  );
-  useLayoutEffect(() => {
-    activateLibraryDevice(deviceKey);
-  }, [activateLibraryDevice, deviceKey]);
   const libraryFeature = useCoreFeature("mediaLibrary");
-  const mediaTagsFeature = useCoreFeature("mediaTags", {
-    requireKnownSupport: true,
+  const seededSearch = savedSearch ?? initialSearch;
+  useLayoutEffect(() => {
+    if (
+      initialSearch &&
+      !savedSearch &&
+      useLibrarySessionStore.getState().deviceAddress === deviceKey
+    ) {
+      setSessionSearch(searchScope, initialSearch);
+    }
+  }, [deviceKey, initialSearch, savedSearch, searchScope, setSessionSearch]);
+  const selection = useLibraryMediaSelectionContext();
+  const { result: selectedResult, selectResult: setSelectedResult } = selection;
+  const form = useMediaSearchForm({
+    initialDraft: {
+      query: seededSearch?.query,
+      system: seededSearch?.system ?? initialSystemId,
+      tags: seededSearch?.tags,
+    },
+    initialSearch: seededSearch ?? null,
+    fixedTags,
+    available: libraryFeature.available,
+    onSearch: (search) => {
+      setSelectedResult(null);
+      setSessionSearch(searchScope, search);
+    },
+    onFiltersChange: () => setSelectedResult(null),
   });
-  const browseAllSearchFeature = useCoreFeature("mediaBrowseAllSearch", {
-    requireKnownSupport: true,
-  });
-  const systemsQuery = useQuery({
-    queryKey: ["systems", deviceKey, { all: false }],
-    queryFn: () => CoreAPI.systems(),
-    enabled: connected && gamesIndex.exists,
-    staleTime: 60 * 1000,
-  });
-  const [query, setQuery] = useState(savedSearch?.query ?? "");
-  const [querySystem, setQuerySystem] = useState(
-    savedSearch?.system ?? initialSystemId ?? "all",
-  );
-  const [queryTags, setQueryTags] = useState<string[]>(
-    (savedSearch?.tags ?? []).filter((tag) => !fixedTags.includes(tag)),
-  );
-  const [searchParams, setSearchParams] = useState(savedSearch ?? null);
-  const [isSearching, setIsSearching] = useState(false);
-  const [systemSelectorOpen, setSystemSelectorOpen] = useState(false);
-  const [tagSelectorOpen, setTagSelectorOpen] = useState(false);
-  const [selectedResult, setSelectedResult] = useState<SearchResultGame | null>(
-    null,
-  );
-  const selectedEntry = useMemo(
-    () => (selectedResult ? searchResultToBrowseEntry(selectedResult) : null),
-    [selectedResult],
-  );
-  const canUseSearch =
-    connected && gamesIndex.exists && libraryFeature.available;
-  const effectiveQueryTags = mediaTagsFeature.available ? queryTags : [];
-  const requestTags = Array.from(
-    new Set([...fixedTags, ...effectiveQueryTags]),
-  );
-  const hasSearchConstraint =
-    query.trim() !== "" || querySystem !== "all" || requestTags.length > 0;
-  const canSubmitSearch =
-    canUseSearch && (browseAllSearchFeature.available || hasSearchConstraint);
-  const goBack =
-    onBack ?? (() => navigate({ to: "/library", resetScroll: false }));
-
-  const search = () => {
-    if (!canSubmitSearch) return;
-    setSelectedResult(null);
-    setIsSearching(true);
-    const nextSearch = {
-      query: query.trim(),
-      system: querySystem,
-      tags: effectiveQueryTags,
-    };
-    setSearchParams(nextSearch);
-    setSessionSearch(searchScope, nextSearch);
-  };
-
-  const clearFilters = () => {
-    setQuerySystem("all");
-    setQueryTags([]);
-    setSelectedResult(null);
-  };
-
-  const content = (
-    <>
-      <div role="search" aria-label={pageTitle} className="space-y-3">
-        <TextInput
-          label={t("library.searchInput")}
-          placeholder={t("library.searchPlaceholder")}
-          value={query}
-          setValue={setQuery}
-          type="search"
-          clearable
-          disabled={!canUseSearch}
-          onKeyUp={(event) => {
-            if (event.key === "Enter") {
-              event.currentTarget.blur();
-              search();
-            }
-          }}
-        />
-
-        <div className="flex flex-col gap-3 md:flex-row">
-          <div className="flex flex-col md:flex-1">
-            <span id="library-search-system-label" className="mb-1 text-white">
-              {t("create.search.systemInput")}
-            </span>
-            <SystemSelectorTrigger
-              aria-labelledby="library-search-system-label"
-              selectedSystems={querySystem === "all" ? [] : [querySystem]}
-              systemsData={systemsQuery.data}
-              placeholder={t("create.search.allSystems")}
-              mode="single"
-              onClick={() => setSystemSelectorOpen(true)}
-              disabled={!canUseSearch}
-            />
-          </div>
-
-          {mediaTagsFeature.available && (
-            <div className="flex flex-col md:flex-1">
-              <span id="library-search-tags-label" className="mb-1 text-white">
-                {t("create.search.tagsInput")}
-              </span>
-              <TagSelectorTrigger
-                aria-labelledby="library-search-tags-label"
-                selectedTags={queryTags}
-                placeholder={t("create.search.allTags")}
-                onClick={() => setTagSelectorOpen(true)}
-                disabled={!canUseSearch}
-              />
-            </div>
-          )}
-        </div>
-
-        <Button
-          label={t("library.searchAction")}
-          icon={<SearchIcon size="20" />}
-          onClick={search}
-          disabled={!canSubmitSearch || isSearching}
-          className="w-full"
-        />
-      </div>
-
-      <VirtualSearchResults
-        query={searchParams?.query ?? ""}
-        systems={
-          searchParams && searchParams.system !== "all"
-            ? [searchParams.system]
-            : []
-        }
-        tags={
-          searchParams
-            ? Array.from(new Set([...fixedTags, ...(searchParams.tags ?? [])]))
-            : []
-        }
-        selectedResult={selectedResult}
-        setSelectedResult={setSelectedResult}
-        hasSearched={searchParams !== null}
-        searchSystem={searchParams?.system ?? "all"}
-        searchTags={searchParams?.tags ?? []}
-        onClearFilters={clearFilters}
-        isSearching={isSearching}
-        onSearchComplete={() => setIsSearching(false)}
-        scrollContainerRef={scrollRef}
-        loadingDelayMs={DEFAULT_LOADING_DELAY_MS}
-      />
-      <BackToTop
-        scrollContainerRef={scrollRef}
-        threshold={200}
-        bottomOffset="calc(var(--bottom-nav-base-height) + 1rem)"
-      />
-    </>
-  );
-
-  const overlays = (
-    <>
-      <LibraryMediaDetailsModal
-        isOpen={selectedEntry !== null}
-        close={() => setSelectedResult(null)}
-        entry={selectedEntry}
-        systemId={selectedResult?.system.id ?? ""}
-        deviceKey={deviceKey}
-      />
-      <SystemSelector
-        isOpen={systemSelectorOpen}
-        onClose={() => setSystemSelectorOpen(false)}
-        onSelect={(systems) => {
-          setQuerySystem(systems[0] ?? "all");
-          setSelectedResult(null);
-        }}
-        selectedSystems={querySystem === "all" ? [] : [querySystem]}
-        mode="single"
-        title={t("create.search.selectSystem")}
-        includeAllOption
-        defaultSelection="all"
-      />
-      {mediaTagsFeature.available && (
-        <TagSelector
-          isOpen={tagSelectorOpen}
-          onClose={() => setTagSelectorOpen(false)}
-          onSelect={(tags) => {
-            setQueryTags(tags);
-            setSelectedResult(null);
-          }}
-          selectedTags={queryTags}
-          systems={querySystem === "all" ? [] : [querySystem]}
-          title={t("create.search.selectTags")}
-        />
-      )}
-    </>
-  );
-
-  if (embedded) {
-    return (
-      <>
-        {content}
-        {overlays}
-      </>
-    );
-  }
 
   return (
     <>
+      <MediaSearchForm
+        form={form}
+        layout="library"
+        scrollRef={scrollRef}
+        labels={{
+          region: title ?? t("library.searchTitle"),
+          input: t("library.searchInput"),
+          placeholder: t("library.searchPlaceholder"),
+          action: t("library.searchAction"),
+        }}
+        selectedResult={selectedResult}
+        setSelectedResult={setSelectedResult}
+        selectionPresentation={selection.docked ? "pane" : "modal"}
+        rowVariant="library"
+      />
+      <MediaSearchSelectors form={form} />
+    </>
+  );
+}
+
+/**
+ * The standalone search page. It owns the scroller, the Library selection and
+ * its docked details, and Back for metadata-exploration entries.
+ */
+export function LibraryGameSearch({
+  historyBack,
+  ...body
+}: Omit<LibrarySearchBodyProps, "scrollRef" | "title"> & {
+  /** Returns to the details that opened this exploration entry. */
+  historyBack?: () => void;
+} = {}) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const pageTitle = t("library.searchTitle");
+  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(pageTitle);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const deviceKey = useActiveDeviceKey();
+  const searchScope = body.sessionScope ?? body.initialSystemId ?? "all";
+  const selection = useLibraryMediaSelection(
+    `search:${searchScope}`,
+    deviceKey,
+  );
+  const goBack =
+    historyBack ?? (() => navigate({ to: "/library", resetScroll: false }));
+  useBackButtonHandler(
+    "metadata-search",
+    () => {
+      if (!historyBack) return false;
+      historyBack();
+      return true;
+    },
+    50,
+    Boolean(historyBack),
+  );
+
+  return (
+    <LibraryMediaSelectionContext.Provider value={selection}>
       <PageFrame
+        headerMode="content-wide"
+        breadcrumbs={[{ to: "/library", label: t("library.title") }]}
+        layout="workspace"
+        sessionScrollKey={
+          body.initialSearch ? librarySearchScrollKey(searchScope) : undefined
+        }
+        supportingPane={
+          <LibraryDetailsSurface
+            selection={selection}
+            systemId={selection.result?.system.id ?? ""}
+            deviceKey={deviceKey}
+          />
+        }
         onSwipeBack={goBack}
         scrollRef={scrollRef}
         headerLeft={
@@ -286,9 +174,8 @@ export function LibraryGameSearch({
           </h1>
         }
       >
-        {content}
+        <LibrarySearchBody {...body} scrollRef={scrollRef} />
       </PageFrame>
-      {overlays}
-    </>
+    </LibraryMediaSelectionContext.Provider>
   );
 }

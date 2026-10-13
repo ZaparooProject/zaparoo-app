@@ -7,6 +7,11 @@ import {
   type PurchasesOfferings,
 } from "@revenuecat/purchases-capacitor";
 import type { SubscriptionResponse } from "@/lib/models";
+import {
+  canSubscribeToWarp,
+  isPaidWarpActive,
+  getTrialAccessContext,
+} from "@/lib/warpSubscription";
 import { getSubscriptionStatus } from "@/lib/onlineApi";
 import { useRequirementsStore } from "@/hooks/useRequirementsModal";
 import { usePreferencesStore } from "@/lib/preferencesStore";
@@ -16,6 +21,7 @@ import {
   ensurePurchasesUser,
   getOfferingDiagnostics,
   getPurchaseAccess,
+  hasNonPromotionalWarp,
   getWarpPackages,
   loadOfferings,
   runPurchasesOperation,
@@ -143,12 +149,14 @@ export function useWarpSubscription(appUserID: string) {
 
   const applySubscription = useCallback(
     (nextSubscription: SubscriptionResponse) => {
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || !isCurrentIdentity()) return;
       setSubscription(nextSubscription);
-      setOnlinePremiumAccess(nextSubscription.is_premium);
-      if (nextSubscription.is_premium) setActivationPending(false);
+      const trial = getTrialAccessContext(nextSubscription, appUserID);
+      if (trial) setOnlinePremiumAccess(nextSubscription.is_premium, trial);
+      else setOnlinePremiumAccess(nextSubscription.is_premium);
+      if (isPaidWarpActive(nextSubscription)) setActivationPending(false);
     },
-    [setOnlinePremiumAccess],
+    [setOnlinePremiumAccess, isCurrentIdentity, appUserID],
   );
 
   const loadAccount = useCallback(
@@ -178,17 +186,19 @@ export function useWarpSubscription(appUserID: string) {
         ]);
         if (signal.aborted) return;
 
+        if (!isCurrentIdentity()) return;
         const access = getPurchaseAccess(customerInfo);
         setLifetimeProAccess(access.lifetimePro);
-        setRevenueCatWarpActive(access.warp);
+        const storeOwnedWarp = hasNonPromotionalWarp(customerInfo);
+        setRevenueCatWarpActive(storeOwnedWarp);
         applySubscription(nextSubscription);
 
-        if (nextSubscription.is_premium) {
+        if (!canSubscribeToWarp(nextSubscription)) {
           setPackages(null);
           return;
         }
 
-        if (access.warp) {
+        if (storeOwnedWarp) {
           setPackages(null);
           setActivationPending(true);
           return;
@@ -260,12 +270,15 @@ export function useWarpSubscription(appUserID: string) {
           purchaseError,
         });
       } finally {
-        if (!silent && !signal.aborted && mountedRef.current) {
+        // A silent refresh can replace the first load before it finishes, so
+        // whichever load is still current when it settles ends the loading
+        // state. An aborted load has been superseded and leaves it alone.
+        if (!signal.aborted && mountedRef.current) {
           setIsLoading(false);
         }
       }
     },
-    [appUserID, applySubscription, setLifetimeProAccess],
+    [appUserID, applySubscription, setLifetimeProAccess, isCurrentIdentity],
   );
 
   useEffect(() => {
@@ -387,7 +400,8 @@ export function useWarpSubscription(appUserID: string) {
             Math.min(ACTIVATION_REQUEST_TIMEOUT_MS, requestBudgetMs),
           );
           applySubscription(nextSubscription);
-          if (nextSubscription.is_premium) return true;
+          if (!isCurrentIdentity()) return false;
+          if (isPaidWarpActive(nextSubscription)) return true;
         } catch (e) {
           if (signal.aborted) throw e;
         }
@@ -399,7 +413,7 @@ export function useWarpSubscription(appUserID: string) {
 
       return false;
     },
-    [applySubscription],
+    [applySubscription, isCurrentIdentity],
   );
 
   const retry = useCallback(async () => {
@@ -429,7 +443,8 @@ export function useWarpSubscription(appUserID: string) {
       const latestSubscription = await getSubscriptionStatus(controller.signal);
       assertCurrentAction(controller.signal);
       applySubscription(latestSubscription);
-      if (latestSubscription.is_premium) return "active";
+      if (isPaidWarpActive(latestSubscription)) return "active";
+      if (!canSubscribeToWarp(latestSubscription)) return "busy";
 
       const purchaseResult = await runPurchasesOperation(
         appUserID,
@@ -438,8 +453,7 @@ export function useWarpSubscription(appUserID: string) {
             throw new PurchaseIdentityError();
           }
 
-          const initialAccess = getPurchaseAccess(initialCustomerInfo);
-          if (initialAccess.warp) {
+          if (hasNonPromotionalWarp(initialCustomerInfo)) {
             return {
               customerInfo: initialCustomerInfo,
               packageIdentifier: null,
@@ -483,7 +497,9 @@ export function useWarpSubscription(appUserID: string) {
       clearCachedPurchaseErrorDiagnostics();
       const access = getPurchaseAccess(purchaseResult.customerInfo);
       setLifetimeProAccess(access.lifetimePro);
-      setRevenueCatWarpActive(access.warp);
+      setRevenueCatWarpActive(
+        hasNonPromotionalWarp(purchaseResult.customerInfo),
+      );
 
       logger.log("Warp purchase operation completed", {
         platform: Capacitor.getPlatform(),
@@ -573,7 +589,7 @@ export function useWarpSubscription(appUserID: string) {
       const storeVerifiedProAccess =
         usePreferencesStore.getState().storeVerifiedProAccess;
       setLifetimeProAccess(access.lifetimePro || storeVerifiedProAccess);
-      setRevenueCatWarpActive(access.warp);
+      setRevenueCatWarpActive(hasNonPromotionalWarp(result.customerInfo));
 
       logger.log("Purchase restore completed", {
         hasLifetimePro: access.lifetimePro,
@@ -586,9 +602,9 @@ export function useWarpSubscription(appUserID: string) {
       );
       assertCurrentAction(controller.signal);
       applySubscription(currentSubscription);
-      if (currentSubscription.is_premium) return "active";
+      if (isPaidWarpActive(currentSubscription)) return "active";
 
-      if (access.warp) {
+      if (hasNonPromotionalWarp(result.customerInfo)) {
         if (await pollForActivation(controller.signal)) return "active";
         logger.error(
           "Restored Warp activation confirmation timed out",

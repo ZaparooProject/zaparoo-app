@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { useTranslation } from "react-i18next";
-import { Copy } from "lucide-react";
+import { CopyIcon } from "lucide-react";
 import { useSystemNameResolver } from "@/hooks/useSystemName";
 import { useMediaWriteTarget } from "@/hooks/useMediaWriteTarget";
 import { CreateIcon, DeviceIcon, PlayIcon } from "@/lib/images";
@@ -11,9 +11,14 @@ import { usePreferencesStore } from "@/lib/preferencesStore";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { SlideModal } from "@/components/SlideModal";
 import { Button } from "@/components/wui/Button";
+import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { ModalActionRail } from "@/components/wui/ModalActionRail";
 import { FavoriteButton } from "@/components/library/FavoriteButton";
 import { MediaWriteTargetSelector } from "@/components/MediaWriteTargetSelector";
+import {
+  ReaderActivityControl,
+  type ReaderActivityState,
+} from "@/components/ReaderActivityControl";
 
 type MediaDetailsAction = (value: string) => void | Promise<void>;
 
@@ -27,6 +32,15 @@ export interface MediaDetailsModalProps {
   previewDisabled?: boolean;
   primaryActionLabel?: string;
   primaryActionIcon?: ReactElement;
+  /** Offer Favorite. Off where the sheet only picks a value to use, such as inserting into a ZapScript. */
+  showFavorite?: boolean;
+  readerActivity?: {
+    state: ReaderActivityState;
+    activeLabel: string;
+    errorMessage?: string;
+    onCancel: () => void;
+    onRetry: () => void;
+  };
 }
 
 export function MediaDetailsModal({
@@ -39,6 +53,8 @@ export function MediaDetailsModal({
   previewDisabled = false,
   primaryActionLabel,
   primaryActionIcon,
+  showFavorite = true,
+  readerActivity,
 }: MediaDetailsModalProps) {
   const { t } = useTranslation();
   const showFilenames = usePreferencesStore((state) => state.showFilenames);
@@ -51,23 +67,43 @@ export function MediaDetailsModal({
       ? filenameFromPath(media.path) || media.name
       : media.name
     : "";
-  const hasSecondaryActions = Boolean(favoriteEntry || onCopy || onPreview);
+  const writeLabel = primaryActionLabel ?? t("create.search.writeLabel");
+  const writeIcon = primaryActionIcon ?? <CreateIcon size="20" />;
   const primaryAction = media ? (
-    <Button
-      label={primaryActionLabel ?? t("create.search.writeLabel")}
-      icon={primaryActionIcon ?? <CreateIcon size="20" />}
-      intent="primary"
-      onClick={() => void onWrite(writeTarget.selectedValue)}
-    />
+    readerActivity ? (
+      <ReaderActivityControl
+        state={readerActivity.state}
+        idleLabel={writeLabel}
+        activeLabel={readerActivity.activeLabel}
+        errorMessage={readerActivity.errorMessage}
+        icon={writeIcon}
+        disabled={!writeTarget.selectedValue}
+        onStart={() => void onWrite(writeTarget.selectedValue)}
+        onCancel={readerActivity.onCancel}
+        onRetry={readerActivity.onRetry}
+      />
+    ) : (
+      <Button
+        label={writeLabel}
+        icon={writeIcon}
+        intent="primary"
+        disabled={!writeTarget.selectedValue}
+        onClick={() => void onWrite(writeTarget.selectedValue)}
+      />
+    )
   ) : undefined;
+  // Secondary actions sit in a rail beside the primary action; a sheet with
+  // none is just its primary action.
+  const hasSecondaryActions =
+    showFavorite || Boolean(onCopy) || Boolean(onPreview);
   const footer =
     media && primaryAction ? (
-      hasSecondaryActions ? (
+      hasSecondaryActions && favoriteEntry ? (
         <ModalActionRail
           aria-label={t("create.search.mediaActions")}
           actions={
             <>
-              {favoriteEntry && (
+              {showFavorite && (
                 <FavoriteButton
                   entry={favoriteEntry}
                   fallbackSystemId={media.system.id}
@@ -81,10 +117,10 @@ export function MediaDetailsModal({
               {onCopy && (
                 <Button
                   label={t("create.search.copyLabel")}
-                  icon={<Copy size="20" />}
+                  icon={<CopyIcon size="20" />}
                   layout="responsive"
                   variant="text"
-                  className="whitespace-nowrap"
+                  className="w-full whitespace-nowrap"
                   onClick={() => void onCopy(writeTarget.selectedValue)}
                 />
               )}
@@ -94,8 +130,9 @@ export function MediaDetailsModal({
                   icon={<PlayIcon size="20" />}
                   layout="responsive"
                   variant="text"
-                  className="whitespace-nowrap"
+                  className="w-full whitespace-nowrap"
                   disabled={previewDisabled}
+                  disabledAppearance="unavailable"
                   onClick={() => void onPreview(writeTarget.selectedValue)}
                 />
               )}
@@ -104,19 +141,25 @@ export function MediaDetailsModal({
           primaryAction={primaryAction}
         />
       ) : (
-        primaryAction
+        <ModalActionBar primaryAction={primaryAction} />
       )
     ) : undefined;
 
   return (
-    <SlideModal isOpen={isOpen} close={close} title={title} footer={footer}>
+    <SlideModal
+      isOpen={isOpen}
+      close={close}
+      title={title}
+      footer={footer}
+      footerSkipLabel={t("accessibility.skipToActions")}
+    >
       {media && (
-        <div className="flex flex-col gap-4 py-2">
+        <div className="flex flex-col gap-4 pt-2">
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
               <div className="flex items-center gap-2 sm:min-w-[100px]">
-                <DeviceIcon size="16" className="text-white/60" />
-                <span className="text-sm text-white/60">
+                <DeviceIcon size="16" className="text-muted-foreground" />
+                <span className="text-muted-foreground text-sm">
                   {t("create.search.systemLabel")}
                 </span>
               </div>

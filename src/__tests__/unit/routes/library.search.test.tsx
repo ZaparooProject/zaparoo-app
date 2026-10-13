@@ -310,17 +310,6 @@ describe("Library game search", () => {
     ).toBeInTheDocument();
   });
 
-  it("should use a contextual back action when provided", async () => {
-    const user = userEvent.setup();
-    const onBack = vi.fn();
-    render(<LibraryGameSearch initialSystemId="SNES" onBack={onBack} />);
-
-    await user.click(screen.getByRole("button", { name: "nav.back" }));
-
-    expect(onBack).toHaveBeenCalledOnce();
-    expect(mockNavigate).not.toHaveBeenCalled();
-  });
-
   it("should return to the Library system browser", async () => {
     const user = userEvent.setup();
     render(<LibraryGameSearch />);

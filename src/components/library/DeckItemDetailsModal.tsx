@@ -1,28 +1,31 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { PlayIcon, Trash2Icon } from "lucide-react";
+import { Trash2Icon } from "lucide-react";
 import { CoreAPI, logRunFailure } from "@/lib/coreApi";
 import { deckItemLaunchText } from "@/lib/decks";
-import type { DeckItem } from "@/lib/models";
+import type { DeckItem, MediaBrowseEntry } from "@/lib/models";
+import {
+  collectLibraryMetadata,
+  organizeLibraryDetailTags,
+} from "@/lib/libraryMedia";
+import { useSystemNameResolver } from "@/hooks/useSystemName";
+import {
+  LibraryFactRows,
+  LibraryMediaFacts,
+  TechnicalDetails,
+} from "@/components/library/LibraryMediaFacts";
+import { useLibraryMediaMeta } from "@/components/library/useLibraryMediaFacts";
 import { ConnectionState, useStatusStore } from "@/lib/store";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { SlideModal } from "@/components/SlideModal";
 import { Button } from "@/components/wui/Button";
-import { ModalActionRail } from "@/components/wui/ModalActionRail";
-import { CreateIcon } from "@/lib/images";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
+import { useContextualNfcWrite } from "@/hooks/useContextualNfcWrite";
+import {
+  ContextualWriteRail,
+  LaunchButton,
+} from "@/components/library/ContextualWriteRail";
 import { DeckArtwork } from "@/components/library/DeckArtwork";
-
-function cardRenderedUrl(item: DeckItem | null): string | null {
-  if (item?.kind !== "card") return null;
-  const image = item.metadata?.rendered_url;
-  if (typeof image !== "string") return null;
-  try {
-    const url = new URL(image);
-    return url.protocol === "https:" ? url.href : null;
-  } catch {
-    return null;
-  }
-}
 
 export function DeckItemDetailsModal({
   item,
@@ -32,7 +35,7 @@ export function DeckItemDetailsModal({
   canRemove,
   onRemove,
   writeAvailable,
-  onWrite,
+  docked = false,
 }: {
   item: DeckItem | null;
   deckId: string;
@@ -41,7 +44,8 @@ export function DeckItemDetailsModal({
   canRemove: boolean;
   onRemove: (item: DeckItem) => void;
   writeAvailable: boolean;
-  onWrite: (text: string) => void;
+  /** Shown in the page's details pane instead of as a dialog. */
+  docked?: boolean;
 }) {
   const { t } = useTranslation();
   const [launching, setLaunching] = useState(false);
@@ -55,10 +59,55 @@ export function DeckItemDetailsModal({
       ? `https://zpr.au/c$${item.cardId.trim()}`
       : launchText;
   const displayText = launchText ?? playText;
-  const imageUrl = cardRenderedUrl(item);
+  const deviceKey = useActiveDeviceKey();
+  const writeActivity = useContextualNfcWrite(
+    JSON.stringify([deviceKey, deckId, item?.id, launchText]),
+    isOpen,
+  );
+  // An indexed game behind the item gets the same facts as Library details.
+  const mediaEntry = useMemo<MediaBrowseEntry | null>(
+    () =>
+      item?.media?.available
+        ? {
+            name: item.media.name,
+            path: item.media.path,
+            type: "media",
+            systemId: item.media.system,
+          }
+        : null,
+    [item],
+  );
+  const mediaSystemId = item?.media?.system ?? "";
+  const metadata = useLibraryMediaMeta(
+    mediaEntry,
+    mediaSystemId,
+    deviceKey,
+    isOpen,
+  ).data?.media;
+  const resolveSystemName = useSystemNameResolver();
+  const factView = useMemo(
+    () =>
+      organizeLibraryDetailTags(
+        metadata ? collectLibraryMetadata(metadata).tags : [],
+      ),
+    [metadata],
+  );
+  const linkTarget =
+    mediaEntry && metadata
+      ? {
+          entry: mediaEntry,
+          systemId: metadata.title.system.id || mediaSystemId,
+          deviceKey,
+        }
+      : null;
+  const closeDetails = () => {
+    void writeActivity.cancel();
+    close();
+  };
 
   const launch = async () => {
-    if (!playText || !liveConnected || launching) return;
+    if (!playText || !liveConnected || launching || writeActivity.active)
+      return;
     setLaunching(true);
     try {
       await CoreAPI.run({ text: playText });
@@ -75,70 +124,53 @@ export function DeckItemDetailsModal({
   return (
     <SlideModal
       isOpen={isOpen}
-      close={close}
+      close={closeDetails}
       title={title}
+      presentation={docked ? "pane" : "modal"}
+      footerSkipLabel={t("accessibility.skipToActions")}
       footer={
-        <ModalActionRail
+        <ContextualWriteRail
           aria-label={t("decks.itemActions")}
-          actions={
-            <>
-              {canRemove && (
-                <Button
-                  label={t("decks.remove")}
-                  icon={<Trash2Icon size={20} />}
-                  variant="text"
-                  layout="responsive"
-                  intent="destructive"
-                  className="enabled:!text-error whitespace-nowrap"
-                  disabled={!item || launching}
-                  onClick={() => {
-                    if (!item) return;
-                    close();
-                    onRemove(item);
-                  }}
-                />
-              )}
-              <Button
-                label={t("library.writeAction")}
-                icon={<CreateIcon size="20" />}
-                variant="text"
-                layout="responsive"
-                className="whitespace-nowrap"
-                disabled={!launchText || !writeAvailable || launching}
-                onClick={() => {
-                  if (!launchText) return;
-                  close();
-                  onWrite(launchText);
-                }}
-              />
-            </>
-          }
+          activity={writeActivity}
+          writeDisabled={!launchText || !writeAvailable}
+          busy={launching}
+          onWrite={() => {
+            if (launchText) void writeActivity.start(launchText);
+          }}
           primaryAction={
-            <Button
+            <LaunchButton
               label={t("decks.play")}
-              icon={<PlayIcon size={20} />}
-              intent="primary"
-              className="!min-h-0"
-              disabled={!playText || !liveConnected || launching}
-              onClick={() => void launch()}
+              launching={launching}
+              unavailable={!playText || !liveConnected}
+              busy={writeActivity.active}
+              onLaunch={() => void launch()}
             />
           }
-        />
+        >
+          {canRemove && (
+            <Button
+              label={t("decks.remove")}
+              icon={<Trash2Icon size={20} />}
+              variant="text"
+              layout="responsive"
+              intent="destructive"
+              className="whitespace-nowrap"
+              disabled={!item || launching || writeActivity.active}
+              disabledAppearance={
+                launching || writeActivity.active ? "busy" : "unavailable"
+              }
+              onClick={() => {
+                if (!item) return;
+                closeDetails();
+                onRemove(item);
+              }}
+            />
+          )}
+        </ContextualWriteRail>
       }
     >
       <div className="flex flex-col gap-3 py-2">
-        {imageUrl && (
-          <img
-            src={imageUrl}
-            alt={t("library.imageAlt", {
-              title,
-              type: t("library.imageTypes.artwork"),
-            })}
-            loading="lazy"
-            className="h-64 w-full object-contain"
-          />
-        )}
-        {item?.kind === "script" && (
+        {item && (
           <DeckArtwork
             item={item}
             detail
@@ -163,6 +195,27 @@ export function DeckItemDetailsModal({
             {t("decks.noPlayAction")}
           </p>
         ) : null}
+        {linkTarget && metadata && (
+          <>
+            <LibraryMediaFacts
+              target={linkTarget}
+              systemName={resolveSystemName(
+                linkTarget.systemId,
+                metadata.title.system.name || linkTarget.systemId,
+              )}
+              facts={factView.facts}
+              tags={factView.tags}
+            />
+            {factView.technicalFacts.length > 0 && (
+              <TechnicalDetails>
+                <LibraryFactRows
+                  target={linkTarget}
+                  facts={factView.technicalFacts}
+                />
+              </TechnicalDetails>
+            )}
+          </>
+        )}
       </div>
     </SlideModal>
   );

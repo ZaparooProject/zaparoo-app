@@ -106,7 +106,7 @@ interface UseNetworkScanResult {
   devices: DiscoveredDevice[];
   /** Whether scanning is in progress */
   isScanning: boolean;
-  /** Error message if scan failed */
+  /** Translation key for the failure, if the scan could not start */
   error: string | null;
   /** Start scanning for devices */
   startScan: () => Promise<void>;
@@ -358,7 +358,8 @@ export function useNetworkScan(): UseNetworkScanResult {
   const startScan = useCallback(async () => {
     // Only works on native platforms
     if (!Capacitor.isNativePlatform()) {
-      setError("Network scanning is only available on mobile devices");
+      setError(null);
+      setIsScanning(false);
       return;
     }
 
@@ -384,7 +385,7 @@ export function useNetworkScan(): UseNetworkScanResult {
         action: "networkScan",
         severity: "warning",
       });
-      setError("Failed to scan network");
+      setError("settings.networkScan.scanFailed");
       setIsScanning(false);
       isScanningRef.current = false;
     }

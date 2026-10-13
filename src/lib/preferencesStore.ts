@@ -10,7 +10,14 @@ import {
   type AppReviewCadenceState,
 } from "@/lib/appReview";
 import type { SystemNameRegionPreference } from "@/lib/systemNames";
+import type { ScanMode } from "@/lib/scanMode";
+import { normaliseZapLayouts, type ZapLayout } from "@/lib/zapLayout";
 import { logger } from "./logger";
+import {
+  isAppearance,
+  readLegacyAppearance,
+  type Appearance,
+} from "./appearance";
 import { sessionManager } from "./nfc";
 import {
   isCapacitorPluginUnavailableError,
@@ -216,6 +223,8 @@ export interface PreferencesState {
   lifetimeProAccess: boolean | null;
   storeVerifiedProAccess: boolean;
   onlinePremiumAccess: boolean | null;
+  onlineTrialExpiresAt: string | null;
+  onlineTrialUserID: string | null;
   preferRemoteWriter: boolean;
   keepScreenAwake: boolean;
 
@@ -246,6 +255,15 @@ export interface PreferencesState {
     error: boolean;
   };
 
+  // Null means appearance has not been migrated/hydrated yet.
+  appearance: Appearance | null;
+
+  /**
+   * Which scan mode last produced a token, so the home page can lead with it.
+   * A memory of behaviour, not a setting - it never appears in Settings.
+   */
+  lastScanMode: ScanMode | null;
+
   // Display settings
   showFilenames: boolean;
   systemNameRegion: SystemNameRegionPreference;
@@ -255,6 +273,15 @@ export interface PreferencesState {
   hapticsEnabled: boolean;
   textZoomLevel: number;
   accessibleLists: boolean;
+  /** The desktop sidebar is collapsed to its icon rail. */
+  sidebarCollapsed: boolean;
+  /** Navigation is hidden so a page can be an always-on display. */
+  fullScreen: boolean;
+  /**
+   * Zap page arrangements by device record ID. A device with no entry shows
+   * the built-in page.
+   */
+  zapLayouts: Record<string, ZapLayout>;
 
   // Hydration tracking (internal, not persisted)
   _hasHydrated: boolean;
@@ -299,7 +326,10 @@ export interface PreferencesActions {
   setLifetimeProAccess: (value: boolean) => void;
   setStoreVerifiedProAccess: (value: boolean) => void;
   beginOnlinePremiumAccessCheck: () => void;
-  setOnlinePremiumAccess: (value: boolean) => void;
+  setOnlinePremiumAccess: (
+    value: boolean,
+    trial?: { userID: string; expiresAt: string },
+  ) => void;
   clearOnlinePremiumAccess: () => void;
   setPreferRemoteWriter: (value: boolean) => void;
   setKeepScreenAwake: (value: boolean) => void;
@@ -317,12 +347,20 @@ export interface PreferencesActions {
   setLastWhatsNewRuntimeKey: (runtimeKey: string) => void;
   markWhatsNewSeen: (announcementId: string, runtimeKey: string) => void;
   setLogLevelFilters: (filters: PreferencesState["logLevelFilters"]) => void;
+  setAppearance: (value: Appearance) => void;
+  setLastScanMode: (value: ScanMode) => void;
   setShowFilenames: (value: boolean) => void;
   setSystemNameRegion: (value: SystemNameRegionPreference) => void;
   setAppBadgeEnabled: (value: boolean) => void;
   setHapticsEnabled: (value: boolean) => void;
   setTextZoomLevel: (value: number) => void;
   setAccessibleLists: (value: boolean) => void;
+  setSidebarCollapsed: (value: boolean) => void;
+  setFullScreen: (value: boolean) => void;
+  /** Saves a device's arrangement; null returns it to the built-in page. */
+  setZapLayout: (deviceKey: string, value: ZapLayout | null) => void;
+  /** Forgets arrangements of devices that no longer exist. */
+  pruneZapLayouts: (deviceKeys: readonly string[]) => void;
 }
 
 export type PreferencesStore = PreferencesState & PreferencesActions;
@@ -355,6 +393,8 @@ const DEFAULT_PREFERENCES: Omit<
   lifetimeProAccess: null,
   storeVerifiedProAccess: false,
   onlinePremiumAccess: null,
+  onlineTrialExpiresAt: null,
+  onlineTrialUserID: null,
   preferRemoteWriter: false,
   keepScreenAwake: true,
   shakeEnabled: false,
@@ -372,19 +412,28 @@ const DEFAULT_PREFERENCES: Omit<
     warn: true,
     error: true,
   },
+  appearance: null,
+  lastScanMode: null,
   showFilenames: false,
   systemNameRegion: "auto",
   appBadgeEnabled: true,
   hapticsEnabled: true,
   textZoomLevel: 1.0,
   accessibleLists: false,
+  sidebarCollapsed: false,
+  fullScreen: false,
+  zapLayouts: {},
 };
 
 function persistedPreferences(state: PreferencesStore) {
   return {
     restartScan: state.restartScan,
     launchOnScan: state.launchOnScan,
-    launcherAccess: state.launcherAccess,
+    // Cloud trial access is session-bound; never hydrate it as lifetime Pro.
+    launcherAccess:
+      state.onlineTrialExpiresAt !== null
+        ? state.lifetimeProAccess === true || state.storeVerifiedProAccess
+        : state.launcherAccess,
     storeVerifiedProAccess: state.storeVerifiedProAccess,
     preferRemoteWriter: state.preferRemoteWriter,
     keepScreenAwake: state.keepScreenAwake,
@@ -398,12 +447,17 @@ function persistedPreferences(state: PreferencesStore) {
     lastWhatsNewRuntimeKey: state.lastWhatsNewRuntimeKey,
     seenWhatsNewAnnouncementIds: state.seenWhatsNewAnnouncementIds,
     logLevelFilters: state.logLevelFilters,
+    appearance: state.appearance,
+    lastScanMode: state.lastScanMode,
     showFilenames: state.showFilenames,
     systemNameRegion: state.systemNameRegion,
     appBadgeEnabled: state.appBadgeEnabled,
     hapticsEnabled: state.hapticsEnabled,
     textZoomLevel: state.textZoomLevel,
     accessibleLists: state.accessibleLists,
+    sidebarCollapsed: state.sidebarCollapsed,
+    fullScreen: state.fullScreen,
+    zapLayouts: state.zapLayouts,
   };
 }
 
@@ -485,24 +539,36 @@ export const usePreferencesStore = create<PreferencesStore>()(
       beginOnlinePremiumAccessCheck: () =>
         set((state) => ({
           onlinePremiumAccess: null,
+          onlineTrialExpiresAt: null,
+          onlineTrialUserID: null,
           launcherAccess:
             state.lifetimeProAccess === true ||
-            (state.lifetimeProAccess === null && state.launcherAccess),
+            (state.onlinePremiumAccess !== true &&
+              state.lifetimeProAccess === null &&
+              state.launcherAccess),
         })),
-      setOnlinePremiumAccess: (value) =>
+      setOnlinePremiumAccess: (value, trial) =>
         set((state) => ({
           onlinePremiumAccess: value,
+          onlineTrialExpiresAt: value && trial ? trial.expiresAt : null,
+          onlineTrialUserID: value && trial ? trial.userID : null,
           launcherAccess:
             value ||
             state.lifetimeProAccess === true ||
-            (state.lifetimeProAccess === null && state.launcherAccess),
+            (state.onlinePremiumAccess !== true &&
+              state.lifetimeProAccess === null &&
+              state.launcherAccess),
         })),
       clearOnlinePremiumAccess: () =>
         set((state) => ({
           onlinePremiumAccess: false,
+          onlineTrialExpiresAt: null,
+          onlineTrialUserID: null,
           launcherAccess:
             state.lifetimeProAccess === true ||
-            (state.lifetimeProAccess === null && state.launcherAccess),
+            (state.onlinePremiumAccess !== true &&
+              state.lifetimeProAccess === null &&
+              state.launcherAccess),
         })),
       setPreferRemoteWriter: (value) => set({ preferRemoteWriter: value }),
       setKeepScreenAwake: (value) => set({ keepScreenAwake: value }),
@@ -541,12 +607,40 @@ export const usePreferencesStore = create<PreferencesStore>()(
               : [...state.seenWhatsNewAnnouncementIds, announcementId],
         })),
       setLogLevelFilters: (filters) => set({ logLevelFilters: filters }),
+      setAppearance: (value) => {
+        // Keep this session usable if a write fails; never leave a rejected
+        // persistence promise attached to an input event.
+        void Promise.resolve(set({ appearance: value })).catch((error) => {
+          logger.warn("Failed to persist appearance preference", error);
+        });
+      },
+      setLastScanMode: (value) => set({ lastScanMode: value }),
       setShowFilenames: (value) => set({ showFilenames: value }),
       setSystemNameRegion: (value) => set({ systemNameRegion: value }),
       setAppBadgeEnabled: (value) => set({ appBadgeEnabled: value }),
       setHapticsEnabled: (value) => set({ hapticsEnabled: value }),
       setTextZoomLevel: (value) => set({ textZoomLevel: value }),
       setAccessibleLists: (value) => set({ accessibleLists: value }),
+      setSidebarCollapsed: (value) => set({ sidebarCollapsed: value }),
+      setFullScreen: (value) => set({ fullScreen: value }),
+      setZapLayout: (deviceKey, value) =>
+        set((state) => {
+          const zapLayouts = { ...state.zapLayouts };
+          if (value) zapLayouts[deviceKey] = value;
+          else delete zapLayouts[deviceKey];
+          return { zapLayouts };
+        }),
+      pruneZapLayouts: (deviceKeys) =>
+        set((state) => {
+          const keep = new Set(deviceKeys);
+          const stale = Object.keys(state.zapLayouts).filter(
+            (key) => !keep.has(key),
+          );
+          if (stale.length === 0) return state;
+          const zapLayouts = { ...state.zapLayouts };
+          for (const key of stale) delete zapLayouts[key];
+          return { zapLayouts };
+        }),
     }),
     {
       name: PREFERENCES_STORAGE_KEY,
@@ -681,6 +775,7 @@ export const usePreferencesStore = create<PreferencesStore>()(
             ...currentState.appReviewCadence,
             ...persisted.appReviewCadence,
           },
+          zapLayouts: normaliseZapLayouts(persisted.zapLayouts),
         };
 
         // Stored values win over defaults, except for settings changed while
@@ -691,6 +786,14 @@ export const usePreferencesStore = create<PreferencesStore>()(
           Object.assign(merged, {
             [key]: currentState[key as keyof PreferencesStore],
           });
+        }
+        // Zap layouts are kept per device, so a layout saved while storage was
+        // unavailable must not discard the other devices' stored layouts.
+        if (_preferenceKeysChangedWhileDegraded.has("zapLayouts")) {
+          merged.zapLayouts = {
+            ...normaliseZapLayouts(persisted.zapLayouts),
+            ...currentState.zapLayouts,
+          };
         }
 
         // Runtime access checks may already have answered (e.g. when storage
@@ -705,6 +808,9 @@ export const usePreferencesStore = create<PreferencesStore>()(
 
         return {
           ...merged,
+          appearance: isAppearance(merged.appearance)
+            ? merged.appearance
+            : (readLegacyAppearance() ?? "system"),
           // Never persist the hydration flags or runtime-checked values.
           // A store ownership fallback is durable because Google or Apple has
           // already confirmed the non-consumable is owned on this device.
@@ -719,6 +825,8 @@ export const usePreferencesStore = create<PreferencesStore>()(
             currentState.onlinePremiumAccess === true ||
             (accessCheckPending && cachedLauncherAccess),
           onlinePremiumAccess: currentState.onlinePremiumAccess,
+          onlineTrialExpiresAt: currentState.onlineTrialExpiresAt,
+          onlineTrialUserID: currentState.onlineTrialUserID,
           nfcAvailable: currentState.nfcAvailable,
           _nfcAvailabilityHydrated: currentState._nfcAvailabilityHydrated,
           cameraAvailable: currentState.cameraAvailable,

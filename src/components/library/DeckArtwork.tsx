@@ -7,7 +7,10 @@ import { deckArtworkTarget } from "@/lib/deckArtwork";
 import { searchResultToBrowseEntry } from "@/lib/libraryMedia";
 import { ConnectionState, useStatusStore } from "@/lib/store";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
-import { LibraryArtwork } from "@/components/library/LibraryArtwork";
+import {
+  LibraryArtworkFrame,
+  LibraryArtworkPlate,
+} from "@/components/library/LibraryArtworkFrame";
 
 function httpsImage(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -156,20 +159,20 @@ function ArtworkImage({
   alt: string;
 }) {
   const [failed, setFailed] = useState(false);
+  const frameClassName = "size-full";
   return (
-    <span
-      className="text-foreground-hint flex h-full w-full items-center justify-center overflow-hidden bg-white/5"
-      onErrorCapture={() => setFailed(true)}
-    >
+    <span className="block size-full" onErrorCapture={() => setFailed(true)}>
       {!failed && url ? (
-        <img
-          src={url}
-          alt={alt}
-          loading="lazy"
-          className="h-full w-full object-contain"
-        />
+        <LibraryArtworkPlate compact className={frameClassName}>
+          <img
+            src={url}
+            alt={alt}
+            loading="lazy"
+            className="size-full rounded-sm object-contain"
+          />
+        </LibraryArtworkPlate>
       ) : !failed && entry ? (
-        <LibraryArtwork
+        <LibraryArtworkFrame
           entry={entry}
           systemId={entry.systemId ?? ""}
           deviceKey={deviceKey}
@@ -177,10 +180,16 @@ function ArtworkImage({
           priority={detail ? "detail" : "thumbnail"}
           alt={alt}
           enabled={enabled}
-          className="h-full w-full object-contain"
+          compact
+          className={frameClassName}
         />
       ) : (
-        <FileIcon size={24} />
+        <LibraryArtworkPlate
+          compact
+          className={`${frameClassName} text-foreground-hint flex items-center justify-center`}
+        >
+          <FileIcon size={24} />
+        </LibraryArtworkPlate>
       )}
     </span>
   );

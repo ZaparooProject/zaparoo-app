@@ -18,9 +18,12 @@ import {
 import { invalidateLibraryImageCache } from "@/lib/libraryImageCache";
 import { PageFrame } from "@/components/PageFrame";
 import { HeaderButton } from "@/components/wui/HeaderButton";
+import { Card } from "@/components/wui/Card";
 import { Button } from "@/components/wui/Button";
+import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { TextInput } from "@/components/wui/TextInput";
 import { SlideModal } from "@/components/SlideModal";
+import { formatAppDateTime } from "@/lib/formatDate";
 import { BackIcon } from "@/lib/images";
 import { Route } from "@/routes/settings.devices_.$recordId";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
@@ -57,7 +60,7 @@ export function DeviceDetail() {
   const { forgetDevice } = useDeviceConnectionActions();
   const { selectRecord } = useSelectDevice();
 
-  const headingTitle = record?.name ?? endpoint?.address ?? "";
+  const headingTitle = record?.name || endpoint?.address || "";
   const headingRef = usePageHeadingFocus<HTMLHeadingElement>(headingTitle);
 
   const initialName = record?.name ?? "";
@@ -120,12 +123,17 @@ export function DeviceDetail() {
   const lastConnectedLine =
     record.lastConnectedAt !== undefined
       ? t("settings.deviceDetail.lastConnected", {
-          when: new Date(record.lastConnectedAt).toLocaleString(),
+          when: formatAppDateTime(record.lastConnectedAt) ?? "",
         })
       : t("settings.deviceDetail.neverConnected");
 
   return (
     <PageFrame
+      headerMode="content-wide"
+      breadcrumbs={[
+        { to: "/settings", label: t("settings.title") },
+        { to: "/settings/devices", label: t("scan.deviceSheetAllDevices") },
+      ]}
       onSwipeBack={goBack}
       headerLeft={
         <HeaderButton
@@ -137,21 +145,21 @@ export function DeviceDetail() {
       headerCenter={
         <h1
           ref={headingRef}
-          className="text-foreground flex min-w-0 items-center gap-2 text-xl"
+          className="flex min-w-0 items-center gap-2"
           title={headingTitle}
         >
           {isActive && (
             <span
+              role="img"
               aria-label={t("settings.activeDevice")}
-              style={{ backgroundColor: "var(--color-success)" }}
-              className="h-2 w-2 shrink-0 rounded-full"
+              className="bg-success h-2 w-2 shrink-0 rounded-full"
             />
           )}
           <span className="truncate">{headingTitle}</span>
         </h1>
       }
     >
-      <div className="flex flex-col gap-6 p-3">
+      <Card className="flex flex-col gap-4">
         <TextInput
           label={t("settings.deviceDetail.nameLabel")}
           placeholder={endpoint.address}
@@ -165,11 +173,11 @@ export function DeviceDetail() {
         <section aria-labelledby="device-info-heading">
           <h2
             id="device-info-heading"
-            className="font-bold text-gray-400 capitalize"
+            className="text-foreground mb-2 text-lg font-semibold"
           >
             {t("settings.deviceDetail.infoHeading")}
           </h2>
-          <p style={{ wordBreak: "break-all" }}>
+          <p className="break-all">
             {t("settings.deviceDetail.address", { value: endpoint.address })}
           </p>
           {record.platform && (
@@ -197,42 +205,46 @@ export function DeviceDetail() {
         <Button
           label={t("settings.deviceDetail.forget")}
           variant="outline"
+          intent="destructive"
           onClick={() => setConfirmOpen(true)}
           className="w-full"
         />
-      </div>
+      </Card>
 
       <SlideModal
         isOpen={confirmOpen}
         close={() => {
           if (!forgetting) setConfirmOpen(false);
         }}
+        dismissible={!forgetting}
         title={t("settings.deviceDetail.forgetTitle")}
         footer={
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              label={t("settings.deviceDetail.forgetCancel")}
-              onClick={() => setConfirmOpen(false)}
-              disabled={forgetting}
-              className="flex-1"
-            />
-            <Button
-              variant="outline"
-              intent="destructive"
-              label={t("settings.deviceDetail.forgetConfirm")}
-              onClick={() => void handleConfirmForget()}
-              disabled={forgetting}
-              className={
-                forgetting ? "flex-1" : "border-error text-error flex-1"
-              }
-            />
-          </div>
+          <ModalActionBar
+            secondaryAction={
+              <Button
+                variant="secondary"
+                label={t("settings.deviceDetail.forgetCancel")}
+                onClick={() => setConfirmOpen(false)}
+                disabled={forgetting}
+                disabledAppearance="busy"
+              />
+            }
+            primaryAction={
+              <Button
+                variant="outline"
+                intent="destructive"
+                label={t("settings.deviceDetail.forgetConfirm")}
+                onClick={() => void handleConfirmForget()}
+                disabled={forgetting}
+                disabledAppearance="busy"
+              />
+            }
+          />
         }
       >
-        <div className="py-4">
-          <p className="text-center">{t("settings.deviceDetail.forgetBody")}</p>
-        </div>
+        <p className="py-4 text-center">
+          {t("settings.deviceDetail.forgetBody")}
+        </p>
       </SlideModal>
     </PageFrame>
   );

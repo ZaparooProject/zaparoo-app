@@ -18,6 +18,7 @@ import { DeckDescriptionInput } from "@/components/library/DeckDescriptionInput"
 import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { BackIcon } from "@/lib/images";
+import { useLibraryCollectionBreadcrumbs } from "@/components/library/useLibraryBreadcrumbs";
 
 export const Route = createFileRoute("/library/decks/new")({
   component: NewDeck,
@@ -39,6 +40,7 @@ export function NewDeck({
   const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
   const goBack = () => void navigate(appBackNavigationOptions(backTo));
+  const collectionBreadcrumbs = useLibraryCollectionBreadcrumbs();
 
   const save = async () => {
     if (!connected || !feature.available || !name.trim() || saving) return;
@@ -67,6 +69,12 @@ export function NewDeck({
 
   return (
     <PageFrame
+      headerMode="content-wide"
+      breadcrumbs={
+        backTo === "/create"
+          ? [{ to: backTo, label: t("create.title") }]
+          : collectionBreadcrumbs
+      }
       onSwipeBack={goBack}
       headerLeft={
         <HeaderButton
@@ -111,6 +119,7 @@ export function NewDeck({
             intent="primary"
             className="w-full"
             disabled={!name.trim() || saving}
+            disabledAppearance={saving ? "busy" : "unavailable"}
           />
         </form>
       )}

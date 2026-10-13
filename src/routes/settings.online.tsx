@@ -2,19 +2,15 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
-import { Purchases } from "@revenuecat/purchases-capacitor";
 import { Browser } from "@capacitor/browser";
 import toast from "react-hot-toast";
 import { Capacitor } from "@capacitor/core";
-import {
-  LogOutIcon,
-  UserPlusIcon,
-  ExternalLinkIcon,
-  Trash2Icon,
-} from "lucide-react";
+import { LogOutIcon, Trash2Icon } from "lucide-react";
 import type { AxiosError } from "axios";
 import { TextInput } from "@/components/wui/TextInput.tsx";
 import { Button } from "@/components/wui/Button.tsx";
+import { Card } from "@/components/wui/Card";
+import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { WarpSubscription } from "@/components/WarpSubscription";
 import { OnlineDeviceSetup } from "@/components/OnlineDeviceSetup";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -22,14 +18,21 @@ import { Label } from "@/components/ui/label";
 import { useStatusStore } from "@/lib/store.ts";
 import { PageFrame } from "@/components/PageFrame.tsx";
 import { HeaderButton } from "@/components/wui/HeaderButton";
-import { BackIcon, GoogleIcon, AppleIcon } from "@/lib/images";
+import {
+  BackIcon,
+  ExternalIcon,
+  GoogleIcon,
+  AppleIcon,
+  LockIcon,
+} from "@/lib/images";
+import { signOutOnline } from "@/lib/onlineSignOut";
+import { formatAppDate } from "@/lib/formatDate";
 import { logger } from "@/lib/logger";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import {
   collectErrorSearchStrings,
   isExpectedEmailAuthError,
-  isExpectedRevenueCatLogoutError,
 } from "@/lib/errors";
 import {
   updateRequirements,
@@ -44,6 +47,7 @@ import {
 } from "@/lib/mfaAuthentication";
 import { SlideModal } from "@/components/SlideModal";
 import {
+  getDisplayedWarpAccess,
   getPurchasePreviewState,
   usePurchasePreviewStore,
 } from "@/lib/purchasePreviewStore";
@@ -84,6 +88,39 @@ const EXPIRED_MFA_CHALLENGE_TOKENS = [
   "multi-factor-challenge-missing",
   "totp-challenge-timeout",
 ] as const;
+
+type OAuthProvider = "google" | "apple";
+
+const OAUTH_CANCEL_TOKENS = [
+  "cancel",
+  "popup_closed",
+  "user_denied",
+  "dismissed",
+] as const;
+
+const OAUTH_PROVIDERS = {
+  google: {
+    labelKey: "online.loginGoogle",
+    Icon: GoogleIcon,
+    signIn: () => MfaAuthentication.signInWithGoogle(),
+    action: "signInWithGoogle",
+    logMessage: "Firebase Google login failed:",
+    // SIGN_IN_CANCELLED from Android's legacy Google account picker, which
+    // rejects with only its status code.
+    cancelled: (message: string) => message.startsWith("12501:"),
+  },
+  apple: {
+    labelKey: "online.loginApple",
+    Icon: AppleIcon,
+    signIn: () => MfaAuthentication.signInWithApple(),
+    action: "signInWithApple",
+    logMessage: "Firebase Apple login failed:",
+    // ASAuthorizationError.canceled, which iOS rejects with only the
+    // localized error description.
+    cancelled: (message: string) =>
+      message.includes("authorizationerror error 1001"),
+  },
+} as const;
 
 function getExpectedSignupEmailAuthErrorToken(error: unknown): string | null {
   if (!isExpectedEmailAuthError(error)) return null;
@@ -144,16 +181,10 @@ export function OnlinePage() {
   const onlinePremiumAccess = usePreferencesStore(
     (state) => state.onlinePremiumAccess,
   );
-  const displayedWarpActive =
-    purchasePreview === "live"
-      ? onlinePremiumAccess
-      : purchasePreview === "warp"
-        ? true
-        : purchasePreview === "free" ||
-            purchasePreview === "checkout" ||
-            purchasePreview === "pro"
-          ? false
-          : null;
+  const displayedWarpActive = getDisplayedWarpAccess(
+    purchasePreview,
+    onlinePremiumAccess,
+  );
 
   useEffect(() => {
     mfaPendingRef.current = mfaPending;
@@ -366,62 +397,26 @@ export function OnlinePage() {
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleOAuthSignIn = async (provider: OAuthProvider) => {
+    const { signIn, action, logMessage, cancelled } = OAUTH_PROVIDERS[provider];
     setIsLoading(true);
     try {
-      const result = await MfaAuthentication.signInWithGoogle();
+      const result = await signIn();
       await handleFirstFactorResult(result);
     } catch (e) {
-      const error = e as Error;
-      // Check if user cancelled the login - don't show error toast
-      const msg = error.message.toLowerCase();
+      // A user-cancelled login is not an error to show.
+      const msg = e instanceof Error ? e.message.toLowerCase() : "";
       if (
-        msg.includes("cancel") ||
-        msg.includes("popup_closed") ||
-        msg.includes("user_denied") ||
-        msg.includes("dismissed") ||
-        // SIGN_IN_CANCELLED from Android's legacy Google account picker,
-        // which rejects with only its status code.
-        msg.startsWith("12501:")
-      ) {
-        return;
-      }
-      logger.error("Firebase Google login failed:", error, {
-        category: "api",
-        action: "signInWithGoogle",
-        severity: "warning",
-      });
-      toast.error(t("online.loginFail"));
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleAppleSignIn = async () => {
-    setIsLoading(true);
-    try {
-      const result = await MfaAuthentication.signInWithApple();
-      await handleFirstFactorResult(result);
-    } catch (e) {
-      const error = e as Error;
-      // Check if user cancelled the login - don't show error toast
-      const msg = error.message.toLowerCase();
-      if (
-        msg.includes("cancel") ||
-        msg.includes("popup_closed") ||
-        msg.includes("user_denied") ||
-        msg.includes("dismissed") ||
-        // ASAuthorizationError.canceled, which iOS rejects with only the
-        // localized error description.
-        msg.includes("authorizationerror error 1001")
+        OAUTH_CANCEL_TOKENS.some((token) => msg.includes(token)) ||
+        cancelled(msg)
       ) {
         return;
       }
       // Anything else, including ASAuthorizationError.unknown (1000) from a
       // device without an Apple Account, stays a warning.
-      logger.error("Firebase Apple login failed:", error, {
+      logger.error(logMessage, e, {
         category: "api",
-        action: "signInWithApple",
+        action,
         severity: "warning",
       });
       toast.error(t("online.loginFail"));
@@ -430,16 +425,8 @@ export function OnlinePage() {
     }
   };
 
-  const handleForgotPassword = () => {
-    if (!onlineEmail) {
-      setFormError(t("online.enterEmailFirst"));
-      return;
-    }
-
-    setFormError(null);
-    FirebaseAuthentication.sendPasswordResetEmail({
-      email: onlineEmail,
-    })
+  const sendPasswordReset = (email: string) => {
+    FirebaseAuthentication.sendPasswordResetEmail({ email })
       .then(() => {
         toast.success(t("online.resetEmailSent"));
       })
@@ -453,38 +440,29 @@ export function OnlinePage() {
       });
   };
 
-  const handleSignOut = async () => {
-    // Revert RevenueCat to anonymous before Firebase signOut (skip on web)
-    if (Capacitor.getPlatform() !== "web") {
-      try {
-        const { isAnonymous } = await Purchases.isAnonymous();
-        if (!isAnonymous) {
-          await Purchases.logOut();
-        }
-      } catch (e) {
-        if (!isExpectedRevenueCatLogoutError(e)) {
-          logger.error("RevenueCat logout failed:", e, {
-            category: "purchase",
-            action: "logOut",
-            severity: "warning",
-          });
-        }
-      }
+  const handleForgotPassword = () => {
+    if (!onlineEmail) {
+      setFormError(t("online.enterEmailFirst"));
+      return;
     }
 
-    FirebaseAuthentication.signOut()
-      .then(() => {
-        setLoggedInUser(null);
-        setOnlineEmail("");
-        setOnlinePassword("");
-      })
-      .catch((e) => {
-        logger.error("Firebase sign out failed:", e, {
-          category: "api",
-          action: "signOut",
-          severity: "warning",
-        });
+    setFormError(null);
+    sendPasswordReset(onlineEmail);
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOutOnline();
+      setOnlineEmail("");
+      setOnlinePassword("");
+    } catch (e) {
+      logger.error("Firebase sign out failed:", e, {
+        category: "api",
+        action: "signOut",
+        severity: "warning",
       });
+      toast.error(t("online.logoutFailed"));
+    }
   };
 
   const handleKeyUp = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -579,6 +557,14 @@ export function OnlinePage() {
 
   return (
     <PageFrame
+      headerMode="content-wide"
+      breadcrumbs={[{ to: "/settings", label: t("settings.title") }]}
+      layout={loggedInUser !== null ? "workspace" : "default"}
+      className={
+        loggedInUser !== null
+          ? "online-settings-page settings-panel-page"
+          : "online-settings-page"
+      }
       onSwipeBack={goBack}
       headerLeft={
         <HeaderButton
@@ -593,152 +579,146 @@ export function OnlinePage() {
         </h1>
       }
     >
-      <div className="flex flex-col gap-4">
+      <>
         {loggedInUser !== null ? (
           // Logged in state
-          <div className="flex flex-col gap-6 py-4">
-            <div className="flex flex-col items-center gap-1">
-              {loggedInUser.displayName && (
-                <span className="text-lg font-medium text-white">
-                  {loggedInUser.displayName}
-                </span>
-              )}
-              <span className="text-muted-foreground text-sm">
-                {loggedInUser.email}
-              </span>
+          <div className="settings-panel-layout settings-online-panels">
+            <div className="settings-online-device">
+              <OnlineDeviceSetup
+                connected={connected}
+                warpActive={displayedWarpActive}
+              />
             </div>
-
-            <OnlineDeviceSetup
-              connected={connected}
-              warpActive={displayedWarpActive}
-            />
-
-            {(Capacitor.isNativePlatform() || purchasePreview !== "live") && (
-              <WarpSubscription appUserID={loggedInUser.uid} />
-            )}
-
-            {/* Account actions */}
-            <section
-              className="flex w-full flex-col gap-3"
-              aria-labelledby="online-account-actions-title"
-            >
-              <h2
-                id="online-account-actions-title"
-                className="text-lg font-medium text-white"
-              >
-                {t("online.account")}
-              </h2>
-
-              {/* Dashboard button */}
-              <Button
-                label={t("online.dashboard")}
-                variant="outline"
-                icon={<ExternalLinkIcon size="20" />}
-                onClick={() =>
-                  Browser.open({ url: "https://online.zaparoo.com" })
-                }
-                className="w-full"
-              />
-
-              {/* Change password - only for email/password users */}
-              {hasPasswordProvider(loggedInUser.providerData) && (
-                <Button
-                  label={t("online.changePassword")}
-                  variant="outline"
-                  onClick={() => {
-                    if (loggedInUser.email) {
-                      FirebaseAuthentication.sendPasswordResetEmail({
-                        email: loggedInUser.email,
-                      })
-                        .then(() => {
-                          toast.success(t("online.resetEmailSent"));
-                        })
-                        .catch((e: Error) => {
-                          logger.error("Firebase password reset failed:", e, {
-                            category: "api",
-                            action: "sendPasswordResetEmail",
-                            severity: "warning",
-                          });
-                          toast.error(t("online.resetEmailFailed"));
-                        });
-                    }
-                  }}
-                  className="w-full"
-                />
+            <div className="settings-online-account">
+              {(Capacitor.isNativePlatform() || purchasePreview !== "live") && (
+                <WarpSubscription appUserID={loggedInUser.uid} />
               )}
 
-              {/* Log out button */}
-              <Button
-                label={t("online.logout")}
-                variant="outline"
-                icon={<LogOutIcon size="20" />}
-                onClick={handleSignOut}
-                className="w-full"
-              />
+              {/* Account actions */}
+              <Card>
+                <section
+                  className="flex w-full flex-col gap-4"
+                  aria-labelledby="online-account-actions-title"
+                >
+                  <h2
+                    id="online-account-actions-title"
+                    className="text-foreground text-lg font-semibold"
+                  >
+                    {t("online.account")}
+                  </h2>
+                  <div className="flex flex-col gap-1">
+                    {loggedInUser.displayName && (
+                      <span className="text-foreground font-medium">
+                        {loggedInUser.displayName}
+                      </span>
+                    )}
+                    <span className="text-muted-foreground text-sm break-all">
+                      {loggedInUser.email}
+                    </span>
+                  </div>
 
-              {/* Delete account section */}
-              {scheduledDeletion ? (
-                <div className="border-error/30 bg-error/10 mt-2 rounded-lg border p-3">
-                  <p className="text-error text-sm font-medium">
-                    {t("online.deletionScheduledTitle")}
-                  </p>
-                  <p className="text-muted-foreground mt-1 text-xs">
-                    {t("online.deletionScheduledMessage", {
-                      date: new Date(scheduledDeletion).toLocaleDateString(),
-                    })}
-                  </p>
-                  <Button
-                    label={
-                      isCancelling
-                        ? t("spinner.cancelling")
-                        : t("online.cancelDeletion")
-                    }
-                    variant="outline"
-                    onClick={handleCancelDeletion}
-                    disabled={isCancelling}
-                    className="mt-3 w-full"
-                  />
-                </div>
-              ) : (
-                <Button
-                  label={t("online.deleteAccount")}
-                  variant="outline"
-                  icon={<Trash2Icon size="20" />}
-                  onClick={() => setDeleteModalOpen(true)}
-                  className="border-error text-error mt-2 w-full"
-                />
-              )}
-            </section>
+                  <div className="flex flex-col gap-3">
+                    <Button
+                      label={t("online.dashboard")}
+                      variant="outline"
+                      icon={<ExternalIcon size="20" />}
+                      onClick={() =>
+                        Browser.open({ url: "https://online.zaparoo.com" })
+                      }
+                      className="w-full"
+                    />
+
+                    {/* Change password - only for email/password users */}
+                    {hasPasswordProvider(loggedInUser.providerData) && (
+                      <Button
+                        label={t("online.changePassword")}
+                        variant="outline"
+                        icon={<LockIcon size="20" />}
+                        onClick={() => {
+                          if (loggedInUser.email) {
+                            sendPasswordReset(loggedInUser.email);
+                          }
+                        }}
+                        className="w-full"
+                      />
+                    )}
+
+                    <Button
+                      label={t("online.logout")}
+                      variant="outline"
+                      icon={<LogOutIcon size="20" />}
+                      onClick={handleSignOut}
+                      className="w-full"
+                    />
+
+                    {scheduledDeletion ? (
+                      <div className="border-error/30 bg-error-wash flex flex-col gap-3 rounded-lg border p-3">
+                        <div className="flex flex-col gap-1">
+                          <p className="text-error text-sm font-medium">
+                            {t("online.deletionScheduledTitle")}
+                          </p>
+                          <p className="text-muted-foreground text-xs">
+                            {t("online.deletionScheduledMessage", {
+                              date: formatAppDate(scheduledDeletion),
+                            })}
+                          </p>
+                        </div>
+                        <Button
+                          label={
+                            isCancelling
+                              ? t("cancelling")
+                              : t("online.cancelDeletion")
+                          }
+                          variant="outline"
+                          onClick={handleCancelDeletion}
+                          disabled={isCancelling}
+                          disabledAppearance="busy"
+                          className="w-full"
+                        />
+                      </div>
+                    ) : (
+                      <Button
+                        label={t("online.deleteAccount")}
+                        variant="outline"
+                        intent="destructive"
+                        icon={<Trash2Icon size="20" />}
+                        onClick={() => setDeleteModalOpen(true)}
+                        className="w-full"
+                      />
+                    )}
+                  </div>
+                </section>
+              </Card>
+            </div>
           </div>
         ) : purchasePreview !== "live" ? (
-          <div className="flex flex-col gap-6 py-4">
-            <WarpSubscription appUserID="purchase-preview" />
-          </div>
+          <WarpSubscription appUserID="purchase-preview" />
         ) : (
-          <div className="flex flex-col gap-6 py-4">
-            <section
-              className="flex flex-col gap-3"
-              aria-label={t("online.account")}
-            >
-              <p className="text-muted-foreground text-center text-sm">
-                {t("online.description")}
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  label={t("online.login")}
-                  onClick={() => openAuthSheet(false)}
-                  className="flex-1"
-                  intent="primary"
-                />
-                <Button
-                  label={t("online.signUp")}
-                  icon={<UserPlusIcon size="20" />}
-                  variant="outline"
-                  onClick={() => openAuthSheet(true)}
-                  className="flex-1"
-                />
-              </div>
-            </section>
+          <div className="flex flex-col gap-5">
+            <Card>
+              <section
+                className="flex flex-col gap-3"
+                aria-label={t("online.account")}
+              >
+                <p className="text-muted-foreground text-center text-sm">
+                  {t("online.description")}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    label={t("online.login")}
+                    onClick={() => openAuthSheet(false)}
+                    className="flex-1"
+                    intent="primary"
+                  />
+                  <Button
+                    label={t("online.signUp")}
+                    variant="secondary"
+                    onClick={() => openAuthSheet(true)}
+                    className="flex-1"
+                  />
+                </div>
+              </section>
+            </Card>
 
             <OnlineDeviceSetup
               connected={connected}
@@ -747,7 +727,7 @@ export function OnlinePage() {
             />
           </div>
         )}
-      </div>
+      </>
 
       {loggedInUser === null && (
         <SlideModal
@@ -795,18 +775,19 @@ export function OnlinePage() {
                   }
                   onClick={handleMfaVerify}
                   disabled={!isMfaCodeComplete || isMfaVerifying}
+                  disabledAppearance={isMfaVerifying ? "busy" : "unavailable"}
                   className="w-full"
                   intent="primary"
                 />
 
-                <button
-                  type="button"
+                <Button
+                  label={t("online.mfaBack")}
+                  variant="text"
+                  size="sm"
                   onClick={handleCancelMfa}
                   disabled={isMfaVerifying}
-                  className="text-muted-foreground hover:text-foreground text-sm underline transition-colors disabled:opacity-50"
-                >
-                  {t("online.mfaBack")}
-                </button>
+                  className="w-full"
+                />
               </div>
             ) : (
               <div className="flex flex-col gap-4">
@@ -838,13 +819,12 @@ export function OnlinePage() {
                   {/* Forgot password - right aligned, only in log in mode */}
                   {!isSignUpMode && (
                     <div className="flex justify-end">
-                      <button
-                        type="button"
+                      <Button
+                        label={t("online.forgotPassword")}
+                        variant="text"
+                        size="sm"
                         onClick={handleForgotPassword}
-                        className="text-muted-foreground hover:text-foreground text-sm transition-colors"
-                      >
-                        {t("online.forgotPassword")}
-                      </button>
+                      />
                     </div>
                   )}
                 </div>
@@ -862,7 +842,7 @@ export function OnlinePage() {
                     />
                     <Label
                       htmlFor="age-confirm"
-                      className="text-sm leading-tight text-white"
+                      className="text-foreground text-sm leading-tight"
                     >
                       {t("online.ageConfirmLabel")}
                     </Label>
@@ -870,14 +850,11 @@ export function OnlinePage() {
                 )}
 
                 {/* Inline form error */}
-                {formError && (
-                  <p className="text-sm text-red-400">{formError}</p>
-                )}
+                {formError && <p className="text-error text-sm">{formError}</p>}
 
                 {/* Log in / Sign up Button */}
                 <Button
                   label={isSignUpMode ? t("online.signUp") : t("online.login")}
-                  icon={isSignUpMode ? <UserPlusIcon size="20" /> : undefined}
                   onClick={handleEmailAuth}
                   disabled={
                     !onlineEmail ||
@@ -885,79 +862,64 @@ export function OnlinePage() {
                     isLoading ||
                     (isSignUpMode && !ageConfirmed)
                   }
+                  disabledAppearance={isLoading ? "busy" : "unavailable"}
                   className="w-full"
                   intent="primary"
                 />
 
                 {/* Toggle between Log in and Sign up */}
-                <p className="text-muted-foreground text-center text-sm">
-                  {isSignUpMode
-                    ? t("online.switchToLogInPrefix")
-                    : t("online.switchToSignUpPrefix")}
-                  <button
-                    type="button"
+                <div className="text-muted-foreground flex flex-wrap items-center justify-center text-sm">
+                  <span>
+                    {isSignUpMode
+                      ? t("online.switchToLogInPrefix")
+                      : t("online.switchToSignUpPrefix")}
+                  </span>
+                  <Button
+                    label={
+                      isSignUpMode
+                        ? t("online.switchToLogInLink")
+                        : t("online.switchToSignUpLink")
+                    }
+                    variant="text"
+                    size="sm"
                     onClick={() => {
                       setIsSignUpMode(!isSignUpMode);
                       setAgeConfirmed(false);
                       setFormError(null);
                     }}
-                    className="text-white underline transition-colors hover:text-white/80"
-                  >
-                    {isSignUpMode
-                      ? t("online.switchToLogInLink")
-                      : t("online.switchToSignUpLink")}
-                  </button>
-                </p>
+                  />
+                </div>
 
                 {/* OAuth section - only show on native or zaparoo.app */}
                 {oauthAvailable && (
                   <>
                     <div className="my-1 flex items-center gap-3">
                       <div className="bg-border h-px flex-1" />
-                      <span className="text-muted-foreground text-sm">or</span>
+                      <span className="text-muted-foreground text-sm">
+                        {t("online.or")}
+                      </span>
                       <div className="bg-border h-px flex-1" />
                     </div>
 
                     {/* On iOS, show Apple first. On Android/other, show Google first */}
-                    {Capacitor.getPlatform() === "ios" ? (
-                      <>
+                    {(Capacitor.getPlatform() === "ios"
+                      ? (["apple", "google"] as const)
+                      : (["google", "apple"] as const)
+                    ).map((provider) => {
+                      const { labelKey, Icon } = OAUTH_PROVIDERS[provider];
+                      return (
                         <Button
-                          label={t("online.loginApple")}
+                          key={provider}
+                          label={t(labelKey)}
                           variant="outline"
-                          icon={<AppleIcon size="20" />}
-                          onClick={handleAppleSignIn}
+                          icon={<Icon size="20" />}
+                          onClick={() => void handleOAuthSignIn(provider)}
                           disabled={isLoading}
+                          disabledAppearance="busy"
                           className="w-full"
                         />
-                        <Button
-                          label={t("online.loginGoogle")}
-                          variant="outline"
-                          icon={<GoogleIcon size="20" />}
-                          onClick={handleGoogleSignIn}
-                          disabled={isLoading}
-                          className="w-full"
-                        />
-                      </>
-                    ) : (
-                      <>
-                        <Button
-                          label={t("online.loginGoogle")}
-                          variant="outline"
-                          icon={<GoogleIcon size="20" />}
-                          onClick={handleGoogleSignIn}
-                          disabled={isLoading}
-                          className="w-full"
-                        />
-                        <Button
-                          label={t("online.loginApple")}
-                          variant="outline"
-                          icon={<AppleIcon size="20" />}
-                          onClick={handleAppleSignIn}
-                          disabled={isLoading}
-                          className="w-full"
-                        />
-                      </>
-                    )}
+                      );
+                    })}
                   </>
                 )}
 
@@ -998,25 +960,29 @@ export function OnlinePage() {
         dismissible={!isDeleting}
         title={t("online.deleteAccountConfirmTitle")}
         footer={
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              label={t("nav.cancel")}
-              onClick={closeDeleteModal}
-              className="flex-1"
-              disabled={isDeleting}
-            />
-            <Button
-              variant="outline"
-              intent="destructive"
-              label={
-                isDeleting ? t("spinner.deleting") : t("online.deleteAccount")
-              }
-              onClick={handleDeleteAccount}
-              className="border-error text-error flex-1"
-              disabled={isDeleting || confirmText !== "DELETE MY ACCOUNT"}
-            />
-          </div>
+          <ModalActionBar
+            secondaryAction={
+              <Button
+                variant="secondary"
+                label={t("nav.cancel")}
+                onClick={closeDeleteModal}
+                disabled={isDeleting}
+                disabledAppearance="busy"
+              />
+            }
+            primaryAction={
+              <Button
+                variant="outline"
+                intent="destructive"
+                label={
+                  isDeleting ? t("spinner.deleting") : t("online.deleteAccount")
+                }
+                onClick={handleDeleteAccount}
+                disabled={isDeleting || confirmText !== "DELETE MY ACCOUNT"}
+                disabledAppearance={isDeleting ? "busy" : "unavailable"}
+              />
+            }
+          />
         }
       >
         <div className="flex flex-col gap-4 py-2">
@@ -1026,22 +992,12 @@ export function OnlinePage() {
           <p className="text-muted-foreground text-sm">
             {t("online.deleteAccountGracePeriod")}
           </p>
-          <div>
-            <label
-              htmlFor="delete-account-confirmation"
-              className="text-sm text-white"
-            >
-              {t("online.deleteConfirmLabel")}
-            </label>
-            <input
-              id="delete-account-confirmation"
-              type="text"
-              value={confirmText}
-              onChange={(e) => setConfirmText(e.target.value)}
-              placeholder="DELETE MY ACCOUNT"
-              className="border-bd-input bg-background text-foreground mt-1 w-full rounded-md border p-3"
-            />
-          </div>
+          <TextInput
+            label={t("online.deleteConfirmLabel")}
+            value={confirmText}
+            setValue={setConfirmText}
+            placeholder="DELETE MY ACCOUNT"
+          />
         </div>
       </SlideModal>
     </PageFrame>

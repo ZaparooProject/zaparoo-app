@@ -5,8 +5,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { waitFor } from "../../../test-utils";
-import { renderHook } from "@testing-library/react";
+import { seedActiveDevice, waitFor } from "../../../test-utils";
+import { act, renderHook } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useVirtualInfiniteSearch } from "../../../hooks/useVirtualInfiniteSearch";
 import { SearchResultsResponse } from "../../../lib/models";
@@ -428,6 +428,38 @@ describe("useVirtualInfiniteSearch", () => {
 
       // Legacy responses without pagination should indicate no more pages
       expect(result.current.hasNextPage).toBe(false);
+    });
+  });
+
+  describe("device scope", () => {
+    it("should not serve one device's results for the same search on another", async () => {
+      const page = (name: string) => ({
+        results: [
+          { name, path: `/${name}.sfc`, system: { id: "snes", name: "SNES" } },
+        ],
+        total: 1,
+        pagination: { hasNextPage: false, pageSize: 100, nextCursor: null },
+      });
+      mockCoreAPI.mediaSearch.mockResolvedValueOnce(page("from-device-a"));
+      await seedActiveDevice({ recordId: "device-a" });
+      const wrapper = createWrapper();
+      const { result } = renderHook(
+        () => useVirtualInfiniteSearch({ query: "mario", systems: [] }),
+        { wrapper },
+      );
+      await waitFor(() =>
+        expect(result.current.allItems[0]?.name).toBe("from-device-a"),
+      );
+
+      mockCoreAPI.mediaSearch.mockResolvedValueOnce(page("from-device-b"));
+      await act(async () => {
+        await seedActiveDevice({ recordId: "device-b" });
+      });
+
+      await waitFor(() =>
+        expect(result.current.allItems[0]?.name).toBe("from-device-b"),
+      );
+      expect(mockCoreAPI.mediaSearch).toHaveBeenCalledTimes(2);
     });
   });
 });

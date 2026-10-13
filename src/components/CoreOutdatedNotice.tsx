@@ -1,4 +1,4 @@
-import { TriangleAlert } from "lucide-react";
+import { TriangleAlertIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useStatusStore } from "@/lib/store";
 import { FEATURE_GATES, isCoreFeatureAvailable } from "@/lib/featureGates";
@@ -26,11 +26,12 @@ export function CoreOutdatedNotice() {
   }, "0.0.0");
 
   return (
-    <div role="alert" aria-live="polite">
-      <Card className="border-yellow-500/40 bg-yellow-500/10">
+    <div role="status">
+      {/* bg-none drops the card's opaque gradient so the wash shows. */}
+      <Card className="border-warning bg-warning-wash bg-none">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
-            <TriangleAlert
+            <TriangleAlertIcon
               size={18}
               className="text-warning shrink-0"
               aria-hidden="true"

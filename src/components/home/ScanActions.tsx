@@ -1,0 +1,176 @@
+import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { CameraIcon, NfcIcon } from "@/lib/images";
+import { Button } from "@/components/wui/Button";
+import { Card } from "@/components/wui/Card";
+import { EmptyState } from "@/components/wui/EmptyState";
+import { ReaderActivityControl } from "@/components/ReaderActivityControl";
+import { useAppUi } from "@/hooks/useAppUi";
+import type { ScanLayout } from "@/hooks/useHomeScanLayout";
+import { ScanResult } from "@/lib/models";
+import type { ScanMode } from "@/lib/scanMode";
+
+/** Get screen reader announcement for current scan state. */
+function getScanStatusAnnouncement(
+  scanSession: boolean,
+  scanStatus: ScanResult,
+  stopped: boolean,
+  t: (key: string) => string,
+): string {
+  if (scanSession) {
+    return t("scan.statusScanning");
+  }
+  if (scanStatus === ScanResult.Success) {
+    return t("scan.statusSuccess");
+  }
+  if (scanStatus === ScanResult.Error) {
+    return t("scan.statusError");
+  }
+  if (stopped) {
+    return t("scan.statusStopped");
+  }
+  return "";
+}
+
+interface ScanActionsProps {
+  layout: ScanLayout;
+  /** Wider layouts group equal action tiles instead of the phone scan pad. */
+  compact?: boolean;
+  scanSession: boolean;
+  scanStatus: ScanResult;
+  /** Starts a scan, and stops one already running. */
+  onTapScan: () => void;
+  onCameraScan: () => void;
+  nfcEnabled: boolean;
+  onOpenNfcSettings: () => void;
+  writeActivity?: ReactNode;
+}
+
+export function ScanActions({
+  layout,
+  compact = false,
+  scanSession,
+  scanStatus,
+  onTapScan,
+  onCameraScan,
+  nfcEnabled,
+  onOpenNfcSettings,
+  writeActivity,
+}: ScanActionsProps) {
+  const { t } = useTranslation();
+  const appUi = useAppUi();
+  const [stopped, setStopped] = useState(false);
+  const wasScanning = useRef(scanSession);
+
+  useEffect(() => {
+    // A scan the user stopped settles with no result, so it would otherwise
+    // pass silently for screen reader users.
+    if (wasScanning.current && !scanSession) {
+      setStopped(scanStatus === ScanResult.Default);
+    }
+    if (!wasScanning.current && scanSession) {
+      setStopped(false);
+    }
+    wasScanning.current = scanSession;
+  }, [scanSession, scanStatus]);
+
+  const statusAnnouncement = getScanStatusAnnouncement(
+    scanSession,
+    scanStatus,
+    stopped,
+    t,
+  );
+
+  const renderAction = (mode: ScanMode) => {
+    if (mode === "camera") {
+      return (
+        <Button
+          key="camera"
+          variant="secondary"
+          size={compact ? "default" : "lg"}
+          layout="stacked"
+          className={
+            compact
+              ? "zap-scan-tile w-full max-w-none"
+              : "min-h-[4.5rem] w-full"
+          }
+          icon={<CameraIcon size={24} />}
+          label={t("scan.scanCode")}
+          aria-label={t("scan.scanCode")}
+          // A camera sheet over a live NFC session would fight it for the tag.
+          disabled={scanSession}
+          onClick={onCameraScan}
+        />
+      );
+    }
+
+    if (!nfcEnabled) {
+      return (
+        <Button
+          key="nfc"
+          variant="fill"
+          intent="primary"
+          size={compact ? "default" : "lg"}
+          layout="stacked"
+          className={
+            compact
+              ? "zap-scan-tile w-full max-w-none"
+              : "min-h-[8.5rem] w-full"
+          }
+          icon={<NfcIcon size={compact ? 24 : 28} />}
+          label={t("spinner.nfcDisabledLabel")}
+          aria-label={t("spinner.openNfcSettings")}
+          onClick={onOpenNfcSettings}
+        />
+      );
+    }
+
+    return (
+      <ReaderActivityControl
+        key="nfc"
+        state={scanSession ? "waiting" : "idle"}
+        idleLabel={t("scan.tapTag")}
+        activeLabel={t("scan.tapTagScanning")}
+        activeAriaLabel={t("scan.tapTagStop")}
+        icon={<NfcIcon size={compact ? 24 : 28} />}
+        onStart={onTapScan}
+        onCancel={onTapScan}
+        size={compact ? "default" : "lg"}
+        layout="stacked"
+        className="w-full"
+        buttonClassName={
+          compact ? "zap-scan-tile w-full max-w-none" : "min-h-[8.5rem] w-full"
+        }
+        readerIconSize={compact ? 24 : 28}
+        announceStateChanges={false}
+      />
+    );
+  };
+
+  return (
+    <>
+      <div aria-live="assertive" aria-atomic="true" className="sr-only">
+        {statusAnnouncement}
+      </div>
+
+      {layout.showEmptyState ? (
+        <Card>
+          <EmptyState
+            title={t("scan.noReaderTitle")}
+            description={t("scan.noReaderSub")}
+          />
+        </Card>
+      ) : (
+        appUi.enabled &&
+        (writeActivity ? (
+          writeActivity
+        ) : (
+          <div className={compact ? "zap-scan-actions" : "flex flex-col gap-2"}>
+            {layout.leading && renderAction(layout.leading)}
+            {layout.alternate && renderAction(layout.alternate)}
+          </div>
+        ))
+      )}
+    </>
+  );
+}

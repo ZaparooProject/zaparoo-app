@@ -7,6 +7,8 @@ import {
   NfcUtils,
 } from "@capawesome-team/capacitor-nfc";
 import { logger } from "./logger";
+import { isAppPreviewEnabled } from "./appPreviewStore";
+import { simulateNfcOperation } from "./nfcPreview";
 import {
   NfcCancelledError,
   NfcSessionBusyError,
@@ -428,7 +430,58 @@ export function readNfcEvent(event: NfcTagScannedEvent): Tag | null {
   return { uid: int2hex(event.nfcTag.id), text: text };
 }
 
+/**
+ * Dev app preview: stands in for a local read session so the scan UI can be
+ * exercised in a browser. Holds the session lock and registers a canceller so
+ * cancelSession() stops a simulated scan exactly like a real one.
+ */
+async function previewReadSession(): Promise<Result> {
+  if (activeSessionToken !== null) {
+    throw new NfcSessionBusyError();
+  }
+  const sessionToken = Symbol("nfcPreviewSession");
+  activeSessionToken = sessionToken;
+  const controller = new AbortController();
+  activeSessionCancel = () => controller.abort();
+  sessionManager.setIsScanning(true);
+  // Bounded like a real reader-mode session, so a simulated scan nobody
+  // cancels cannot hold the session lock for the rest of the page's life.
+  const timeoutId = setTimeout(
+    () => controller.abort(),
+    ANDROID_SESSION_TIMEOUT_MS,
+  );
+
+  try {
+    return await simulateNfcOperation({
+      read: true,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof NfcCancelledError) {
+      return {
+        status: Status.Cancelled,
+        info: {
+          rawTag: null,
+          tag: null,
+        },
+      };
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+    if (activeSessionToken === sessionToken) {
+      activeSessionToken = null;
+      activeSessionCancel = null;
+      sessionManager.setIsScanning(false);
+    }
+  }
+}
+
 export async function readTag(): Promise<Result> {
+  if (isAppPreviewEnabled()) {
+    return previewReadSession();
+  }
+
   try {
     return await withNfcSession<Result>(async (event) => {
       return {
@@ -894,6 +947,10 @@ export async function eraseTag(): Promise<Result> {
 }
 
 export async function readRaw(): Promise<Result> {
+  if (isAppPreviewEnabled()) {
+    return previewReadSession();
+  }
+
   try {
     return await withNfcSession<Result>(async (event) => {
       logger.log("read raw success");

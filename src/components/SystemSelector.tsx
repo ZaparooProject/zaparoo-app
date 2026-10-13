@@ -1,9 +1,7 @@
 import { useState, useMemo, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { Check, Trash2 } from "lucide-react";
 import { useDebounce } from "use-debounce";
-import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi";
 import type { System } from "@/lib/models";
 import {
@@ -15,13 +13,16 @@ import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { useSystemsWithDisplayNames } from "@/hooks/useSystemName";
 import { useHapticPress } from "@/hooks/useHapticPress";
 import { EmptyState } from "@/components/wui/EmptyState";
-import { getTabBarPanelId, getTabBarTabId } from "@/components/wui/tabBarIds";
-import { SystemFilterControls } from "@/components/SystemFilterControls";
 import { ModalActionBar } from "@/components/wui/ModalActionBar";
+import { SystemFilterControls } from "@/components/SystemFilterControls";
+import { DelayedLoading } from "@/components/DelayedLoading";
 import { useAnnouncer } from "./A11yAnnouncer";
 import { SlideModal } from "./SlideModal";
 import { Button } from "./wui/Button";
 import { BackToTop } from "./BackToTop";
+import { SelectionIndicator, SelectorTrigger } from "./SelectorParts";
+import { selectorOptionClassName } from "./selectorOptionClassName";
+import { InlineLoading } from "./InlineLoading";
 
 export type { System } from "@/lib/models";
 
@@ -56,6 +57,7 @@ export function SystemSelector({
   const { t } = useTranslation();
   const { announce } = useAnnouncer();
   const slideModalScrollRef = useRef<HTMLDivElement>(null);
+
   const handleHapticPress = useHapticPress();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -64,7 +66,12 @@ export function SystemSelector({
   const deviceKey = useActiveDeviceKey();
 
   // Fetch systems data
-  const { data: systemsData, isLoading } = useQuery({
+  const {
+    data: systemsData,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ["systems", deviceKey, { all: allSystems }],
     queryFn: () => CoreAPI.systems(allSystems ? { all: true } : undefined),
     enabled: isOpen,
@@ -139,17 +146,7 @@ export function SystemSelector({
     onSelect([]);
   }, [onSelect]);
 
-  // Handle apply (for multi-select)
-  const handleApply = useCallback(() => {
-    onClose();
-  }, [onClose]);
-
   const systemTabIdPrefix = "system-category-tab";
-  const selectedCategoryTabId = getTabBarTabId(
-    selectedCategory,
-    systemTabIdPrefix,
-  );
-  const selectedCategoryPanelId = getTabBarPanelId(selectedCategoryTabId);
   const allOptionVisible =
     (mode === "single" || mode === "insert") &&
     includeAllOption &&
@@ -163,36 +160,52 @@ export function SystemSelector({
     selectedSystems.includes(system.id),
   );
 
-  // Footer for multi-select mode
+  const renderOption = (
+    id: string,
+    name: string,
+    isSelected: boolean,
+    tabIndex: number,
+  ) => (
+    <button
+      key={id}
+      className={selectorOptionClassName(isSelected)}
+      onPointerUp={handleHapticPress}
+      onClick={() => handleSystemSelect(id)}
+      type="button"
+      role={mode === "multi" ? "checkbox" : "radio"}
+      aria-checked={isSelected}
+      aria-label={name}
+      tabIndex={tabIndex}
+    >
+      {mode !== "insert" && (
+        <SelectionIndicator
+          selected={isSelected}
+          shape={mode === "multi" ? "checkbox" : "radio"}
+        />
+      )}
+      <span className="text-foreground min-w-0 font-medium" aria-hidden="true">
+        {name}
+      </span>
+    </button>
+  );
+
   const footer =
     mode === "multi" ? (
-      <div className="flex flex-col gap-3 px-2 pb-2">
-        <div className="text-center">
-          <span className="text-muted-foreground text-sm">
-            {t("systemSelector.selectedCount", {
-              count: selectedSystems.length,
-            })}
-          </span>
-        </div>
-        <ModalActionBar
-          secondaryAction={
-            <Button
-              label={t("systemSelector.clearAll")}
-              icon={<Trash2 size={20} />}
-              variant="outline"
-              onClick={handleClearAll}
-              disabled={selectedSystems.length === 0}
-            />
-          }
-          primaryAction={
-            <Button
-              label={t("systemSelector.apply")}
-              onClick={handleApply}
-              disabled={selectedSystems.length === 0 && !includeAllOption}
-            />
-          }
-        />
-      </div>
+      <ModalActionBar
+        secondaryAction={
+          <Button
+            label={t("systemSelector.clear")}
+            aria-label={t("systemSelector.clearAll")}
+            variant="secondary"
+            onClick={handleClearAll}
+            disabled={selectedSystems.length === 0}
+          />
+        }
+        primaryAction={
+          // Stays enabled after Clear so an empty selection can be confirmed.
+          <Button label={t("systemSelector.done")} onClick={onClose} />
+        }
+      />
     ) : undefined;
 
   return (
@@ -201,177 +214,82 @@ export function SystemSelector({
       close={onClose}
       title={title || t("systemSelector.title")}
       footer={footer}
+      footerSkipLabel={t("accessibility.skipToActions")}
       scrollRef={slideModalScrollRef}
       fixedHeight="90vh"
     >
-      <div className="flex min-h-0 flex-col">
+      <div className="pb-2">
         <SystemFilterControls
           categories={categories}
           category={selectedCategory}
-          onCategoryChange={setSelectedCategory}
+          onCategoryChange={(category) => {
+            setSelectedCategory(category);
+            slideModalScrollRef.current?.scrollTo({ top: 0 });
+          }}
           query={searchQuery}
-          onQueryChange={setSearchQuery}
+          onQueryChange={(query) => {
+            setSearchQuery(query);
+            slideModalScrollRef.current?.scrollTo({ top: 0 });
+          }}
           tabIdPrefix={systemTabIdPrefix}
-        />
-
-        <div className="flex min-h-0 flex-1 flex-col">
-          <div
-            id={selectedCategoryPanelId}
-            role="tabpanel"
-            aria-labelledby={selectedCategoryTabId}
-            className="min-h-0 flex-1 overflow-hidden"
-            tabIndex={-1}
-          >
-            {isLoading ? (
-              <div className="flex h-32 items-center justify-center">
-                <span className="text-muted-foreground">{t("loading")}</span>
-              </div>
-            ) : filteredSystems.length === 0 ? (
-              debouncedSearchQuery ? (
-                <EmptyState
-                  className="h-32"
-                  title={t("systemSelector.noResults")}
-                  description={t("systemSelector.noResultsHint")}
-                />
-              ) : (
-                <EmptyState
-                  className="h-32"
-                  title={t("systemSelector.noSystems")}
-                />
-              )
-            ) : (
-              <div
-                className="flex min-h-0 flex-1 flex-col"
-                role={mode === "multi" ? "group" : "radiogroup"}
-                aria-label={t("systemSelector.title")}
-                onKeyDown={
-                  mode === "multi" ? undefined : handleRadioGroupKeyDown
-                }
-              >
-                {/* Add "All Systems" option for single/insert mode */}
-                {allOptionVisible && (
-                  <div className="px-2 pb-2">
-                    <button
-                      className={classNames(
-                        "flex w-full items-center justify-between px-4 py-3 text-left transition-colors",
-                        "rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
-                        "hover:bg-white/10 focus:bg-white/10",
-                        {
-                          "bg-white/10": allOptionSelected,
-                        },
-                      )}
-                      onPointerUp={handleHapticPress}
-                      onClick={() => handleSystemSelect("all")}
-                      type="button"
-                      role="radio"
-                      aria-checked={allOptionSelected}
-                      tabIndex={allOptionSelected ? 0 : -1}
-                      aria-label={t("systemSelector.allSystems")}
-                    >
-                      <div
-                        className="flex items-center space-x-3"
-                        aria-hidden="true"
-                      >
-                        {mode !== "insert" && (
-                          <div
-                            className={classNames(
-                              "border-input h-5 w-5 rounded-full border-2",
-                              {
-                                "bg-primary border-primary": allOptionSelected,
-                              },
-                            )}
-                          >
-                            {allOptionSelected && (
-                              <div className="bg-background m-0.5 h-2 w-2 rounded-full" />
-                            )}
-                          </div>
-                        )}
-                        <span className="text-foreground font-medium">
-                          {t("systemSelector.allSystems")}
-                        </span>
-                      </div>
-                    </button>
-                  </div>
-                )}
-                <div className="flex-1 overflow-auto px-2" tabIndex={-1}>
-                  {filteredSystems.map((system, index) => {
-                    const isSelected = selectedSystems.includes(system.id);
-                    return (
-                      <button
-                        key={system.id}
-                        className={classNames(
-                          "flex min-h-14 w-full items-center justify-between px-4 py-3 text-left transition-colors",
-                          "rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
-                          "hover:bg-white/10 focus:bg-white/10",
-                          { "bg-white/10": isSelected },
-                        )}
-                        onPointerUp={handleHapticPress}
-                        onClick={() => handleSystemSelect(system.id)}
-                        type="button"
-                        role={mode === "multi" ? "checkbox" : "radio"}
-                        aria-checked={isSelected}
-                        aria-label={system.name}
-                        tabIndex={
-                          mode === "multi" ||
-                          isSelected ||
-                          (!allOptionSelected &&
-                            !hasRenderedSelection &&
-                            index === 0)
-                            ? 0
-                            : -1
-                        }
-                      >
-                        <div
-                          className="flex items-center space-x-3"
-                          aria-hidden="true"
-                        >
-                          {mode === "insert" ? null : mode === "multi" ? (
-                            <div
-                              className={classNames(
-                                "border-input flex h-5 w-5 items-center justify-center rounded border-2",
-                                { "bg-primary border-primary": isSelected },
-                              )}
-                            >
-                              {isSelected && (
-                                <Check className="text-primary-foreground h-3 w-3" />
-                              )}
-                            </div>
-                          ) : (
-                            <div
-                              className={classNames(
-                                "border-input h-5 w-5 rounded-full border-2",
-                                { "bg-primary border-primary": isSelected },
-                              )}
-                            >
-                              {isSelected && (
-                                <div className="bg-background m-0.5 h-2 w-2 rounded-full" />
-                              )}
-                            </div>
-                          )}
-                          <span className="text-foreground font-medium">
-                            {system.name}
-                          </span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Scroll to top button */}
-        <BackToTop
-          scrollContainerRef={slideModalScrollRef}
-          threshold={200}
-          bottomOffset={
-            mode === "single" || mode === "insert"
-              ? "1rem"
-              : "calc(1rem + 100px)"
-          }
+          variant="modal"
         />
       </div>
+      {isLoading ? (
+        <DelayedLoading>
+          <InlineLoading />
+        </DelayedLoading>
+      ) : isError ? (
+        <EmptyState
+          className="h-32"
+          title={t("systemSelector.loadError")}
+          action={
+            <Button
+              label={t("library.tryAgain")}
+              variant="outline"
+              onClick={() => void refetch()}
+            />
+          }
+        />
+      ) : filteredSystems.length === 0 ? (
+        debouncedSearchQuery ? (
+          <EmptyState
+            className="h-32"
+            title={t("systemSelector.noResults")}
+            description={t("systemSelector.noResultsHint")}
+          />
+        ) : (
+          <EmptyState className="h-32" title={t("systemSelector.noSystems")} />
+        )
+      ) : (
+        <div
+          role={mode === "multi" ? "group" : "radiogroup"}
+          aria-label={t("systemSelector.title")}
+          onKeyDown={mode === "multi" ? undefined : handleRadioGroupKeyDown}
+        >
+          {allOptionVisible &&
+            renderOption(
+              "all",
+              t("systemSelector.allSystems"),
+              allOptionSelected,
+              allOptionSelected ? 0 : -1,
+            )}
+          {filteredSystems.map((system, index) => {
+            const isSelected = selectedSystems.includes(system.id);
+            return renderOption(
+              system.id,
+              system.name,
+              isSelected,
+              mode === "multi" ||
+                isSelected ||
+                (!allOptionSelected && !hasRenderedSelection && index === 0)
+                ? 0
+                : -1,
+            );
+          })}
+        </div>
+      )}
+      <BackToTop scrollContainerRef={slideModalScrollRef} threshold={200} />
     </SlideModal>
   );
 }
@@ -452,52 +370,15 @@ export function SystemSelectorTrigger({
     t,
   ]);
 
-  const isDisabled = disabled;
-
-  const handleClick = () => {
-    if (isDisabled) return;
-    onClick();
-  };
-
   return (
-    <button
-      onClick={handleClick}
-      className={classNames(
-        "border-input text-foreground flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors focus:ring-2 focus:ring-white/20 focus:outline-none",
-        {
-          "hover:bg-white/10": !isDisabled,
-          "cursor-not-allowed opacity-50": isDisabled,
-        },
-        className,
-      )}
-      style={{ backgroundColor: "var(--color-background)" }}
-      disabled={isDisabled}
-      type="button"
+    <SelectorTrigger
+      text={displayText ?? placeholderText}
+      placeholder={selectedSystems.length === 0}
+      onClick={onClick}
+      disabled={disabled}
+      className={className}
       aria-label={ariaLabel}
       aria-labelledby={ariaLabelledBy}
-    >
-      <span
-        className={classNames({
-          "text-muted-foreground": selectedSystems.length === 0,
-        })}
-      >
-        {displayText}
-      </span>
-      <div className="ml-2 h-4 w-4">
-        <svg
-          className="h-4 w-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 9l-7 7-7-7"
-          />
-        </svg>
-      </div>
-    </button>
+    />
   );
 }

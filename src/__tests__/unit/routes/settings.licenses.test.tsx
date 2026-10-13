@@ -36,6 +36,9 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = await importOriginal<RouterModule>();
   return {
     ...actual,
+    Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
+      <a href={to}>{children}</a>
+    ),
     createFileRoute: () => (options: MockRouteOptions) => {
       componentRef.current = options.component;
       return { options };

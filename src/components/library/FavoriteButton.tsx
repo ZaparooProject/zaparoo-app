@@ -1,4 +1,5 @@
-import { Heart } from "lucide-react";
+import classNames from "classnames";
+import { HeartIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useMediaPreferences } from "@/components/library/useMediaPreferences";
 import type { MediaBrowseEntry, TagInfo } from "@/lib/models";
@@ -33,14 +34,23 @@ export function FavoriteButton(props: {
     <Button
       label={props.iconOnly ? undefined : (props.displayLabel ?? favoriteLabel)}
       aria-label={actionLabel}
-      icon={<Heart size={20} fill={flags.favorite ? "currentColor" : "none"} />}
+      icon={
+        <HeartIcon size={20} fill={flags.favorite ? "currentColor" : "none"} />
+      }
       variant={props.variant ?? "outline"}
       size={props.iconOnly ? "lg" : "default"}
       layout={props.layout}
       aria-pressed={flags.favorite}
       disabled={!feature.available || !connected || !canUpdate || busy}
+      disabledAppearance={busy ? "busy" : "unavailable"}
       onClick={() => toggle("favorite")}
-      className={props.className ?? (props.iconOnly ? undefined : "w-full")}
+      className={classNames(
+        "aria-pressed:text-primary transition-colors duration-150",
+        {
+          "aria-pressed:bg-transparent": props.variant === "text",
+        },
+        props.className ?? (props.iconOnly ? undefined : "w-full"),
+      )}
     />
   );
 }

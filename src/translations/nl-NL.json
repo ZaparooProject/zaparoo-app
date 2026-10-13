@@ -2,13 +2,22 @@
   "translation": {
     "copy": "Kopiëren",
     "copied": "Gekopieerd",
+    "copyToClipboard": "Naar klembord kopiëren",
+    "copyFailed": "Kopiëren naar klembord mislukt",
     "save": "Opslaan",
     "clearSearch": "Zoekopdracht wissen",
+    "settingHelp": {
+      "label": "Hulp bij {{title}}"
+    },
     "backToTop": "Terug naar boven",
     "error": "Fout: {{msg}}",
     "loading": "Laden...",
     "cancelling": "Annuleren...",
     "resuming": "Hervatten...",
+    "reader": {
+      "cancelAction": "Lezeractiviteit annuleren",
+      "pressAgainToCancel": "Druk opnieuw om te annuleren"
+    },
     "shareFailed": "Delen mislukt",
     "errorBoundary": {
       "title": "Oeps, er is iets heel ergs gebeurd!",
@@ -33,16 +42,29 @@
       "back": "Terug",
       "cancel": "Annuleren",
       "close": "Sluiten",
+      "moreActions": "Meer acties",
       "create": "Maken",
-      "assign": "Toewijzen",
       "index": "Zap",
       "library": "Bibliotheek",
-      "design": "Ontwerpen",
       "settings": "Instellingen",
+      "search": "Zoeken",
+      "devices": "Apparaten",
+      "media": "Media",
+      "all": "Alle",
       "settingsWithNotifications_one": "Instellingen, {{count}} melding",
       "settingsWithNotifications_other": "Instellingen, {{count}} meldingen",
-      "run": "Uitvoeren",
-      "mainNavigation": "Hoofdnavigatie"
+      "mainNavigation": "Hoofdnavigatie",
+      "breadcrumbs": "Broodkruimelpad",
+      "menu": "Navigatiemenu",
+      "currentDevice": "Huidig apparaat",
+      "openMenu": "Navigatie openen",
+      "expandSection": "{{section}} uitklappen",
+      "collapseSection": "{{section}} inklappen",
+      "collapseSidebar": "Zijbalk inklappen",
+      "fullScreen": "Volledig scherm",
+      "exitFullScreen": "Volledig scherm verlaten",
+      "lightMode": "Lichte modus",
+      "darkMode": "Donkere modus"
     },
     "appBadge": {
       "title": "Badges op appicoon",
@@ -72,7 +94,6 @@
       "addError": "Kon niet aan deck worden toegevoegd",
       "added": "Toegevoegd aan deck",
       "addAction": "Aan deck",
-      "createWithGame": "Deck maken met game",
       "edit": "Deck bewerken",
       "readOnly": "Deze kopie is alleen-lezen",
       "locked": "Dit deck is vergrendeld",
@@ -98,6 +119,7 @@
       "items_one": "{{count}} item",
       "items_other": "{{count}} items",
       "noItems": "Dit deck is leeg",
+      "selectItem": "Selecteer een item",
       "unnamedItem": "Naamloos item",
       "script": "Script",
       "zapScript": "ZapScript",
@@ -112,21 +134,18 @@
       "full": "Dit deck is vol",
       "moveUp": "{{name}} omhoog verplaatsen",
       "moveDown": "{{name}} omlaag verplaatsen",
-      "removeItem": "{{name}} verwijderen",
       "remove": "Verwijderen",
       "confirmRemove": "{{name}} uit dit deck verwijderen?",
       "delete": "Deck verwijderen",
       "confirmDelete": "{{name}} verwijderen? Dit kan niet ongedaan worden gemaakt."
     },
     "library": {
+      "selectMedia": "Selecteer media",
       "title": "Bibliotheek",
       "collections": "Collecties",
       "systems": "Systemen",
       "browseBy": "Bibliotheek bekijken",
-      "searchCollections": "Collecties zoeken",
-      "noMatchingCollections": "Geen overeenkomende collecties",
       "favorites": "Favorieten",
-      "favoritesLabel": "Favoriete media",
       "favoritesList": "Favoriete media",
       "loadingFavorites": "Favorieten laden...",
       "favoritesError": "Favorieten konden niet worden geladen",
@@ -143,6 +162,7 @@
       "liked": "Leuk",
       "disliked": "Niet leuk",
       "playLater": "Later spelen",
+      "playLaterAction": "Later spelen",
       "likedList": "Leuke media",
       "dislikedList": "Niet-leuke media",
       "playLaterList": "Media voor later",
@@ -161,6 +181,19 @@
       "noLikedHint": "Markeer media als leuk vanuit de details of Nu aan het spelen.",
       "noDislikedHint": "Markeer media als niet leuk vanuit de details of Nu aan het spelen.",
       "noPlayLaterHint": "Bewaar media voor later vanuit de details of Nu aan het spelen.",
+      "recentlyPlayed": "Recent gespeeld",
+      "recentlyPlayedShort": "Recent",
+      "recentlyPlayedList": "Recent gespeelde media",
+      "loadingRecentlyPlayed": "Recent gespeeld laden...",
+      "recentlyPlayedError": "Recent gespeeld kon niet worden geladen",
+      "noRecentlyPlayed": "Nog niets gespeeld",
+      "noRecentlyPlayedHint": "Media die je start verschijnen hier.",
+      "topPlayed": "Meest gespeeld",
+      "topPlayedList": "Meest gespeelde media",
+      "loadingTopPlayed": "Meest gespeeld laden...",
+      "topPlayedError": "Meest gespeeld kon niet worden geladen",
+      "noTopPlayed": "Nog niets gespeeld",
+      "noTopPlayedHint": "Je meest gespeelde media verschijnen hier.",
       "like": "Leuk",
       "dislike": "Niet leuk",
       "addLike": "Media leuk vinden",
@@ -201,7 +234,6 @@
       "noLetterIndex": "Letternavigatie is niet beschikbaar voor deze map",
       "jumpError": "Er kon niet naar die letter worden gesprongen",
       "jumpingTo": "{{label}} laden...",
-      "coverAlt": "Hoesafbeelding van {{title}}",
       "imageAlt": "{{type}} van {{title}}",
       "imageTypes": {
         "artwork": "Illustratie",
@@ -273,22 +305,398 @@
       "sortTitleDesc": "Titel: Z–A",
       "sortFilenameAsc": "Bestandsnaam: A–Z",
       "sortFilenameDesc": "Bestandsnaam: Z–A",
-      "searchTitle": "Games zoeken",
-      "searchInput": "Gametitel",
-      "searchPlaceholder": "Voer een gametitel in",
-      "searchAction": "Zoeken"
+      "searchTitle": "Media zoeken",
+      "searchInput": "Naam",
+      "searchPlaceholder": "Voer een medianaam in",
+      "searchAction": "Zoeken",
+      "tagValues": {
+        "region": {
+          "world": "Wereldwijd",
+          "us": "Verenigde Staten",
+          "eu": "Europa",
+          "jp": "Japan",
+          "au": "Australië",
+          "kr": "Zuid-Korea",
+          "cn": "China",
+          "tw": "Taiwan",
+          "hk": "Hongkong",
+          "br": "Brazilië",
+          "ca": "Canada",
+          "uk": "Verenigd Koninkrijk",
+          "fr": "Frankrijk",
+          "de": "Duitsland",
+          "it": "Italië",
+          "es": "Spanje",
+          "scandinavia": "Scandinavië",
+          "asia": "Azië"
+        },
+        "lang": {
+          "en": "Engels",
+          "fr": "Frans",
+          "de": "Duits",
+          "es": "Spaans",
+          "it": "Italiaans",
+          "ja": "Japans",
+          "ko": "Koreaans",
+          "zh": "Chinees",
+          "pt": "Portugees",
+          "nl": "Nederlands",
+          "sv": "Zweeds",
+          "no": "Noors",
+          "da": "Deens",
+          "fi": "Fins",
+          "pl": "Pools",
+          "ru": "Russisch",
+          "ar": "Arabisch",
+          "en-US": "Engels (VS)",
+          "en-GB": "Engels (VK)"
+        },
+        "edition": {
+          "directorsCut": "Director's Cut",
+          "collectors": "Collector's Edition",
+          "limited": "Gelimiteerde editie",
+          "special": "Speciale editie",
+          "deluxe": "Deluxe-editie",
+          "ultimate": "Ultimate-editie",
+          "anniversary": "Jubileumeditie",
+          "remastered": "Remastered",
+          "remake": "Remake",
+          "remix": "Remix",
+          "complete": "Complete editie",
+          "goty": "Game of the Year-editie"
+        },
+        "genre": {
+          "action": "Actie",
+          "action_platformer": "Platformer",
+          "action_maze": "Doolhof",
+          "action_blockbreaker": "Breakout",
+          "action_runandgun": "Run-and-gun",
+          "action_hackandslash": "Hack-and-slash",
+          "action_metroidvania": "Metroidvania",
+          "action_roguelite": "Roguelite",
+          "adventure": "Avontuur",
+          "adventure_pointandclick": "Point-and-click",
+          "adventure_visualnovel": "Visual novel",
+          "adventure_survivalhorror": "Survivalhorror",
+          "adventure_text": "Tekstadventure",
+          "board": "Bordspel",
+          "board_cards": "Kaartspel",
+          "board_hanafuda": "Hanafuda",
+          "board_chess": "Schaken",
+          "board_shougi": "Shogi",
+          "board_go": "Go",
+          "board_mahjong": "Mahjong",
+          "board_reversi": "Reversi",
+          "board_othello": "Othello",
+          "board_backgammon": "Backgammon",
+          "board_party": "Partygame",
+          "board_jankenpon": "Steen, papier, schaar",
+          "brawler": "Beat 'em up",
+          "fighting": "Vechtspel",
+          "fighting_melee": "Melee-gevecht",
+          "minigames": "Minigames",
+          "parlor": "Speelhalspel",
+          "parlor_pinball": "Flipperkast",
+          "parlor_jackpot": "Jackpot",
+          "parlor_pachinko": "Pachinko",
+          "parlor_darts": "Darts",
+          "parlor_bowling": "Bowlen",
+          "parlor_billiards": "Biljart",
+          "parlor_mogurataiji": "Mollenmeppen",
+          "parlor_kiddieride": "Kinderattractie",
+          "parlor_mechanical": "Mechanisch spel",
+          "quiz": "Quiz",
+          "racing": "Racen",
+          "racing_combat": "Combatracen",
+          "racing_driving": "Rijden",
+          "rpg": "RPG",
+          "rpg_a": "Actie-RPG",
+          "rpg_j": "JRPG",
+          "rpg_s": "Strategie-RPG",
+          "rpg_dungeoncrawler": "Dungeoncrawler",
+          "rpg_mmo": "MMORPG",
+          "rhythm": "Ritme",
+          "rhythm_karaoke": "Karaoke",
+          "rhythm_dance": "Dans",
+          "shmup": "Shoot 'em up",
+          "shmup_h": "Horizontale shooter",
+          "shmup_v": "Verticale shooter",
+          "shmup_i": "Isometrische shooter",
+          "shmup_danmaku": "Bullet hell",
+          "shooting": "Shooter",
+          "shooting_gallery": "Schiettent",
+          "shooting_rail": "Railshooter",
+          "shooting_fps": "First-person shooter",
+          "shooting_tps": "Third-person shooter",
+          "puzzle": "Puzzel",
+          "puzzle_drop": "Vallende-blokkenpuzzel",
+          "puzzle_mind": "Logische puzzel",
+          "sim": "Simulatie",
+          "sim_strategy": "Strategie",
+          "sim_cardgame": "Ruilkaartspel",
+          "sim_flight": "Vluchtsimulatie",
+          "sim_train": "Treinsimulatie",
+          "sim_date": "Datingsim",
+          "sim_otome": "Otomegame",
+          "sim_life": "Levenssimulatie",
+          "sim_farm": "Boerderijsimulatie",
+          "sim_pet": "Huisdiersimulatie",
+          "sim_fishing": "Vissen",
+          "sim_god": "God game",
+          "sim_derby": "Paardenracesimulatie",
+          "sim_building": "Bouwsimulatie",
+          "sim_cooking": "Koken",
+          "sports": "Sport",
+          "sports_soccer": "Voetbal",
+          "sports_basketball": "Basketbal",
+          "sports_baseball": "Honkbal",
+          "sports_volleyball": "Volleybal",
+          "sports_rugby": "Rugby",
+          "sports_football": "American football",
+          "sports_dodgeball": "Trefbal",
+          "sports_hockey": "Hockey",
+          "sports_skiing": "Skiën",
+          "sports_skateboarding": "Skateboarden",
+          "sports_snowboarding": "Snowboarden",
+          "sports_tennis": "Tennis",
+          "sports_pingpong": "Tafeltennis",
+          "sports_paddle": "Padel",
+          "sports_squash": "Squash",
+          "sports_badminton": "Badminton",
+          "sports_flyingdisc": "Frisbee",
+          "sports_cycling": "Wielrennen",
+          "sports_formula1": "Formule 1",
+          "sports_rally": "Rally",
+          "sports_nascar": "NASCAR",
+          "sports_motogp": "MotoGP",
+          "sports_motocross": "Motocross",
+          "sports_karting": "Karten",
+          "sports_jetski": "Jetski",
+          "sports_golf": "Golf",
+          "sports_cricket": "Cricket",
+          "sports_boxing": "Boksen",
+          "sports_kickboxing": "Kickboksen",
+          "sports_wrestling": "Worstelen",
+          "sports_sumo": "Sumo",
+          "sports_karate": "Karate",
+          "sports_judo": "Judo",
+          "sports_kendo": "Kendo",
+          "sports_taekwondo": "Taekwondo",
+          "sports_mma": "MMA",
+          "sports_decathlon": "Tienkamp",
+          "sports_running": "Hardlopen",
+          "sports_archery": "Boogschieten",
+          "sports_swimming": "Zwemmen",
+          "sports_rowing": "Roeien",
+          "sports_kayak": "Kajakken",
+          "sports_surf": "Surfen",
+          "notagame": "Geen spel",
+          "notagame_educational": "Educatief",
+          "notagame_drawing": "Tekenen",
+          "notagame_popcorn": "Popcornautomaat",
+          "notagame_purikura": "Fotohokje",
+          "notagame_redemption": "Redemptionspel",
+          "notagame_media": "Media",
+          "notagame_magazine": "Magazine",
+          "notagame_application": "Applicatie",
+          "notagame_test": "Testprogramma",
+          "notagame_sdk": "SDK",
+          "notagame_slideshow": "Diavoorstelling",
+          "notagame_sound": "Geluid",
+          "sim_management": "Managementsim",
+          "sports_roller": "Rolschaatsen"
+        },
+        "players": {
+          "vs": "Versus",
+          "coop": "Coöp",
+          "alt": "Om de beurt",
+          "simultaneous": "Gelijktijdig",
+          "mmo": "MMO"
+        },
+        "input": {
+          "joystick": "Joystick",
+          "joystick_2h": "2-weg joystick (horizontaal)",
+          "joystick_2v": "2-weg joystick (verticaal)",
+          "joystickWays": "{{value}}-weg joystick",
+          "joystick_double": "Dubbele joystick",
+          "joystick_rotary": "Roterende joystick",
+          "stick": "Stick",
+          "stick_twin": "Twin-stick",
+          "trackball": "Trackball",
+          "paddle": "Paddle",
+          "spinner": "Spinner",
+          "wheel": "Stuur",
+          "dial": "Draaiknop",
+          "lightgun": "Lichtpistool",
+          "optical": "Optisch",
+          "positional": "Positioneel",
+          "positionalCount": "Positioneel: {{value}}",
+          "buttons": "Knoppen",
+          "buttonsCount": "Knoppen: {{value}}",
+          "buttons_pneumatic": "Pneumatische knoppen",
+          "pedals": "Pedalen",
+          "pedalsCount": "Pedalen: {{value}}",
+          "puncher": "Stootkussen",
+          "puncherCount": "Stootkussens: {{value}}",
+          "motion": "Bewegingsbesturing",
+          "keyboard": "Toetsenbord",
+          "keyboard_mahjong": "Mahjongpaneel",
+          "touchscreen": "Touchscreen",
+          "touchscreen_resistive": "Resistief touchscreen",
+          "touchscreen_capacitive": "Capacitief touchscreen",
+          "accelerometer": "Versnellingsmeter",
+          "ddrpad": "Dansmat",
+          "hrm": "Hartslagmeter"
+        },
+        "save": {
+          "backup": "Back-upopslag",
+          "password": "Wachtwoord"
+        },
+        "media": {
+          "disc": "Disc",
+          "disk": "Diskette",
+          "file": "Bestand",
+          "part": "Deel",
+          "side": "Kant",
+          "sideLetter": "Kant {{value}}",
+          "tape": "Cassette",
+          "cart": "Cartridge"
+        },
+        "unfinished": {
+          "alpha": "Alfa",
+          "beta": "Bèta",
+          "proto": "Prototype",
+          "demo": "Demo",
+          "demo_auto": "Automatische demo",
+          "demo_kiosk": "Kioskdemo",
+          "demo_playable": "Speelbare demo",
+          "demo_rolling": "Doorlopende demo",
+          "demo_slideshow": "Diavoorstelling-demo",
+          "sample": "Sample",
+          "debug": "Debugversie",
+          "competition": "Wedstrijdversie",
+          "preview": "Preview",
+          "prerelease": "Pre-release",
+          "final": "Definitief",
+          "wip": "In ontwikkeling"
+        },
+        "unlicensed": {
+          "unlicensed": "Zonder licentie",
+          "bootleg": "Bootleg",
+          "hack": "Hack",
+          "clone": "Kloon",
+          "pirate": "Illegale kopie",
+          "translation": "Vertaling",
+          "translation_old": "Oude vertaling",
+          "aftermarket": "Aftermarket"
+        },
+        "release": {
+          "homebrew": "Homebrew",
+          "unreleased": "Niet uitgebracht",
+          "public-domain": "Publiek domein",
+          "reissue": "Heruitgave",
+          "classics": "Klassiekers",
+          "promo": "Promo",
+          "not-for-resale": "Niet voor wederverkoop",
+          "kiosk": "Kiosk"
+        },
+        "dump": {
+          "cracked": "Gekraakt",
+          "fixed": "Gerepareerd",
+          "hacked": "Gehackt",
+          "modified": "Aangepast",
+          "pirated": "Illegaal gekopieerd",
+          "trained": "Met trainer",
+          "translated": "Vertaald",
+          "overdump": "Overdump",
+          "underdump": "Underdump",
+          "virus": "Virus",
+          "bad": "Slechte dump",
+          "alternate": "Alternatief",
+          "verified": "Geverifieerd",
+          "pending": "In afwachting",
+          "checksum-bad": "Onjuiste checksum",
+          "checksum-unknown": "Onbekende checksum",
+          "hacked_intro": "Intro toegevoegd",
+          "hacked_intro-removed": "Intro verwijderd",
+          "no-boot": "Start niet op"
+        },
+        "copyright": {
+          "cw": "Cardware",
+          "cw-r": "Cardware (geregistreerd)",
+          "fw": "Freeware",
+          "gw": "Giftware",
+          "gw-r": "Giftware (geregistreerd)",
+          "lw": "Licenceware",
+          "pd": "Publiek domein",
+          "sw": "Shareware",
+          "sw-r": "Shareware (geregistreerd)"
+        },
+        "perspective": {
+          "firstperson": "Eerste persoon",
+          "thirdperson": "Derde persoon",
+          "topdown": "Bovenaanzicht",
+          "isometric": "Isometrisch",
+          "fixedcamera": "Vaste camera",
+          "sidescroll_horizontal": "Sidescrolling",
+          "sidescroll_vertical": "Verticaal scrollend"
+        },
+        "art": {
+          "pixelart": "Pixelart",
+          "celshaded": "Cel-shaded",
+          "vector": "Vector",
+          "digitized": "Gedigitaliseerd",
+          "handdrawn": "Handgetekend"
+        },
+        "accessibility": {
+          "visual_colorblindmode": "Kleurenblindmodus",
+          "visual_highcontrast": "Hoog contrast",
+          "visual_textsizeadjust": "Aanpasbare tekstgrootte",
+          "audio_subtitles": "Ondertiteling",
+          "audio_monoaudio": "Mono-audio",
+          "audio_visualcues": "Visuele aanwijzingen",
+          "input_remappablecontrols": "Aanpasbare besturing",
+          "input_onebuttonmode": "Eén-knopmodus"
+        },
+        "cabinet": {
+          "upright": "Staande kast",
+          "cocktail": "Cocktailtafel",
+          "cabaret": "Cabaret",
+          "sitdown": "Zitkast"
+        },
+        "protection": {
+          "no-protection": "Geen beveiliging",
+          "encrypted": "Versleuteld",
+          "decrypted": "Ontsleuteld"
+        },
+        "supplement": {
+          "update": "Update",
+          "expansion": "Uitbreiding",
+          "theme": "Thema",
+          "avatar": "Avatar"
+        },
+        "based": {
+          "manganime": "Manga/anime",
+          "movie": "Film"
+        },
+        "multigame": {
+          "compilation": "Compilatie",
+          "menu": "Menu",
+          "volume": "Deel {{value}}"
+        },
+        "alt": {
+          "alt": "Alternatief"
+        }
+      },
+      "revisionValue": "Revisie {{value}}",
+      "tagValueNumbered": "{{name}} {{value}}"
     },
     "spinner": {
       "deleting": "Verwijderen...",
-      "notSupportedLabel": "Apparaat ondersteunt geen NFC",
-      "notSupportedSub": "Je kunt de NFC-lees- en schrijffuncties in deze app niet gebruiken",
       "nfcDisabledLabel": "NFC-toegang uitgeschakeld",
-      "nfcDisabledSub": "Schakel NFC-toegang in de apparaatinstellingen in om NFC te lezen en te schrijven",
       "openNfcSettings": "NFC-instellingen openen",
       "holdTag": "Houd tag bij telefoon",
       "holdTagReader": "Houd tag bij lezer",
-      "scanning": "Scannen",
-      "pressToScan": "Druk om te scannen",
       "writeSuccess": "Tag geschreven",
       "writeFailed": "Schrijven naar tag mislukt",
       "readSuccess": "Tag gelezen",
@@ -300,27 +708,24 @@
       "makeReadOnlySuccess": "Tag ingesteld op alleen-lezen",
       "makeReadOnlyFailed": "Instellen van tag op alleen-lezen mislukt",
       "formatErrorRetry": "Deze tag kan niet worden geformatteerd. Probeer het opnieuw of gebruik een andere tag.",
+      "sessionBusy": "Er is al een andere NFC-bewerking bezig.",
+      "tagLost": "De tag is te snel weggehaald. Houd hem stil en probeer het opnieuw.",
       "verifying": "Tag controleren...",
       "verifyFailed": "Tag is niet goed opgeslagen",
       "verifyFailedRetry": "De tag is niet goed opgeslagen. Houd hem bij je telefoon en probeer het opnieuw.",
       "retapTag": "Tag geformatteerd. Haal hem weg en houd hem daarna opnieuw bij je telefoon."
     },
     "toast": {
-      "updateDbHeading": "Mediadatabase bijwerken",
       "preparingDb": "Database voorbereiden",
-      "hideLabel": "Verbergen",
       "updatedDb": "Mediadatabase bijgewerkt",
       "filesFound": "Gescande items: {{count}}",
-      "nowPlayingHeading": "Nu aan het spelen",
-      "indexingProgress": "Voortgang database-indexering"
+      "nowPlayingHeading": "Nu aan het spelen"
     },
     "whatsNew": {
-      "title": "Wat is er nieuw",
       "gotIt": "Begrepen"
     },
     "write": {
-      "noWriteMethodAvailable": "Geen NFC-schrijfmogelijkheid beschikbaar",
-      "nfcNotSupported": "NFC wordt niet ondersteund op dit apparaat"
+      "noWriteMethodAvailable": "Geen NFC-schrijfmogelijkheid beschikbaar"
     },
     "accessibility": {
       "skipToContent": "Naar hoofdinhoud",
@@ -331,7 +736,6 @@
       "title": "Klaargezet token bevestigen?",
       "waitingDescription": "Dit token wacht op bevestiging.",
       "readyDescription": "Dit token kan worden bevestigd.",
-      "tokenValue": "Tokenwaarde",
       "confirm": "Bevestigen",
       "dismiss": "Verbergen",
       "confirmError": "Klaargezet token kon niet worden bevestigd",
@@ -341,29 +745,17 @@
     },
     "scan": {
       "cameraMode": "Camera",
-      "cameraAvailable": "Camera gebruiken om te scannen",
       "nfcMode": "NFC",
       "scanError": "Fout bij scannen van tag",
-      "scanSuccess": "Tag gescand",
-      "noDevices": "Geen Zaparoo-apparaten gevonden",
-      "connecting": "Verbinden...",
-      "reconnecting": "Opnieuw verbinden...",
       "connectionError": "Verbindingsfout",
       "retry": "Opnieuw proberen",
-      "continuous": "Continu scannen",
-      "launchOnScan": "Starten bij scannen",
       "connectedHeading": "Verbonden",
-      "connectedSub": "Adres: {{ip}}",
       "nowPlayingHeading": "Nu aan het spelen",
       "mediaPreferences": "Mediavoorkeuren",
-      "nothingPlaying": "Er wordt niets gespeeld",
-      "nowPlayingName": "Naam: {{game}}",
-      "nowPlayingSystem": "Systeem: {{system}}",
       "stopPlayingButton": "Afspelen stoppen",
       "backgroundMediaHeading": "Achtergrond",
       "stopBackgroundMediaButton": "Achtergrondmedia stoppen",
       "stopBackgroundMediaError": "Achtergrondmedia konden niet worden gestopt",
-      "playlistName": "Afspeellijst: {{playlist}}",
       "playlistPosition": "Item {{current}} van {{total}}",
       "playlistControls": "Bediening voor afspeellijst {{section}}",
       "playlistPrevious": "Vorig item",
@@ -371,12 +763,14 @@
       "playlistPlay": "Afspeellijst afspelen",
       "playlistNext": "Volgend item",
       "playlistControlError": "Afspeellijst kon niet worden bediend",
-      "lastScannedHeading": "Laatst gescand",
-      "lastScannedTime": "Tijd: {{time}}",
+      "mediaControls": "Bediening voor {{section}}",
+      "mediaPause": "Pauzeren",
+      "mediaResume": "Hervatten",
+      "mediaControlError": "Media konden niet worden bediend",
       "lastScannedUid": "ID: {{uid}}",
-      "lastScannedText": "Waarde: {{text}}",
-      "historyTitle": "Scangeschiedenis",
+      "historyTitle": "Geschiedenis",
       "historyReplay": "Scan herhalen",
+      "historyUnknown": "Onbekende scan",
       "historyReplayError": "Scan kon niet worden herhaald",
       "historyFailed": "Mislukt",
       "purchaseProTitle": "Zaparoo Pro",
@@ -397,11 +791,45 @@
       "purchaseAccountDescription": "Koppel Pro aan een gratis Zaparoo Online-account. Zo heb je een back-up als je appwinkel de aankoop ooit kwijtraakt, en kun je Pro op zoveel Android- en iOS-apparaten gebruiken als je wilt.",
       "purchaseAccountAction": "Zaparoo Online instellen",
       "purchaseAccountLater": "Niet nu",
-      "completeIntro": "Aan de slag met Zaparoo",
       "statusScanning": "Scannen naar NFC-tag",
       "statusSuccess": "Tag gescand",
       "statusError": "Tagscan mislukt",
-      "remoteKeyboard": "Bediening"
+      "remoteKeyboard": "Bediening",
+      "tapTag": "Tag scannen",
+      "tapTagScanning": "Scannen",
+      "tapTagStop": "Scannen stoppen",
+      "scanCode": "Code scannen",
+      "statusStopped": "Scannen gestopt",
+      "noReaderTitle": "Geen lezer op deze telefoon",
+      "noReaderSub": "Deze telefoon heeft geen NFC of camera beschikbaar en kan dus niet scannen. Je kunt hem nog wel gebruiken om je apparaat te beheren.",
+      "devicePill": "{{device}}, {{status}}",
+      "deviceNone": "Geen apparaat",
+      "deviceSheetTitle": "Apparaat",
+      "deviceSheetRecent": "Van apparaat wisselen",
+      "deviceSheetAllDevices": "Apparaten beheren",
+      "nowPlayingIdle": "Er wordt niets afgespeeld",
+      "lastPlayed": "Laatst gespeeld: {{media}}",
+      "playLastPlayed": "{{media}} opnieuw afspelen",
+      "playLastPlayedUnavailable": "Laatst gespeelde media afspelen",
+      "playLastPlayedError": "Die media konden niet worden gestart",
+      "readersHeading": "Lezers",
+      "readerHolding": "Media aanwezig",
+      "recentsHeading": "Recent gespeeld",
+      "favoritesHeading": "Favorieten",
+      "coverRowLaunch": "{{game}} spelen",
+      "coverRowDetails": "Details van {{media}} bekijken",
+      "coverRowLaunchError": "Die media konden niet worden gestart",
+      "historyTabs": "Type geschiedenis",
+      "historyTabScans": "Scans",
+      "historyTabPlayed": "Gespeeld",
+      "historyPlayedEmpty": "Nog niets gespeeld op dit apparaat",
+      "history": {
+        "empty": "Nog geen scans"
+      },
+      "scanHistoryTitle": "Scangeschiedenis",
+      "playHistoryTitle": "Afspeelgeschiedenis",
+      "historyRefresh": "Geschiedenis vernieuwen",
+      "historyLoadError": "Geschiedenis kon niet worden geladen"
     },
     "create": {
       "title": "Maken",
@@ -421,7 +849,6 @@
         "searchButton": "Zoeken",
         "gamesDbUpdate": "De mediadatabase moet worden bijgewerkt voordat je kunt zoeken",
         "searchError": "Fout bij zoeken naar media",
-        "noGamesFound": "Geen media gevonden",
         "title": "Media zoeken",
         "gameInput": "Naam",
         "gameInputPlaceholder": "Voer een medianaam in",
@@ -430,7 +857,6 @@
         "tagsInput": "Tags",
         "allTags": "Alle tags",
         "systemLabel": "Systeem",
-        "categoryLabel": "Categorie",
         "pathLabel": "Pad",
         "zapscriptLabel": "ZapScript",
         "tagsLabel": "Tags",
@@ -446,8 +872,6 @@
         "resultsFound_one": "{{count}} resultaat gevonden",
         "resultsFound_other": "{{count}} resultaten gevonden",
         "loadMore": "Meer resultaten laden",
-        "loadedMore_one": "Nog {{count}} resultaat geladen",
-        "loadedMore_other": "Nog {{count}} resultaten geladen",
         "startSearching": "Klaar om te zoeken",
         "startSearchingHint": "Voer een medianaam in of selecteer filters om te zoeken",
         "noResultsFound": "Geen resultaten gevonden voor \"{{query}}\"",
@@ -458,34 +882,35 @@
         "clearFilters": "Filters wissen",
         "tryAgain": "Opnieuw proberen",
         "recentSearches": "Recente zoekopdrachten",
+        "searchAgain": "Zoeken naar {{query}}",
+        "recentSystem": "Systeem: {{system}}",
+        "recentTags": "Tags: {{tags}}",
+        "recentAllMedia": "Alle media",
         "noRecentSearches": "Nog geen recente zoekopdrachten",
         "noRecentSearchesHint": "Begin met zoeken om je zoekgeschiedenis op te bouwen",
         "clearHistory": "Geschiedenis wissen",
-        "gamesDbSettings": "Database-instellingen openen",
-        "searchResult": "Zoekresultaat selecteren"
+        "gamesDbSettings": "Database-instellingen openen"
       },
       "custom": {
         "title": "Aangepast ZapScript",
         "textPlaceholder": "Voer ZapScript in",
         "textareaLabel": "ZapScript-editor",
         "write": "Naar tag schrijven",
-        "run": "Uitvoeren",
+        "run": "Testen",
         "clear": "Wissen",
         "failMsg": "Uitvoeren van ZapScript mislukt",
         "characters": "Aantal tekens: {{count}}",
         "searchMedia": "Media",
         "commands": "Commando",
+        "commandsTitle": "Commando's",
         "selectSystem": "Systeem",
         "zapscriptHelp": "Help",
         "clearConfirmTitle": "ZapScript wissen?",
-        "commandPalette": "Commandopalet",
-        "insertCommandStart": "Begin van commando invoegen",
-        "insertCommandSeparator": "Commandoscheidingsteken invoegen",
         "insertMedia": "Mediapad invoegen",
         "insert": "Invoegen",
         "insertSystem": "Systeem invoegen",
         "insertCommand": "Commando invoegen",
-        "runZapScript": "ZapScript uitvoeren"
+        "runZapScript": "ZapScript testen"
       },
       "nfc": {
         "title": "NFC-hulpprogramma's",
@@ -497,9 +922,7 @@
         "confirm": "Weet je het zeker?",
         "tabs": {
           "read": "Lezen",
-          "write": "Schrijven",
-          "tools": "Gereedschap",
-          "history": "Geschiedenis"
+          "tools": "Gereedschap"
         },
         "readTab": {
           "scanTag": "Tag scannen",
@@ -530,35 +953,11 @@
           "historicalBytes": "Historische bytes (ISO-DEP)",
           "manufacturer": "Fabrikant (NFC-F)",
           "systemCode": "Systeemcode (NFC-F)",
-          "copiedToClipboard": "{{label}} gekopieerd naar klembord",
-          "copyFailed": "Kopiëren naar klembord mislukt",
-          "tagData": "Taggegevens",
           "shareTitle": "NFC-taggegevens",
           "shareText": "UID: {{uid}}\nTekst: {{text}}",
           "shareTagData": "Taggegevens delen"
         },
-        "write": {
-          "templates": {
-            "text": "Tekst",
-            "url": "URL",
-            "wifi": "Wifi",
-            "contact": "Contact",
-            "custom": "Aangepast"
-          },
-          "writeToTag": "Naar tag schrijven",
-          "preview": "Voorbeeld",
-          "estimatedSize": "Geschatte grootte"
-        },
-        "history": {
-          "title": "NFC-geschiedenis",
-          "empty": "Geen geschiedenis",
-          "clearAll": "Alles wissen",
-          "writeAgain": "Opnieuw schrijven",
-          "remove": "Verwijderen"
-        },
         "tools": {
-          "dangerousOperations": "Gevaarlijke bewerkingen",
-          "platformInfo": "Platforminformatie",
           "formatDescription": "Formatteert de tag volgens de NDEF-standaard en verwijdert alle gegevens",
           "formatWarning": "Hiermee worden alle gegevens op de tag permanent verwijderd",
           "eraseDescription": "Verwijdert alle NDEF-gegevens van de tag",
@@ -579,6 +978,8 @@
           "reload": "Configuratiebestanden opnieuw laden",
           "reloadedSuccess": "Mappings opnieuw geladen uit configuratiebestanden",
           "reloadFailed": "Mappings opnieuw laden mislukt",
+          "loadFailed": "Mappings konden niet worden geladen",
+          "retry": "Opnieuw proberen",
           "disabledBadge": "Uitgeschakeld",
           "readOnlyBadge": "Alleen-lezen",
           "noOverride": "Geen actie",
@@ -605,7 +1006,6 @@
           "matchRegexHelp": "Het patroon is een reguliere expressie.",
           "matchRegexInvalid": "Ongeldige reguliere expressie",
           "pattern": "Patroon",
-          "patternRequired": "Patroon is verplicht",
           "override": "ZapScript",
           "overrideHelp": "Wordt uitgevoerd wanneer de mapping overeenkomt.",
           "enabled": "Ingeschakeld",
@@ -634,7 +1034,7 @@
       "loginGoogle": "Inloggen met Google",
       "loginApple": "Inloggen met Apple",
       "logout": "Uitloggen",
-      "loginSuccess": "Inloggen gelukt",
+      "logoutFailed": "Uitloggen mislukt",
       "loginWrong": "Ongeldig e-mailadres of wachtwoord",
       "loginFail": "Er is een fout opgetreden bij het inloggen",
       "mfaTitle": "Tweestapsverificatie",
@@ -646,7 +1046,6 @@
       "mfaBack": "Terug naar inloggen",
       "mfaExpired": "Verificatie verlopen. Log opnieuw in.",
       "mfaFailed": "Code verifiëren mislukt. Probeer het opnieuw.",
-      "signUpSuccess": "Account aangemaakt",
       "signUpFail": "Account aanmaken mislukt",
       "emailExists": "Er bestaat al een account met dit e-mailadres",
       "weakPassword": "Wachtwoord is te zwak",
@@ -658,16 +1057,9 @@
       "resetEmailSent": "E-mail voor wachtwoordherstel verzonden",
       "resetEmailFailed": "E-mail voor wachtwoordherstel verzenden mislukt",
       "enterEmailFirst": "Voer eerst je e-mailadres in",
-      "oauthNotAvailable": "Inloggen via sociale media vereist de Zaparoo-app",
       "settingsStatusSignedOut": "Niet ingelogd",
       "settingsStatusSignedIn": "Ingelogd",
-      "settingsStatusFree": "Gratis account",
       "settingsStatusWarpActive": "Warp actief",
-      "settingsLoggedInAs": "Ingelogd als {{email}}",
-      "loggedInAs": "Ingelogd als {{email}}",
-      "loggedInWithGoogle": "Ingelogd met Google",
-      "loggedInWithApple": "Ingelogd met Apple",
-      "loggedInWithPassword": "Ingelogd met e-mailadres en wachtwoord",
       "dashboard": "Dashboard",
       "changePassword": "Wachtwoord wijzigen",
       "deleteAccount": "Account verwijderen",
@@ -690,7 +1082,6 @@
       "ageConfirmRequired": "Leeftijdsbevestiging vereist",
       "deviceLink": {
         "title": "Verbonden apparaat",
-        "description": "Door dit apparaat te koppelen, voeg je het toe aan je account zodat het Online-functies kan gebruiken. Synchronisatie van speelgeschiedenis is gratis. Speelgeschiedenis en back-ups worden pas geüpload nadat je ze hebt ingeschakeld.",
         "help": "Door dit apparaat te koppelen, voeg je het toe aan je account zodat het Online-functies kan gebruiken. Alleen koppelen uploadt niets. Synchronisatie van speelgeschiedenis en cloudback-ups moeten afzonderlijk worden ingeschakeld.",
         "disconnected": "Maak verbinding met een Core-apparaat voordat je het aan Zaparoo Online koppelt.",
         "backToSettings": "Terug naar Instellingen",
@@ -699,7 +1090,6 @@
         "checking": "Apparaatkoppeling controleren...",
         "linking": "Apparaat koppelen...",
         "linked": "Apparaat gekoppeld aan Zaparoo Online",
-        "linkedAs": "Gekoppeld als",
         "linkedSince": "Gekoppeld sinds",
         "warp": "Warp",
         "warpActive": "Actief",
@@ -722,7 +1112,6 @@
         "loading": "Online-functies controleren...",
         "allFeatures": "Alle online functies",
         "allFeaturesHelp": "Schakel alle online functies tegelijk in of uit. Elke functie kan nog steeds afzonderlijk worden gewijzigd. Cloudback-up wordt alleen ingeschakeld als Warp actief is.",
-        "someOn": "Deels aan",
         "remoteControl": "Bediening op afstand",
         "remoteControlHelp": "Sta je gekoppelde Zaparoo Online-account toe goedgekeurde opdrachten naar dit apparaat te sturen.",
         "remoteControlSummary": "Sta je gekoppelde Zaparoo Online-account toe goedgekeurde opdrachten naar dit apparaat te sturen.",
@@ -730,19 +1119,17 @@
         "playHistoryHelp": "Bewaar wat je hebt gespeeld en wanneer in je Zaparoo Online-account. Deze functie is gratis.\n\nBij de eerste synchronisatie wordt de bewaarde lokale speelgeschiedenis geüpload. Als je dit uitschakelt, stoppen toekomstige uploads.",
         "playHistorySummary": "Gratis. Bewaar wat je hebt gespeeld en wanneer in je Zaparoo Online-account.",
         "librarySync": "Bibliotheek synchroniseren",
-        "librarySyncHelp": "Synchroniseer je gamelijst, favorieten, leuke media en decks met je gekoppelde Zaparoo Online-account.",
-        "librarySyncSummary": "Synchroniseer je gamelijst, favorieten, leuke media en decks met je gekoppelde Zaparoo Online-account.",
+        "librarySyncHelp": "Synchroniseer je medialijst, favorieten, leuke media en decks met je gekoppelde Zaparoo Online-account.",
+        "librarySyncSummary": "Synchroniseer je medialijst, favorieten, leuke media en decks met je gekoppelde Zaparoo Online-account.",
         "automaticBackup": "Automatische cloudback-up",
         "automaticBackupHelp": "Bescherm ondersteunde instellingen, invoer, saves en save states met geplande back-ups buiten het apparaat. Voor uploads is een actief Warp-abonnement vereist.\n\nAls je dit uitschakelt, stoppen automatische uploads. Bestaande cloudback-ups blijven beschikbaar om te herstellen.",
         "automaticBackupSummary": "Inbegrepen bij Warp. Bescherm ondersteunde apparaatgegevens met geplande back-ups buiten het apparaat.",
-        "free": "Gratis",
         "requiresWarp": "Warp vereist",
         "checkingWarp": "Warp controleren",
         "schedule": "Back-upschema",
         "scheduleDaily": "Dagelijks",
         "scheduleWeekly": "Wekelijks",
         "scheduleManual": "Alleen handmatig",
-        "backupStatus": "Status cloudback-up",
         "checkingStatus": "Controleren...",
         "statusUnavailable": "Niet beschikbaar",
         "backupInProgress": "Back-up maken...",
@@ -750,7 +1137,6 @@
         "lastBackup": "Laatste back-up {{date}}",
         "neverBackedUp": "Nog geen back-up gemaakt",
         "notConfigured": "Niet geconfigureerd",
-        "remoteStatus": "Status bediening op afstand",
         "remoteStates": {
           "unknown": "Onbekend",
           "disabled": "Uit",
@@ -776,6 +1162,7 @@
       "termsOfService": "Servicevoorwaarden",
       "privacyPolicy": "Privacybeleid",
       "and": "en",
+      "or": "of",
       "warp": {
         "title": "Zaparoo Warp",
         "description": "Bescherm ondersteunde apparaatgegevens met cloudback-ups en gebruik Zaparoo Pro zolang Warp actief is.",
@@ -827,7 +1214,14 @@
         "manage": "Abonnement beheren",
         "openingManagement": "Abonnementsinstellingen openen...",
         "manageUnavailable": "Abonnementsbeheer is hier niet beschikbaar",
-        "manageFailed": "Abonnementsbeheer kon niet worden geopend"
+        "manageFailed": "Abonnementsbeheer kon niet worden geopend",
+        "trialActive": "Warp-proefperiode is actief",
+        "trialEnds": "Proefperiode eindigt op {{date}}",
+        "trialPending": "Je Warp-proefperiode wordt bevestigd.",
+        "trialExpired": "Je Warp-proefperiode is afgelopen.",
+        "trialImmediateBilling": "Als je tijdens de proefperiode abonneert, begint de betaling direct.",
+        "trialLastDay": "Je Warp-proefperiode eindigt binnen 24 uur.",
+        "trialEnding": "Je Warp-proefperiode eindigt binnen 3 dagen."
       }
     },
     "requirements": {
@@ -847,6 +1241,7 @@
       "emailNotVerified": "E-mailadres nog niet geverifieerd",
       "emailSendFailed": "Verificatie-e-mail verzenden mislukt",
       "emailCheckFailed": "Verificatie controleren mislukt",
+      "saveFailed": "Opslaan mislukt",
       "emailVerified": "E-mailadres geverifieerd",
       "saved": "Opgeslagen",
       "save": "Opslaan",
@@ -854,22 +1249,30 @@
       "logout": "Uitloggen"
     },
     "settings": {
+      "groups": {
+        "device": "Apparaat",
+        "app": "App",
+        "support": "Ondersteuning"
+      },
       "title": "Instellingen",
-      "moreSettings": "Meer instellingen",
       "device": "Apparaatadres",
+      "deviceSetup": {
+        "addDeviceManually": "Apparaat handmatig toevoegen",
+        "enterAddress": "Adres invoeren",
+        "connect": "Verbinden"
+      },
       "deviceAddressRequired": "Voer een apparaatadres in",
       "deviceAddressInvalid": "Voer een geldige hostnaam, een geldig IP-adres of een geldige host:poort in.",
-      "modeLabel": "Scanmodus",
       "tapMode": "Tikken",
       "insertMode": "Vasthouden",
       "updateDb": "Mediadatabase bijwerken",
       "updateDb.cancel": "Annuleren",
       "updateDb.resume": "Hervatten",
       "updateDb.status.ready": "Database is gereed",
+      "updateDb.status.noDatabase": "Geen database gevonden",
       "updateDb.status.optimizing": "Database wordt geoptimaliseerd (klaar voor gebruik)",
       "updateDb.status.paused": "Gepauzeerd",
       "updateDb.status.throttled": "Wordt op lagere snelheid uitgevoerd",
-      "updateDb.status.reconnecting": "Opnieuw verbinden...",
       "updateDb.status.mediaCount": "Database gereed: {{formattedCount}} mediatitels",
       "updateDb.status.noConnection": "Niet verbonden",
       "updateDb.status.checking": "Databasestatus controleren...",
@@ -877,7 +1280,7 @@
       "updateDb.status.setupMissing": "De mediadatabase is niet gereed. Werk de database bij om deze opnieuw op te bouwen.",
       "updateDb.startError": "Bijwerken van mediadatabase starten mislukt",
       "updateDb.blockedByScrape": "Er worden metadata opgehaald. De database kan pas worden bijgewerkt als dit klaar is.",
-      "updateDb.selectSystemsTitle": "Systemen selecteren om bij te werken",
+      "updateDb.selectSystemsTitle": "Bij te werken systemen",
       "updateDb.allSystems": "Alle systemen",
       "updateDb.progressLabel": "Voortgang database-update",
       "updateDb.cleanOrphans": "Ontbrekende media opschonen",
@@ -893,6 +1296,8 @@
       "scrapeMedia.cancel": "Annuleren",
       "scrapeMedia.starting": "Starten...",
       "scrapeMedia.startError": "Starten van mediascrape mislukt",
+      "scrapeMedia.cancelError": "Annuleren van mediascrape mislukt",
+      "scrapeMedia.resumeError": "Hervatten van mediascrape mislukt",
       "scrapeMedia.scraperPlaceholder": "Selecteer een scraper",
       "scrapeMedia.allSystems": "Alle systemen",
       "scrapeMedia.selectSystemsTitle": "Systemen selecteren om te scrapen",
@@ -923,7 +1328,6 @@
       "scrapeMedia.status.paused": "Gepauzeerd",
       "scrapeMedia.status.throttled": "Wordt op lagere snelheid uitgevoerd",
       "scrapeMedia.status.reconnecting": "Opnieuw verbinden...",
-      "scrapeMedia.status.totalScraped": "{{formattedCount}} mediarecords gescrapet",
       "scrapeMedia.force": "Al gescrapete media opnieuw scrapen",
       "scrapeMedia.resume": "Hervatten",
       "media": {
@@ -931,7 +1335,6 @@
         "databaseTitle": "Mediadatabase",
         "scraperTitle": "Metadatascraper"
       },
-      "designer": "Zaparoo Designer",
       "getApp": "Zaparoo-app downloaden",
       "language": "Taal",
       "languageRegion": {
@@ -949,13 +1352,15 @@
       "networkScan": {
         "title": "Apparaten zoeken",
         "searching": "Apparaten zoeken...",
-        "stillSearching": "Nog steeds aan het zoeken...",
-        "noDevices": "Geen apparaten gevonden",
+        "refresh": "Opnieuw zoeken",
+        "noOtherDevices": "Geen andere apparaten gevonden",
         "addresses_one": "IP-adres: {{addresses}}",
         "addresses_other": "IP-adressen: {{addresses}}",
-        "version": "v{{version}}"
+        "version": "v{{version}}",
+        "scanFailed": "Zoeken naar apparaten mislukt"
       },
       "connectionFailed": "Kan geen verbinding maken met apparaat",
+      "updateFailed": "Instelling kon niet worden opgeslagen",
       "notConnected": "Niet verbonden",
       "coreOutdated": {
         "title": "Core-update aanbevolen (v{{version}}+)",
@@ -965,7 +1370,6 @@
       "deviceHistoryEmpty": "Nog geen opgeslagen apparaten.",
       "deviceHistoryError": "Opgeslagen apparaten konden niet worden geladen.",
       "deviceHistoryLoading": "Opgeslagen apparaten laden...",
-      "deviceDetails": "Apparaatdetails",
       "activeDevice": "Actief apparaat",
       "deviceDetail": {
         "nameLabel": "Apparaatnaam",
@@ -997,10 +1401,10 @@
       "about": {
         "title": "Over",
         "version": "Versie: {{version}}",
-        "createdBy": "Gemaakt door",
         "translationsBy": "Vertalingen door",
-        "contributors": "Zaparoo-bijdragers",
         "wizzodev": "Wizzo.dev Patrons",
+        "roleDeveloper": "Ontwikkelaar",
+        "roleDesigner": "UX-designer",
         "joinPatreon": "Lid worden via Patreon"
       },
       "licenses": {
@@ -1040,9 +1444,6 @@
       "playControls": {
         "title": "Afspeelbediening"
       },
-      "playtime": {
-        "title": "Speeltijd"
-      },
       "advanced": {
         "title": "Geavanceerd",
         "errorReporting": "Foutrapportage",
@@ -1055,6 +1456,14 @@
         "showFilenamesHelp": "Toon in zoekresultaten in de app de volledige bestandsnaam van media in plaats van de opgeschoonde versie. Dit kan nuttig zijn als je veel aangepaste tags in je bestandsnamen gebruikt.",
         "appIconBadges": "Badges op appicoon",
         "appIconBadgesHelp": "Toon het aantal ongelezen inboxberichten op het appicoon. iOS kan om toestemming voor meldingen vragen, omdat badges via de meldingsinstellingen worden beheerd.",
+        "appPreview": "App preview",
+        "appPreviewHelp": "Render app-only screens in the browser for design work. Nothing behind them is functional: NFC, camera and purchases are simulated.",
+        "appPreviewNfcResult": "Preview NFC result",
+        "appPreviewNfcHold": "Wait for a tag",
+        "appPreviewNfcSuccess": "Success",
+        "appPreviewNfcVerifyFailed": "Verification failed",
+        "appPreviewNfcRetap": "Re-tap required",
+        "appPreviewNfcError": "Error",
         "purchasePreview": "Aankoopvoorbeeld",
         "purchasePreviewLive": "Livestatus",
         "purchasePreviewFree": "Gratis account",
@@ -1066,12 +1475,6 @@
         "viewLogs": "Logs bekijken"
       },
       "core": {
-        "title": "Core-instellingen",
-        "soundEffects": "Geluidseffecten afspelen bij scannen",
-        "autoDetect": "Externe NFC-lezer automatisch detecteren",
-        "debug": "Debugmodus",
-        "nfcDriver": "Verbindingstekenreeks NFC-driver",
-        "insertModeBlocklist": "Core-blokkeerlijst voor vasthoudmodus",
         "playtime": {
           "title": "Speeltijdlimieten",
           "enabled": "Speeltijdlimieten inschakelen",
@@ -1110,7 +1513,10 @@
           "lastUsed": "Laatst gebruikt: {{date}}",
           "neverUsed": "Nooit",
           "roleLabel": "Rol",
-          "role": { "admin": "Beheerder", "member": "Lid" },
+          "role": {
+            "admin": "Beheerder",
+            "member": "Lid"
+          },
           "name": "Naam",
           "nameRequiredLabel": "Naam *",
           "nameRequired": "Voer een profielnaam in",
@@ -1132,7 +1538,6 @@
           "limitsOff": "Uit",
           "dailyLimit": "Dagelijkse limiet",
           "sessionLimit": "Sessielimiet",
-          "inherit": "Overnemen",
           "unlimitedHelp": "Stel beide velden in op 0 voor onbeperkte speeltijd.",
           "durationInvalid": "Uren moeten 0 of meer zijn en minuten moeten tussen 0 en 59 liggen",
           "saved": "Profiel opgeslagen",
@@ -1153,7 +1558,8 @@
           "switch": "Van profiel wisselen",
           "shared": "Gedeeld profiel",
           "switched": "Profiel gewisseld",
-          "switchFailed": "Kon niet van profiel wisselen"
+          "switchFailed": "Kon niet van profiel wisselen",
+          "switchOptionActive": "{{name}} (actief)"
         },
         "launchGuard": {
           "title": "Startbeveiliging",
@@ -1167,8 +1573,6 @@
         }
       },
       "app": {
-        "title": "App-instellingen",
-        "preferRemoteWriter": "Voorkeur voor verbonden lezer bij schrijven",
         "restorePurchases": "Aankopen herstellen",
         "restoreSuccess": "Aankopen zijn hersteld",
         "restoreNotFound": "Geen aankopen gevonden. Als je store aangeeft dat je Pro al bezit, tik je op Pro ontgrendelen om het bezit te verifiëren.",
@@ -1177,36 +1581,35 @@
         "copyBillingDiagnostics": "Factureringsdiagnose kopiëren",
         "billingDiagnosticsCopied": "Factureringsdiagnose gekopieerd",
         "billingDiagnosticsCopyFailed": "Factureringsdiagnose kon niet worden gekopieerd",
-        "shakeToLaunch": "Schudden om te starten",
         "proFeature": "Pro",
         "proActive": "Zaparoo Pro actief",
         "shakeRandomMedia": "Willekeurige media",
         "shakeCustom": "Aangepast",
         "shakeSelectSystem": "Systeem selecteren",
-        "shakeZapscript": "ZapScript om te starten",
         "shakeModeLabel": "Schudmodus"
       },
       "logs": {
         "title": "Logs",
         "refresh": "Vernieuwen",
-        "filters": "Filters",
         "download": "Downloaden",
         "copy": "Naar klembord kopiëren",
         "upload": "Logs uploaden",
         "uploading": "Logs uploaden...",
         "uploadSuccess": "Logs geüpload",
         "uploadError": "Logs uploaden mislukt",
+        "downloadError": "Logs downloaden mislukt",
         "uploadResult": "Link naar geüploade logs",
         "copyUploadLink": "Link naar geüploade logs kopiëren",
-        "filename": "Bestandsnaam",
-        "fileSize": "Bestandsgrootte",
         "searchPlaceholder": "Logs filteren...",
-        "levelFilters": "Logniveaus",
-        "totalEntries": "Totaal aantal items",
-        "filteredEntries": "Getoond",
+        "entriesShowing": "{{shown}} van {{total}} vermeldingen weergegeven",
+        "entryCount_one": "{{count}} vermelding",
+        "entryCount_other": "{{count}} vermeldingen",
+        "levelDebug": "Debug",
+        "levelInfo": "Info",
+        "levelWarn": "Waarschuwing",
+        "levelError": "Fout",
         "noEntriesFound": "Geen logitems komen overeen met je filters",
         "fetchError": "Logs ophalen mislukt",
-        "notConnected": "Maak verbinding met een Zaparoo-apparaat om logs te bekijken",
         "showMore": "Meer tonen",
         "showLess": "Minder tonen"
       },
@@ -1218,7 +1621,11 @@
         "textSizeSmall": "S",
         "textSizeDefault": "M",
         "textSizeLarge": "L",
-        "textSizeExtraLarge": "XL"
+        "textSizeExtraLarge": "XL",
+        "appearance": "Weergave",
+        "appearanceSystem": "Systeem",
+        "appearanceLight": "Licht",
+        "appearanceDark": "Donker"
       },
       "help": {
         "title": "Help",
@@ -1226,7 +1633,6 @@
         "taptoWiki": "Zaparoo Docs",
         "documentationLabel": "Documentatie",
         "gettingStarted": "Aan de slag met Zaparoo",
-        "softwareSetup": "Zaparoo-software installeren",
         "commandReference": "ZapScript-help",
         "communityLabel": "Community",
         "discord": "Lid worden van de Discord-server",
@@ -1234,14 +1640,18 @@
         "technicalSupport": "Technische ondersteuning",
         "reportIssue": "Een probleem melden op GitHub",
         "emailLabel": "E-mailadres voor ondersteuning:"
-      }
+      },
+      "connectDevice": "Verbinden met {{device}}",
+      "savedDevices": "Opgeslagen apparaten"
     },
     "systemSelector": {
+      "loadError": "Systemen konden niet worden geladen",
+      "clear": "Wissen",
+      "done": "Gereed",
       "title": "Systemen selecteren",
       "searchPlaceholder": "Systemen zoeken...",
       "searchSystems": "Systemen zoeken",
-      "clearSearch": "Zoekopdracht wissen",
-      "systemsList": "Systeemlijst",
+      "otherCategory": "Overig",
       "selected": "{{name}} geselecteerd",
       "deselected": "{{name}} gedeselecteerd",
       "allSystems": "Alle systemen",
@@ -1250,25 +1660,32 @@
       "noResults": "Geen systemen gevonden",
       "noResultsHint": "Gebruik een kortere zoekopdracht of wis de zoekopdracht.",
       "noSystems": "Geen systemen beschikbaar",
-      "selectedCount": "Geselecteerde systemen: {{count}}",
       "multipleSelected": "Geselecteerde systemen: {{count}}",
-      "clearAll": "Alles wissen",
-      "apply": "Toepassen"
+      "clearAll": "Alles wissen"
+    },
+    "launcherSelector": {
+      "title": "Launcher selecteren",
+      "search": "Launchers zoeken",
+      "loadError": "Kan launchers niet laden",
+      "noResults": "Geen launchers gevonden",
+      "noLaunchers": "Geen launchers beschikbaar",
+      "unavailable": "Niet beschikbaar op dit apparaat"
     },
     "tagSelector": {
+      "expandAll": "Alles uitklappen",
+      "collapseAll": "Alles inklappen",
+      "unavailable": "Tags niet beschikbaar",
       "title": "Tags selecteren",
       "searchPlaceholder": "Tags filteren...",
       "searchTags": "Tags filteren",
-      "clearSearch": "Zoekopdracht wissen",
       "resultsLabel": "Overeenkomende tags",
-      "allTypes": "Alle typen",
       "noResults": "Geen tags gevonden",
       "noResultsHint": "Gebruik een kortere zoekopdracht of wis de zoekopdracht.",
       "noTags": "Geen tags beschikbaar",
-      "selectedCount": "Geselecteerde tags: {{count}}",
       "multipleSelected": "Geselecteerde tags: {{count}}",
       "clearAll": "Alles wissen",
       "apply": "Toepassen",
+      "applyCount": "Toepassen ({{count}})",
       "selected": "{{name}} geselecteerd",
       "deselected": "{{name}} gedeselecteerd",
       "type": {
@@ -1278,9 +1695,12 @@
         "arcadeboard": "Arcadebord",
         "art": "Kunststijl",
         "based": "Gebaseerd op",
+        "builddate": "Builddatum",
+        "cabinet": "Arcadebehuizing",
         "category": "Categorie",
         "compatibility": "Compatibiliteit",
         "copyright": "Auteursrecht",
+        "credit": "Credit",
         "developer": "Ontwikkelaar",
         "disc": "Schijf",
         "disctotal": "Totaal aantal schijven",
@@ -1288,32 +1708,44 @@
         "dump": "Dumpstatus",
         "edition": "Editie",
         "embedded": "Ingebed",
+        "episode": "Aflevering",
         "extension": "Extensie",
+        "gamefamily": "Gamereeks",
         "gamegenre": "Gamegenre",
         "genre": "Genre",
         "input": "Invoer",
+        "issue": "Nummer",
         "lang": "Taal",
         "mameparent": "MAME-parent",
         "media": "Media",
         "multigame": "Multigame",
+        "patch": "Patch",
         "perspective": "Perspectief",
         "platform": "Platform",
         "players": "Spelers",
         "port": "Port",
+        "property": "Eigenschap",
+        "protection": "Kopieerbeveiliging",
         "publisher": "Uitgever",
+        "rating": "Beoordeling",
         "reboxed": "Opnieuw verpakt",
         "region": "Regio",
+        "release": "Uitgave",
         "rerelease": "Heruitgave",
         "rev": "Revisie",
         "save": "Savegame",
         "search": "Zoeken",
+        "season": "Seizoen",
         "series": "Serie",
         "set": "Set",
         "supplement": "Supplement",
-        "unlicensed": "Zonder licentie",
+        "track": "Track",
         "unfinished": "Onvoltooid",
         "unknown": "Onbekend",
+        "unlicensed": "Zonder licentie",
+        "user": "Gebruiker",
         "video": "Video",
+        "volume": "Deel",
         "year": "Jaar"
       }
     },
@@ -1353,7 +1785,10 @@
       "deviceLinking": "Apparaatkoppeling met Zaparoo Online",
       "onlineRemoteControl": "Zaparoo Online-bediening op afstand",
       "onlineLibrarySync": "Zaparoo Online-bibliotheeksynchronisatie",
-      "profiles": "Profielen"
+      "profiles": "Profielen",
+      "mediaRecents": "Recent gespeeld",
+      "mediaHistoryDistinct": "Afspeelgeschiedenis zonder duplicaten",
+      "launchers": "Launcherlijst"
     },
     "inbox": {
       "title": "Meldingen",
@@ -1364,6 +1799,8 @@
       "deleteOne": "{{title}} verwijderen",
       "clearAll": "Alles wissen",
       "confirmClear": "Alle meldingen wissen?",
+      "deleteFailed": "Melding kon niet worden verwijderd",
+      "clearFailed": "Meldingen konden niet worden gewist",
       "confirmClearYes": "Alles wissen",
       "confirmClearNo": "Annuleren",
       "severity": {
@@ -1414,12 +1851,13 @@
       "description": "Voer de 6-cijferige pincode in die op je apparaat wordt getoond.",
       "noAddress": "Stel in Instellingen een apparaatadres in voordat je koppelt.",
       "pinLabel": "Pincode",
-      "pinPlaceholder": "000000",
       "clientNameLabel": "Apparaatnaam",
       "startPairing": "Koppelen",
       "pairing": "Koppelen...",
       "success": "Koppelen gelukt",
       "openPairing": "Koppelen met apparaat",
+      "defaultClientName": "Zaparoo App {{platform}}",
+      "unknownDeviceName": "Onbekend",
       "connectionError": {
         "encryptionRequired": "Dit apparaat moet worden gekoppeld.",
         "credentialsRevoked": "Koppeling is ingetrokken. Koppel opnieuw.",
@@ -1450,7 +1888,7 @@
       },
       "deviceAddress": {
         "title": "Verbind je apparaat",
-        "text": "Tik op het zoekpictogram om Zaparoo-apparaten in je netwerk te vinden, of voer indien nodig handmatig het IP-adres van een apparaat in."
+        "text": "Open de apparaatselectie om een opgeslagen of nabijgelegen Zaparoo-apparaat te kiezen, of voer het adres handmatig in."
       },
       "mediaDatabase": {
         "title": "Mediabibliotheek bijwerken",
@@ -1471,6 +1909,315 @@
         "next": "Volgende",
         "finish": "Voltooien"
       }
+    },
+    "zapscript": {
+      "builder": {
+        "view": "Editorweergave",
+        "steps": "Stappen",
+        "text": "Tekst",
+        "addStep": "Stap toevoegen",
+        "empty": "Nog geen stappen",
+        "emptyHint": "Voeg een stap toe om te kiezen wat er gebeurt bij het scannen",
+        "stepLabel": "Stap {{position}}: {{name}}",
+        "moveUp": "Stap {{position}} omhoog verplaatsen",
+        "moveDown": "Stap {{position}} omlaag verplaatsen",
+        "remove": "Stap {{position}} verwijderen",
+        "options": "Geavanceerd",
+        "textStep": "ZapScript-tekst",
+        "textStepDescription": "Deze stap gebruikt syntaxis die alleen als tekst kan worden bewerkt",
+        "textStepField": "ZapScript voor stap {{position}}",
+        "textOnly": "Dit script kan alleen als tekst worden bewerkt",
+        "textOnlyHint": "Het gebruikt syntaxis die de stappenweergave niet in stappen kan opdelen",
+        "editAsText": "Als tekst bewerken",
+        "noChoice": "Niet ingesteld",
+        "searchMediaFor": "Media zoeken voor {{field}}",
+        "chooseSystemFor": "Een systeem kiezen voor {{field}}",
+        "chooseLauncherFor": "Een launcher kiezen voor {{field}}",
+        "searchCommands": "Opdrachten zoeken",
+        "noCommands": "Geen opdrachten gevonden"
+      },
+      "groups": {
+        "launch": "Starten",
+        "playlist": "Afspeellijst",
+        "input": "Invoer",
+        "ui": "Op het scherm",
+        "profile": "Profielen",
+        "mister": "MiSTer",
+        "http": "Webverzoeken",
+        "utility": "Hulpmiddelen"
+      },
+      "commands": {
+        "launch": {
+          "description": "Media starten via een pad of titel"
+        },
+        "launch_system": {
+          "description": "Een systeem openen zonder media te laden"
+        },
+        "launch_random": {
+          "description": "Een willekeurige game van een systeem starten"
+        },
+        "launch_search": {
+          "description": "De eerste media starten die bij een zoekopdracht past"
+        },
+        "launch_title": {
+          "description": "Media starten op basis van systeem en titel"
+        },
+        "launch_last": {
+          "description": "Onlangs gespeelde media starten"
+        },
+        "playlist_play": {
+          "description": "Een afspeellijst starten of de gepauzeerde hervatten"
+        },
+        "playlist_stop": {
+          "description": "De afspeellijst stoppen en sluiten"
+        },
+        "playlist_next": {
+          "description": "Naar het volgende item in de afspeellijst gaan"
+        },
+        "playlist_previous": {
+          "description": "Naar het vorige item in de afspeellijst gaan"
+        },
+        "playlist_goto": {
+          "description": "Naar een bepaald item in de afspeellijst springen"
+        },
+        "playlist_pause": {
+          "description": "De afspeellijst pauzeren"
+        },
+        "playlist_load": {
+          "description": "Een afspeellijst laden zonder deze te starten"
+        },
+        "playlist_open": {
+          "description": "Een afspeellijst op het scherm tonen om een item te kiezen"
+        },
+        "execute": {
+          "description": "Een opdracht op het apparaat uitvoeren"
+        },
+        "delay": {
+          "description": "Wachten voordat de volgende stap wordt uitgevoerd"
+        },
+        "evaluate": {
+          "description": "Een ander stuk ZapScript uitvoeren"
+        },
+        "write": {
+          "description": "Tekst schrijven naar de volgende tag die wordt gescand"
+        },
+        "stop": {
+          "description": "De media die wordt afgespeeld stoppen"
+        },
+        "echo": {
+          "description": "Een bericht naar het Zaparoo-logboek schrijven"
+        },
+        "control": {
+          "description": "De media die wordt afgespeeld bedienen, zoals pauzeren of opslaan"
+        },
+        "screenshot": {
+          "description": "Een schermafbeelding maken"
+        },
+        "mister_ini": {
+          "description": "Overschakelen naar een ander MiSTer INI-bestand"
+        },
+        "mister_core": {
+          "description": "Een MiSTer-core starten"
+        },
+        "mister_script": {
+          "description": "Een script uit de MiSTer Scripts-map uitvoeren"
+        },
+        "mister_mgl": {
+          "description": "Starten met MiSTer MGL-inhoud"
+        },
+        "mister_wallpaper": {
+          "description": "De achtergrond van het MiSTer-menu instellen of wissen"
+        },
+        "http_get": {
+          "description": "Een webadres op de achtergrond openen"
+        },
+        "http_post": {
+          "description": "Gegevens naar een webadres sturen"
+        },
+        "input_keyboard": {
+          "description": "Toetsenbordtoetsen indrukken"
+        },
+        "input_gamepad": {
+          "description": "Gamepadknoppen indrukken"
+        },
+        "input_text": {
+          "description": "Tekst typen op het toetsenbord"
+        },
+        "input_coinp1": {
+          "description": "Munten inwerpen voor speler 1"
+        },
+        "input_coinp2": {
+          "description": "Munten inwerpen voor speler 2"
+        },
+        "input_coinp3": {
+          "description": "Munten inwerpen voor speler 3"
+        },
+        "input_coinp4": {
+          "description": "Munten inwerpen voor speler 4"
+        },
+        "ui_notice": {
+          "description": "Een melding op het scherm tonen"
+        },
+        "ui_picker": {
+          "description": "Een keuzelijst op het scherm tonen"
+        },
+        "traits": {
+          "description": "Extra gegevens aan dit script toevoegen"
+        },
+        "profile": {
+          "description": "Overschakelen naar een profiel"
+        },
+        "profile_clear": {
+          "description": "Het actieve profiel uitschakelen"
+        },
+        "playtime_extend": {
+          "description": "Extra speeltijd geven"
+        }
+      },
+      "args": {
+        "system": "Systeem",
+        "media": "Media",
+        "search": "Zoektekst",
+        "title": "Titel",
+        "historyOffset": "Hoeveel terug",
+        "playlist": "Afspeellijst",
+        "position": "Itemnummer",
+        "command": "Opdracht",
+        "duration": "Wachttijd",
+        "text": "Tekst",
+        "controlAction": "Actie",
+        "iniNumber": "INI-nummer",
+        "corePath": "Core-pad",
+        "script": "Script",
+        "mgl": "MGL-inhoud",
+        "wallpaper": "Achtergrondbestand",
+        "url": "Webadres",
+        "contentType": "Inhoudstype",
+        "body": "Te verzenden gegevens",
+        "keys": "Toetsen",
+        "buttons": "Knoppen",
+        "coins": "Munten",
+        "profileId": "Profielwissel-ID",
+        "extraTime": "Extra tijd",
+        "keyCode": "Toetscode"
+      },
+      "advArgs": {
+        "when": "Alleen uitvoeren wanneer",
+        "launcher": "Launcher",
+        "system": "Systeem",
+        "action": "Actie",
+        "name": "Naam",
+        "pre_notice": "Melding vóór het starten",
+        "slot": "Mediaslot",
+        "tags": "Tags",
+        "set_name": "Setnaam",
+        "set_name_same_dir": "Gamemap behouden bij de setnaam",
+        "mode": "Afspeelvolgorde",
+        "repeat": "Herhalen",
+        "speed": "Tijd tussen toetsaanslagen",
+        "hidden": "Verborgen uitvoeren",
+        "profile": "Autoriserend profiel"
+      }
+    },
+    "zapLayout": {
+      "customise": "Aanpassen",
+      "title": "Zap-pagina aanpassen",
+      "resetDefault": "Standaardinstellingen herstellen",
+      "cancel": "Annuleren",
+      "done": "Klaar",
+      "reorder": "{{name}} verplaatsen",
+      "reorderRole": "verplaatsbare widget",
+      "dragInstructions": "Druk op Spatie om een widget op te pakken, verplaats hem met de pijltoetsen en druk op Spatie om hem neer te zetten. Druk op Escape om te annuleren.",
+      "dragStart": "{{name}} opgepakt.",
+      "dragOver": "{{name}} staat boven {{place}}.",
+      "dragEnd": "{{name}} neergezet in {{place}}.",
+      "dragCancel": "Verplaatsen van {{name}} gestopt.",
+      "moveUp": "{{name}} omhoog",
+      "moveDown": "{{name}} omlaag",
+      "hideWidget": "{{name}} verbergen",
+      "showWidget": "{{name}} tonen",
+      "show": "Tonen",
+      "dropHere": "Zet widgets hier neer",
+      "hiddenEmpty": "Verborgen widgets verschijnen hier.",
+      "stackNote": "Op smalle schermen worden de kolommen in deze volgorde onder elkaar getoond.",
+      "unavailable": "Momenteel niet beschikbaar op dit apparaat.",
+      "emptyNow": "Verschijnt zodra er iets te tonen is.",
+      "widgets": {
+        "nowPlaying": "Nu aan het spelen",
+        "scan": "Tag of code scannen",
+        "controls": "Bediening",
+        "readers": "Lezers",
+        "favourites": "Favorieten",
+        "recents": "Onlangs gespeeld"
+      },
+      "places": {
+        "main": "Hoofdkolom",
+        "side": "Zijkolom",
+        "bottom": "Volledige breedte",
+        "hidden": "Verborgen"
+      },
+      "addButton": "Toevoegen",
+      "addButtonTitle": "Knop toevoegen",
+      "editButtonTitle": "Knop bewerken",
+      "buttonUnnamed": "Knop",
+      "buttonLabel": "Label",
+      "buttonIcon": "Pictogram",
+      "iconNone": "Geen",
+      "buttonStyle": "Stijl",
+      "buttonScript": "ZapScript",
+      "askFirst": "Vragen voor het uitvoeren",
+      "deleteButton": "Knop verwijderen",
+      "moveEarlier": "{{name}} eerder zetten",
+      "moveLater": "{{name}} later zetten",
+      "editButton": "{{name}} bewerken",
+      "confirmRunTitle": "{{name}} uitvoeren?",
+      "confirmRun": "Uitvoeren",
+      "copyFrom": "Kopiëren van ander apparaat",
+      "icons": {
+        "play": "Afspelen",
+        "pause": "Pauze",
+        "stop": "Stoppen",
+        "next": "Volgende",
+        "volume": "Volume",
+        "mute": "Dempen",
+        "gamepad": "Gamepad",
+        "tv": "TV",
+        "save": "Opslaan",
+        "folder": "Map",
+        "power": "Aan/uit",
+        "refresh": "Vernieuwen",
+        "home": "Start",
+        "star": "Ster",
+        "music": "Muziek",
+        "zap": "Bliksem"
+      },
+      "styles": {
+        "primary": "Blauw",
+        "secondary": "Gewoon",
+        "destructive": "Rood"
+      },
+      "buttonSize": "Grootte",
+      "moreOptions": "Meer opties",
+      "sizes": {
+        "small": "Klein",
+        "medium": "Middel",
+        "large": "Groot"
+      },
+      "addChooserTitle": "Toevoegen aan Zap-pagina",
+      "addKindButton": "Knop",
+      "addKindButtonHint": "Voert een ZapScript uit als je erop drukt.",
+      "addKindCollection": "Collectie",
+      "addKindCollectionHint": "Een rij covers uit een collectie of een deck.",
+      "addCollectionTitle": "Collectie toevoegen",
+      "editCollectionTitle": "Collectie bewerken",
+      "collectionSource": "Tonen",
+      "collectionGroup": "Collecties",
+      "deckGroup": "Decks",
+      "deckMissing": "Deck niet gevonden",
+      "collectionTitle": "Titel",
+      "deleteCollection": "Collectie verwijderen",
+      "editCollection": "{{name}} bewerken",
+      "moved": "{{name}} verplaatst naar {{place}}, positie {{position}} van {{count}}."
     }
   }
 }

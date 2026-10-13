@@ -1,10 +1,11 @@
 import { useTranslation } from "react-i18next";
-import { Trash2 } from "lucide-react";
+import { Trash2Icon } from "lucide-react";
 import { RecentSearch } from "@/hooks/useRecentSearches";
 import { SearchIcon } from "@/lib/images";
 import { EmptyState } from "@/components/wui/EmptyState";
+import { formatAppDateTime } from "@/lib/formatDate";
+import { HistoryListRow } from "./HistoryListRow";
 import { SlideModal } from "./SlideModal";
-import { Card } from "./wui/Card";
 import { Button } from "./wui/Button";
 
 interface RecentSearchesModalProps {
@@ -31,63 +32,56 @@ export function RecentSearchesModal({
     onClose();
   };
 
-  const handleClearHistory = () => {
-    onClearHistory();
-    onClose();
-  };
-
   return (
     <SlideModal
       isOpen={isOpen}
       close={onClose}
       title={t("create.search.recentSearches")}
-      footer={
-        recentSearches.length > 0 ? (
-          <Button
-            label={t("create.search.clearHistory")}
-            icon={<Trash2 size="20" />}
-            variant="outline"
-            onClick={handleClearHistory}
-            className="w-full"
-          />
-        ) : undefined
-      }
     >
-      <div className="flex flex-col gap-3 pt-2">
-        {recentSearches.length === 0 ? (
-          <EmptyState
-            title={t("create.search.noRecentSearches")}
-            description={t("create.search.noRecentSearchesHint")}
-          />
-        ) : (
-          <div className="flex flex-col gap-2">
-            {recentSearches.map((search, index) => (
-              <Card
-                key={index}
-                className="cursor-pointer"
-                onClick={() => handleSearchSelect(search)}
-              >
-                <div className="flex flex-row items-center gap-3">
-                  <span
-                    aria-hidden="true"
-                    className="bg-button-pattern border-bd-filled text-primary-foreground flex h-10 w-10 min-w-10 items-center justify-center rounded-full border border-solid px-1.5"
-                  >
-                    <SearchIcon size="20" />
-                  </span>
-                  <div className="flex grow flex-col">
-                    <span className="text-sm font-semibold">
-                      {getSearchDisplayText(search)}
-                    </span>
-                    <span className="text-muted-foreground text-xs">
-                      {new Date(search.timestamp).toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-              </Card>
-            ))}
+      {recentSearches.length === 0 ? (
+        <EmptyState
+          title={t("create.search.noRecentSearches")}
+          description={t("create.search.noRecentSearchesHint")}
+        />
+      ) : (
+        <>
+          <ul>
+            {recentSearches.map((search, index) => {
+              const displayText = getSearchDisplayText(search);
+
+              return (
+                <HistoryListRow
+                  key={`${search.timestamp}:${index}`}
+                  title={<span className="break-words">{displayText}</span>}
+                  meta={formatAppDateTime(search.timestamp) ?? ""}
+                  action={
+                    <Button
+                      icon={<SearchIcon size="20" />}
+                      variant="ghost"
+                      size="sm"
+                      aria-label={t("create.search.searchAgain", {
+                        query: displayText,
+                      })}
+                      onClick={() => handleSearchSelect(search)}
+                    />
+                  }
+                />
+              );
+            })}
+          </ul>
+          <div className="pt-2">
+            <Button
+              label={t("create.search.clearHistory")}
+              icon={<Trash2Icon size="20" />}
+              variant="text"
+              size="sm"
+              intent="destructive"
+              className="w-full"
+              onClick={onClearHistory}
+            />
           </div>
-        )}
-      </div>
+        </>
+      )}
     </SlideModal>
   );
 }

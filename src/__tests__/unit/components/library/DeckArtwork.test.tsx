@@ -128,7 +128,6 @@ describe("DeckArtwork", () => {
           canRemove={false}
           onRemove={vi.fn()}
           writeAvailable={false}
-          onWrite={vi.fn()}
         />
       </>,
     );
@@ -163,7 +162,6 @@ describe("DeckArtwork", () => {
         canRemove={false}
         onRemove={vi.fn()}
         writeAvailable={false}
-        onWrite={vi.fn()}
       />,
     );
     expect(lookup).not.toHaveBeenCalled();

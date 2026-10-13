@@ -1,37 +1,46 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { useState } from "react";
 import { Browser } from "@capacitor/browser";
 import { useTranslation } from "react-i18next";
-import { Capacitor } from "@capacitor/core";
-import { Check } from "lucide-react";
+import {
+  PersonStandingIcon,
+  CheckIcon,
+  CloudIcon,
+  DatabaseIcon,
+  HelpCircleIcon,
+  InfoIcon,
+  PencilIcon,
+  LanguagesIcon,
+  RadioIcon,
+  SlidersHorizontalIcon,
+  WrenchIcon,
+} from "lucide-react";
 import {
   PurchaseSupportActions,
   useProPurchase,
 } from "@/components/ProPurchase.tsx";
-import { NetworkScanModal } from "@/components/NetworkScanModal";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
-import { useSelectDevice } from "@/hooks/useSelectDevice";
-import type { ScanDeviceSelection } from "@/hooks/useSelectDevice";
 import { PageFrame } from "@/components/PageFrame";
+import { useAppUi } from "@/hooks/useAppUi";
 import { useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { Button } from "@/components/wui/Button";
-import { ExternalIcon, NextIcon } from "@/lib/images";
-import {
-  activeAddressOf,
-  useDeviceRegistry,
-} from "@/lib/devices/deviceRegistry";
+import { ExternalIcon } from "@/lib/images";
 import { MediaDatabaseCard } from "@/components/MediaDatabaseCard";
-import { DeviceConnectionCard } from "@/components/DeviceConnectionCard";
+import { DeviceConnectionSummary } from "@/components/DeviceConnectionSummary";
 import { CoreOutdatedNotice } from "@/components/CoreOutdatedNotice";
 import { GatedFeature } from "@/components/GatedFeature";
 import { InboxButton } from "@/components/InboxButton";
-import { isCoreFeatureAvailable } from "@/lib/featureGates";
+import { useKnownCoreFeature } from "@/hooks/useKnownCoreFeature";
 import {
+  getDisplayedWarpAccess,
   getPurchasePreviewState,
   usePurchasePreviewStore,
 } from "@/lib/purchasePreviewStore";
 import { useHapticPress } from "@/hooks/useHapticPress";
+import { useFullSidebar } from "@/hooks/useNavigationMode";
+import { Card } from "@/components/wui/Card";
+import { LibraryLinkButton } from "@/components/library/LibraryLinkButton";
+import { getReleaseDisplayVersion } from "@/lib/whatsNew";
 
 export const Route = createFileRoute("/settings/")({
   component: Settings,
@@ -48,7 +57,6 @@ export function Settings() {
   const { purchaseModal, setProPurchaseModalOpen, proAccess } =
     useProPurchase();
 
-  const connectionError = useStatusStore((state) => state.connectionError);
   const loggedInUser = useStatusStore((state) => state.loggedInUser);
   const onlinePremiumAccess = usePreferencesStore(
     (state) => state.onlinePremiumAccess,
@@ -58,69 +66,162 @@ export function Settings() {
   );
   const purchasePreview = getPurchasePreviewState(configuredPurchasePreview);
   const purchasePreviewEnabled = purchasePreview !== "live";
-  const displayedOnlinePremiumAccess = purchasePreviewEnabled
-    ? purchasePreview === "warp"
-      ? true
-      : purchasePreview === "free" ||
-          purchasePreview === "checkout" ||
-          purchasePreview === "pro"
-        ? false
-        : null
-    : onlinePremiumAccess;
+  const displayedOnlinePremiumAccess = getDisplayedWarpAccess(
+    purchasePreview,
+    onlinePremiumAccess,
+  );
   const displayedProAccess = purchasePreviewEnabled
     ? purchasePreview === "pro"
     : proAccess;
-  const showNativePurchaseUI =
-    Capacitor.isNativePlatform() || purchasePreviewEnabled;
-  const coreVersion = useStatusStore((state) => state.coreVersion);
-  const coreVersionPending = useStatusStore(
-    (state) => state.coreVersionPending,
+  const appUi = useAppUi();
+  const showNativePurchaseUI = appUi.enabled || purchasePreviewEnabled;
+  const { available: showMediaScraper } = useKnownCoreFeature("mediaScrapers");
+  // The sidebar already lists every settings page from this width, so the
+  // landing page shows status panels instead of repeating those links.
+  const sidebar = useFullSidebar();
+  const onlineStatus =
+    loggedInUser === null && !purchasePreviewEnabled
+      ? t("online.settingsStatusSignedOut")
+      : displayedOnlinePremiumAccess === true
+        ? t("online.settingsStatusWarpActive")
+        : t("online.settingsStatusSignedIn");
+  const navigationGroups = [
+    {
+      id: "app",
+      label: t("settings.groups.app"),
+      destinations: [
+        {
+          to: "/settings/language-region",
+          label: t("settings.languageRegion.title"),
+          icon: LanguagesIcon,
+        },
+        {
+          to: "/settings/accessibility",
+          label: t("settings.accessibility.title"),
+          icon: PersonStandingIcon,
+        },
+        {
+          to: "/",
+          search: { customise: true },
+          label: t("zapLayout.title"),
+          icon: PencilIcon,
+          full: true,
+        },
+        {
+          to: "/settings/online",
+          label: t("online.title"),
+          icon: CloudIcon,
+          status: onlineStatus,
+        },
+      ],
+    },
+    {
+      id: "device",
+      label: t("settings.groups.device"),
+      destinations: [
+        ...(showMediaScraper
+          ? [
+              {
+                to: "/settings/media" as const,
+                label: t("settings.media.title"),
+                icon: DatabaseIcon,
+              },
+            ]
+          : []),
+        {
+          to: "/settings/readers",
+          label: t("settings.readers.title"),
+          icon: RadioIcon,
+        },
+        {
+          to: "/settings/play-controls",
+          label: t("settings.playControls.title"),
+          icon: SlidersHorizontalIcon,
+        },
+        {
+          to: "/settings/advanced",
+          label: t("settings.advanced.title"),
+          icon: WrenchIcon,
+        },
+      ],
+    },
+    {
+      id: "support",
+      label: t("settings.groups.support"),
+      destinations: [
+        {
+          to: "/settings/help",
+          label: t("settings.help.title"),
+          icon: HelpCircleIcon,
+        },
+        {
+          to: "/settings/about",
+          label: t("settings.about.title"),
+          icon: InfoIcon,
+        },
+      ],
+    },
+  ] as const;
+
+  const appActions = (
+    <>
+      {!appUi.enabled && (
+        <div>
+          <Button
+            label={t("settings.getApp")}
+            variant="secondary"
+            className="w-full"
+            icon={<ExternalIcon size="20" />}
+            onClick={() => Browser.open({ url: "https://zaparoo.app" })}
+          />
+        </div>
+      )}
+
+      {showNativePurchaseUI &&
+        displayedOnlinePremiumAccess === false &&
+        (displayedProAccess ? (
+          <p
+            role="status"
+            className="text-success flex min-h-12 items-center gap-2 text-sm font-medium"
+          >
+            <CheckIcon size={20} aria-hidden="true" />
+            {t("settings.app.proActive")}
+          </p>
+        ) : (
+          <Button
+            label={t("scan.purchaseProAction")}
+            intent="pro"
+            className="w-full"
+            onClick={
+              purchasePreviewEnabled
+                ? () => undefined
+                : () => setProPurchaseModalOpen(true)
+            }
+          />
+        ))}
+
+      {appUi.enabled &&
+        !displayedProAccess &&
+        displayedOnlinePremiumAccess !== true && (
+          <PurchaseSupportActions variant="restoreOnly" />
+        )}
+    </>
   );
-  const showMediaScraper =
-    coreVersion !== null &&
-    !coreVersionPending &&
-    isCoreFeatureAvailable("mediaScrapers", coreVersion);
-  const activeAddress = useDeviceRegistry(activeAddressOf);
-  const [address, setAddress] = useState(activeAddress);
-  const [trackedAddress, setTrackedAddress] = useState(activeAddress);
-  const [addressError, setAddressError] = useState("");
-  const [scanOpen, setScanOpen] = useState(false);
-
-  // The field is a draft the user can edit, so it can't just mirror the store.
-  // Re-seed it whenever the active device actually changes — registry hydration
-  // is async, and picking a device from the scan list resolves asynchronously
-  // too, so the address arrives after the first render either way.
-  if (activeAddress !== trackedAddress) {
-    setTrackedAddress(activeAddress);
-    setAddress(activeAddress);
-    setAddressError("");
-  }
-
-  const { selectDevice, selectScanDevice } = useSelectDevice();
-
-  const handleAddressInputChange = (newAddress: string) => {
-    setAddress(newAddress);
-    if (addressError) setAddressError("");
-  };
-
-  const handleDeviceAddressChange = (newAddress: string) => {
-    const result = selectDevice(newAddress);
-    if (!result.ok) {
-      setAddressError(t(result.errorKey));
-      return;
-    }
-
-    setAddress(result.address);
-    setAddressError("");
-  };
-
-  const handleScanDeviceSelect = (device: ScanDeviceSelection) => {
-    void selectScanDevice(device);
-  };
+  const mediaDatabase = (
+    <MediaDatabaseCard
+      onViewScrapeDetails={() =>
+        void router.navigate({ to: "/settings/media" })
+      }
+    />
+  );
+  const panelHeading = "text-foreground text-lg font-semibold";
 
   return (
     <>
       <PageFrame
+        layout="workspace"
+        headerMode="content-wide"
+        className="settings-overview-page wrap-anywhere"
         headerCenter={
           <h1 ref={headingRef} className="text-foreground text-xl">
             {t("settings.title")}
@@ -132,195 +233,125 @@ export function Settings() {
           </GatedFeature>
         }
       >
-        <div className="flex flex-col gap-5">
-          <div data-tour="device-address">
-            <DeviceConnectionCard
-              address={address}
-              setAddress={handleAddressInputChange}
-              onAddressChange={handleDeviceAddressChange}
-              connectionError={connectionError}
-              addressError={addressError}
-              onScanClick={() => setScanOpen(true)}
-            />
-          </div>
-
-          <CoreOutdatedNotice />
-
-          {/* Network Scan Modal */}
-          <NetworkScanModal
-            isOpen={scanOpen}
-            onClose={() => setScanOpen(false)}
-            onSelectDevice={handleScanDeviceSelect}
-          />
-
-          <MediaDatabaseCard
-            onViewScrapeDetails={() =>
-              void router.navigate({ to: "/settings/media" })
-            }
-          />
-
-          {!Capacitor.isNativePlatform() && (
-            <div>
-              <Button
-                label={t("settings.getApp")}
-                className="w-full"
-                icon={<ExternalIcon size="20" />}
-                onClick={() => Browser.open({ url: "https://zaparoo.app" })}
-              />
-            </div>
-          )}
-
-          {showNativePurchaseUI && displayedOnlinePremiumAccess === false && (
-            <div className="flex flex-col gap-5">
-              {displayedProAccess ? (
-                <Button
-                  label={t("settings.app.proActive")}
-                  icon={<Check size={20} />}
-                  disabled
-                />
-              ) : (
-                <Button
-                  label={t("scan.purchaseProAction")}
-                  onClick={
-                    purchasePreviewEnabled
-                      ? () => undefined
-                      : () => setProPurchaseModalOpen(true)
-                  }
-                />
+        {/* One tree at every width, so the cards keep their state on resize. */}
+        <div
+          className={sidebar ? "settings-overview-panels" : "settings-overview"}
+        >
+          <div className="settings-overview-context">
+            <div className="settings-overview-panel">
+              {sidebar && (
+                <h2 className={panelHeading}>{t("settings.groups.device")}</h2>
               )}
+              <div data-tour="device-address">
+                <DeviceConnectionSummary />
+              </div>
+              <CoreOutdatedNotice />
             </div>
-          )}
-
-          {Capacitor.isNativePlatform() &&
-            !displayedProAccess &&
-            displayedOnlinePremiumAccess !== true && (
-              <PurchaseSupportActions variant="restoreOnly" />
+            <div className="settings-overview-panel">
+              {sidebar && (
+                <h2 className={panelHeading}>
+                  {t("settings.media.databaseTitle")}
+                </h2>
+              )}
+              {mediaDatabase}
+            </div>
+            {sidebar ? (
+              <>
+                <section
+                  aria-labelledby="settings-online-panel-heading"
+                  className="settings-overview-panel"
+                >
+                  <h2
+                    id="settings-online-panel-heading"
+                    className={panelHeading}
+                  >
+                    {t("online.title")}
+                  </h2>
+                  <Card className="flex flex-col gap-3">
+                    <p className="text-sm font-medium">{onlineStatus}</p>
+                    <LibraryLinkButton
+                      to="/settings/online"
+                      label={t(
+                        loggedInUser === null
+                          ? "online.login"
+                          : "online.account",
+                      )}
+                      icon={<CloudIcon size={20} />}
+                      className="w-full"
+                    />
+                  </Card>
+                </section>
+                <section
+                  aria-labelledby="settings-app-panel-heading"
+                  className="settings-overview-panel"
+                >
+                  <h2 id="settings-app-panel-heading" className={panelHeading}>
+                    {t("settings.groups.app")}
+                  </h2>
+                  <Card className="flex flex-col gap-3">
+                    <p className="text-sm font-medium">
+                      {t("settings.about.version", {
+                        version: getReleaseDisplayVersion(
+                          import.meta.env.VITE_RELEASE_KEY,
+                          import.meta.env.VITE_VERSION,
+                        ),
+                      })}
+                    </p>
+                    {appActions}
+                  </Card>
+                </section>
+              </>
+            ) : (
+              appActions
             )}
-
-          <div className="flex flex-col gap-1">
-            <Link
-              to="/settings/online"
-              onPointerUp={handleHapticPress}
-              className="flex min-h-[48px] flex-row items-center justify-between"
-            >
-              <span>{t("online.title")}</span>
-              <span className="flex items-center gap-2">
-                <span className="text-muted-foreground text-sm">
-                  {loggedInUser === null && !purchasePreviewEnabled
-                    ? t("online.settingsStatusSignedOut")
-                    : displayedOnlinePremiumAccess === true
-                      ? t("online.settingsStatusWarpActive")
-                      : displayedOnlinePremiumAccess === false
-                        ? t("online.settingsStatusFree")
-                        : t("online.settingsStatusSignedIn")}
-                </span>
-                <span aria-hidden="true">
-                  <NextIcon size="20" />
-                </span>
-              </span>
-            </Link>
-
-            <Link
-              to="/settings/language-region"
-              onPointerUp={handleHapticPress}
-              className="flex min-h-[48px] flex-row items-center justify-between"
-            >
-              <span>{t("settings.languageRegion.title")}</span>
-              <span aria-hidden="true">
-                <NextIcon size="20" />
-              </span>
-            </Link>
-
-            <nav
-              aria-labelledby="more-settings-heading"
-              className="flex flex-col gap-1"
-            >
-              <h2 id="more-settings-heading" className="sr-only">
-                {t("settings.moreSettings")}
-              </h2>
-
-              {showMediaScraper && (
-                <Link
-                  to="/settings/media"
-                  onPointerUp={handleHapticPress}
-                  className="flex min-h-[48px] flex-row items-center justify-between"
-                >
-                  <span>{t("settings.media.title")}</span>
-                  <span aria-hidden="true">
-                    <NextIcon size="20" />
-                  </span>
-                </Link>
-              )}
-
-              <Link
-                to="/settings/play-controls"
-                onPointerUp={handleHapticPress}
-                className="flex min-h-[48px] flex-row items-center justify-between"
-              >
-                <p>{t("settings.playControls.title")}</p>
-                <span aria-hidden="true">
-                  <NextIcon size="20" />
-                </span>
-              </Link>
-
-              <Link
-                to="/settings/readers"
-                onPointerUp={handleHapticPress}
-                className="flex min-h-[48px] flex-row items-center justify-between"
-              >
-                <p>{t("settings.readers.title")}</p>
-                <span aria-hidden="true">
-                  <NextIcon size="20" />
-                </span>
-              </Link>
-
-              {Capacitor.isNativePlatform() && (
-                <Link
-                  to="/settings/accessibility"
-                  onPointerUp={handleHapticPress}
-                  className="flex min-h-[48px] flex-row items-center justify-between"
-                >
-                  <p>{t("settings.accessibility.title")}</p>
-                  <span aria-hidden="true">
-                    <NextIcon size="20" />
-                  </span>
-                </Link>
-              )}
-
-              <Link
-                to="/settings/advanced"
-                onPointerUp={handleHapticPress}
-                className="flex min-h-[48px] flex-row items-center justify-between"
-              >
-                <p>{t("settings.advanced.title")}</p>
-                <span aria-hidden="true">
-                  <NextIcon size="20" />
-                </span>
-              </Link>
-
-              <Link
-                to="/settings/help"
-                onPointerUp={handleHapticPress}
-                className="flex min-h-[48px] flex-row items-center justify-between"
-              >
-                <p>{t("settings.help.title")}</p>
-                <span aria-hidden="true">
-                  <NextIcon size="20" />
-                </span>
-              </Link>
-
-              <Link
-                to="/settings/about"
-                onPointerUp={handleHapticPress}
-                className="flex min-h-[48px] flex-row items-center justify-between"
-              >
-                <p>{t("settings.about.title")}</p>
-                <span aria-hidden="true">
-                  <NextIcon size="20" />
-                </span>
-              </Link>
-            </nav>
           </div>
+          {!sidebar && (
+            <div className="settings-overview-destinations">
+              {navigationGroups.map((group) => (
+                <nav
+                  key={group.id}
+                  aria-labelledby={`settings-${group.id}-heading`}
+                  className="flex flex-col gap-2"
+                >
+                  <h2
+                    id={`settings-${group.id}-heading`}
+                    className="text-foreground text-lg font-semibold"
+                  >
+                    {group.label}
+                  </h2>
+                  <div className="settings-navigation-grid">
+                    {group.destinations.map((destination) => (
+                      <Link
+                        key={destination.label}
+                        to={destination.to}
+                        search={
+                          "search" in destination
+                            ? destination.search
+                            : undefined
+                        }
+                        onPointerUp={handleHapticPress}
+                        className={`site-button site-button-outline flex min-h-14 min-w-0 touch-manipulation items-center gap-2 px-3 py-2 text-left text-sm tracking-normal ${"status" in destination ? "col-span-full flex-wrap" : "full" in destination ? "col-span-full" : ""}`}
+                      >
+                        <destination.icon
+                          size={20}
+                          className="text-muted-foreground shrink-0"
+                          aria-hidden="true"
+                        />
+                        <span className="min-w-0 grow">
+                          {destination.label}
+                        </span>
+                        {"status" in destination && (
+                          <span className="text-muted-foreground ml-auto min-w-0 text-right text-sm font-normal normal-case">
+                            {destination.status}
+                          </span>
+                        )}
+                      </Link>
+                    ))}
+                  </div>
+                </nav>
+              ))}
+            </div>
+          )}
         </div>
       </PageFrame>
 

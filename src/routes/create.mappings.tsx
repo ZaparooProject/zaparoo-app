@@ -3,7 +3,7 @@ import {
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PlusIcon, RefreshCwIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -16,10 +16,14 @@ import { useStatusStore } from "@/lib/store.ts";
 import { logger } from "@/lib/logger";
 import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
+import { InlineLoading } from "@/components/InlineLoading";
+import { DelayedLoading } from "@/components/DelayedLoading";
+import { BackToTop } from "@/components/BackToTop";
 import { PageFrame } from "@/components/PageFrame";
 import { MappingRow } from "@/components/MappingRow";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 
 export const Route = createFileRoute("/create/mappings")({
@@ -38,13 +42,19 @@ export function Mappings() {
     void router.navigate(appBackNavigationOptions("/create"));
   const [search, setSearch] = useState("");
   const [reloading, setReloading] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { available: readOnlyMappingsAvailable } = useCoreFeature(
     "readOnlyMappings",
     { requireKnownSupport: true },
   );
 
+  const deviceKey = useActiveDeviceKey();
   const mappings = useQuery({
-    queryKey: ["mappings", { includeReadOnly: readOnlyMappingsAvailable }],
+    queryKey: [
+      "mappings",
+      deviceKey,
+      { includeReadOnly: readOnlyMappingsAvailable },
+    ],
     queryFn: () =>
       readOnlyMappingsAvailable
         ? CoreAPI.mappings({ includeReadOnly: true })
@@ -102,10 +112,14 @@ export function Mappings() {
   };
 
   const isInitialLoading = mappings.isLoading && !mappings.data;
-  const isEmpty = !isInitialLoading && sortedMappings.length === 0;
+  const isEmpty =
+    !isInitialLoading && !mappings.isError && sortedMappings.length === 0;
 
   return (
     <PageFrame
+      layout="workspace"
+      headerMode="content-wide"
+      breadcrumbs={[{ to: "/create", label: t("create.title") }]}
       onSwipeBack={goBack}
       headerLeft={
         <HeaderButton
@@ -127,9 +141,25 @@ export function Mappings() {
           disabled={!connected || reloading}
         />
       }
+      scrollRef={scrollContainerRef}
     >
       <div className="flex flex-col gap-3">
-        {isInitialLoading ? null : isEmpty ? (
+        {isInitialLoading ? (
+          <DelayedLoading>
+            <InlineLoading />
+          </DelayedLoading>
+        ) : mappings.isError ? (
+          <EmptyState
+            title={t("create.mappings.list.loadFailed")}
+            action={
+              <Button
+                label={t("create.mappings.list.retry")}
+                variant="outline"
+                onClick={() => void mappings.refetch()}
+              />
+            }
+          />
+        ) : isEmpty ? (
           <EmptyState
             title={t("create.mappings.list.empty")}
             description={t("create.mappings.list.emptyDescription")}
@@ -144,23 +174,24 @@ export function Mappings() {
           />
         ) : (
           <>
-            {sortedMappings.length > 0 && (
+            <div className="mapping-list-toolbar">
               <TextInput
                 value={search}
                 setValue={setSearch}
+                aria-label={t("create.mappings.list.searchPlaceholder")}
                 placeholder={t("create.mappings.list.searchPlaceholder")}
                 clearable
                 inputMode="search"
                 type="search"
               />
-            )}
-            <Button
-              icon={<PlusIcon size={20} />}
-              label={t("create.mappings.list.newMapping")}
-              intent="primary"
-              onClick={goToNew}
-              className="w-full"
-            />
+              <Button
+                icon={<PlusIcon size={20} />}
+                label={t("create.mappings.list.newMapping")}
+                intent="primary"
+                onClick={goToNew}
+                className="w-full max-w-none"
+              />
+            </div>
             {filteredMappings.length === 0 ? (
               <EmptyState
                 size="compact"
@@ -186,6 +217,7 @@ export function Mappings() {
           </>
         )}
       </div>
+      <BackToTop scrollContainerRef={scrollContainerRef} threshold={200} />
     </PageFrame>
   );
 }

@@ -1,15 +1,15 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CameraIcon, NfcIcon, SaveIcon, Trash2Icon } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
 import { BarcodeScanner } from "@capacitor-mlkit/barcode-scanning";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { TextInput } from "@/components/wui/TextInput.tsx";
 import { ZapScriptInput } from "@/components/ZapScriptInput.tsx";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch.tsx";
-import { Segmented } from "@/components/wui/Segmented.tsx";
-import { BackIcon } from "@/lib/images.tsx";
+import { RadioGroup } from "@/components/wui/RadioGroup.tsx";
+import { BackIcon, CameraIcon, NfcIcon } from "@/lib/images.tsx";
 import { HeaderButton } from "@/components/wui/HeaderButton.tsx";
 import { CoreAPI } from "@/lib/coreApi";
 import { useStatusStore } from "@/lib/store.ts";
@@ -20,17 +20,18 @@ import {
   BarcodePermissionDeniedError,
   BarcodeScanCancelledError,
 } from "@/lib/errors";
+import { ModalActionBar } from "@/components/wui/ModalActionBar";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { Button } from "@/components/wui/Button";
+import { EmptyState } from "@/components/wui/EmptyState";
+import { InlineLoading } from "@/components/InlineLoading";
+import { DelayedLoading } from "@/components/DelayedLoading";
 import { PageFrame } from "@/components/PageFrame";
 import { SlideModal } from "@/components/SlideModal";
-import {
-  isWriteModalOpen,
-  useNfcWriter,
-  WriteAction,
-  WriteMethod,
-} from "@/lib/writeNfcHook";
-import { usePreferencesStore } from "@/lib/preferencesStore";
-import { WriteModal } from "@/components/WriteModal";
+import { WriteAction } from "@/lib/writeNfcHook";
+import { useAppUi } from "@/hooks/useAppUi";
+import { useContextualNfcWrite } from "@/hooks/useContextualNfcWrite";
+import { ReaderActivityControl } from "@/components/ReaderActivityControl";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 
@@ -113,16 +114,11 @@ export function MappingEditor({ id }: MappingEditorProps) {
 
   const connected = useStatusStore((state) => state.connected);
   const queryClient = useQueryClient();
-  const preferRemoteWriter = usePreferencesStore(
-    (state) => state.preferRemoteWriter,
-  );
-  const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
-  const [writeIntent, setWriteIntent] = useState(false);
-  const writeOpen = isWriteModalOpen(writeIntent, nfcWriter);
-  const prevStatusRef = useRef(nfcWriter.status);
+  const appUi = useAppUi();
 
+  const deviceKey = useActiveDeviceKey();
   const mappings = useQuery({
-    queryKey: ["mappings"],
+    queryKey: ["mappings", deviceKey],
     queryFn: () => CoreAPI.mappings(),
   });
 
@@ -143,6 +139,8 @@ export function MappingEditor({ id }: MappingEditorProps) {
   const [saving, setSaving] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  // Tag capture only fills an ID pattern, so leaving the ID type ends it.
+  const capture = useContextualNfcWrite("mapping-capture", type === "uid");
 
   useEffect(() => {
     if (!isEditing || hydrated) return;
@@ -155,7 +153,11 @@ export function MappingEditor({ id }: MappingEditorProps) {
       setOverride(existing.override);
       setEnabled(existing.enabled);
       setHydrated(true);
-    } else if (mappings.isFetched && !mappings.isFetching) {
+    } else if (
+      !mappings.isError &&
+      mappings.isFetched &&
+      !mappings.isFetching
+    ) {
       toast.error(t("create.mappings.editor.notFound"));
       navigate({ to: "/create/mappings", replace: true });
     }
@@ -163,38 +165,21 @@ export function MappingEditor({ id }: MappingEditorProps) {
     isEditing,
     hydrated,
     existing,
+    mappings.isError,
     mappings.isFetched,
     mappings.isFetching,
     navigate,
     t,
   ]);
 
+  const capturedUid = capture.result?.info.tag?.uid;
   useEffect(() => {
-    const justCompleted =
-      prevStatusRef.current === null && nfcWriter.status !== null;
-    prevStatusRef.current = nfcWriter.status;
-    if (justCompleted && nfcWriter.result?.info.tag?.uid) {
-      setPattern(nfcWriter.result.info.tag.uid);
-    }
-  }, [nfcWriter.result, nfcWriter.status]);
-
-  const closeWriteModal = async () => {
-    setWriteIntent(false);
-    await nfcWriter.end();
-  };
-
-  const startNfcScan = () => {
-    nfcWriter.write(WriteAction.Read).catch((e) => {
-      logger.error("NFC read failed:", e, {
-        category: "nfc",
-        action: "mappingNfcScan",
-        severity: "error",
-      });
-    });
-    setWriteIntent(true);
-  };
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Fill the pattern once from the external tag read.
+    if (capturedUid) setPattern(capturedUid);
+  }, [capture.result, capturedUid]);
 
   const startBarcodeScan = () => {
+    if (!Capacitor.isNativePlatform()) return;
     BarcodeScanner.scan()
       .then((res) => {
         if (res.barcodes.length < 1) return;
@@ -290,6 +275,11 @@ export function MappingEditor({ id }: MappingEditorProps) {
   return (
     <>
       <PageFrame
+        headerMode="content-wide"
+        breadcrumbs={[
+          { to: "/create", label: t("create.title") },
+          { to: "/create/mappings", label: t("create.mappings.title") },
+        ]}
         onSwipeBack={goBack}
         headerLeft={
           <HeaderButton
@@ -304,7 +294,22 @@ export function MappingEditor({ id }: MappingEditorProps) {
           </h1>
         }
       >
-        {isEditing && !hydrated ? null : (
+        {isEditing && mappings.isError ? (
+          <EmptyState
+            title={t("create.mappings.list.loadFailed")}
+            action={
+              <Button
+                label={t("create.mappings.list.retry")}
+                variant="outline"
+                onClick={() => void mappings.refetch()}
+              />
+            }
+          />
+        ) : isEditing && !hydrated ? (
+          <DelayedLoading>
+            <InlineLoading />
+          </DelayedLoading>
+        ) : (
           <div className="flex flex-col gap-4">
             <TextInput
               label={t("create.mappings.editor.label")}
@@ -314,7 +319,7 @@ export function MappingEditor({ id }: MappingEditorProps) {
               maxLength={255}
             />
 
-            <Segmented
+            <RadioGroup
               label={t("create.mappings.editor.type")}
               help={typeHelp ? t(typeHelp) : undefined}
               options={TYPE_OPTIONS.map((o) => ({
@@ -325,7 +330,7 @@ export function MappingEditor({ id }: MappingEditorProps) {
               onChange={setType}
             />
 
-            <Segmented
+            <RadioGroup
               label={t("create.mappings.editor.match")}
               help={matchHelp ? t(matchHelp) : undefined}
               options={MATCH_OPTIONS.map((o) => ({
@@ -347,26 +352,41 @@ export function MappingEditor({ id }: MappingEditorProps) {
                     : undefined
                 }
               />
-              {type === "uid" && (
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    className="w-full"
-                    icon={<NfcIcon size="20" />}
-                    onClick={startNfcScan}
-                    label={t("scan.nfcMode")}
-                  />
-                  <Button
-                    className="w-full"
-                    icon={<CameraIcon size="20" />}
-                    onClick={startBarcodeScan}
-                    label={t("scan.cameraMode")}
-                  />
+              {type === "uid" && (appUi.nfc || appUi.camera) && (
+                <div className="wui-action-grid">
+                  {appUi.nfc && (
+                    <ReaderActivityControl
+                      state={capture.state}
+                      idleLabel={t("scan.nfcMode")}
+                      activeLabel={capture.activeLabel}
+                      icon={<NfcIcon size="20" />}
+                      variant="outline"
+                      intent="default"
+                      buttonClassName="w-full"
+                      disabled={capture.externalWriteActive}
+                      onStart={() => void capture.start("", WriteAction.Read)}
+                      onCancel={capture.onCancel}
+                    />
+                  )}
+                  {appUi.camera && (
+                    <Button
+                      className="min-h-18 w-full max-w-none"
+                      variant="outline"
+                      icon={<CameraIcon size="20" />}
+                      onClick={startBarcodeScan}
+                      disabled={capture.active}
+                      label={t("scan.cameraMode")}
+                    />
+                  )}
                 </div>
               )}
             </div>
 
             <div className="flex flex-col">
-              <span id="mapping-override-label" className="mb-1 block">
+              <span
+                id="mapping-override-label"
+                className="mb-2 block text-sm font-medium"
+              >
                 {t("create.mappings.editor.override")}
               </span>
               <ZapScriptInput
@@ -387,10 +407,11 @@ export function MappingEditor({ id }: MappingEditorProps) {
             />
 
             <Button
-              icon={<SaveIcon size="20" />}
               label={t("create.mappings.editor.save")}
               disabled={!canSave}
+              disabledAppearance={saving ? "busy" : "unavailable"}
               intent="primary"
+              className="w-full"
               onClick={onSave}
             />
 
@@ -398,54 +419,48 @@ export function MappingEditor({ id }: MappingEditorProps) {
               <Button
                 variant="outline"
                 intent="destructive"
-                icon={<Trash2Icon size="20" />}
                 label={t("create.mappings.editor.delete")}
                 disabled={!connected || saving || deleting}
+                disabledAppearance={saving || deleting ? "busy" : "unavailable"}
                 onClick={() => setConfirmOpen(true)}
-                className="border-error text-error"
+                className="w-full"
               />
             )}
           </div>
         )}
       </PageFrame>
 
-      <WriteModal
-        isOpen={writeOpen}
-        close={closeWriteModal}
-        verifyError={nfcWriter.verifyError !== null}
-        retry={() => void nfcWriter.retry()}
-        retapRequired={nfcWriter.retapRequired}
-      />
-
       <SlideModal
         isOpen={confirmOpen}
         close={() => setConfirmOpen(false)}
         title={t("create.mappings.editor.deleteConfirmTitle")}
         footer={
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              label={t("create.mappings.editor.deleteCancel")}
-              onClick={() => setConfirmOpen(false)}
-              disabled={deleting}
-              className="flex-1"
-            />
-            <Button
-              variant="outline"
-              intent="destructive"
-              label={t("create.mappings.editor.deleteConfirmAction")}
-              onClick={onDelete}
-              disabled={deleting}
-              className="border-error text-error flex-1"
-            />
-          </div>
+          <ModalActionBar
+            secondaryAction={
+              <Button
+                variant="secondary"
+                label={t("create.mappings.editor.deleteCancel")}
+                onClick={() => setConfirmOpen(false)}
+                disabled={deleting}
+                disabledAppearance="busy"
+              />
+            }
+            primaryAction={
+              <Button
+                variant="outline"
+                intent="destructive"
+                label={t("create.mappings.editor.deleteConfirmAction")}
+                onClick={onDelete}
+                disabled={deleting}
+                disabledAppearance="busy"
+              />
+            }
+          />
         }
       >
-        <div className="py-4">
-          <p className="text-center">
-            {t("create.mappings.editor.deleteConfirmBody")}
-          </p>
-        </div>
+        <p className="py-4 text-center">
+          {t("create.mappings.editor.deleteConfirmBody")}
+        </p>
       </SlideModal>
     </>
   );

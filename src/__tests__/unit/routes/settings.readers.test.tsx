@@ -1,6 +1,15 @@
 import type { ComponentType } from "react";
+import { render as renderWithProviders } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "../../../test-utils";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+  createTestQueryClient,
+  createProvidersWithQueryClient,
+} from "../../../test-utils";
 import { mockReaderInfo } from "../../../test-utils/factories";
 
 // Mock router - use vi.hoisted to make variables accessible in mocks
@@ -17,6 +26,9 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = (await importOriginal()) as any;
   return {
     ...actual,
+    Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
+      <a href={to}>{children}</a>
+    ),
     createFileRoute: () => (options: any) => {
       componentRef.current = options.component;
       return { options };
@@ -158,6 +170,34 @@ describe("Settings Readers Route", () => {
     const ReadersSettings = getReadersSettings();
     return render(<ReadersSettings />);
   };
+
+  it("keeps reader rows in name order when a refresh returns a different API order", async () => {
+    const readers = [
+      mockReaderInfo({ id: "ten", info: "Reader 10" }),
+      mockReaderInfo({ id: "alpha", info: "Alpha" }),
+      mockReaderInfo({ id: "two", info: "Reader 2" }),
+    ];
+    mockReaders
+      .mockResolvedValueOnce({ readers })
+      .mockResolvedValue({ readers: [...readers].reverse() });
+    const queryClient = createTestQueryClient();
+    const ReadersSettings = getReadersSettings();
+    renderWithProviders(<ReadersSettings />, {
+      wrapper: createProvidersWithQueryClient(queryClient),
+    });
+    await screen.findByText("Alpha");
+    const visibleNames = () =>
+      screen
+        .getAllByText(/^(Alpha|Reader 2|Reader 10)$/)
+        .map((element) => element.textContent);
+    expect(visibleNames()).toEqual(["Alpha", "Reader 2", "Reader 10"]);
+    await act(async () => {
+      await queryClient.invalidateQueries({ queryKey: ["readers"] });
+    });
+    expect(mockReaders).toHaveBeenCalledTimes(2);
+    expect(visibleNames()).toEqual(["Alpha", "Reader 2", "Reader 10"]);
+    queryClient.clear();
+  });
 
   describe("rendering", () => {
     it("should render the page title", () => {
@@ -304,9 +344,7 @@ describe("Settings Readers Route", () => {
       renderComponent();
 
       expect(
-        screen.getByRole("button", {
-          name: "Help for settings.readers.scanMode",
-        }),
+        screen.getByRole("radiogroup", { name: "settings.readers.scanMode" }),
       ).toBeInTheDocument();
     });
 
@@ -374,10 +412,11 @@ describe("Settings Readers Route", () => {
       renderComponent();
 
       // Wait for buttons to be available
+      // The group stays mounted but unavailable until settings have loaded.
       await waitFor(() => {
         expect(
           screen.getByRole("radio", { name: /settings.insertMode/i }),
-        ).toBeInTheDocument();
+        ).toBeEnabled();
       });
 
       const holdButton = screen.getByRole("radio", {
@@ -399,20 +438,16 @@ describe("Settings Readers Route", () => {
       renderComponent();
 
       expect(
-        screen.getByRole("button", {
-          name: "Help for settings.readers.audioFeedback",
-        }),
-      ).toBeInTheDocument();
+        screen.getAllByText("settings.readers.audioFeedback").length,
+      ).toBeGreaterThan(0);
     });
 
     it("should render auto-detect readers toggle", () => {
       renderComponent();
 
       expect(
-        screen.getByRole("button", {
-          name: "Help for settings.readers.autoDetectReaders",
-        }),
-      ).toBeInTheDocument();
+        screen.getAllByText("settings.readers.autoDetectReaders").length,
+      ).toBeGreaterThan(0);
     });
   });
 
@@ -421,10 +456,8 @@ describe("Settings Readers Route", () => {
       renderComponent();
 
       expect(
-        screen.getByRole("button", {
-          name: "Help for settings.readers.continuousScan",
-        }),
-      ).toBeInTheDocument();
+        screen.getAllByText("settings.readers.continuousScan").length,
+      ).toBeGreaterThan(0);
     });
   });
 });

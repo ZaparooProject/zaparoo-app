@@ -7,7 +7,7 @@
  * - Search filtering (debounced)
  * - Tag selection/deselection with screen reader announcements
  * - Selection remains available during indexing
- * - Footer with selected count, clear all, and apply buttons
+ * - Compact footer with selected count in Apply, plus Clear all
  * - Accordion expand/collapse all
  */
 
@@ -126,7 +126,7 @@ describe("TagSelector", () => {
       render(<TagSelector {...defaultProps} />);
 
       // Assert
-      expect(screen.getByText("loading")).toBeInTheDocument();
+      expect(await screen.findByText("loading")).toBeInTheDocument();
     });
   });
 
@@ -142,6 +142,29 @@ describe("TagSelector", () => {
       await waitFor(() => {
         expect(screen.getByText("tagSelector.unavailable")).toBeInTheDocument();
       });
+    });
+
+    it("should retry loading tags from the error state", async () => {
+      // Arrange
+      const user = userEvent.setup();
+      vi.mocked(CoreAPI.mediaTags).mockRejectedValueOnce(
+        new Error("API Error"),
+      );
+      vi.mocked(CoreAPI.mediaTags).mockResolvedValueOnce({
+        tags: [{ type: "genre", tag: "action" }],
+      });
+
+      // Act
+      render(<TagSelector {...defaultProps} />);
+      await user.click(
+        await screen.findByRole("button", { name: "library.tryAgain" }),
+      );
+
+      // Assert
+      expect(
+        await screen.findByText(/tagSelector.type.genre/),
+      ).toBeInTheDocument();
+      expect(CoreAPI.mediaTags).toHaveBeenCalledTimes(2);
     });
 
     it("should render error state when tags response is malformed", async () => {
@@ -241,6 +264,29 @@ describe("TagSelector", () => {
       });
     });
 
+    it("should hide internal scraper bookkeeping tags", async () => {
+      vi.mocked(CoreAPI.mediaTags).mockResolvedValue({
+        tags: [
+          { tag: "Action", type: "genre" },
+          { tag: "scraped", type: "scraper.gamelist.xml" },
+          { tag: "run-1", type: "scraper-run.gamelist.xml" },
+        ],
+      });
+
+      render(<TagSelector {...defaultProps} />);
+
+      expect(
+        await screen.findByRole("button", {
+          name: /tagSelector\.type\.genre/i,
+        }),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("scraped")).not.toBeInTheDocument();
+      expect(screen.queryByText("run-1")).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /scraper/i }),
+      ).not.toBeInTheDocument();
+    });
+
     it("should sort multiple non-priority types alphabetically after priority ones", async () => {
       // Arrange - two non-priority types ("zone" > "arcade" alphabetically)
       vi.mocked(CoreAPI.mediaTags).mockResolvedValue({
@@ -335,6 +381,33 @@ describe("TagSelector", () => {
         // Non-matching tags should not be visible in the virtualized list
         // Since we're mocking useVirtualizer, it will show all items
       });
+    });
+
+    it("should virtualize search results against the modal's own scroller", async () => {
+      const { useVirtualizer } = await import("@tanstack/react-virtual");
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      vi.mocked(CoreAPI.mediaTags).mockResolvedValue({
+        tags: createMockTags(),
+      });
+
+      render(<TagSelector {...defaultProps} />);
+      const searchbox = await screen.findByRole("searchbox", {
+        name: "tagSelector.searchTags",
+      });
+      await user.type(searchbox, "199");
+      await act(async () => {
+        vi.advanceTimersByTime(350);
+      });
+      await waitFor(() => {
+        expect(screen.getAllByRole("listitem")).toHaveLength(2);
+      });
+
+      // The scroller holds the search controls as well as the list: one
+      // scrolling body, not a nested list viewport that never scrolls.
+      const options = vi.mocked(useVirtualizer).mock.lastCall![0];
+      const scroller = options.getScrollElement() as HTMLElement;
+      expect(scroller).toContainElement(searchbox);
+      expect(scroller).toContainElement(screen.getByRole("list"));
     });
 
     it("should render all matching tags in normal flow for accessible lists", async () => {
@@ -548,7 +621,7 @@ describe("TagSelector", () => {
   });
 
   describe("footer", () => {
-    it("should show selected count in footer", async () => {
+    it("should show selected count in the Apply action", async () => {
       // Arrange
       vi.mocked(CoreAPI.mediaTags).mockResolvedValue({
         tags: createMockTags(),
@@ -564,7 +637,7 @@ describe("TagSelector", () => {
       // Assert
       await waitFor(() => {
         expect(
-          screen.getByText(/tagSelector\.selectedCount/i),
+          screen.getByRole("button", { name: /tagSelector\.applyCount/i }),
         ).toBeInTheDocument();
       });
     });

@@ -1,51 +1,32 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Capacitor } from "@capacitor/core";
-import classNames from "classnames";
-import { BookMarkedIcon, ListPlusIcon, NfcIcon } from "lucide-react";
+import { BookMarkedIcon, ListPlusIcon } from "lucide-react";
+import { useAppUi } from "@/hooks/useAppUi";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
-import { NextIcon, PlayIcon, SearchIcon, TextIcon } from "@/lib/images";
-import { useStatusStore } from "@/lib/store";
 import {
-  isWriteModalOpen,
-  useNfcWriter,
-  WriteAction,
-  WriteMethod,
-} from "@/lib/writeNfcHook";
+  NextIcon,
+  NfcIcon,
+  PlayIcon,
+  SearchIcon,
+  TextIcon,
+} from "@/lib/images";
+import { useStatusStore } from "@/lib/store";
+import { useContextualNfcWrite } from "@/hooks/useContextualNfcWrite";
 import { CoreAPI } from "@/lib/coreApi";
 import { isCoreFeatureAvailable } from "@/lib/featureGates";
 import { logger } from "@/lib/logger";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import type { PlayingResponse, SearchResultGame } from "@/lib/models";
 import { MediaDetailsModal } from "@/components/MediaDetailsModal";
+import { CreateActionIcon } from "@/components/CreateActionIcon";
 import { Card } from "@/components/wui/Card";
-import { WriteModal } from "@/components/WriteModal";
 import { PageFrame } from "@/components/PageFrame";
-import { usePreferencesStore } from "@/lib/preferencesStore";
 
 export const Route = createFileRoute("/create/")({
   component: Create,
 });
-
-function CreateActionIcon(props: { icon: ReactNode; disabled?: boolean }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={classNames(
-        "flex h-10 w-10 min-w-10 items-center justify-center rounded-full border border-solid px-1.5",
-        {
-          "bg-button-pattern border-bd-filled text-primary-foreground":
-            !props.disabled,
-          "border-foreground-disabled text-foreground-disabled": props.disabled,
-        },
-      )}
-    >
-      {props.icon}
-    </span>
-  );
-}
 
 function toMediaDetails(
   playing: PlayingResponse,
@@ -72,25 +53,19 @@ export function Create() {
   const coreVersionPending = useStatusStore(
     (state) => state.coreVersionPending,
   );
-  const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
+  const nfcAvailable = useAppUi().nfc;
   const decksFeature = useCoreFeature("decks", { requireKnownSupport: true });
-  const preferRemoteWriter = usePreferencesStore(
-    (state) => state.preferRemoteWriter,
-  );
-  const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
   const [currentMediaDetails, setCurrentMediaDetails] =
     useState<SearchResultGame | null>(null);
-  // Track user intent to open modal; actual visibility derived from NFC status
-  const [writeIntent, setWriteIntent] = useState(false);
-  const writeOpen = isWriteModalOpen(writeIntent, nfcWriter);
+  // Closing the details ends the write they own.
+  const writeActivity = useContextualNfcWrite(
+    currentMediaDetails?.path ?? null,
+    currentMediaDetails !== null,
+  );
   const activeMediaZapScriptAvailable =
     connected &&
     !coreVersionPending &&
     isCoreFeatureAvailable("activeMediaZapScript", coreVersion);
-  const closeWriteModal = async () => {
-    setWriteIntent(false);
-    await nfcWriter.end();
-  };
 
   const openCurrentMediaDetails = async () => {
     if (!connected || playing.mediaPath === "") {
@@ -126,13 +101,16 @@ export function Create() {
   return (
     <>
       <PageFrame
+        layout="workspace"
+        headerMode="content-wide"
+        className="create-overview-page wrap-anywhere"
         headerCenter={
           <h1 ref={headingRef} className="text-foreground text-xl">
             {t("create.title")}
           </h1>
         }
       >
-        <div className="flex flex-col gap-3">
+        <div className="create-destinations">
           <Link
             to="/create/search"
             disabled={!connected}
@@ -140,18 +118,20 @@ export function Create() {
             data-tour="create-search"
           >
             <Card disabled={!connected} pressable>
-              <div className="flex flex-row items-center gap-3">
-                <CreateActionIcon
-                  disabled={!connected}
-                  icon={<SearchIcon size="20" />}
-                />
-                <div className="flex grow flex-col">
+              <div className="flex flex-row flex-wrap items-center gap-3">
+                <CreateActionIcon icon={<SearchIcon size="20" />} />
+                <div className="flex min-w-0 grow basis-[8rem] flex-col gap-1">
                   <span className="font-semibold">
                     {t("create.searchGameHeading")}
                   </span>
-                  <span className="text-sm">{t("create.searchGameSub")}</span>
+                  <span className="text-muted-foreground text-sm leading-relaxed">
+                    {t("create.searchGameSub")}
+                  </span>
                 </div>
-                <span aria-hidden="true">
+                <span
+                  aria-hidden="true"
+                  className="text-muted-foreground shrink-0"
+                >
                   <NextIcon size="20" />
                 </span>
               </div>
@@ -163,16 +143,13 @@ export function Create() {
             disabled={!connected || playing.mediaPath === ""}
             onClick={() => void openCurrentMediaDetails()}
           >
-            <div className="flex flex-row items-center gap-3">
-              <CreateActionIcon
-                icon={<PlayIcon size="26" />}
-                disabled={playing.mediaPath === "" && playing.mediaName === ""}
-              />
-              <div className="flex grow flex-col">
+            <div className="flex flex-row flex-wrap items-center gap-3">
+              <CreateActionIcon icon={<PlayIcon size="26" />} />
+              <div className="flex min-w-0 grow basis-[8rem] flex-col gap-1">
                 <span className="font-semibold">
                   {t("create.currentGameHeading")}
                 </span>
-                <span className="text-sm">
+                <span className="text-muted-foreground text-sm leading-relaxed">
                   {playing.mediaName
                     ? t("create.currentGameSub", { game: playing.mediaName })
                     : t("create.currentGameSubFallback")}
@@ -188,16 +165,18 @@ export function Create() {
               aria-disabled={!connected}
             >
               <Card disabled={!connected} pressable>
-                <div className="flex flex-row items-center gap-3">
-                  <CreateActionIcon
-                    disabled={!connected}
-                    icon={<BookMarkedIcon size="20" />}
-                  />
-                  <div className="flex grow flex-col">
+                <div className="flex flex-row flex-wrap items-center gap-3">
+                  <CreateActionIcon icon={<BookMarkedIcon size="20" />} />
+                  <div className="flex min-w-0 grow basis-[8rem] flex-col gap-1">
                     <span className="font-semibold">{t("decks.new")}</span>
-                    <span className="text-sm">{t("decks.createSubtitle")}</span>
+                    <span className="text-muted-foreground text-sm leading-relaxed">
+                      {t("decks.createSubtitle")}
+                    </span>
                   </div>
-                  <span aria-hidden="true">
+                  <span
+                    aria-hidden="true"
+                    className="text-muted-foreground shrink-0"
+                  >
                     <NextIcon size="20" />
                   </span>
                 </div>
@@ -211,18 +190,20 @@ export function Create() {
             aria-disabled={!connected}
           >
             <Card disabled={!connected} pressable>
-              <div className="flex flex-row items-center gap-3">
-                <CreateActionIcon
-                  icon={<ListPlusIcon size="20" />}
-                  disabled={!connected}
-                />
-                <div className="flex grow flex-col">
+              <div className="flex flex-row flex-wrap items-center gap-3">
+                <CreateActionIcon icon={<ListPlusIcon size="20" />} />
+                <div className="flex min-w-0 grow basis-[8rem] flex-col gap-1">
                   <span className="font-semibold">
                     {t("create.mappingsHeading")}
                   </span>
-                  <span className="text-sm">{t("create.mappingsSub")}</span>
+                  <span className="text-muted-foreground text-sm leading-relaxed">
+                    {t("create.mappingsSub")}
+                  </span>
                 </div>
-                <span aria-hidden="true">
+                <span
+                  aria-hidden="true"
+                  className="text-muted-foreground shrink-0"
+                >
                   <NextIcon size="20" />
                 </span>
               </div>
@@ -231,15 +212,20 @@ export function Create() {
 
           <Link to="/create/custom">
             <Card pressable>
-              <div className="flex flex-row items-center gap-3">
+              <div className="flex flex-row flex-wrap items-center gap-3">
                 <CreateActionIcon icon={<TextIcon size="20" />} />
-                <div className="flex grow flex-col">
+                <div className="flex min-w-0 grow basis-[8rem] flex-col gap-1">
                   <span className="font-semibold">
                     {t("create.customHeading")}
                   </span>
-                  <span className="text-sm">{t("create.customSub")}</span>
+                  <span className="text-muted-foreground text-sm leading-relaxed">
+                    {t("create.customSub")}
+                  </span>
                 </div>
-                <span aria-hidden="true">
+                <span
+                  aria-hidden="true"
+                  className="text-muted-foreground shrink-0"
+                >
                   <NextIcon size="20" />
                 </span>
               </div>
@@ -248,25 +234,24 @@ export function Create() {
 
           <Link
             to="/create/nfc"
-            disabled={!Capacitor.isNativePlatform() || !nfcAvailable}
-            aria-disabled={!Capacitor.isNativePlatform() || !nfcAvailable}
+            disabled={!nfcAvailable}
+            aria-disabled={!nfcAvailable}
           >
-            <Card
-              disabled={!Capacitor.isNativePlatform() || !nfcAvailable}
-              pressable
-            >
-              <div className="flex flex-row items-center gap-3">
-                <CreateActionIcon
-                  icon={<NfcIcon size="24" />}
-                  disabled={!Capacitor.isNativePlatform() || !nfcAvailable}
-                />
-                <div className="flex grow flex-col">
+            <Card disabled={!nfcAvailable} pressable>
+              <div className="flex flex-row flex-wrap items-center gap-3">
+                <CreateActionIcon icon={<NfcIcon size="24" />} />
+                <div className="flex min-w-0 grow basis-[8rem] flex-col gap-1">
                   <span className="font-semibold">
                     {t("create.nfcHeading")}
                   </span>
-                  <span className="text-sm">{t("create.nfcSub")}</span>
+                  <span className="text-muted-foreground text-sm leading-relaxed">
+                    {t("create.nfcSub")}
+                  </span>
                 </div>
-                <span aria-hidden="true">
+                <span
+                  aria-hidden="true"
+                  className="text-muted-foreground shrink-0"
+                >
                   <NextIcon size="20" />
                 </span>
               </div>
@@ -275,26 +260,11 @@ export function Create() {
         </div>
       </PageFrame>
       <MediaDetailsModal
-        isOpen={currentMediaDetails !== null && !writeOpen}
+        isOpen={currentMediaDetails !== null}
         close={() => setCurrentMediaDetails(null)}
         media={currentMediaDetails}
-        onWrite={(value) => {
-          setWriteIntent(true);
-          return nfcWriter.write(WriteAction.Write, value).catch((error) => {
-            logger.error("NFC write failed:", error, {
-              category: "nfc",
-              action: "writeCurrentMedia",
-              severity: "error",
-            });
-          });
-        }}
-      />
-      <WriteModal
-        isOpen={writeOpen}
-        close={closeWriteModal}
-        verifyError={nfcWriter.verifyError !== null}
-        retry={() => void nfcWriter.retry()}
-        retapRequired={nfcWriter.retapRequired}
+        onWrite={(value) => writeActivity.start(value)}
+        readerActivity={writeActivity}
       />
     </>
   );

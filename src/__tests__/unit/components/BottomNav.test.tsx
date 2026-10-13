@@ -84,19 +84,25 @@ describe("BottomNav", () => {
     expect(await findA11yViolations(baseElement)).toEqual([]);
   });
 
-  it("allows navigation labels and height to reflow with text zoom", () => {
+  it("renders one named navigation with four linked destinations", () => {
     render(<BottomNav />);
 
-    expect(screen.getByRole("navigation")).toHaveClass(
-      "[height:calc(var(--bottom-nav-base-height)+var(--bottom-nav-safe-inset))]",
+    expect(screen.getAllByRole("navigation")).toHaveLength(1);
+    expect(
+      screen.getByRole("navigation", { name: "nav.mainNavigation" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("link")).toHaveLength(4);
+    expect(screen.getByRole("link", { name: "nav.index" })).toHaveAttribute(
+      "aria-current",
+      "page",
     );
-    for (const link of screen.getAllByRole("link")) {
-      expect(link).toHaveClass("w-full", "min-w-0");
-    }
-    expect(screen.getByText("nav.settings")).toHaveClass(
-      "wrap-anywhere",
-      "hyphens-auto",
-    );
+  });
+
+  it("marks the active destination with aria-current", () => {
+    render(<BottomNav />);
+
+    const homeLink = screen.getByTestId("link-/");
+    expect(homeLink).toHaveAttribute("aria-current", "page");
   });
 
   it("renders all navigation buttons", () => {

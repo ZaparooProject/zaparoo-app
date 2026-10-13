@@ -275,6 +275,18 @@ describe("useScanOperations", () => {
       expect(BarcodeScanner.scan).toHaveBeenCalled();
     });
 
+    it("should not open the scanner outside the native app", async () => {
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
+      const { result } = renderHook(() => useScanOperations(defaultProps));
+
+      await act(async () => {
+        await result.current.handleCameraScan();
+      });
+
+      expect(BarcodeScanner.scan).not.toHaveBeenCalled();
+      expect(mockHaptics.notification).not.toHaveBeenCalled();
+    });
+
     it("should process barcode value and call setLastToken", async () => {
       // Arrange
       vi.mocked(BarcodeScanner.scan).mockResolvedValue({
@@ -500,6 +512,70 @@ describe("useScanOperations", () => {
     });
   });
 
+  describe("continuous scan launch state", () => {
+    it("should use Pro access gained after the scan session started", async () => {
+      sessionManager.launchOnScan = true;
+      sessionManager.shouldRestart = true;
+      const setProPurchaseModalOpen = vi.fn();
+      const setLastToken = vi.fn();
+      const { result, rerender } = renderHook(
+        ({ launcherAccess }: { launcherAccess: boolean }) =>
+          useScanOperations({
+            ...defaultProps,
+            launcherAccess,
+            setProPurchaseModalOpen,
+            setLastToken,
+          }),
+        { initialProps: { launcherAccess: false } },
+      );
+
+      await act(async () => {
+        result.current.handleScanButton();
+        await vi.advanceTimersByTimeAsync(10);
+      });
+      rerender({ launcherAccess: true });
+
+      await act(async () => {
+        __simulateTagScanned(__createMockNfcTag("04abc123def456", "game:test"));
+        await vi.advanceTimersByTimeAsync(100);
+      });
+
+      await vi.waitFor(() => expect(setLastToken).toHaveBeenCalled());
+      expect(setProPurchaseModalOpen).not.toHaveBeenCalledWith(true);
+    });
+  });
+
+  describe("unmount", () => {
+    it("should cancel the scan session it started", async () => {
+      const { result, unmount } = renderHook(() =>
+        useScanOperations(defaultProps),
+      );
+      await act(async () => {
+        result.current.handleScanButton();
+        await vi.advanceTimersByTimeAsync(10);
+      });
+      vi.mocked(Nfc.stopScanSession).mockClear();
+
+      unmount();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10);
+      });
+
+      expect(Nfc.stopScanSession).toHaveBeenCalled();
+    });
+
+    it("should leave an NFC session it does not own alone", async () => {
+      const { unmount } = renderHook(() => useScanOperations(defaultProps));
+
+      unmount();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10);
+      });
+
+      expect(Nfc.stopScanSession).not.toHaveBeenCalled();
+    });
+  });
+
   describe("scan restart behavior", () => {
     it("should restart scan when shouldRestart is true and scan succeeds", async () => {
       // Arrange
@@ -720,7 +796,7 @@ describe("useScanOperations", () => {
         await result.current.handleCameraScan();
       });
 
-      // Assert - Should not open write modal for empty content
+      // Assert - Should not open reader activity for empty content
       expect(setWriteOpen).not.toHaveBeenCalled();
       expect(setLastToken).not.toHaveBeenCalled();
     });
@@ -761,7 +837,7 @@ describe("useScanOperations", () => {
         await result.current.handleCameraScan();
       });
 
-      // Assert - Should handle gracefully without launching or opening write modal
+      // Assert - Should handle gracefully without launching or opening reader activity
       expect(setLastToken).not.toHaveBeenCalled();
       expect(setWriteOpen).not.toHaveBeenCalled();
     });

@@ -1,30 +1,35 @@
-import { useRef, useState, type ReactElement } from "react";
+import { useCallback, useId, useRef, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { Capacitor } from "@capacitor/core";
 import { Directory, Filesystem } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
 import {
-  Camera,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronUp,
-  Download,
-  House,
-  Loader2,
-  Share2,
-  Undo2,
-  X,
+  ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ChevronUpIcon,
+  DownloadIcon,
+  HouseIcon,
+  Share2Icon,
+  Undo2Icon,
+  XIcon,
 } from "lucide-react";
 import Keyboard from "react-simple-keyboard/build/index.modern.esm.js";
+import { CameraIcon } from "@/lib/images";
 import "react-simple-keyboard/build/css/index.css";
 import { SlideModal } from "@/components/SlideModal";
-import { Segmented } from "@/components/wui/Segmented";
+import { TabBar } from "@/components/wui/TabBar";
+import { Button } from "@/components/wui/Button";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { useTactilePress } from "@/hooks/useTactilePress";
+import { getTabBarPanelId, getTabBarTabId } from "@/components/wui/tabBarIds";
 import { CoreAPI, getScreenshotFailureKind } from "@/lib/coreApi";
 import { useHaptics } from "@/hooks/useHaptics";
 import { logger } from "@/lib/logger";
 import { useStatusStore } from "@/lib/store";
+import { useLiveCoreControls } from "@/hooks/useLiveCoreControls";
+import { useCoreFeature } from "@/hooks/useCoreFeature";
 
 type KeyboardLayoutName = "default" | "shift" | "symbols" | "fn";
 type RemoteKeyboardMode = "remote" | "keyboard";
@@ -170,12 +175,12 @@ function getRemoteActions(platform: string | null): RemoteAction[] {
       {
         labelKey: "remoteKeyboard.back",
         keys: "{esc}",
-        icon: <Undo2 size={28} />,
+        icon: <Undo2Icon size={28} />,
       },
       {
         labelKey: "remoteKeyboard.osd",
         keys: "{f12}",
-        icon: <House size={28} />,
+        icon: <HouseIcon size={28} />,
       },
     ];
   }
@@ -188,7 +193,7 @@ function getRemoteActions(platform: string | null): RemoteAction[] {
       {
         labelKey: "remoteKeyboard.back",
         keys: "{esc}",
-        icon: <Undo2 size={28} />,
+        icon: <Undo2Icon size={28} />,
       },
       { labelKey: "remoteKeyboard.menu", keys: "{space}" },
       { labelKey: "remoteKeyboard.context", keys: "{backspace}" },
@@ -201,7 +206,7 @@ function getRemoteActions(platform: string | null): RemoteAction[] {
     {
       labelKey: "remoteKeyboard.back",
       keys: "{esc}",
-      icon: <Undo2 size={28} />,
+      icon: <Undo2Icon size={28} />,
     },
     { labelKey: "remoteKeyboard.menu", keys: "{f12}" },
     { labelKey: "remoteKeyboard.start", keys: "{space}" },
@@ -212,44 +217,72 @@ function getRemoteActions(platform: string | null): RemoteAction[] {
 export function RemoteKeyboardModal(props: {
   isOpen: boolean;
   close: () => void;
+  docked?: boolean;
 }) {
   const { t } = useTranslation();
   const { impact } = useHaptics();
-  const connected = useStatusStore((state) => state.connected);
   const corePlatform = useStatusStore((state) => state.corePlatform);
   const [layoutName, setLayoutName] = useState<KeyboardLayoutName>("default");
   const [mode, setMode] = useState<RemoteKeyboardMode>("remote");
+  const tabPrefix = useId();
   const [error, setError] = useState<string | null>(null);
   const [screenshot, setScreenshot] = useState<ScreenshotResult | null>(null);
   const [capturingScreenshot, setCapturingScreenshot] = useState(false);
   const sendQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const captureRequestRef = useRef<symbol | null>(null);
+  const invalidatePending = useCallback(() => {
+    sendQueueRef.current = Promise.resolve();
+    captureRequestRef.current = null;
+    setCapturingScreenshot(false);
+    setError(null);
+  }, []);
+  const controls = useLiveCoreControls(invalidatePending);
+  const connected = controls.available;
+  const remoteFeature = useCoreFeature("remoteInput");
+  const enabled = connected && remoteFeature.available;
+  const downloadPress = useTactilePress({ hasOnClick: true });
 
   const isNative = Capacitor.isNativePlatform();
   const remoteActions = getRemoteActions(corePlatform);
-  const modeOptions: { value: RemoteKeyboardMode; label: string }[] = [
-    { value: "remote", label: t("remoteKeyboard.remoteMode") },
-    { value: "keyboard", label: t("remoteKeyboard.keyboardMode") },
+  const modeOptions = [
+    {
+      value: "remote" as const,
+      label: t("remoteKeyboard.remoteMode"),
+      id: getTabBarTabId("remote", tabPrefix),
+    },
+    {
+      value: "keyboard" as const,
+      label: t("remoteKeyboard.keyboardMode"),
+      id: getTabBarTabId("keyboard", tabPrefix),
+    },
   ];
+  const activeTabId = getTabBarTabId(mode, tabPrefix);
+  const activePanelProps = {
+    role: "tabpanel",
+    id: getTabBarPanelId(activeTabId),
+    "aria-labelledby": activeTabId,
+  };
 
   const triggerControlHaptic = () => {
     impact("light");
   };
 
-  const sendMacro = (keys: string) => {
-    triggerControlHaptic();
+  const sendMacro = (keys: string, withHaptic = true) => {
+    if (withHaptic) triggerControlHaptic();
 
-    if (!connected) {
-      const message = t("remoteKeyboard.disconnected");
-      setError(null);
-      toast.error(message);
-      return;
-    }
+    const target = controls.captureTarget();
+    if (!target || !remoteFeature.available) return;
 
     setError(null);
     sendQueueRef.current = sendQueueRef.current
       .catch(() => undefined)
-      .then(() => CoreAPI.inputKeyboard({ keys }))
+      .then(() => {
+        if (controls.isCurrentTarget(target)) {
+          return CoreAPI.inputKeyboard({ keys });
+        }
+      })
       .catch((error) => {
+        if (!controls.isCurrentTarget(target)) return;
         const message = t("remoteKeyboard.sendError");
         logger.error(message, error, {
           category: "api",
@@ -276,22 +309,19 @@ export function RemoteKeyboardModal(props: {
   };
 
   const handleScreenshot = () => {
-    triggerControlHaptic();
-
-    if (!connected) {
-      const message = t("remoteKeyboard.disconnected");
-      setError(null);
-      toast.error(message);
+    const target = controls.captureTarget();
+    if (!target || !remoteFeature.available || captureRequestRef.current)
       return;
-    }
-
+    const request = Symbol("screenshot");
+    captureRequestRef.current = request;
     setError(null);
     setCapturingScreenshot(true);
     CoreAPI.screenshot()
       .then((result) => {
-        setScreenshot(result);
+        if (controls.isCurrentTarget(target)) setScreenshot(result);
       })
       .catch((error) => {
+        if (!controls.isCurrentTarget(target)) return;
         const message = t("remoteKeyboard.screenshotError");
         const failureKind = getScreenshotFailureKind(error);
         if (failureKind === "unavailable") {
@@ -306,13 +336,16 @@ export function RemoteKeyboardModal(props: {
         setError(message);
         toast.error(message);
       })
-      .finally(() => setCapturingScreenshot(false));
+      .finally(() => {
+        if (captureRequestRef.current === request) {
+          captureRequestRef.current = null;
+          setCapturingScreenshot(false);
+        }
+      });
   };
 
   const shareScreenshot = async () => {
-    triggerControlHaptic();
-
-    if (!screenshot) return;
+    if (!Capacitor.isNativePlatform() || !screenshot) return;
 
     try {
       const filename = getScreenshotFileName(screenshot.path);
@@ -349,24 +382,34 @@ export function RemoteKeyboardModal(props: {
 
   return (
     <SlideModal
-      isOpen={props.isOpen}
+      isOpen={Boolean(props.docked || props.isOpen)}
       close={props.close}
       title={t("remoteKeyboard.title")}
+      presentation={props.docked ? "pane" : "modal"}
+      paneLayout="section"
+      dismissible={!props.docked}
+      suspendWhenCovered
+      className={props.docked ? "zap-remote-surface" : undefined}
     >
-      <div className="flex flex-col gap-3 pb-2">
-        {!connected && (
-          <p role="status" className="text-sm text-red-300">
+      <div
+        className={
+          props.docked
+            ? "wui-card border-border flex flex-col gap-3 rounded-lg border border-solid p-4"
+            : "flex flex-col gap-3 pb-2"
+        }
+      >
+        {!connected && !props.docked && (
+          <p role="status" className="text-error text-sm">
             {t("remoteKeyboard.disconnected")}
           </p>
         )}
         {error && (
-          <p role="alert" className="text-sm text-red-300">
+          <p role="alert" className="text-error text-sm">
             {error}
           </p>
         )}
-        <Segmented
+        <TabBar
           label={t("remoteKeyboard.mode")}
-          labelHidden
           options={modeOptions}
           value={mode}
           onChange={(next) => {
@@ -375,78 +418,87 @@ export function RemoteKeyboardModal(props: {
           }}
         />
         {mode === "remote" ? (
-          <div className="remote-keyboard-pad">
+          <div className="remote-keyboard-pad" {...activePanelProps}>
             <div className="remote-keyboard-dpad">
-              <button
-                type="button"
-                className="remote-keyboard-pad-button remote-keyboard-pad-up"
+              <Button
+                variant="secondary"
+                shape="square"
+                className="remote-keyboard-pad-up min-h-16 w-full max-w-none min-w-16"
+                disabled={!enabled}
                 aria-label={t("remoteKeyboard.up")}
-                onClick={() => sendMacro("{up}")}
-              >
-                <ChevronUp size={28} aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                className="remote-keyboard-pad-button remote-keyboard-pad-left"
+                onClick={() => sendMacro("{up}", false)}
+                icon={<ChevronUpIcon size={28} />}
+              />
+              <Button
+                variant="secondary"
+                shape="square"
+                className="remote-keyboard-pad-left min-h-16 w-full max-w-none min-w-16"
+                disabled={!enabled}
                 aria-label={t("remoteKeyboard.left")}
-                onClick={() => sendMacro("{left}")}
-              >
-                <ChevronLeft size={28} aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                className="remote-keyboard-pad-button remote-keyboard-pad-ok"
-                onClick={() => sendMacro("{enter}")}
-              >
-                {t("remoteKeyboard.ok")}
-              </button>
-              <button
-                type="button"
-                className="remote-keyboard-pad-button remote-keyboard-pad-right"
+                onClick={() => sendMacro("{left}", false)}
+                icon={<ChevronLeftIcon size={28} />}
+              />
+              <Button
+                variant="secondary"
+                size="sm"
+                className="remote-keyboard-pad-ok min-h-16 w-full max-w-none min-w-16"
+                disabled={!enabled}
+                label={t("remoteKeyboard.ok")}
+                onClick={() => sendMacro("{enter}", false)}
+              />
+              <Button
+                variant="secondary"
+                shape="square"
+                className="remote-keyboard-pad-right min-h-16 w-full max-w-none min-w-16"
+                disabled={!enabled}
                 aria-label={t("remoteKeyboard.right")}
-                onClick={() => sendMacro("{right}")}
-              >
-                <ChevronRight size={28} aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                className="remote-keyboard-pad-button remote-keyboard-pad-down"
+                onClick={() => sendMacro("{right}", false)}
+                icon={<ChevronRightIcon size={28} />}
+              />
+              <Button
+                variant="secondary"
+                shape="square"
+                className="remote-keyboard-pad-down min-h-16 w-full max-w-none min-w-16"
+                disabled={!enabled}
                 aria-label={t("remoteKeyboard.down")}
-                onClick={() => sendMacro("{down}")}
-              >
-                <ChevronDown size={28} aria-hidden="true" />
-              </button>
+                onClick={() => sendMacro("{down}", false)}
+                icon={<ChevronDownIcon size={28} />}
+              />
             </div>
             <div className="remote-keyboard-pad-actions">
               {remoteActions.map((action) => (
-                <button
+                <Button
                   key={`${action.labelKey}-${action.keys}`}
-                  type="button"
-                  className="remote-keyboard-pad-action"
+                  variant="secondary"
+                  shape="square"
+                  size="sm"
+                  className="min-h-16 min-w-16"
                   aria-label={t(action.ariaLabelKey ?? action.labelKey)}
-                  onClick={() => sendMacro(action.keys)}
-                >
-                  {action.icon ?? t(action.labelKey)}
-                </button>
+                  disabled={!enabled}
+                  onClick={() => sendMacro(action.keys, false)}
+                  icon={action.icon}
+                  label={action.icon ? undefined : t(action.labelKey)}
+                />
               ))}
-              <button
-                type="button"
-                className="remote-keyboard-pad-action"
+              <Button
+                variant="secondary"
+                shape="square"
+                className="min-h-16 min-w-16"
                 aria-label={t("remoteKeyboard.screenshotAction")}
                 aria-busy={capturingScreenshot}
                 onClick={handleScreenshot}
-                disabled={capturingScreenshot}
-              >
-                {capturingScreenshot ? (
-                  <Loader2
-                    size={28}
-                    className="animate-spin"
-                    aria-hidden="true"
-                  />
-                ) : (
-                  <Camera size={28} aria-hidden="true" />
-                )}
-              </button>
+                disabled={!enabled || capturingScreenshot}
+                disabledAppearance={
+                  capturingScreenshot ? "busy" : "unavailable"
+                }
+                icon={
+                  capturingScreenshot ? (
+                    <LoadingSpinner size={28} decorative />
+                  ) : (
+                    <CameraIcon size={28} />
+                  )
+                }
+              />
             </div>
             {screenshot && screenshotUrl && (
               <div className="remote-keyboard-screenshot-result">
@@ -457,50 +509,77 @@ export function RemoteKeyboardModal(props: {
                 />
                 <div className="remote-keyboard-screenshot-actions">
                   {isNative ? (
-                    <button
-                      type="button"
-                      className="remote-keyboard-screenshot-control"
-                      onClick={shareScreenshot}
-                    >
-                      <Share2 size={20} aria-hidden="true" />
-                      {t("remoteKeyboard.screenshotShare")}
-                    </button>
+                    <Button
+                      variant="secondary"
+                      className="w-full max-w-none min-w-0"
+                      icon={<Share2Icon size={20} />}
+                      label={t("remoteKeyboard.screenshotShare")}
+                      onClick={() => void shareScreenshot()}
+                    />
                   ) : (
                     <a
-                      className="remote-keyboard-screenshot-control"
+                      className="wui-button flex min-h-12 min-w-0 touch-manipulation items-center justify-center gap-2 border border-solid border-transparent px-5 py-3 text-sm font-bold tracking-wider uppercase"
+                      data-variant="secondary"
+                      data-intent="default"
+                      data-pressed={downloadPress.pressed}
+                      {...downloadPress.handlers}
+                      onClick={(event) => {
+                        if (!downloadPress.shouldFireClick())
+                          event.preventDefault();
+                      }}
                       href={screenshotUrl}
                       download={getScreenshotFileName(screenshot.path)}
                     >
-                      <Download size={20} aria-hidden="true" />
+                      <span
+                        className="wui-button-icon flex shrink-0 items-center"
+                        aria-hidden="true"
+                      >
+                        <DownloadIcon size={20} />
+                      </span>
                       {t("remoteKeyboard.screenshotDownload")}
                     </a>
                   )}
-                  <button
-                    type="button"
-                    className="remote-keyboard-screenshot-control"
-                    onClick={() => {
-                      triggerControlHaptic();
-                      setScreenshot(null);
-                    }}
-                  >
-                    <X size={20} aria-hidden="true" />
-                    {t("remoteKeyboard.screenshotClear")}
-                  </button>
+                  <Button
+                    variant="secondary"
+                    className="w-full max-w-none min-w-0"
+                    icon={<XIcon size={20} />}
+                    label={t("remoteKeyboard.screenshotClear")}
+                    onClick={() => setScreenshot(null)}
+                  />
                 </div>
               </div>
             )}
           </div>
         ) : (
-          <div className="remote-keyboard-wrapper">
-            <Keyboard
-              layout={layout}
-              layoutName={layoutName}
-              display={display}
-              onKeyPress={handleKeyPress}
-              disableButtonHold
-              useButtonTag
-              theme="hg-theme-default remote-keyboard"
-            />
+          <div className="remote-keyboard-wrapper" {...activePanelProps}>
+            <fieldset
+              className="min-w-0 border-0 p-0"
+              disabled={!enabled}
+              aria-label={t("remoteKeyboard.keyboardMode")}
+            >
+              <Keyboard
+                layout={layout}
+                layoutName={layoutName}
+                display={display}
+                onKeyPress={handleKeyPress}
+                disableButtonHold
+                useButtonTag
+                buttonTheme={[
+                  {
+                    class: "wui-button",
+                    buttons: layout[layoutName].join(" "),
+                  },
+                ]}
+                buttonAttributes={[
+                  {
+                    attribute: "data-variant",
+                    value: "outline",
+                    buttons: layout[layoutName].join(" "),
+                  },
+                ]}
+                theme="hg-theme-default remote-keyboard"
+              />
+            </fieldset>
           </div>
         )}
       </div>

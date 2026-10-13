@@ -1,6 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor, within } from "../../../test-utils";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
+import type { ReactElement } from "react";
 import { ZapScriptInput } from "@/components/ZapScriptInput";
 import { useStatusStore } from "@/lib/store";
 import { CoreAPI, CoreApiError } from "@/lib/coreApi";
@@ -15,6 +22,15 @@ vi.mock("@capacitor/browser", () => ({
   },
 }));
 
+// The editor opens on its step view; the textarea and its command palette are
+// on the Text tab.
+const renderOnTextTab = async (ui: ReactElement) => {
+  render(ui);
+  await userEvent
+    .setup()
+    .click(screen.getByRole("tab", { name: "zapscript.builder.text" }));
+};
+
 describe("ZapScriptInput", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -27,9 +43,9 @@ describe("ZapScriptInput", () => {
   });
 
   describe("rendering", () => {
-    it("should render textarea with placeholder", () => {
+    it("should render textarea with placeholder", async () => {
       // Arrange & Act
-      render(<ZapScriptInput value="" setValue={vi.fn()} />);
+      await renderOnTextTab(<ZapScriptInput value="" setValue={vi.fn()} />);
 
       // Assert
       const textarea = screen.getByRole("textbox", {
@@ -42,9 +58,11 @@ describe("ZapScriptInput", () => {
       );
     });
 
-    it("should display current value in textarea", () => {
+    it("should display current value in textarea", async () => {
       // Arrange & Act
-      render(<ZapScriptInput value="**launch.system:nes" setValue={vi.fn()} />);
+      await renderOnTextTab(
+        <ZapScriptInput value="**launch.system:nes" setValue={vi.fn()} />,
+      );
 
       // Assert
       const textarea = screen.getByRole("textbox", {
@@ -61,13 +79,16 @@ describe("ZapScriptInput", () => {
       expect(screen.getByText("create.custom.characters")).toBeInTheDocument();
     });
 
-    it("should have command palette toggle button", () => {
-      // Arrange & Act
-      render(<ZapScriptInput value="" setValue={vi.fn()} />);
+    it("should show the insert tools without a toggle", async () => {
+      await renderOnTextTab(<ZapScriptInput value="" setValue={vi.fn()} />);
 
-      // Assert
+      for (const name of ["insertMedia", "insertSystem", "insertCommand"]) {
+        expect(
+          screen.getByRole("button", { name: `create.custom.${name}` }),
+        ).toBeInTheDocument();
+      }
       expect(
-        screen.getByRole("button", { name: "create.custom.commandPalette" }),
+        screen.getByRole("button", { name: "create.custom.zapscriptHelp" }),
       ).toBeInTheDocument();
     });
   });
@@ -77,7 +98,7 @@ describe("ZapScriptInput", () => {
       // Arrange
       const user = userEvent.setup();
       const setValue = vi.fn();
-      render(<ZapScriptInput value="" setValue={setValue} />);
+      await renderOnTextTab(<ZapScriptInput value="" setValue={setValue} />);
 
       // Act
       const textarea = screen.getByRole("textbox", {
@@ -88,124 +109,12 @@ describe("ZapScriptInput", () => {
       // Assert - setValue is called for each character
       expect(setValue).toHaveBeenCalled();
     });
-
-    it("should have aria-describedby pointing to character count", () => {
-      // Arrange & Act
-      render(<ZapScriptInput value="" setValue={vi.fn()} />);
-
-      // Assert
-      const textarea = screen.getByRole("textbox", {
-        name: "create.custom.textareaLabel",
-      });
-      expect(textarea).toHaveAttribute(
-        "aria-describedby",
-        "zapscript-char-count",
-      );
-    });
-  });
-
-  describe("command palette", () => {
-    it("should be hidden by default when showPalette is false", () => {
-      // Arrange & Act
-      render(
-        <ZapScriptInput value="" setValue={vi.fn()} showPalette={false} />,
-      );
-
-      // Assert - Controls should not be visible
-      expect(
-        screen.queryByLabelText("create.custom.insertCommandStart"),
-      ).not.toBeInTheDocument();
-    });
-
-    it("should show controls when showPalette is true", () => {
-      // Arrange & Act
-      render(<ZapScriptInput value="" setValue={vi.fn()} showPalette={true} />);
-
-      // Assert - Controls should be visible
-      expect(
-        screen.getByLabelText("create.custom.insertCommandStart"),
-      ).toBeInTheDocument();
-    });
-
-    it("should toggle controls visibility when palette button clicked", async () => {
-      // Arrange
-      const user = userEvent.setup();
-      render(
-        <ZapScriptInput value="" setValue={vi.fn()} showPalette={false} />,
-      );
-
-      // Act - Click to expand
-      await user.click(
-        screen.getByRole("button", { name: "create.custom.commandPalette" }),
-      );
-
-      // Assert - Controls should now be visible
-      expect(
-        screen.getByLabelText("create.custom.insertCommandStart"),
-      ).toBeInTheDocument();
-    });
-
-    it("should have aria-expanded attribute on palette toggle", async () => {
-      // Arrange
-      const user = userEvent.setup();
-      render(
-        <ZapScriptInput value="" setValue={vi.fn()} showPalette={false} />,
-      );
-
-      // Assert - Initially not expanded
-      const toggle = screen.getByRole("button", {
-        name: "create.custom.commandPalette",
-      });
-      expect(toggle).toHaveAttribute("aria-expanded", "false");
-
-      // Act - Click to expand
-      await user.click(toggle);
-
-      // Assert - Now expanded
-      expect(toggle).toHaveAttribute("aria-expanded", "true");
-    });
-  });
-
-  describe("insert buttons", () => {
-    it("should insert ** when command start button clicked", async () => {
-      // Arrange
-      const user = userEvent.setup();
-      const setValue = vi.fn();
-      render(
-        <ZapScriptInput value="" setValue={setValue} showPalette={true} />,
-      );
-
-      // Act
-      await user.click(
-        screen.getByLabelText("create.custom.insertCommandStart"),
-      );
-
-      // Assert - Should insert **
-      expect(setValue).toHaveBeenCalledWith("**");
-    });
-
-    it("should insert || when separator button clicked", async () => {
-      // Arrange
-      const user = userEvent.setup();
-      const setValue = vi.fn();
-      render(
-        <ZapScriptInput value="" setValue={setValue} showPalette={true} />,
-      );
-
-      // Act
-      await user.click(
-        screen.getByLabelText("create.custom.insertCommandSeparator"),
-      );
-
-      // Assert - Should insert ||
-      expect(setValue).toHaveBeenCalledWith("||");
-    });
   });
 
   describe("run button", () => {
     it("should be disabled when value is empty", () => {
       // Arrange & Act
-      render(<ZapScriptInput value="" setValue={vi.fn()} showPalette={true} />);
+      render(<ZapScriptInput value="" setValue={vi.fn()} />);
 
       // Assert
       const runButton = screen.getByRole("button", {
@@ -216,13 +125,7 @@ describe("ZapScriptInput", () => {
 
     it("should be enabled when value is not empty and connected", () => {
       // Arrange & Act
-      render(
-        <ZapScriptInput
-          value="**launch.system:nes"
-          setValue={vi.fn()}
-          showPalette={true}
-        />,
-      );
+      render(<ZapScriptInput value="**launch.system:nes" setValue={vi.fn()} />);
 
       // Assert
       const runButton = screen.getByRole("button", {
@@ -238,13 +141,7 @@ describe("ZapScriptInput", () => {
       });
 
       // Act
-      render(
-        <ZapScriptInput
-          value="**launch.system:nes"
-          setValue={vi.fn()}
-          showPalette={true}
-        />,
-      );
+      render(<ZapScriptInput value="**launch.system:nes" setValue={vi.fn()} />);
 
       // Assert
       const runButton = screen.getByRole("button", {
@@ -271,7 +168,6 @@ describe("ZapScriptInput", () => {
           <ZapScriptInput
             value="**launch.search:snes/mario"
             setValue={vi.fn()}
-            showPalette={true}
           />,
         );
         await user.click(
@@ -345,29 +241,23 @@ describe("ZapScriptInput", () => {
   describe("clear button", () => {
     it("should be disabled when value is empty", () => {
       // Arrange & Act
-      render(<ZapScriptInput value="" setValue={vi.fn()} showPalette={true} />);
+      render(<ZapScriptInput value="" setValue={vi.fn()} />);
 
-      // Assert - The palette clear button (visible, not in hidden modal) should be disabled
+      // Assert - The editor's clear button (not the one in the hidden confirm modal) should be disabled
       // When modal is closed (aria-hidden="true"), getByRole only finds buttons in accessible tree
       const clearButtons = screen.getAllByRole("button", {
         name: "create.custom.clear",
       }) as HTMLButtonElement[];
-      // At least one clear button should be disabled (the palette one)
+      // At least one clear button should be disabled (the editor's own)
       const disabledButton = clearButtons.find((btn) => btn.disabled);
       expect(disabledButton).toBeTruthy();
     });
 
     it("should be enabled when value is not empty", () => {
       // Arrange & Act
-      render(
-        <ZapScriptInput
-          value="some text"
-          setValue={vi.fn()}
-          showPalette={true}
-        />,
-      );
+      render(<ZapScriptInput value="some text" setValue={vi.fn()} />);
 
-      // Assert - The palette clear button should be enabled
+      // Assert - The editor's clear button should be enabled
       const clearButtons = screen.getAllByRole("button", {
         name: "create.custom.clear",
       }) as HTMLButtonElement[];
@@ -378,13 +268,7 @@ describe("ZapScriptInput", () => {
     it("should open confirm modal when clicked", async () => {
       // Arrange
       const user = userEvent.setup();
-      render(
-        <ZapScriptInput
-          value="some text"
-          setValue={vi.fn()}
-          showPalette={true}
-        />,
-      );
+      render(<ZapScriptInput value="some text" setValue={vi.fn()} />);
 
       // Act - Click the enabled clear button to open confirm modal
       const clearButtons = screen.getAllByRole("button", {
@@ -405,13 +289,7 @@ describe("ZapScriptInput", () => {
       // Arrange
       const user = userEvent.setup();
       const setValue = vi.fn();
-      render(
-        <ZapScriptInput
-          value="some text"
-          setValue={setValue}
-          showPalette={true}
-        />,
-      );
+      render(<ZapScriptInput value="some text" setValue={setValue} />);
 
       // Act - Open confirm modal by clicking the enabled clear button
       const clearButtons = screen.getAllByRole("button", {
@@ -440,9 +318,9 @@ describe("ZapScriptInput", () => {
   });
 
   describe("secondary action buttons", () => {
-    it("should show search media button", () => {
+    it("should show search media button", async () => {
       // Arrange & Act
-      render(<ZapScriptInput value="" setValue={vi.fn()} showPalette={true} />);
+      await renderOnTextTab(<ZapScriptInput value="" setValue={vi.fn()} />);
 
       // Assert - Button has aria-label from insertMedia prop
       expect(
@@ -450,9 +328,9 @@ describe("ZapScriptInput", () => {
       ).toBeInTheDocument();
     });
 
-    it("should show select system button", () => {
+    it("should show select system button", async () => {
       // Arrange & Act
-      render(<ZapScriptInput value="" setValue={vi.fn()} showPalette={true} />);
+      await renderOnTextTab(<ZapScriptInput value="" setValue={vi.fn()} />);
 
       // Assert - Button has aria-label from insertSystem prop
       expect(
@@ -460,9 +338,9 @@ describe("ZapScriptInput", () => {
       ).toBeInTheDocument();
     });
 
-    it("should show commands button", () => {
+    it("should show commands button", async () => {
       // Arrange & Act
-      render(<ZapScriptInput value="" setValue={vi.fn()} showPalette={true} />);
+      await renderOnTextTab(<ZapScriptInput value="" setValue={vi.fn()} />);
 
       // Assert - Button has aria-label from insertCommand prop
       expect(
@@ -470,9 +348,9 @@ describe("ZapScriptInput", () => {
       ).toBeInTheDocument();
     });
 
-    it("should show help button", () => {
+    it("should show help button", async () => {
       // Arrange & Act
-      render(<ZapScriptInput value="" setValue={vi.fn()} showPalette={true} />);
+      await renderOnTextTab(<ZapScriptInput value="" setValue={vi.fn()} />);
 
       // Assert - Find by visible label text
       expect(
@@ -480,14 +358,14 @@ describe("ZapScriptInput", () => {
       ).toBeInTheDocument();
     });
 
-    it("should disable media and system buttons when not connected", () => {
+    it("should disable media and system buttons when not connected", async () => {
       // Arrange
       act(() => {
         useStatusStore.getState().setConnected(false);
       });
 
       // Act
-      render(<ZapScriptInput value="" setValue={vi.fn()} showPalette={true} />);
+      await renderOnTextTab(<ZapScriptInput value="" setValue={vi.fn()} />);
 
       // Assert - Use aria-label to find buttons
       expect(screen.getByLabelText("create.custom.insertMedia")).toBeDisabled();
@@ -498,9 +376,9 @@ describe("ZapScriptInput", () => {
   });
 
   describe("rows prop", () => {
-    it("should use default rows of 4", () => {
+    it("should use default rows of 4", async () => {
       // Arrange & Act
-      render(<ZapScriptInput value="" setValue={vi.fn()} />);
+      await renderOnTextTab(<ZapScriptInput value="" setValue={vi.fn()} />);
 
       // Assert
       const textarea = screen.getByRole("textbox", {
@@ -509,9 +387,11 @@ describe("ZapScriptInput", () => {
       expect(textarea).toHaveAttribute("rows", "4");
     });
 
-    it("should use custom rows when provided", () => {
+    it("should use custom rows when provided", async () => {
       // Arrange & Act
-      render(<ZapScriptInput value="" setValue={vi.fn()} rows={8} />);
+      await renderOnTextTab(
+        <ZapScriptInput value="" setValue={vi.fn()} rows={8} />,
+      );
 
       // Assert
       const textarea = screen.getByRole("textbox", {
@@ -527,29 +407,44 @@ describe("ZapScriptInput", () => {
       render(<ZapScriptInput value="test" setValue={vi.fn()} />);
 
       // Assert
-      const charCount = document.getElementById("zapscript-char-count");
+      const charCount = screen.getByText("create.custom.characters");
       expect(charCount).toHaveAttribute("aria-live", "polite");
       expect(charCount).toHaveAttribute("aria-atomic", "true");
     });
 
-    it("should have aria-controls on palette toggle", async () => {
-      // Arrange
-      const user = userEvent.setup();
+    it("should give two editors on one page distinct ids", () => {
       render(
-        <ZapScriptInput value="" setValue={vi.fn()} showPalette={false} />,
+        <>
+          <ZapScriptInput value="" setValue={vi.fn()} aria-label="first" />
+          <ZapScriptInput value="" setValue={vi.fn()} aria-label="second" />
+        </>,
       );
 
-      // Assert
-      const toggle = screen.getByRole("button", {
-        name: "create.custom.commandPalette",
-      });
-      expect(toggle).toHaveAttribute("aria-controls", "zapscript-controls");
+      const panelIds = screen
+        .getAllByRole("tab")
+        .map((tab) => tab.getAttribute("aria-controls"));
+      expect(new Set(panelIds).size).toBe(4);
+      for (const tab of screen.getAllByRole("tab")) {
+        expect(
+          document.getElementById(tab.getAttribute("aria-controls")!),
+        ).toHaveAttribute("aria-labelledby", tab.id);
+      }
+    });
 
-      // Act - expand to verify controls ID exists
-      await user.click(toggle);
+    it("should lock the textarea and its insert tools when disabled", async () => {
+      await renderOnTextTab(
+        <ZapScriptInput value="abc" setValue={vi.fn()} disabled />,
+      );
 
-      // Assert - controls element should exist with the ID
-      expect(document.getElementById("zapscript-controls")).toBeInTheDocument();
+      expect(
+        screen.getByRole("textbox", { name: "create.custom.textareaLabel" }),
+      ).toBeDisabled();
+      expect(
+        screen.getByLabelText("create.custom.insertCommand"),
+      ).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "create.custom.clear" }),
+      ).toBeDisabled();
     });
   });
 
@@ -558,7 +453,7 @@ describe("ZapScriptInput", () => {
       // Arrange
       const { Browser } = await import("@capacitor/browser");
       const user = userEvent.setup();
-      render(<ZapScriptInput value="" setValue={vi.fn()} showPalette={true} />);
+      await renderOnTextTab(<ZapScriptInput value="" setValue={vi.fn()} />);
 
       // Act
       await user.click(
@@ -576,7 +471,7 @@ describe("ZapScriptInput", () => {
     it("should open media search modal when search media button clicked", async () => {
       // Arrange
       const user = userEvent.setup();
-      render(<ZapScriptInput value="" setValue={vi.fn()} showPalette={true} />);
+      await renderOnTextTab(<ZapScriptInput value="" setValue={vi.fn()} />);
 
       // Act
       await user.click(screen.getByLabelText("create.custom.insertMedia"));
@@ -594,7 +489,7 @@ describe("ZapScriptInput", () => {
     it("should open system selector when select system button clicked", async () => {
       // Arrange
       const user = userEvent.setup();
-      render(<ZapScriptInput value="" setValue={vi.fn()} showPalette={true} />);
+      await renderOnTextTab(<ZapScriptInput value="" setValue={vi.fn()} />);
 
       // Act
       await user.click(screen.getByLabelText("create.custom.insertSystem"));
@@ -612,7 +507,7 @@ describe("ZapScriptInput", () => {
     it("should open commands modal when commands button clicked", async () => {
       // Arrange
       const user = userEvent.setup();
-      render(<ZapScriptInput value="" setValue={vi.fn()} showPalette={true} />);
+      await renderOnTextTab(<ZapScriptInput value="" setValue={vi.fn()} />);
 
       // Act
       await user.click(screen.getByLabelText("create.custom.insertCommand"));
@@ -627,36 +522,76 @@ describe("ZapScriptInput", () => {
   });
 
   describe("cursor position tracking", () => {
-    it("should insert text at cursor position", async () => {
-      // Arrange
-      const user = userEvent.setup();
-      const setValue = vi.fn();
-      render(
-        <ZapScriptInput
-          value="hello world"
-          setValue={setValue}
-          showPalette={true}
-        />,
+    const renderEditor = async (value: string, setValue = vi.fn()) => {
+      await renderOnTextTab(
+        <ZapScriptInput value={value} setValue={setValue} />,
       );
+      return {
+        setValue,
+        textarea: screen.getByRole("textbox", {
+          name: "create.custom.textareaLabel",
+        }) as HTMLTextAreaElement,
+      };
+    };
 
-      // Act - focus textarea and set selection, then click insert
-      const textarea = screen.getByRole("textbox", {
-        name: "create.custom.textareaLabel",
-      }) as HTMLTextAreaElement;
-
-      // Simulate selecting at position 5 (after "hello")
-      textarea.focus();
-      textarea.setSelectionRange(5, 5);
-      // Trigger select event to update cursor position
-      await user.click(textarea);
-
-      // Now insert ** - it should append at cursor position tracked
+    const insertStop = async (user: ReturnType<typeof userEvent.setup>) => {
+      await user.click(screen.getByLabelText("create.custom.insertCommand"));
+      const catalogue = await screen.findByRole("dialog", {
+        name: "create.custom.commandsTitle",
+      });
       await user.click(
-        screen.getByLabelText("create.custom.insertCommandStart"),
+        within(catalogue).getByRole("button", { name: /(^|\s)stop(\s|$)/ }),
       );
+    };
 
-      // Assert - setValue should be called (cursor tracking is internal)
-      expect(setValue).toHaveBeenCalled();
+    it("should append to pre-filled text that has never been focused", async () => {
+      const user = userEvent.setup();
+      const { setValue } = await renderEditor("**launch.system:snes");
+
+      await insertStop(user);
+
+      expect(setValue).toHaveBeenCalledWith("**launch.system:snes||**stop");
     });
+
+    it("should insert at the caret the user placed, as a step of its own", async () => {
+      const user = userEvent.setup();
+      const { setValue, textarea } = await renderEditor("hello world");
+
+      await user.click(textarea);
+      textarea.setSelectionRange(5, 5);
+      fireEvent.select(textarea);
+
+      await insertStop(user);
+
+      expect(setValue).toHaveBeenCalledWith("hello||**stop|| world");
+    });
+
+    it("should keep the caret the textarea had when focus moved to a tool", async () => {
+      const user = userEvent.setup();
+      const { setValue, textarea } = await renderEditor("hello world");
+
+      await user.click(textarea);
+      textarea.setSelectionRange(0, 0);
+      // No select event: the live selection is read as focus leaves.
+      await insertStop(user);
+
+      expect(setValue).toHaveBeenCalledWith("**stop||hello world");
+    });
+
+    it.each([
+      ["", "**stop"],
+      ["**delay:500||", "**delay:500||**stop"],
+      ["**delay:500 || ", "**delay:500 || **stop"],
+    ])(
+      "should not add a separator that is not needed: %j",
+      async (value, expected) => {
+        const user = userEvent.setup();
+        const { setValue } = await renderEditor(value);
+
+        await insertStop(user);
+
+        expect(setValue).toHaveBeenCalledWith(expected);
+      },
+    );
   });
 });

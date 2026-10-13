@@ -1,13 +1,11 @@
 import { useId } from "react";
-import { Check, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import classNames from "classnames";
 import type { SystemReleasePeriod, SystemSort } from "@/lib/systemFilters";
-import { handleRadioGroupKeyDown } from "@/lib/radioGroup";
 import { SlideModal } from "@/components/SlideModal";
 import { Button } from "@/components/wui/Button";
 import { ModalActionBar } from "@/components/wui/ModalActionBar";
-import { useHapticPress } from "@/hooks/useHapticPress";
+import { LibrarySortOptionList } from "@/components/library/LibrarySortOptionList";
+import { Select } from "@/components/wui/Select";
 
 const SORT_OPTIONS: Array<{ value: SystemSort; labelKey: string }> = [
   { value: "name-asc", labelKey: "library.sortNameAsc" },
@@ -44,7 +42,6 @@ export function LibrarySystemFiltersModal(props: {
   onApply: () => void;
 }) {
   const { t } = useTranslation();
-  const handleHapticPress = useHapticPress();
   const manufacturerId = useId();
   const releasePeriodId = useId();
   const hasDraftOptions =
@@ -57,7 +54,6 @@ export function LibrarySystemFiltersModal(props: {
       secondaryAction={
         <Button
           label={t("library.resetOptions")}
-          icon={<RotateCcw size={20} />}
           variant="outline"
           disabled={!hasDraftOptions}
           onClick={props.onReset}
@@ -81,54 +77,24 @@ export function LibrarySystemFiltersModal(props: {
       footer={footer}
     >
       <div className="flex flex-col gap-5 py-3">
-        <section className="flex flex-col gap-2">
-          <h2 className="font-semibold">{t("library.sortSystems")}</h2>
-          <div
-            role="radiogroup"
-            aria-label={t("library.sortSystems")}
-            onKeyDown={handleRadioGroupKeyDown}
-            tabIndex={-1}
-          >
-            {SORT_OPTIONS.map((option, index) => {
-              const selected = props.sort === option.value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  tabIndex={selected ? 0 : -1}
-                  className={classNames(
-                    "flex min-h-12 w-full items-center justify-between gap-3 px-2 py-3 text-left focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none",
-                    {
-                      "border-b border-white/25":
-                        index < SORT_OPTIONS.length - 1,
-                      "bg-white/10": selected,
-                    },
-                  )}
-                  onPointerUp={handleHapticPress}
-                  onClick={() => props.onSortChange(option.value)}
-                >
-                  <span>{t(option.labelKey)}</span>
-                  {selected && <Check size={20} aria-hidden="true" />}
-                </button>
-              );
-            })}
-          </div>
-        </section>
+        <LibrarySortOptionList
+          label={t("library.sortSystems")}
+          options={SORT_OPTIONS}
+          value={props.sort}
+          onChange={props.onSortChange}
+        />
 
         <section className="flex flex-col gap-2">
-          <label htmlFor={manufacturerId} className="font-semibold">
+          <label htmlFor={manufacturerId} className="text-lg font-semibold">
             {t("library.manufacturer")}
           </label>
-          <select
+          <Select
             id={manufacturerId}
             value={props.selectedManufacturer}
             onChange={(event) =>
               props.onSelectedManufacturerChange(event.target.value)
             }
             disabled={props.manufacturers.length === 0}
-            className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
           >
             <option value="">{t("library.anyManufacturer")}</option>
             {props.manufacturers.map((manufacturer) => (
@@ -136,14 +102,14 @@ export function LibrarySystemFiltersModal(props: {
                 {manufacturer}
               </option>
             ))}
-          </select>
+          </Select>
         </section>
 
         <section className="flex flex-col gap-2">
-          <label htmlFor={releasePeriodId} className="font-semibold">
+          <label htmlFor={releasePeriodId} className="text-lg font-semibold">
             {t("library.releasePeriod")}
           </label>
-          <select
+          <Select
             id={releasePeriodId}
             value={props.releasePeriod}
             onChange={(event) =>
@@ -151,14 +117,13 @@ export function LibrarySystemFiltersModal(props: {
                 event.target.value as SystemReleasePeriod,
               )
             }
-            className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
           >
             {RELEASE_PERIODS.map((option) => (
               <option key={option.value} value={option.value}>
                 {t(option.labelKey)}
               </option>
             ))}
-          </select>
+          </Select>
         </section>
       </div>
     </SlideModal>

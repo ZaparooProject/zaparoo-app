@@ -1,0 +1,2312 @@
+@layer components {
+  /* Geometry belongs to the components; these are shared physical materials. */
+  .wui-button,
+  .site-button,
+  .zaparoo-tour-step .shepherd-button {
+    --button-depth: 4px;
+    --button-hover-travel: 2px;
+    --button-hover-edge: 2px;
+    --button-pressed-shadow:
+      0 0 0 var(--button-edge), 0 2px 4px var(--material-shadow),
+      inset 0 1px 0 var(--pressed-highlight);
+    border: 1px solid transparent;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    overflow-wrap: anywhere;
+    transform: translateY(0);
+    transition:
+      transform 100ms ease-in-out,
+      box-shadow 100ms ease-in-out;
+  }
+  .wui-button[data-icon-only="true"][data-shape="round"],
+  .site-button[data-icon-only="true"] {
+    border-radius: 50%;
+  }
+  .wui-button[data-variant="fill"],
+  .zaparoo-tour-step .shepherd-button {
+    --button-edge: var(--cap-primary-edge);
+    --button-highlight: rgb(255 255 255 / 30%);
+    /* A cap has a visible rim in its own edge colour, so it is framed like
+       the secondary button beside it rather than looking a pixel smaller. */
+    border-color: var(--button-edge);
+    color: var(--cap-ink);
+    background: var(--cap-primary);
+    /* White labels need a dark halo against the bright cap. */
+    text-shadow:
+      0 -1px 0 var(--cap-primary-edge),
+      0 1px 0 var(--cap-primary-edge),
+      -1px 0 0 var(--cap-primary-edge),
+      1px 0 0 var(--cap-primary-edge);
+  }
+  .wui-button[data-variant="secondary"],
+  .zaparoo-tour-step .shepherd-button.shepherd-button-secondary {
+    --button-edge: var(--secondary-edge);
+    --button-highlight: var(--pressed-highlight);
+    border-color: var(--edge-default);
+    color: var(--text-primary);
+    background: linear-gradient(
+      180deg,
+      var(--secondary-cap) 0%,
+      var(--surface-raised) 50%,
+      var(--surface-inset) 100%
+    );
+    text-shadow: 0 1px 0 rgb(255 255 255 / 10%);
+  }
+  .wui-button[data-variant="outline"],
+  .site-button-outline {
+    --button-depth: 2px;
+    --button-hover-travel: 1px;
+    --button-hover-edge: 1px;
+    --button-edge: var(--surface-highlight);
+    --button-highlight: var(--material-highlight);
+    border-color: var(--edge-strong);
+    background: var(--surface-inset);
+    color: var(--text-primary);
+    text-shadow: 0 1px 0 rgb(255 255 255 / 10%);
+  }
+  /* Pro/support actions use the arcade gold cap; gold needs a dark label. */
+  .wui-button[data-variant="fill"][data-intent="pro"] {
+    --button-edge: var(--cap-pro-edge);
+    --button-highlight: rgb(255 255 255 / 45%);
+    color: var(--cap-pro-ink);
+    background: var(--cap-pro);
+    text-shadow: 0 1px 0 rgb(255 255 255 / 35%);
+  }
+  .wui-button[data-variant="fill"][data-intent="destructive"] {
+    --button-edge: var(--cap-destructive-edge);
+    --button-highlight: rgb(255 255 255 / 30%);
+    color: var(--cap-ink);
+    background: var(--cap-destructive);
+    text-shadow: 0 -1px 0 var(--cap-destructive-edge);
+  }
+  .wui-button:not(:where([data-variant="text"], [data-variant="ghost"])),
+  .site-button-outline,
+  .zaparoo-tour-step .shepherd-button {
+    margin-bottom: var(--button-depth);
+    box-shadow:
+      0 var(--button-depth) 0 var(--button-edge),
+      0 6px 10px var(--material-shadow),
+      inset 0 1px 0 var(--button-highlight);
+  }
+  .wui-button-responsive {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  @media (min-width: 640px) {
+    .wui-button-responsive {
+      flex-direction: row;
+      gap: 0.5rem;
+    }
+  }
+  @media (min-width: 760px) {
+    .wui-button-responsive {
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+  }
+  .wui-button:is([data-variant="text"], [data-variant="ghost"]) {
+    color: var(--text-secondary);
+    background: transparent;
+  }
+  .wui-button[data-intent="pro"]:not([data-variant="fill"]) {
+    color: var(--status-yellow);
+    border-color: var(--status-yellow);
+  }
+  .wui-button[data-intent="destructive"]:not([data-variant="fill"]) {
+    color: var(--status-red);
+    border-color: var(--status-red);
+  }
+  .wui-button:is([data-variant="text"], [data-variant="ghost"]):is(
+      [data-intent="destructive"],
+      [data-intent="pro"]
+    ) {
+    border-color: transparent;
+  }
+  .wui-button:is([data-variant="text"], [data-variant="ghost"]):not(
+      :disabled
+    ):is(:active, [aria-pressed="true"]) {
+    background: var(--surface-highlight);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .wui-button:not(:where([data-variant="text"], [data-variant="ghost"])):not(
+        :disabled
+      ):hover,
+    .site-button:not(:disabled):hover,
+    .zaparoo-tour-step .shepherd-button:not(:disabled):hover {
+      transform: translateY(var(--button-hover-travel));
+      box-shadow:
+        0 var(--button-hover-edge) 0 var(--button-edge),
+        0 4px 6px var(--material-shadow),
+        inset 0 1px 0 var(--button-highlight);
+    }
+    .wui-button:is([data-variant="text"], [data-variant="ghost"]):not(
+        :disabled
+      ):hover {
+      color: var(--text-primary);
+      background: var(--surface-highlight);
+    }
+    .wui-card[data-pressable="true"]:hover {
+      border-color: var(--edge-strong);
+      box-shadow:
+        inset 0 1px 0 var(--material-highlight),
+        0 0 8px var(--material-highlight);
+    }
+    .wui-input:not(:disabled):hover {
+      border-color: var(--text-muted);
+    }
+  }
+  .wui-button:not(:where([data-variant="text"], [data-variant="ghost"])):not(
+      :disabled
+    ):is(:active, [data-pressed="true"], [aria-pressed="true"]),
+  .site-button:not(:disabled):is(
+      :active,
+      [data-pressed="true"],
+      [aria-pressed="true"]
+    ),
+  .zaparoo-tour-step .shepherd-button:not(:disabled):active {
+    transform: translateY(var(--button-depth));
+    box-shadow: var(--button-pressed-shadow);
+  }
+  /* Two related actions: equal columns while they fit, stacked when narrow. */
+  .wui-action-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+    gap: 0.5rem;
+  }
+  /* Reader controls behave like illuminated, latched physical switches. */
+  .wui-reader-button-shell {
+    position: relative;
+    width: 100%;
+    isolation: isolate;
+  }
+  /* Follow the pressed face, independent of the wrapper's collapsed margins. */
+  .wui-reader-button-shell > .wui-button::before,
+  .wui-reader-action::before {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    border-radius: 3px;
+    box-shadow: none;
+    content: "";
+    pointer-events: none;
+    opacity: 0;
+  }
+  .wui-reader-button-shell > .wui-button[data-reader-state="waiting"]::before,
+  .wui-reader-action[data-reader-state="waiting"]::before {
+    box-shadow: 0 0 0 3px
+      color-mix(in srgb, var(--interaction) 72%, transparent);
+    opacity: 1;
+    animation: reader-button-pulse 1.8s ease-out infinite;
+  }
+  .wui-reader-button-shell > .wui-button[data-reader-state="attention"]::before,
+  .wui-reader-action[data-reader-state="attention"]::before {
+    box-shadow:
+      0 0 6px 2px color-mix(in srgb, var(--status-yellow) 90%, transparent),
+      0 0 10px 3px color-mix(in srgb, var(--status-yellow) 55%, transparent);
+    animation: reader-button-attention 1.65s ease-out infinite;
+  }
+  .wui-reader-button-shell > .wui-button[data-reader-state="error"]::before,
+  .wui-reader-action[data-reader-state="error"]::before {
+    box-shadow:
+      0 0 6px 2px color-mix(in srgb, var(--status-red) 75%, transparent),
+      0 0 10px 3px color-mix(in srgb, var(--status-red) 38%, transparent);
+    opacity: 0.82;
+  }
+  .wui-reader-button-shell > .wui-button {
+    position: relative;
+    z-index: 1;
+  }
+  .wui-button[data-reader-state]:not(
+      :where([data-variant="text"], [data-variant="ghost"])
+    ) {
+    transform: translateY(var(--button-depth));
+    box-shadow: var(--button-pressed-shadow);
+  }
+  .wui-reader-action {
+    position: relative;
+    isolation: isolate;
+    z-index: 0;
+  }
+  .wui-button.wui-reader-action[data-reader-state]:not(:disabled) {
+    transform: translateY(2px);
+    background: var(--surface-inset);
+    box-shadow: inset 0 2px 4px var(--material-shadow);
+    color: var(--interaction);
+  }
+  .wui-button.wui-reader-action[data-reader-state="attention"]:not(:disabled) {
+    color: var(--status-yellow);
+  }
+  .wui-button.wui-reader-action[data-reader-state="error"]:not(:disabled) {
+    color: var(--status-red);
+  }
+  @keyframes reader-button-pulse {
+    0% {
+      box-shadow: 0 0 0 0
+        color-mix(in srgb, var(--interaction) 90%, transparent);
+    }
+    45% {
+      box-shadow: 0 0 0 5px
+        color-mix(in srgb, var(--interaction) 60%, transparent);
+    }
+    100% {
+      box-shadow: 0 0 0 8px
+        color-mix(in srgb, var(--interaction) 0%, transparent);
+    }
+  }
+  @keyframes reader-button-attention {
+    0%,
+    50%,
+    100% {
+      opacity: 0.22;
+    }
+    12%,
+    36% {
+      opacity: 1;
+    }
+    23%,
+    47% {
+      opacity: 0.35;
+    }
+  }
+  /* Full width means "fill the column" on phones. On wider layouts a page
+     action is as wide as its content and starts at the column edge, in line
+     with the text and fields above it (its minimum width is set beside the
+     utilities in index.css). A cell that owns its button's width (a toolbar
+     or a grid of actions) opts out with `max-w-none`. Dialogs are narrow
+     columns of their own, so their actions, like reader controls, keep a
+     centred 20rem cap. */
+  @media (min-width: 760px) {
+    .wui-button.w-full,
+    .site-button.w-full {
+      max-width: max-content;
+      margin-inline: 0;
+    }
+    [role="dialog"] .wui-button.w-full,
+    [role="dialog"] .site-button.w-full,
+    .wui-reader-button-shell,
+    .wui-reader-actions {
+      max-width: 20rem;
+      margin-inline: auto;
+    }
+    /* The reader shell is the capped box; its button fills it. */
+    .wui-reader-button-shell .wui-button.w-full,
+    .wui-reader-actions .wui-button.w-full {
+      max-width: none;
+    }
+  }
+  .wui-button:disabled {
+    cursor: not-allowed;
+  }
+  .wui-button[data-disabled-appearance="unavailable"]:disabled {
+    color: var(--text-muted);
+    text-shadow: none;
+    opacity: 1;
+  }
+  .wui-button[data-disabled-appearance="unavailable"]:not(
+      :where([data-variant="text"], [data-variant="ghost"])
+    ):disabled {
+    border-color: var(--edge-subtle);
+    background: var(--surface-inset);
+    transform: translateY(var(--button-depth));
+    box-shadow: inset 0 1px 3px var(--material-shadow);
+  }
+  .wui-button[data-disabled-appearance="unavailable"]:is(
+      [data-variant="text"],
+      [data-variant="ghost"]
+    ):disabled {
+    background: transparent;
+    transform: translateY(0);
+    box-shadow: none;
+    /* No face to recess, so the content fades instead. */
+    opacity: 0.5;
+  }
+  .wui-button[data-disabled-appearance="busy"]:disabled {
+    opacity: 0.5;
+  }
+  .site-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: translateY(0);
+  }
+  .wui-button:focus-visible,
+  .site-button:focus-visible,
+  .zaparoo-tour-step .shepherd-button:focus-visible {
+    outline: 2px solid var(--interaction);
+    outline-offset: 3px;
+  }
+  .zaparoo-tour-step .shepherd-button {
+    min-height: 3rem;
+    min-width: 3rem;
+    padding-block: 0.75rem;
+  }
+  /* Tape-deck keys mount in the canonical recessed control-bank material. */
+  .wui-transport-deck {
+    display: flex;
+    width: 100%;
+    max-width: 100%;
+    margin-inline: auto;
+    padding: 0.5rem;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 0.5rem;
+    overflow-x: auto;
+    border: 1px solid var(--edge-subtle);
+    border-radius: 8px;
+    background: var(--surface-inset);
+    box-shadow: inset 0 1px 3px var(--material-shadow);
+  }
+  @media (min-width: 40rem) {
+    .wui-transport-deck {
+      width: max-content;
+    }
+  }
+  .wui-playlist-item {
+    color: var(--text-primary);
+    background: transparent;
+    transition: background-color 100ms ease-in-out;
+  }
+  .wui-playlist-item:focus-visible {
+    position: relative;
+    z-index: 1;
+    outline: 2px solid var(--interaction);
+    outline-offset: -2px;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .wui-playlist-item:not(:disabled):hover {
+      background: var(--surface-highlight);
+    }
+  }
+  .wui-playlist-item:not(:disabled):is(:active, [data-pressed="true"]) {
+    background: var(--surface-inset);
+    box-shadow: inset 0 2px 4px var(--material-shadow);
+  }
+  .wui-playlist-item[aria-current="true"] {
+    color: var(--interaction);
+    background: var(--interaction-wash);
+    box-shadow: inset 0 1px 3px var(--material-shadow);
+    font-weight: 600;
+  }
+  .wui-playlist-item[aria-current="true"] > :first-child {
+    color: currentColor;
+  }
+  /* Compact header affordance; the 48px floor keeps the hit target honest. */
+  .wui-button.wui-status-pill {
+    position: relative;
+    isolation: isolate;
+    display: inline-flex;
+    align-items: center;
+    min-height: 3rem;
+    max-width: 100%;
+    min-width: 0;
+    margin-bottom: 0;
+    padding-inline: 0.75rem;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    transform: none;
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: normal;
+    text-transform: none;
+  }
+  .wui-button.wui-status-pill:not(:disabled):is(
+      :hover,
+      :active,
+      [data-pressed="true"]
+    ) {
+    box-shadow: none;
+    transform: none;
+  }
+  .wui-card {
+    border-color: var(--edge-subtle);
+    border-radius: 8px;
+    background-image: linear-gradient(
+      180deg,
+      var(--surface-elevated),
+      var(--surface-raised)
+    );
+    box-shadow:
+      inset 0 1px 0 var(--material-highlight),
+      0 2px 5px var(--material-shadow);
+    filter: none;
+    transition:
+      transform 80ms,
+      border-color 100ms,
+      box-shadow 100ms;
+  }
+  .wui-card[data-pressable="true"]:is(:active, [data-pressed="true"]) {
+    transform: translateY(1px);
+    border-color: var(--edge-strong);
+    box-shadow: inset 0 2px 5px var(--material-shadow);
+  }
+  .wui-card[data-disabled="true"][data-interactive="true"] {
+    border-color: var(--edge-subtle);
+    background: var(--surface-inset);
+    box-shadow: inset 0 2px 5px var(--material-shadow);
+    transform: translateY(1px);
+    opacity: 1;
+  }
+  .wui-card[data-disabled="true"][data-interactive="true"] > * {
+    opacity: 0.5;
+  }
+  .wui-input {
+    min-width: 0;
+    background: var(--surface-inset);
+    border-color: var(--edge-default);
+    border-radius: 4px;
+    color: var(--text-primary);
+    box-shadow: inset 0 1px 3px var(--material-shadow);
+    transition:
+      border-color 100ms,
+      box-shadow 100ms;
+  }
+  .wui-input::placeholder {
+    color: var(--text-muted);
+  }
+  .wui-input:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+  .wui-input:focus-visible {
+    border-color: var(--interaction);
+    outline: 2px solid var(--interaction);
+    outline-offset: 2px;
+  }
+  .wui-input[aria-invalid="true"] {
+    border-color: var(--status-red);
+  }
+  .wui-input:disabled {
+    border-color: var(--text-muted);
+    color: var(--text-muted);
+  }
+  .wui-editor > textarea {
+    border-radius: 4px 4px 0 0;
+  }
+  .wui-field-label {
+    margin-bottom: 0.5rem;
+  }
+  .wui-radio-field,
+  .wui-radio-options {
+    display: flex;
+    flex-direction: column;
+  }
+  .wui-radio-options[data-layout="inline"] {
+    flex-flow: row wrap;
+    column-gap: 1.5rem;
+  }
+  /* A short settings form with room: each field is a row, label on the left
+     and its control on the right, as switch rows already are. */
+  @media (min-width: 1024px) {
+    .settings-form-rows > .wui-field {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 16rem);
+      align-items: center;
+      column-gap: 1.5rem;
+    }
+    .settings-form-rows > .wui-field > .wui-field-label {
+      margin-bottom: 0;
+    }
+    .settings-form-rows > .wui-field:has(> .wui-radio-options) {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+    .settings-form-rows > .wui-field > .wui-radio-options {
+      flex-flow: row wrap;
+      justify-content: flex-end;
+      column-gap: 1.5rem;
+    }
+    .settings-form-rows > .wui-field > .wui-field-help {
+      grid-column: 1 / -1;
+    }
+  }
+  .wui-toggle-track {
+    background: var(--surface-inset);
+    border-color: var(--edge-default);
+    box-shadow: inset 0 1px 3px var(--material-shadow);
+  }
+  .peer:checked ~ .wui-toggle-track {
+    background: var(--interaction);
+  }
+  .wui-radio-indicator {
+    background: var(--surface-inset);
+    box-shadow:
+      inset 0 1px 3px var(--material-shadow),
+      0 1px 0 var(--material-highlight);
+  }
+  .wui-toggle-thumb {
+    position: absolute;
+    width: 1.25rem;
+    height: 1.25rem;
+    top: 0.6875rem;
+    left: 0.25rem;
+    border: 1px solid transparent;
+    border-radius: 50%;
+    background: linear-gradient(180deg, #ffffff 0%, #f0f0f0 50%, #d8d8d8 100%);
+    box-shadow:
+      0 2px 0 #aaaaaa,
+      0 3px 5px var(--material-shadow),
+      inset 0 1px 0 rgb(255 255 255 / 80%);
+    transition: transform 100ms;
+  }
+  :root:not(.dark) .wui-toggle-thumb {
+    border-color: var(--edge-default);
+  }
+  .peer:checked ~ .wui-toggle-thumb {
+    transform: translateX(1.25rem);
+  }
+  .peer:disabled ~ :is(.wui-toggle-thumb, .wui-toggle-track) {
+    opacity: 0.5;
+  }
+  .page-header-shell {
+    right: 0;
+    left: 0;
+    padding-top: var(--page-header-safe-top, 0px);
+    /* Header buttons draw their face 4px inside a 48px hit box, so 12px here
+       puts their visible edge, and the title, on the 16px content margin. */
+    padding-right: calc(
+      12px + var(--page-content-safe-right, var(--page-header-safe-right, 0px))
+    );
+    padding-left: calc(
+      12px + var(--page-content-safe-left, var(--page-header-safe-left, 0px))
+    );
+    background: var(--surface-raised);
+    border-bottom: 1px solid var(--edge-default);
+    box-shadow: inset 0 1px 0 var(--material-highlight);
+  }
+  .page-frame-content-wide-header .page-header-shell {
+    position: absolute;
+  }
+  .page-header-title-inset {
+    padding-left: 4px;
+  }
+  .page-header-content-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .page-header-leading {
+    display: flex;
+    flex-shrink: 0;
+  }
+  .page-header-breadcrumbs {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 0.5rem;
+    font-size: 1.25rem;
+    line-height: 1.25;
+  }
+  .page-header-current {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .page-header-ancestor {
+    display: none;
+    min-width: 0;
+    max-width: 100%;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .page-header-separator {
+    color: var(--text-secondary);
+  }
+  .page-parent-link {
+    display: inline-flex;
+    min-height: 3rem;
+    align-items: center;
+    color: var(--text-secondary);
+    min-width: 0;
+    font-size: inherit;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .page-parent-link:hover {
+      color: var(--text-primary);
+      text-decoration: underline;
+    }
+  }
+  .page-parent-link:focus-visible {
+    outline: 2px solid var(--interaction);
+    outline-offset: 2px;
+  }
+  .wui-header-button {
+    position: relative;
+    isolation: isolate;
+    width: 48px;
+    min-width: 48px;
+    height: 48px;
+    min-height: 48px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+  }
+  :is(.wui-header-button, .wui-status-pill)::before {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    z-index: -1;
+    border: 1px solid var(--edge-subtle);
+    border-radius: 6px;
+    background: linear-gradient(
+      180deg,
+      var(--surface-elevated),
+      var(--surface-raised)
+    );
+    box-shadow:
+      0 2px 0 var(--material-edge),
+      0 3px 6px var(--material-shadow),
+      inset 0 1px 0 var(--material-highlight);
+    transition:
+      background-color 100ms ease-in-out,
+      border-color 100ms ease-in-out,
+      box-shadow 100ms ease-in-out,
+      transform 100ms ease-in-out;
+  }
+  :is(.wui-header-button, .wui-status-pill):is(
+    [aria-pressed="true"],
+    [aria-expanded="true"]
+  ) {
+    color: var(--interaction);
+  }
+  :is(.wui-header-button, .wui-status-pill):is(
+      [aria-pressed="true"],
+      [aria-expanded="true"]
+    )::before {
+    border-color: var(--interaction);
+    background: var(--interaction-wash);
+    box-shadow:
+      inset 0 2px 4px var(--material-shadow),
+      inset 0 1px 0 var(--material-highlight);
+  }
+  :is(.wui-header-button, .wui-status-pill):focus-visible {
+    outline: 2px solid var(--interaction);
+    outline-offset: 1px;
+  }
+  .wui-header-button-content {
+    transition: transform 100ms ease-in-out;
+  }
+  :is(.wui-header-button, .wui-status-pill):not(:disabled):is(
+      :active,
+      [data-pressed="true"]
+    )::before {
+    transform: translateY(2px);
+    background: var(--surface-inset);
+    box-shadow:
+      inset 0 2px 4px var(--material-shadow),
+      inset 0 1px 0 var(--material-highlight);
+  }
+  :is(.wui-header-button, .wui-status-pill):not(:disabled):is(
+      :active,
+      [data-pressed="true"]
+    )
+    > .wui-header-button-content {
+    transform: translateY(2px);
+  }
+  .wui-header-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    :is(.wui-header-button, .wui-status-pill):not(:disabled):hover::before {
+      border-color: var(--edge-strong);
+      background: var(--surface-highlight);
+    }
+  }
+  /* Persistent app navigation adapts the shared elevated header material. */
+  .bottom-nav-shell {
+    min-height: calc(
+      var(--bottom-nav-base-height) + var(--app-safe-bottom, 0px)
+    );
+    padding-bottom: var(--app-safe-bottom, 0px);
+    background: var(--surface-raised);
+    border-top: 1px solid var(--edge-default);
+    box-shadow: inset 0 1px 0 var(--material-highlight);
+  }
+  .app-navigation-grid {
+    /* Keep normal dock geometry while allowing translated/zoomed labels to grow. */
+    min-height: calc(var(--bottom-nav-base-height) - 1px);
+    padding-right: calc(8px + var(--app-safe-right, 0px));
+    padding-left: calc(8px + var(--app-safe-left, 0px));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+  }
+  .app-navigation-label {
+    font-size: 0.75rem;
+    line-height: 0.875rem;
+  }
+  .bottom-nav-tab > div {
+    flex-direction: column;
+    gap: 2px;
+  }
+  .page-frame {
+    display: flex;
+    flex-direction: column;
+  }
+  .wui-modal-action-rail,
+  .library-detail-row {
+    display: flex;
+    flex-direction: column;
+  }
+  .library-detail-row {
+    gap: 0.5rem;
+  }
+  @media (min-width: 640px) {
+    .wui-modal-action-rail-primary {
+      display: grid;
+      grid-template-columns: minmax(0, auto) minmax(12rem, 1fr);
+    }
+    .library-detail-row {
+      flex-direction: row;
+      align-items: baseline;
+      gap: 0.75rem;
+    }
+  }
+  @media (min-width: 760px) {
+    .wui-modal-action-rail-primary {
+      display: flex;
+      flex-direction: column;
+    }
+  }
+  /* Content clears app chrome by one section gap, not the page side gutter. */
+  .page-frame-scroll {
+    padding-right: calc(
+      1rem + var(--page-content-safe-right, var(--page-scroll-safe-right, 0px))
+    );
+    padding-left: calc(
+      1rem + var(--page-content-safe-left, var(--page-scroll-safe-left, 0px))
+    );
+    padding-bottom: calc(var(--app-footer-overlay-height, 64px) + 1.25rem);
+  }
+  .page-frame-scroll-with-header {
+    padding-top: calc(var(--page-header-overlay-height, 57px) + 1.25rem);
+  }
+  @media (max-width: 759px) {
+    .online-settings-page > .page-frame-scroll-with-header {
+      padding-top: calc(var(--page-header-overlay-height, 57px) + 1rem);
+      padding-bottom: calc(var(--app-footer-overlay-height, 64px) + 1rem);
+    }
+  }
+  .bottom-nav-surface {
+    height: auto;
+  }
+  .bottom-nav-surface,
+  .app-connection-status {
+    pointer-events: auto;
+  }
+  .bottom-nav-tab {
+    min-height: 48px;
+    justify-content: center;
+    padding: 4px;
+    color: var(--text-secondary);
+    transition:
+      color 100ms ease-in-out,
+      background-color 100ms ease-in-out,
+      box-shadow 100ms ease-in-out;
+  }
+  .bottom-nav-icon {
+    display: flex;
+    transition:
+      color 100ms ease-in-out,
+      filter 100ms ease-in-out;
+  }
+  .bottom-nav-tab[aria-current="page"] {
+    color: var(--text-primary);
+    background: var(--surface-inset);
+    box-shadow:
+      inset 0 2px 4px var(--material-shadow),
+      0 1px 0 var(--material-highlight);
+  }
+  .bottom-nav-tab[aria-current="page"] .bottom-nav-icon {
+    color: var(--interaction);
+    filter: drop-shadow(0 0 4px var(--interaction-glow));
+  }
+  .bottom-nav-tab:focus-visible {
+    outline: 2px solid var(--interaction);
+    outline-offset: 2px;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .bottom-nav-tab:not([aria-current="page"]):hover {
+      color: var(--text-primary);
+      background: var(--surface-highlight);
+    }
+  }
+  @media (min-width: 760px) {
+    /* Navigation chrome already frames the left edge; reserve only the
+       scrollbar side so the page margin is the same on both sides. */
+    .page-frame-scroll {
+      scrollbar-gutter: stable;
+    }
+  }
+  :root,
+  .adaptive-app-shell {
+    --app-navigation-width: 0px;
+  }
+  .app-global-reader-strip {
+    left: 0;
+    /* The desktop sidebar already covers the left inset. */
+    padding-right: calc(1rem + var(--app-safe-right, 0px));
+    padding-left: calc(
+      1rem + max(0px, var(--app-safe-left, 0px) - var(--app-navigation-width))
+    );
+  }
+  .page-frame-support {
+    display: contents;
+  }
+  .library-details-panel {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    flex-direction: column;
+    padding: 1rem;
+    border: 1px solid var(--edge-default);
+  }
+  .zap-workspace {
+    display: flex;
+    width: 100%;
+    max-width: var(--content-bound);
+    margin-inline: auto;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  .zap-session,
+  .zap-supporting,
+  .zap-remote-slot {
+    display: contents;
+  }
+  .zap-reader-tools {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.5rem;
+    order: 0;
+  }
+  .zap-playback,
+  .zap-collections {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  .zap-playback {
+    order: 1;
+  }
+  .zap-collections {
+    order: 2;
+  }
+  .zap-readers {
+    min-width: 0;
+    order: 3;
+  }
+  /* A saved layout drops the built-in phone order: each place becomes a grid
+     of twelfths, and the places stack main, side, bottom. A widget takes the
+     twelfths its cell asks for, packed in order, so narrow buttons sit side by
+     side and every other widget takes the full row. */
+  .zap-workspace[data-zap-layout="custom"]
+    :is(.zap-session, .zap-supporting, .zap-collections) {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: 0.75rem;
+    row-gap: 1.25rem;
+    container: zapcol / inline-size;
+    order: 0;
+  }
+  .zap-cell,
+  .zap-widget-frame {
+    min-width: 0;
+    grid-column: 1 / -1;
+  }
+  .zap-cell {
+    display: flex;
+    flex-direction: column;
+  }
+  .zap-cell > .zap-button-face {
+    flex: 1 1 auto;
+  }
+  :is(.zap-cell, .zap-widget-frame)[data-span="3"] {
+    grid-column: span 3;
+  }
+  :is(.zap-cell, .zap-widget-frame)[data-span="6"] {
+    grid-column: span 6;
+  }
+  /* A column too narrow for a button's share gives it a bigger one, so a
+     button keeps room for its label. */
+  @container zapcol (max-width: 32rem) {
+    :is(.zap-cell, .zap-widget-frame)[data-span="3"] {
+      grid-column: span 6;
+    }
+  }
+  @container zapcol (max-width: 18rem) {
+    :is(.zap-cell, .zap-widget-frame)[data-span="6"] {
+      grid-column: 1 / -1;
+    }
+  }
+  .zap-workspace[data-zap-layout="custom"]
+    :is(.zap-reader-tools, .zap-playback, .zap-readers) {
+    order: 0;
+  }
+  .zap-workspace[data-zap-layout="custom"] .zap-remote-slot {
+    display: block;
+    min-width: 0;
+  }
+  .zap-workspace[data-zap-layout="custom"]
+    :is(.zap-session, .zap-supporting, .zap-collections):empty {
+    display: none;
+  }
+  .zap-customise {
+    display: flex;
+    justify-content: center;
+    margin-top: 1.5rem;
+  }
+  .zap-editor {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .zap-editor-body {
+    display: flex;
+    width: 100%;
+    max-width: var(--content-bound);
+    margin-inline: auto;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  /* A bar of its own across the page, so editing reads as a mode and not as
+     more content. It stays under the page header on phones. */
+  .zap-editor-bar {
+    --zap-bar-top: var(--page-header-overlay-height, 57px);
+    position: sticky;
+    z-index: 2;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    /* The page's own colour, so raised buttons keep their depth on it. */
+    background: var(--background);
+    border-bottom: 1px solid var(--edge-default);
+    box-shadow: 0 2px 8px var(--material-shadow);
+  }
+  .zap-editor-heading {
+    display: none;
+  }
+  @media (max-width: 599px) {
+    .zap-editor-bar {
+      display: flex;
+      justify-content: space-between;
+    }
+    .zap-editor-bar .zap-editor-title {
+      display: none;
+    }
+    .zap-editor-body > .zap-editor-heading {
+      display: block;
+    }
+  }
+  .zap-editor-bar-end {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  /* A phone's form is one column in the order it is filled in. From 1024px
+     the basics sit in a narrow column with the ZapScript editor beside them,
+     so no field stretches across a desktop. */
+  .zap-editor-body.zap-button-form {
+    max-width: 40rem;
+    margin-inline: 0;
+    gap: 1.25rem;
+  }
+  .zap-button-form-basics,
+  .zap-button-form-script,
+  .zap-button-form-more {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  .zap-button-form-script {
+    gap: 0.5rem;
+  }
+  .zap-button-form-more {
+    gap: 1rem;
+  }
+  /* A form's actions close it, as in the mapping editor: save, then the
+     others. */
+  .zap-form-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  /* A phone's Save and Cancel sit side by side and stay in view at the foot
+     of the screen, above the navigation, however far the form is scrolled. */
+  @media (max-width: 759px) {
+    .zap-form-actions-pinned {
+      position: sticky;
+      /* Sticky offsets are measured inside the page's bottom padding, which is
+         the navigation's height plus 1.25rem; pulling it down by that 1.25rem
+         sits it flush on the navigation. */
+      bottom: -1.25rem;
+      z-index: 2;
+      flex-direction: row;
+      margin-inline: -1rem;
+      padding: 0.75rem 1rem;
+      background: var(--background);
+      border-top: 1px solid var(--edge-default);
+      box-shadow: 0 -2px 8px var(--material-shadow);
+    }
+    .zap-form-actions-pinned > * {
+      min-width: 0;
+      flex: 1 1 0;
+    }
+  }
+  /* From 760px Save and Cancel sit in a row, with Delete on a line of its own
+     beneath so it is not the next thing to land on. */
+  @media (min-width: 760px) {
+    .zap-form-actions {
+      flex-flow: row wrap;
+      align-items: center;
+    }
+  }
+  .zap-editor-body.zap-collection-form {
+    max-width: 32rem;
+    margin-inline: 0;
+    gap: 1.25rem;
+  }
+  .zap-editor-title {
+    display: -webkit-box;
+    overflow: hidden;
+    font-weight: 700;
+    line-height: 1.25;
+    text-align: center;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .zap-editor-reset {
+    display: flex;
+    justify-content: center;
+    padding-block: 0.5rem;
+  }
+  .zap-editor-places {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  .zap-editor-list {
+    display: grid;
+    min-height: 3rem;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 0.75rem;
+    container: zapcol / inline-size;
+  }
+  .zap-button-frame {
+    display: flex;
+    flex-direction: column;
+  }
+  .zap-button-frame-face {
+    padding: 0.5rem;
+  }
+  .zap-button-frame-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-top: 1px solid var(--edge-subtle);
+  }
+  .zap-button-frame {
+    container: zapframe / inline-size;
+  }
+  /* A narrow frame sets its controls in two tidy rows rather than letting them
+     wrap: the handle and edit above, the two arrows below. */
+  @container zapframe (max-width: 15rem) {
+    .zap-button-frame-tools {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      justify-items: stretch;
+    }
+    .zap-tool-grip {
+      margin-right: 0;
+      grid-area: 1 / 1;
+      justify-self: start;
+    }
+    .zap-tool-edit {
+      grid-area: 1 / 2;
+      justify-self: end;
+    }
+    .zap-tool-earlier {
+      grid-area: 2 / 1;
+      justify-self: start;
+    }
+    .zap-tool-later {
+      grid-area: 2 / 2;
+      justify-self: end;
+    }
+  }
+  .zap-button-frame[data-hidden] {
+    flex-direction: row;
+    align-items: center;
+    padding-left: 0.75rem;
+  }
+  .zap-button-frame[data-hidden] .zap-button-frame-tools {
+    border-top: 0;
+  }
+  .zap-editor-empty {
+    grid-column: 1 / -1;
+    padding: 1rem;
+    border: 1px dashed var(--edge-default);
+    border-radius: 4px;
+    text-align: center;
+  }
+  .zap-widget-frame {
+    border: 1px solid var(--edge-default);
+    border-radius: 4px;
+    background: var(--surface-raised);
+  }
+  /* The slot a lifted widget leaves behind; its copy follows the pointer. */
+  .zap-widget-frame[data-dragging] {
+    background: transparent;
+    border-style: dashed;
+  }
+  .zap-widget-frame[data-dragging] > * {
+    visibility: hidden;
+  }
+  .zap-widget-frame-lifted {
+    box-shadow: 0 8px 24px var(--material-shadow);
+    cursor: grabbing;
+  }
+  .zap-widget-frame-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+  }
+  .zap-widget-frame-header > span {
+    min-width: 6rem;
+  }
+  .zap-widget-frame-footer {
+    padding: 0.5rem;
+    border-top: 1px solid var(--edge-subtle);
+  }
+  .zap-widget-frame-body {
+    display: flex;
+    max-height: 16rem;
+    flex-direction: column;
+    gap: 0.5rem;
+    overflow: hidden;
+    padding: 0.75rem;
+    border-top: 1px solid var(--edge-subtle);
+  }
+  .now-playing-artwork {
+    width: 3.75rem;
+    height: 5rem;
+  }
+  @media (min-width: 760px) {
+    /* The title sits in a 48px row for its controls, so its text starts 16px
+       below the row's top. The padding here makes up the rest of the side
+       gutter, so the gap above the title equals the gap beside it. */
+    .page-frame-content-wide-header .page-frame-scroll-with-header {
+      padding-top: calc(
+        var(--page-content-safe-top, var(--page-scroll-safe-top, 0px)) +
+          var(--page-header-top-gap, 0px)
+      );
+    }
+    .page-frame-content-wide-header .page-header-shell {
+      position: static;
+      padding: 0;
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+    }
+    .page-frame-content-wide-header .page-header-surface {
+      max-width: none;
+      min-height: 3rem;
+      margin: 0 0 0.5rem;
+      background: transparent;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    .page-frame-content-wide-header .page-header-content {
+      padding: 0;
+    }
+    .page-frame-content-wide-header:not(.page-frame-workspace)
+      .page-header-surface {
+      max-width: var(--content-bound);
+      margin-inline: auto;
+    }
+    .page-header-content-row {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+    .page-header-leading {
+      display: none;
+    }
+    .page-header-ancestor {
+      display: flex;
+    }
+    .page-frame-content-wide-header .page-header-title-inset {
+      padding-left: 0;
+    }
+    .page-frame-phone-header .page-header-shell {
+      display: none;
+    }
+    .page-frame-phone-header .page-frame-scroll {
+      padding-top: calc(
+        var(--page-content-safe-top, var(--page-scroll-safe-top, 0px)) + 1rem
+      );
+    }
+    .zap-editor-bar {
+      --zap-bar-top: 0px;
+    }
+    .zap-scan-actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 12rem));
+      gap: 1rem;
+      align-items: stretch;
+    }
+    .zap-scan-actions .wui-reader-button-shell,
+    .zap-scan-actions .wui-button.w-full {
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      margin-inline: 0;
+    }
+    .zap-scan-tile {
+      min-height: 10rem;
+      aspect-ratio: 1;
+    }
+    /* A contextual write spans the column instead of the 20rem action cap. */
+    .zap-write-activity .wui-reader-button-shell,
+    .zap-write-activity .wui-reader-actions {
+      width: 100%;
+      max-width: none;
+      margin-inline: 0;
+    }
+    .zap-playback {
+      order: 0;
+    }
+    .zap-reader-tools {
+      order: 1;
+    }
+    .zap-readers {
+      order: 2;
+    }
+    .zap-collections {
+      order: 3;
+    }
+  }
+  @media (min-width: 1024px) {
+    .zap-workspace {
+      display: grid;
+      max-width: none;
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+      grid-template-areas:
+        "session supporting"
+        "collections collections";
+      align-items: start;
+      gap: 1.5rem;
+    }
+    .zap-session,
+    .zap-supporting {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .zap-session {
+      grid-area: session;
+    }
+    .zap-supporting {
+      grid-area: supporting;
+    }
+    .zap-collections {
+      grid-area: collections;
+    }
+    .zap-remote-slot {
+      display: block;
+      min-width: 0;
+    }
+    /* The action bank owns width, including nested reader/recovery wrappers. */
+    .zap-reader-tools .wui-button.w-full,
+    .zap-reader-tools .wui-reader-button-shell,
+    .zap-reader-tools .wui-reader-actions {
+      width: 100%;
+      max-width: none;
+      margin-inline: 0;
+    }
+    .zap-workspace[data-remote-available="false"] .zap-remote-slot {
+      display: contents;
+    }
+    .zap-workspace[data-reader-tools="false"] .zap-reader-tools {
+      display: none;
+    }
+    .zap-workspace[data-zap-layout="custom"]
+      :is(.zap-session, .zap-supporting) {
+      row-gap: 1.5rem;
+    }
+    .zap-workspace[data-zap-layout="custom"]:is(
+        [data-side-empty="true"],
+        [data-main-empty="true"]
+      ) {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas: none;
+    }
+    .zap-workspace[data-zap-layout="custom"]:is(
+        [data-side-empty="true"],
+        [data-main-empty="true"]
+      )
+      :is(.zap-session, .zap-supporting, .zap-collections) {
+      grid-area: auto;
+    }
+    .zap-editor-body {
+      max-width: none;
+    }
+    .zap-editor-body.zap-button-form {
+      display: grid;
+      max-width: 72rem;
+      grid-template-columns: minmax(16rem, 24rem) minmax(0, 1fr);
+      grid-template-areas:
+        "basics script"
+        "more script"
+        "actions script"
+        "delete script";
+      grid-template-rows: auto auto auto 1fr;
+      align-items: start;
+      gap: 1.25rem 2.5rem;
+    }
+    .zap-button-form-basics {
+      grid-area: basics;
+    }
+    .zap-button-form-script {
+      grid-area: script;
+    }
+    .zap-button-form-more {
+      grid-area: more;
+    }
+    .zap-editor-body.zap-button-form > .zap-form-actions {
+      grid-area: actions;
+    }
+    .zap-editor-body.zap-button-form > .zap-form-delete {
+      grid-area: delete;
+    }
+    .zap-editor-places {
+      display: grid;
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+      align-items: start;
+      gap: 1.5rem;
+    }
+    .zap-editor-place[data-place="bottom"],
+    .zap-editor-place[data-place="hidden"] {
+      grid-column: 1 / -1;
+    }
+    .zap-playback .now-playing-artwork {
+      width: 6rem;
+      height: 8rem;
+    }
+    .zap-playback .wui-transport-deck {
+      width: 100%;
+    }
+  }
+
+  /* The selected row keeps its face: its title and chevron take the
+     interaction colour, and the chevron is drawn solid (RowSelectionChevron). */
+  .library-browse-row {
+    cursor: pointer;
+  }
+  .library-browse-row-chevron {
+    color: var(--muted-foreground);
+  }
+  .library-browse-row[aria-current="true"]
+    :is(.library-browse-row-title, .library-browse-row-chevron) {
+    color: var(--interaction);
+  }
+  .app-sidebar[hidden] {
+    display: none;
+  }
+  .app-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    /* Above page chrome and the reader strip, below the modal scrim (40). */
+    z-index: 35;
+    display: flex;
+    flex-direction: column;
+    width: min(calc(256px + var(--app-safe-left, 0px)), 100vw);
+    overflow: hidden;
+    overscroll-behavior: contain;
+    padding: calc(1rem + var(--app-safe-top, 0px)) 0 0 var(--app-safe-left, 0px);
+    color: var(--text-primary);
+    background: var(--surface-raised);
+    border-right: 1px solid var(--edge-default);
+    box-shadow: 4px 0 12px var(--material-shadow);
+    pointer-events: auto;
+    outline: none;
+  }
+  .sidebar-brand {
+    display: flex;
+    min-height: 3rem;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0 0.5rem 1rem;
+  }
+  .sidebar-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0 0.5rem 1rem;
+  }
+  .sidebar-group {
+    border-radius: 4px;
+  }
+  .sidebar-group-heading {
+    display: flex;
+    align-items: stretch;
+  }
+  .sidebar-root-link,
+  .sidebar-child-link,
+  .sidebar-disclosure {
+    display: flex;
+    min-height: 3rem;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border-radius: 4px;
+    color: var(--text-secondary);
+    overflow-wrap: anywhere;
+    cursor: pointer;
+  }
+  .sidebar-root-link {
+    min-width: 0;
+    flex: 1;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .sidebar-group[data-active] .sidebar-root-icon {
+    color: var(--interaction);
+  }
+  .sidebar-disclosure {
+    min-width: 3rem;
+    flex-shrink: 0;
+    justify-content: center;
+  }
+  .sidebar-group-heading .sidebar-disclosure[aria-expanded="true"] > svg {
+    transform: rotate(180deg);
+  }
+  .sidebar-children:not([hidden]) {
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 0.25rem;
+  }
+  .sidebar-child-link {
+    padding-left: calc(1.5rem + 22px);
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+  .sidebar-child-group-label {
+    display: block;
+    padding: 1rem 0.75rem 0.25rem calc(1.5rem + 22px);
+    color: var(--text-muted);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    overflow-wrap: anywhere;
+  }
+  .sidebar-children ul .sidebar-child-link {
+    padding-left: calc(2.5rem + 22px);
+  }
+  .sidebar-root-link[aria-current],
+  .sidebar-child-link[aria-current] {
+    color: var(--text-primary);
+  }
+  .sidebar-child-link[aria-current] {
+    font-weight: 600;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    :is(.sidebar-root-link, .sidebar-child-link, .sidebar-disclosure):hover {
+      color: var(--text-primary);
+      background: color-mix(in srgb, var(--surface-highlight) 40%, transparent);
+    }
+  }
+  :is(
+    .sidebar-root-link,
+    .sidebar-child-link,
+    .sidebar-disclosure
+  ):focus-visible {
+    outline: 2px solid var(--interaction);
+    outline-offset: -2px;
+  }
+  .sidebar-child-link[aria-disabled="true"],
+  .sidebar-child-link[aria-disabled="true"]:hover {
+    color: var(--text-muted);
+    background: transparent;
+    cursor: not-allowed;
+  }
+  /* The section list scrolls on its own, so nothing sits behind the footer. */
+  .app-sidebar > .sidebar-navigation {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .sidebar-footer {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    margin-top: auto;
+    padding-bottom: calc(1rem + var(--app-safe-bottom, 0px));
+    background: var(--surface-raised);
+  }
+  .sidebar-action {
+    display: flex;
+    min-height: 3rem;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0 0.5rem;
+    padding: 0.75rem;
+    border-radius: 4px;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-align: left;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .sidebar-action:hover {
+      color: var(--text-primary);
+      background: color-mix(in srgb, var(--surface-highlight) 40%, transparent);
+    }
+  }
+  .sidebar-action:focus-visible {
+    outline: 2px solid var(--interaction);
+    outline-offset: -2px;
+  }
+  /* Settings lists a dozen pages; tighten them so most fit above the footer. */
+  @media (max-height: 1000px) {
+    .sidebar-child-link {
+      min-height: 2.5rem;
+      padding-block: 0.5rem;
+    }
+  }
+  /* Too short to share the height: the whole sidebar scrolls instead. */
+  @media (max-height: 640px) {
+    .app-sidebar {
+      overflow-y: auto;
+    }
+    .app-sidebar > .sidebar-navigation {
+      flex: none;
+      overflow: visible;
+    }
+  }
+  .sidebar-device-status {
+    margin-top: 0.5rem;
+    padding: 1rem 1rem 0;
+    border-top: 1px solid var(--edge-subtle);
+    overflow-wrap: anywhere;
+  }
+  /* The rail: the same sidebar, narrowed to its four sections. Each is an
+     icon over its name; a name too long for the width wraps. */
+  .app-sidebar[data-mode="rail"] {
+    width: min(calc(80px + var(--app-safe-left, 0px)), 100vw);
+    box-shadow: none;
+  }
+  .app-sidebar[data-mode="rail"] .sidebar-brand {
+    justify-content: center;
+    padding-inline: 0;
+  }
+  .sidebar-groups[data-rail] {
+    padding-inline: 0.25rem;
+  }
+  .sidebar-groups[data-rail] .sidebar-root-link {
+    min-height: 3.5rem;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.25rem;
+    /* No side padding: `RailLabel` measures the link's width as its room. */
+    padding: 0.5rem 0;
+    line-height: 1.2;
+    letter-spacing: 0.25px;
+    text-align: center;
+  }
+  /* `RailLabel` sets the size: 11px, or less for a name that would not fit. */
+  .sidebar-rail-label {
+    display: block;
+    max-width: 100%;
+    font-size: 0.6875rem;
+  }
+  .app-sidebar[data-mode="rail"] .sidebar-action {
+    justify-content: center;
+    margin-inline: 0.25rem;
+  }
+  /* Full screen: the one way back fades until the pointer or keyboard is
+     used, and is always there for focus. */
+  .app-fullscreen-exit {
+    position: fixed;
+    /* Bottom left, where the control that hid the navigation was, and clear
+       of the connection strip when it is showing. */
+    bottom: calc(
+      max(var(--app-footer-overlay-height, 0px), var(--app-safe-bottom, 0px)) +
+        0.5rem
+    );
+    left: calc(0.5rem + var(--app-safe-left, 0px));
+    z-index: 35;
+    display: flex;
+    width: 3rem;
+    height: 3rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--edge-default);
+    border-radius: 6px;
+    color: var(--text-primary);
+    background: var(--surface-raised);
+    box-shadow: 0 2px 6px var(--material-shadow);
+    opacity: 0;
+    /* Faded, it must not catch taps meant for the page beneath it. */
+    pointer-events: none;
+    transition: opacity 200ms;
+  }
+  .app-fullscreen-exit:is([data-shown], :focus-visible) {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .app-fullscreen-exit:focus-visible {
+    outline: 2px solid var(--interaction);
+    outline-offset: 2px;
+  }
+  .app-navigation-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 34;
+    background: rgb(0 0 0 / 60%);
+    pointer-events: auto;
+  }
+  @media (min-width: 760px) {
+    .app-global-reader-strip {
+      left: var(--app-navigation-width);
+    }
+    .app-primary-chrome {
+      top: 0;
+    }
+    .app-primary-chrome .app-connection-status {
+      position: fixed;
+      right: 0;
+      bottom: 0;
+      left: var(--app-navigation-width);
+      padding-bottom: var(--app-safe-bottom, 0px);
+    }
+    .home-device-trigger {
+      display: none;
+    }
+    .adaptive-app-shell .page-frame-scroll {
+      padding-bottom: calc(var(--app-footer-overlay-clearance, 0px) + 1.25rem);
+    }
+    .page-frame-workspace .page-header-surface {
+      max-width: none;
+    }
+  }
+  @media (min-width: 1100px) {
+    .page-frame-with-pane {
+      --page-content-safe-right: 0px;
+      --library-detail-width: calc(400px + var(--app-safe-right, 0px));
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) var(--library-detail-width);
+      grid-template-rows: minmax(0, 1fr);
+    }
+    .page-frame-with-pane > .page-header-shell {
+      right: var(--library-detail-width);
+    }
+    .page-frame-with-pane > .page-frame-scroll {
+      min-width: 0;
+      grid-area: 1 / 1;
+    }
+    .page-frame-support {
+      display: flex;
+      min-width: 0;
+      min-height: 0;
+      grid-area: 1 / 2;
+      padding: calc(1rem + var(--page-support-safe-top, 0px))
+        calc(1rem + var(--app-safe-right, 0px))
+        calc(var(--app-footer-overlay-height, 0px) + 1.25rem) 0;
+    }
+  }
+  /* The page sits beside the navigation, whichever form it takes: the rail,
+     or the full sidebar. `data-app-nav` is set on the document root by the
+     shell (`useNavigationMode`). */
+  :root[data-app-nav="rail"],
+  :root[data-app-nav="rail"] .adaptive-app-shell {
+    --app-navigation-width: calc(80px + var(--app-safe-left, 0px));
+  }
+  :root[data-app-nav="full"],
+  :root[data-app-nav="full"] .adaptive-app-shell {
+    --app-navigation-width: calc(256px + var(--app-safe-left, 0px));
+  }
+  :root:is([data-app-nav="rail"], [data-app-nav="full"])
+    :is(.adaptive-app-main, .app-connection-status) {
+    --page-content-safe-left: 0px;
+  }
+  :root:is([data-app-nav="rail"], [data-app-nav="full"]) .adaptive-app-main {
+    width: calc(100% - var(--app-navigation-width));
+    margin-left: var(--app-navigation-width);
+  }
+  /* Beside the navigation the content needs a little more air than the 16px
+     viewport-edge margin, clearing its shadow. */
+  :root:is([data-app-nav="rail"], [data-app-nav="full"])
+    .adaptive-app-main
+    .page-frame-scroll {
+    padding-left: 1.5rem;
+  }
+  :root:is([data-app-nav="rail"], [data-app-nav="full"])
+    .adaptive-app-main
+    .page-frame-scroll-with-header {
+    --page-header-top-gap: 0.5rem;
+  }
+  @media (min-width: 1280px) {
+    .page-frame-with-pane {
+      --library-detail-width: calc(460px + var(--app-safe-right, 0px));
+    }
+  }
+  @media (min-width: 1600px) {
+    .page-frame-with-pane {
+      --library-detail-width: calc(520px + var(--app-safe-right, 0px));
+    }
+  }
+  .library-collections {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .library-collection-links {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    min-width: 0;
+  }
+  .library-decks,
+  .library-decks-toolbar {
+    min-width: 0;
+  }
+  .library-decks-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  @media (min-width: 760px) {
+    .library-decks-toolbar {
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+    .library-decks-toolbar > :first-child {
+      min-width: 0;
+      flex: 2 1 min(100%, 14rem);
+    }
+    .library-decks-toolbar > .wui-button {
+      flex: 1 1 min(100%, 10rem);
+      margin-inline: 0;
+    }
+  }
+  /* Collections and Decks are two stacked sections at every width: the
+     tiles run across the page, the deck list sits beneath at full width. */
+  @media (min-width: 760px) {
+    .library-collections {
+      gap: 1.5rem;
+    }
+    .library-collection-links {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 1024px) {
+    .library-decks-toolbar > .wui-button {
+      flex: 0 0 12rem;
+    }
+  }
+  @media (min-width: 1280px) {
+    .library-collection-links {
+      grid-auto-columns: minmax(0, 1fr);
+      grid-auto-flow: column;
+      grid-template-columns: none;
+    }
+  }
+  .library-search-workspace,
+  .deck-workspace {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .library-search-workspace {
+    gap: 1rem;
+  }
+  .library-search-filters,
+  .create-search-filters,
+  .media-search-filters,
+  .library-search-filter-controls,
+  .create-search-filter-controls,
+  .media-search-filter-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .library-search-filters {
+    width: 100%;
+    max-width: var(--content-bound);
+    align-self: center;
+  }
+  .library-search-results,
+  .deck-context,
+  .deck-items {
+    min-width: 0;
+  }
+  .library-search-filter-selectors,
+  .create-search-filter-selectors,
+  .media-search-filter-selectors {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .deck-workspace {
+    gap: 1rem;
+  }
+  .deck-edit-form,
+  .deck-description {
+    width: 100%;
+    max-width: var(--content-bound);
+  }
+  .deck-context,
+  .deck-items {
+    display: contents;
+  }
+  /* From 760px the search form is one toolbar row above full-width results:
+     the title field stretches, the selectors keep a fixed basis and Search is
+     its natural size. Short of room, the selectors and Search wrap beneath
+     the title together. */
+  @media (min-width: 760px) {
+    .library-search-filters,
+    .create-search-filters,
+    .media-search-filters {
+      max-width: none;
+      margin-inline: 0;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+    .library-search-filters > :first-child,
+    .create-search-filters > :first-child,
+    .media-search-filters > :first-child {
+      min-width: 0;
+      flex: 1 1 18rem;
+    }
+    /* Each group states the room it needs as its basis (two selectors and
+       Search; two selectors), so the row wraps before anything is squeezed,
+       and wraps inside itself rather than letting one field run under the
+       next. */
+    .library-search-filter-controls,
+    .create-search-filter-controls,
+    .media-search-filter-controls {
+      min-width: 0;
+      flex: 1 1 39rem;
+      flex-flow: row wrap;
+      align-items: flex-end;
+    }
+    .library-search-filter-selectors,
+    .create-search-filter-selectors,
+    .media-search-filter-selectors {
+      min-width: 0;
+      flex: 1 1 28rem;
+      flex-flow: row wrap;
+    }
+    .library-search-filter-selectors > *,
+    .create-search-filter-selectors > *,
+    .media-search-filter-selectors > * {
+      min-width: 0;
+      flex: 1 1 13.75rem;
+    }
+    .library-search-filter-controls > .wui-button,
+    .create-search-filter-controls > .wui-button,
+    .media-search-filter-controls > .wui-button {
+      flex: 0 0 auto;
+      margin-inline: 0;
+    }
+  }
+  /* A deck is one column at every width: description, its action row, then
+     the items at full width. The action row stays compact, not page-wide. */
+  @media (min-width: 760px) {
+    .deck-workspace > .deck-context > .wui-modal-action-rail {
+      width: 100%;
+      max-width: 28rem;
+    }
+  }
+  .zapscript-step {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem 0.5rem 0.75rem 0.75rem;
+    border: 1px solid var(--edge-default);
+    border-radius: 6px;
+    background: var(--surface-raised);
+  }
+  .zapscript-step-fields {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+    align-items: end;
+    gap: 0.75rem;
+    padding-right: 0.25rem;
+  }
+  /* The page-level editor: steps and text side by side when there is room. */
+  .zapscript-input-split {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    align-items: start;
+    gap: 1.5rem;
+  }
+  .custom-zapscript-page {
+    width: 100%;
+    max-width: var(--content-bound);
+    margin-inline: auto;
+  }
+  @media (min-width: 1024px) {
+    .custom-zapscript-page {
+      max-width: none;
+    }
+  }
+  .zapscript-input-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .zapscript-input .wui-button {
+    max-width: 100%;
+    flex-wrap: wrap;
+    overflow-wrap: anywhere;
+  }
+  .media-search-workspace {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+  }
+  .media-search-filters {
+    width: 100%;
+    min-width: 0;
+  }
+  @media (min-width: 760px) {
+    .media-search-workspace {
+      gap: 1rem;
+    }
+  }
+  .media-search-results {
+    min-width: 0;
+    min-height: 0;
+    flex: 1;
+  }
+  .commands-workspace {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .commands-workspace > * {
+    min-width: 0;
+  }
+  @media (min-width: 760px) {
+    .commands-workspace {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+      align-items: start;
+    }
+  }
+  .create-destinations,
+  .create-search-workspace,
+  .nfc-workspace {
+    display: flex;
+    width: 100%;
+    max-width: var(--content-bound);
+    margin-inline: auto;
+    flex-direction: column;
+  }
+  .create-destinations,
+  .mapping-list-toolbar {
+    gap: 0.75rem;
+  }
+  .create-destinations > *,
+  .create-search-filters,
+  .create-search-results {
+    min-width: 0;
+  }
+  .mapping-list-toolbar {
+    display: flex;
+    flex-direction: column;
+  }
+  .mapping-row-body {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .nfc-read-grid,
+  .nfc-tools-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  @media (min-width: 760px) {
+    .create-search-workspace {
+      max-width: none;
+      gap: 1rem;
+    }
+    .create-overview-page .page-header-surface,
+    .nfc-workspace-page .page-header-surface {
+      max-width: var(--content-bound);
+      margin-inline: auto;
+    }
+    /* Filter stretches; the action keeps a fixed width at the list's edge,
+       as the Decks toolbar does. */
+    .mapping-list-toolbar {
+      flex-direction: row;
+      align-items: flex-end;
+    }
+    .mapping-list-toolbar > :first-child {
+      min-width: 0;
+      flex: 1;
+    }
+    .mapping-list-toolbar .wui-button.w-full {
+      flex: 0 0 12rem;
+      margin-inline: 0;
+    }
+  }
+  /* With room, a mapping reads across one line in aligned columns: name and
+     status, type and match, then its ZapScript. */
+  @media (min-width: 1024px) {
+    .mapping-row-body {
+      display: grid;
+      grid-template-columns: minmax(0, 20rem) minmax(0, 14rem) minmax(0, 1fr);
+      align-items: center;
+      column-gap: 1.5rem;
+    }
+  }
+  @media (min-width: 1024px) {
+    .create-overview-page .page-header-surface,
+    .nfc-workspace-page .page-header-surface {
+      max-width: none;
+    }
+    .create-destinations {
+      display: grid;
+      max-width: none;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .create-destinations > a > .wui-card {
+      height: 100%;
+    }
+    .nfc-workspace {
+      max-width: none;
+    }
+    .nfc-read-grid,
+    .nfc-tools-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: start;
+      gap: 1.25rem;
+    }
+    .nfc-read-action {
+      grid-column: 1 / -1;
+    }
+  }
+  .settings-panel-stack,
+  .settings-panel-layout,
+  .settings-overview {
+    display: flex;
+    width: 100%;
+    max-width: var(--content-bound);
+    margin-inline: auto;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  .settings-play-main,
+  .settings-online-device,
+  .settings-online-account,
+  .settings-overview-context,
+  .settings-overview-destinations {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  .settings-play-profiles {
+    min-width: 0;
+  }
+  .settings-play-panels[data-profiles-available="false"]
+    .settings-play-profiles {
+    display: none;
+  }
+  @media (min-width: 760px) {
+    .settings-overview-page .page-header-surface,
+    .settings-panel-page .page-header-surface {
+      max-width: var(--content-bound);
+      margin-inline: auto;
+    }
+  }
+  @media (min-width: 1024px) {
+    .settings-overview-page .page-header-surface,
+    .settings-panel-page .page-header-surface {
+      max-width: none;
+    }
+    /* A bounded page keeps its width but starts at the left edge, so titles
+       do not move sideways between pages. */
+    .page-frame-content-wide-header:not(.page-frame-workspace)
+      .page-header-surface {
+      margin-inline: 0;
+    }
+    .settings-panel-stack {
+      max-width: none;
+    }
+    .settings-panel-layout {
+      display: grid;
+      max-width: none;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: start;
+      gap: 1.5rem;
+    }
+    .settings-reader-panels,
+    .settings-play-panels,
+    .settings-online-panels {
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    }
+    .settings-reader-controls,
+    .settings-play-main {
+      grid-column: 1;
+      grid-row: 1;
+    }
+    .settings-reader-status,
+    .settings-play-profiles {
+      grid-column: 2;
+      grid-row: 1;
+    }
+    .settings-play-panels[data-profiles-available="false"] .settings-play-main {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: start;
+    }
+    .settings-overview {
+      display: grid;
+      max-width: none;
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+      align-items: start;
+      gap: 1.5rem;
+    }
+    .settings-overview-destinations {
+      grid-column: 1;
+      grid-row: 1;
+    }
+    .settings-overview-context {
+      grid-column: 2;
+      grid-row: 1;
+    }
+  }
+  /* The Settings landing page beside the sidebar: status panels, no menu. */
+  .settings-overview-panels {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 1.5rem;
+  }
+  .settings-overview-panel {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  /* The panels are the grid's own cells there; below, they stack as before. */
+  .settings-overview-panels > .settings-overview-context {
+    display: contents;
+  }
+  .settings-overview > .settings-overview-context > .settings-overview-panel {
+    gap: 1.25rem;
+  }
+  /* Logs: stacked on phones; with room, Upload, the filter box, the level
+     chips and the count share one line, and an upload link takes the next. */
+  .logs-toolbar,
+  .logs-toolbar-upload {
+    display: flex;
+    flex-direction: column;
+  }
+  .logs-toolbar {
+    gap: 0.75rem;
+  }
+  .logs-toolbar-upload {
+    gap: 0.5rem;
+  }
+  .logs-toolbar-result {
+    display: flex;
+    gap: 0.5rem;
+  }
+  @media (min-width: 1024px) {
+    .logs-toolbar {
+      flex-flow: row wrap;
+      align-items: center;
+    }
+    .logs-toolbar-upload {
+      display: contents;
+    }
+    .logs-toolbar-search {
+      flex: 1 1 14rem;
+    }
+    .logs-toolbar-result {
+      order: 1;
+      flex: 1 0 100%;
+    }
+  }
+  .settings-navigation-grid {
+    display: grid;
+    grid-template-columns: repeat(
+      auto-fit,
+      minmax(min(100%, max(9.5rem, calc((100% - 0.5rem) / 2))), 1fr)
+    );
+    gap: 0.5rem;
+  }
+  .settings-nav-row {
+    display: flex;
+    min-height: 3rem;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .settings-nav-row:hover {
+      background: var(--surface-highlight);
+    }
+  }
+  .settings-nav-row:focus-visible {
+    outline: 2px solid var(--interaction);
+    outline-offset: -2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .wui-button,
+    .site-button,
+    .wui-toggle-thumb,
+    .wui-card,
+    .wui-input,
+    .zaparoo-tour-step .shepherd-button {
+      transition: none;
+    }
+    .wui-reader-button-shell > .wui-button[data-reader-state]::before,
+    .wui-reader-action[data-reader-state]::before {
+      animation: none;
+      opacity: 0.72;
+    }
+  }
+}

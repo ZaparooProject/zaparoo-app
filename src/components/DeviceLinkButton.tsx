@@ -1,7 +1,7 @@
 import { useEffect } from "react";
-import { Loader2 } from "lucide-react";
 import { useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Button } from "@/components/wui/Button";
 import {
   useDeviceLinking,
@@ -37,11 +37,9 @@ export function DeviceLinkButton({
 
   if (!supported) {
     return (
-      <Button
-        label={t("online.deviceLink.updateCore")}
-        disabled
-        className="w-full"
-      />
+      <p className="text-muted-foreground text-sm">
+        {t("online.deviceLink.updateCore")}
+      </p>
     );
   }
 
@@ -55,8 +53,9 @@ export function DeviceLinkButton({
             ? "online.deviceLink.checking"
             : "online.deviceLink.linking",
         )}
-        icon={<Loader2 size={20} className="animate-spin" aria-hidden="true" />}
+        icon={<LoadingSpinner size={20} decorative />}
         disabled
+        disabledAppearance="busy"
         className="w-full"
       />
     );
@@ -64,11 +63,9 @@ export function DeviceLinkButton({
 
   if (state === "linked") {
     return (
-      <Button
-        label={t("online.deviceLink.linked")}
-        disabled
-        className="w-full"
-      />
+      <p className="text-muted-foreground text-sm" role="status">
+        {t("online.deviceLink.linked")}
+      </p>
     );
   }
 

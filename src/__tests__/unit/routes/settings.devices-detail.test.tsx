@@ -32,6 +32,9 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = (await importOriginal()) as any;
   return {
     ...actual,
+    Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
+      <a href={to}>{children}</a>
+    ),
     createFileRoute: () => (options: any) => {
       componentRef.current = options.component;
       return {
@@ -197,9 +200,6 @@ describe("Settings Device Detail Route", () => {
     expect(screen.getByLabelText("settings.activeDevice")).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "online.deviceLink.link" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByText("online.deviceLink.description"),
     ).not.toBeInTheDocument();
   });
 

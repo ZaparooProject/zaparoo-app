@@ -47,3 +47,4 @@ coverage/
 
 .tanstack/
 docs/plans/
+.worktrees/

@@ -19,32 +19,32 @@ This opens a headless Chromium browser. The app will load in a disconnected stat
 
 ### Connecting to a Device
 
-The app stores the device address in `localStorage` under the key `deviceAddress`. There are two approaches:
+The app keeps saved devices in a device registry stored through Capacitor Preferences (key `deviceRegistryV2`; on web, Preferences is backed by `localStorage`). There are two approaches:
 
 **Option A: Through the UI (recommended for first-time setup)**
 
 1. Skip the welcome tour: click the "Skip Tour" button
-2. Navigate to Settings (bottom nav bar)
-3. Fill the "Device address" textbox with the device IP (e.g. `10.0.0.107`)
-4. Click the "Save" button
-5. Wait a few seconds, then take a snapshot to confirm "Connected" status
+2. Navigate to Settings (bottom dock on phone widths, sidebar or menu drawer on wider ones)
+3. Open device selection with "Connect" (no selected device) or "Change device"
+4. Choose "Add device manually", fill the "Device address" textbox with the device IP (e.g. `10.0.0.107`), then click "Connect"
+5. Wait for the summary to show "Connected", then take a snapshot
 
-**Option B: Inject localStorage directly**
+**Option B: Inject the legacy address key (fresh profiles only)**
 
 ```bash
 playwright-cli localstorage-set deviceAddress "10.0.0.107"
 playwright-cli reload
 ```
 
-After reload, the app will auto-connect. You'll need to skip the welcome tour again since `tourCompleted` resets on reload.
+`deviceAddress` is the legacy key. It is only imported when no device registry has been saved yet, so this works in a fresh browser profile and is ignored once any device exists; use Option A after that. After reload, the app will auto-connect. You'll need to skip the welcome tour again since `tourCompleted` resets on reload.
 
 ### Verifying Connection
 
 After connecting, confirm by checking the snapshot for:
 
 - Status bar no longer showing "Connecting..."
-- Home page shows "Connected" with the device address
-- "Last scanned" and "Now playing" sections show real data
+- Device status shows "Connected": the device pill in the Zap header on phone widths, the device block at the bottom of the sidebar or drawer on wider ones, and the device summary on Settings
+- "Now playing" and "Readers" on the Zap page show real data
 - Create page options are no longer disabled
 
 ## Navigation
@@ -70,32 +70,45 @@ The only time `goto` is appropriate is for the initial page load or if you inten
 
 ### App Routes
 
-| Route                     | Page             | Notes                                             |
-| ------------------------- | ---------------- | ------------------------------------------------- |
-| `/`                       | Home (Zap)       | Connection status, last scanned, now playing      |
-| `/create`                 | Create a New Tag | Links to sub-pages, "Current media" button        |
-| `/create/search`          | Search for Media | Search box, system/tag filters, results list      |
-| `/create/custom`          | Custom ZapScript | Text editor with command palette                  |
-| `/create/mappings`        | Add a Mapping    | Token ID input, NFC/Camera scan, ZapScript editor |
-| `/settings`               | Settings         | Device connection, media database, language       |
-| `/settings/readers`       | Readers          | Device readers, scan mode, chat/AI config         |
-| `/settings/play-controls` | Play Controls    | Playtime limits and launch guard configuration    |
-| `/settings/media`         | Manage Media     | Database update and metadata scraper controls     |
-| `/settings/advanced`      | Advanced         | Debug logging, error reporting, view logs         |
-| `/settings/logs`          | Logs             | Filterable log viewer                             |
-| `/settings/help`          | Help             | Documentation and community links                 |
-| `/settings/about`         | About            | Version, credits, translations                    |
-| `/settings/online`        | Zaparoo Online   | Login form                                        |
+| Route                       | Page              | Notes                                                    |
+| --------------------------- | ----------------- | -------------------------------------------------------- |
+| `/`                         | Zap (home)        | Scan actions, now playing, readers, cover rows           |
+| `/zap/scan-history`         | Scan history      | Scanned tokens with copy and replay                      |
+| `/zap/play-history`         | Play history      | Chronological play sessions (needs a recent Core)        |
+| `/library`                  | Library           | Systems and Collections tabs                             |
+| `/library/$system`          | System browse     | Folder browsing, letter jump, media details              |
+| `/library/search`           | Search games      | Query and system/tag filters, results list               |
+| `/library/favorites`        | Favorites         | Also `/library/liked`, `/play-later`, `/disliked`        |
+| `/library/recent`           | Recently Played   | Also `/library/top` (Top Played)                         |
+| `/library/decks/$deckId`    | Deck              | Deck items; `/library/decks/new` and `…/add` are editors |
+| `/create`                   | Create            | Links to the Create tools                                |
+| `/create/search`            | Search for media  | Search box, system/tag filters, write-focused details    |
+| `/create/custom`            | Custom ZapScript  | Text editor with command palette                         |
+| `/create/mappings`          | Mappings          | Mapping list; `/new` and `/edit/$id` open the editor     |
+| `/create/decks/new`         | New deck          | Shared deck editor                                       |
+| `/create/nfc`               | NFC utilities     | Native only                                              |
+| `/settings`                 | Settings          | Device summary/selection, media database, section tiles  |
+| `/settings/devices`         | Manage devices    | Saved devices, discovery, manual entry; `/$recordId`     |
+| `/settings/readers`         | Readers           | Device readers, scan mode, in-app reader options         |
+| `/settings/play-controls`   | Play Controls     | Playtime limits, launch guard, profiles                  |
+| `/settings/media`           | Manage Media      | Database update and metadata scraper controls            |
+| `/settings/language-region` | Language & Region | App language and region preferences                      |
+| `/settings/accessibility`   | Accessibility     | Appearance, text size, screen reader-friendly lists      |
+| `/settings/online`          | Zaparoo Online    | Login form, linked device and Online features            |
+| `/settings/advanced`        | Advanced          | Debug logging, error reporting, view logs                |
+| `/settings/logs`            | Logs              | Filterable log viewer                                    |
+| `/settings/help`            | Help              | Documentation and community links                        |
+| `/settings/about`           | About             | Version, credits, `/settings/licenses`                   |
 
-### Bottom Navigation Bar
+### App Navigation
 
-Three persistent nav links at the bottom of every page:
+Four destinations: **Zap** (`/`), **Library** (`/library`), **Create** (`/create`) and **Settings** (`/settings`). How they are presented depends on viewport width:
 
-- **Zap** (`/`) — home page
-- **Create** (`/create`) — tag creation
-- **Settings** (`/settings`) — settings
+- **Below 760px (phone)** — a bottom dock with the four destinations
+- **760–1279px (tablet)** — a top bar with a menu button; it opens a side drawer with the four sections and their child pages
+- **From 1280px (desktop)** — a persistent sidebar with the same sections and child pages
 
-These are always accessible unless a modal dialog is open (modals intentionally block background interaction).
+In the drawer and sidebar, section labels are links and the chevron beside each one expands its child pages without navigating. Navigation is always accessible unless a modal dialog is open (modals intentionally block background interaction). From 1100px, selected Library media opens in a docked details pane rather than a dialog.
 
 ## Working with Snapshots
 
@@ -177,17 +190,17 @@ playwright-cli network
 
 ## Dialogs and Modals
 
-The app uses modal dialogs for confirmations, scan history, game details, system selection, etc. When a dialog is open:
+The app uses modal dialogs for confirmations, device selection, history, game details, system selection, etc. They are bottom sheets below 760px and centered dialogs from 760px. When a dialog is open:
 
 - Background elements are intentionally blocked from interaction
 - Find the dialog's Close or Cancel button ref in the snapshot
 - Click that button to dismiss
-- The Escape key may not close all dialog types (known issue under investigation)
+- Escape closes dismissible dialogs; mandatory blocking dialogs ignore it
 
 ## State Management Notes
 
 - **Connection state** lives in the Zustand store (`useStatusStore`), not persisted — lost on reload
-- **Device address** is persisted in `localStorage` and Capacitor Preferences — survives reload
+- **Saved devices** are persisted in the device registry through Capacitor Preferences — survive reload
 - **Tour completed** is persisted in the preferences store — survives reload only if the store has hydrated before the page unloads
 - **Search results, now playing, scan history** come from the WebSocket connection — lost on disconnect
 
@@ -219,12 +232,15 @@ playwright-cli snapshot
 # Find "Skip Tour" button ref, then:
 playwright-cli click <skip-tour-ref>
 
-# 3. Connect to device via Settings
+# 3. Connect to device via Settings and shared device sheet
 playwright-cli click <settings-nav-ref>
 playwright-cli snapshot
-# Find device address textbox ref
+playwright-cli click <connect-or-change-device-ref>
+playwright-cli snapshot
+playwright-cli click <enter-address-ref>
+playwright-cli snapshot
 playwright-cli fill <textbox-ref> "10.0.0.107"
-playwright-cli click <save-button-ref>
+playwright-cli click <connect-button-ref>
 
 # 4. Wait and verify connection
 sleep 3
@@ -255,7 +271,7 @@ Rules:
 - Screenshot every bug you find.
 - Finding a bug is not the end — document it and KEEP TESTING.
 - Edge cases are where bugs hide. The happy path is boring.
-- Try mobile viewports (375x667) as well as desktop.
+- Try phone (375x667), tablet (820x1180) and desktop (1440x900) viewports.
 ```
 
 ### Test Areas to Cover
@@ -278,10 +294,11 @@ Structure prompts around specific areas for thorough coverage:
 
 **Responsive Layout**
 
-- Mobile: `playwright-cli resize 375 667`
-- Tablet: `playwright-cli resize 768 1024`
+- Phone (bottom dock): `playwright-cli resize 375 667`
 - Narrow: `playwright-cli resize 320 480`
-- Desktop: `playwright-cli resize 1280 720`
+- Tablet (top bar and drawer): `playwright-cli resize 820 1180`
+- Desktop (sidebar): `playwright-cli resize 1440 900`
+- Layout boundaries: 759/760, 1023/1024, 1099/1100 and 1279/1280 wide
 
 **Accessibility**
 

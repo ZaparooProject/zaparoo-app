@@ -8,51 +8,51 @@ export function ToggleSwitch(props: {
   value: boolean | undefined;
   setValue: (value: boolean) => void;
   disabled?: boolean;
-  onDisabledClick?: () => void;
+  /** Help control rendered outside the checkbox label. */
+  help?: React.ReactNode;
   /** Content rendered after the label, outside the clickable label area */
   suffix?: React.ReactNode;
   /** When true, shows a skeleton placeholder instead of the toggle */
   loading?: boolean;
+  /** Let long labels/help and the switch wrap when their panel is narrow. */
+  reflow?: boolean;
 }) {
   const { impact } = useHaptics();
   const inputId = useId();
-  const hasDisabledClickHandler = props.disabled && props.onDisabledClick;
-
-  const handleContainerClick = hasDisabledClickHandler
-    ? (e: React.MouseEvent) => {
-        e.preventDefault();
-        props.onDisabledClick!();
-      }
-    : undefined;
-
-  const handleContainerKeyDown = hasDisabledClickHandler
-    ? (e: React.KeyboardEvent) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          props.onDisabledClick!();
-        }
-      }
-    : undefined;
 
   return (
     <div
-      className="text-foreground flex cursor-pointer items-center justify-between select-none"
-      onClick={handleContainerClick}
-      onKeyDown={handleContainerKeyDown}
-      role={hasDisabledClickHandler ? "button" : undefined}
-      tabIndex={hasDisabledClickHandler ? 0 : undefined}
+      className={classNames(
+        "text-foreground flex min-h-12 items-center justify-between gap-4 select-none",
+        { "flex-wrap": props.reflow },
+      )}
     >
-      <span className="flex items-center">
-        <label htmlFor={inputId} className="cursor-pointer">
+      <span
+        className={classNames(
+          "flex min-w-0 items-center gap-1",
+          props.reflow ? "flex-[1_1_8rem] flex-wrap" : "flex-1",
+        )}
+      >
+        <label
+          htmlFor={inputId}
+          className={classNames(
+            "cursor-pointer text-sm leading-6 font-medium",
+            { "min-w-0 wrap-anywhere": props.reflow },
+          )}
+        >
           {props.label}
         </label>
+        {props.help}
         {props.suffix}
       </span>
       {props.loading ? (
-        <Skeleton className="h-8 w-[51px] rounded-full" />
+        <Skeleton className="h-6 w-11 shrink-0 rounded-full" />
       ) : (
         /* eslint-disable-next-line jsx-a11y/label-has-associated-control -- Label wraps and is associated with input via htmlFor */
-        <label htmlFor={inputId} className="relative cursor-pointer">
+        <label
+          htmlFor={inputId}
+          className="relative flex size-12 shrink-0 cursor-pointer items-center justify-center"
+        >
           <input
             id={inputId}
             type="checkbox"
@@ -70,49 +70,20 @@ export function ToggleSwitch(props: {
           />
           <div
             className={classNames(
+              "wui-toggle-track",
               "block",
-              "h-8",
-              "w-[51px]",
+              "h-6",
+              "w-11",
               "rounded-full",
               "border",
               "border-solid",
               "peer-focus-visible:ring-2",
-              "peer-focus-visible:ring-white/50",
+              "peer-focus-visible:ring-ring",
               "peer-focus-visible:ring-offset-2",
               "peer-focus-visible:ring-offset-background",
-              {
-                "bg-button-pattern": props.value && !props.disabled,
-                "bg-background": !props.value && !props.disabled,
-                "border-bd-outline": !props.disabled,
-                "border-foreground-disabled": props.disabled,
-              },
             )}
           ></div>
-          <div
-            className={classNames(
-              "dot",
-              "bg-bd-outline",
-              "absolute",
-              "left-1.5",
-              "top-2",
-              "h-4",
-              "w-4",
-              "rounded-full",
-              "transition",
-              "peer-checked:left-0",
-              "peer-checked:top-1",
-              "peer-checked:h-6",
-              "peer-checked:w-6",
-              "peer-checked:translate-x-full",
-              {
-                "peer-checked:bg-primary-foreground": !props.disabled,
-                "peer-checked:bg-foreground-disabled": props.disabled,
-                "pointer-events-none": props.disabled,
-                "bg-white": !props.disabled,
-                "bg-foreground-disabled": props.disabled,
-              },
-            )}
-          ></div>
+          <div className="wui-toggle-thumb pointer-events-none"></div>
         </label>
       )}
     </div>

@@ -22,7 +22,9 @@ import { Route as LibraryDislikedRouteImport } from "./routes/library.disliked";
 import { Route as LibraryFavoritesRouteImport } from "./routes/library.favorites";
 import { Route as LibraryLikedRouteImport } from "./routes/library.liked";
 import { Route as LibraryPlayLaterRouteImport } from "./routes/library.play-later";
+import { Route as LibraryRecentRouteImport } from "./routes/library.recent";
 import { Route as LibrarySearchRouteImport } from "./routes/library.search";
+import { Route as LibraryTopRouteImport } from "./routes/library.top";
 import { Route as SettingsIndexRouteImport } from "./routes/settings.index";
 import { Route as SettingsAboutRouteImport } from "./routes/settings.about";
 import { Route as SettingsAccessibilityRouteImport } from "./routes/settings.accessibility";
@@ -36,6 +38,8 @@ import { Route as SettingsMediaRouteImport } from "./routes/settings.media";
 import { Route as SettingsOnlineRouteImport } from "./routes/settings.online";
 import { Route as SettingsPlayControlsRouteImport } from "./routes/settings.play-controls";
 import { Route as SettingsReadersRouteImport } from "./routes/settings.readers";
+import { Route as ZapPlayHistoryRouteImport } from "./routes/zap.play-history";
+import { Route as ZapScanHistoryRouteImport } from "./routes/zap.scan-history";
 import { Route as CreateDecksNewRouteImport } from "./routes/create.decks.new";
 import { Route as CreateMappingsNewRouteImport } from "./routes/create.mappings_.new";
 import { Route as LibraryDecksDeckIdRouteImport } from "./routes/library.decks.$deckId";
@@ -109,9 +113,19 @@ const LibraryPlayLaterRoute = LibraryPlayLaterRouteImport.update({
   path: "/library/play-later",
   getParentRoute: () => rootRouteImport,
 } as any);
+const LibraryRecentRoute = LibraryRecentRouteImport.update({
+  id: "/library/recent",
+  path: "/library/recent",
+  getParentRoute: () => rootRouteImport,
+} as any);
 const LibrarySearchRoute = LibrarySearchRouteImport.update({
   id: "/library/search",
   path: "/library/search",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const LibraryTopRoute = LibraryTopRouteImport.update({
+  id: "/library/top",
+  path: "/library/top",
   getParentRoute: () => rootRouteImport,
 } as any);
 const SettingsIndexRoute = SettingsIndexRouteImport.update({
@@ -179,6 +193,16 @@ const SettingsReadersRoute = SettingsReadersRouteImport.update({
   path: "/settings/readers",
   getParentRoute: () => rootRouteImport,
 } as any);
+const ZapPlayHistoryRoute = ZapPlayHistoryRouteImport.update({
+  id: "/zap/play-history",
+  path: "/zap/play-history",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const ZapScanHistoryRoute = ZapScanHistoryRouteImport.update({
+  id: "/zap/scan-history",
+  path: "/zap/scan-history",
+  getParentRoute: () => rootRouteImport,
+} as any);
 const CreateDecksNewRoute = CreateDecksNewRouteImport.update({
   id: "/create/decks/new",
   path: "/create/decks/new",
@@ -227,7 +251,9 @@ export interface FileRoutesByFullPath {
   "/library/favorites": typeof LibraryFavoritesRoute;
   "/library/liked": typeof LibraryLikedRoute;
   "/library/play-later": typeof LibraryPlayLaterRoute;
+  "/library/recent": typeof LibraryRecentRoute;
   "/library/search": typeof LibrarySearchRoute;
+  "/library/top": typeof LibraryTopRoute;
   "/settings/about": typeof SettingsAboutRoute;
   "/settings/accessibility": typeof SettingsAccessibilityRoute;
   "/settings/advanced": typeof SettingsAdvancedRoute;
@@ -240,6 +266,8 @@ export interface FileRoutesByFullPath {
   "/settings/online": typeof SettingsOnlineRoute;
   "/settings/play-controls": typeof SettingsPlayControlsRoute;
   "/settings/readers": typeof SettingsReadersRoute;
+  "/zap/play-history": typeof ZapPlayHistoryRoute;
+  "/zap/scan-history": typeof ZapScanHistoryRoute;
   "/create/": typeof CreateIndexRoute;
   "/library/": typeof LibraryIndexRoute;
   "/settings/": typeof SettingsIndexRoute;
@@ -263,7 +291,9 @@ export interface FileRoutesByTo {
   "/library/favorites": typeof LibraryFavoritesRoute;
   "/library/liked": typeof LibraryLikedRoute;
   "/library/play-later": typeof LibraryPlayLaterRoute;
+  "/library/recent": typeof LibraryRecentRoute;
   "/library/search": typeof LibrarySearchRoute;
+  "/library/top": typeof LibraryTopRoute;
   "/settings/about": typeof SettingsAboutRoute;
   "/settings/accessibility": typeof SettingsAccessibilityRoute;
   "/settings/advanced": typeof SettingsAdvancedRoute;
@@ -276,6 +306,8 @@ export interface FileRoutesByTo {
   "/settings/online": typeof SettingsOnlineRoute;
   "/settings/play-controls": typeof SettingsPlayControlsRoute;
   "/settings/readers": typeof SettingsReadersRoute;
+  "/zap/play-history": typeof ZapPlayHistoryRoute;
+  "/zap/scan-history": typeof ZapScanHistoryRoute;
   "/create": typeof CreateIndexRoute;
   "/library": typeof LibraryIndexRoute;
   "/settings": typeof SettingsIndexRoute;
@@ -300,7 +332,9 @@ export interface FileRoutesById {
   "/library/favorites": typeof LibraryFavoritesRoute;
   "/library/liked": typeof LibraryLikedRoute;
   "/library/play-later": typeof LibraryPlayLaterRoute;
+  "/library/recent": typeof LibraryRecentRoute;
   "/library/search": typeof LibrarySearchRoute;
+  "/library/top": typeof LibraryTopRoute;
   "/settings/about": typeof SettingsAboutRoute;
   "/settings/accessibility": typeof SettingsAccessibilityRoute;
   "/settings/advanced": typeof SettingsAdvancedRoute;
@@ -313,6 +347,8 @@ export interface FileRoutesById {
   "/settings/online": typeof SettingsOnlineRoute;
   "/settings/play-controls": typeof SettingsPlayControlsRoute;
   "/settings/readers": typeof SettingsReadersRoute;
+  "/zap/play-history": typeof ZapPlayHistoryRoute;
+  "/zap/scan-history": typeof ZapScanHistoryRoute;
   "/create/": typeof CreateIndexRoute;
   "/library/": typeof LibraryIndexRoute;
   "/settings/": typeof SettingsIndexRoute;
@@ -338,7 +374,9 @@ export interface FileRouteTypes {
     | "/library/favorites"
     | "/library/liked"
     | "/library/play-later"
+    | "/library/recent"
     | "/library/search"
+    | "/library/top"
     | "/settings/about"
     | "/settings/accessibility"
     | "/settings/advanced"
@@ -351,6 +389,8 @@ export interface FileRouteTypes {
     | "/settings/online"
     | "/settings/play-controls"
     | "/settings/readers"
+    | "/zap/play-history"
+    | "/zap/scan-history"
     | "/create/"
     | "/library/"
     | "/settings/"
@@ -374,7 +414,9 @@ export interface FileRouteTypes {
     | "/library/favorites"
     | "/library/liked"
     | "/library/play-later"
+    | "/library/recent"
     | "/library/search"
+    | "/library/top"
     | "/settings/about"
     | "/settings/accessibility"
     | "/settings/advanced"
@@ -387,6 +429,8 @@ export interface FileRouteTypes {
     | "/settings/online"
     | "/settings/play-controls"
     | "/settings/readers"
+    | "/zap/play-history"
+    | "/zap/scan-history"
     | "/create"
     | "/library"
     | "/settings"
@@ -410,7 +454,9 @@ export interface FileRouteTypes {
     | "/library/favorites"
     | "/library/liked"
     | "/library/play-later"
+    | "/library/recent"
     | "/library/search"
+    | "/library/top"
     | "/settings/about"
     | "/settings/accessibility"
     | "/settings/advanced"
@@ -423,6 +469,8 @@ export interface FileRouteTypes {
     | "/settings/online"
     | "/settings/play-controls"
     | "/settings/readers"
+    | "/zap/play-history"
+    | "/zap/scan-history"
     | "/create/"
     | "/library/"
     | "/settings/"
@@ -447,7 +495,9 @@ export interface RootRouteChildren {
   LibraryFavoritesRoute: typeof LibraryFavoritesRoute;
   LibraryLikedRoute: typeof LibraryLikedRoute;
   LibraryPlayLaterRoute: typeof LibraryPlayLaterRoute;
+  LibraryRecentRoute: typeof LibraryRecentRoute;
   LibrarySearchRoute: typeof LibrarySearchRoute;
+  LibraryTopRoute: typeof LibraryTopRoute;
   SettingsAboutRoute: typeof SettingsAboutRoute;
   SettingsAccessibilityRoute: typeof SettingsAccessibilityRoute;
   SettingsAdvancedRoute: typeof SettingsAdvancedRoute;
@@ -460,6 +510,8 @@ export interface RootRouteChildren {
   SettingsOnlineRoute: typeof SettingsOnlineRoute;
   SettingsPlayControlsRoute: typeof SettingsPlayControlsRoute;
   SettingsReadersRoute: typeof SettingsReadersRoute;
+  ZapPlayHistoryRoute: typeof ZapPlayHistoryRoute;
+  ZapScanHistoryRoute: typeof ZapScanHistoryRoute;
   CreateIndexRoute: typeof CreateIndexRoute;
   LibraryIndexRoute: typeof LibraryIndexRoute;
   SettingsIndexRoute: typeof SettingsIndexRoute;
@@ -565,11 +617,25 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof LibraryPlayLaterRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    "/library/recent": {
+      id: "/library/recent";
+      path: "/library/recent";
+      fullPath: "/library/recent";
+      preLoaderRoute: typeof LibraryRecentRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     "/library/search": {
       id: "/library/search";
       path: "/library/search";
       fullPath: "/library/search";
       preLoaderRoute: typeof LibrarySearchRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/library/top": {
+      id: "/library/top";
+      path: "/library/top";
+      fullPath: "/library/top";
+      preLoaderRoute: typeof LibraryTopRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     "/settings/": {
@@ -663,6 +729,20 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof SettingsReadersRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    "/zap/play-history": {
+      id: "/zap/play-history";
+      path: "/zap/play-history";
+      fullPath: "/zap/play-history";
+      preLoaderRoute: typeof ZapPlayHistoryRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/zap/scan-history": {
+      id: "/zap/scan-history";
+      path: "/zap/scan-history";
+      fullPath: "/zap/scan-history";
+      preLoaderRoute: typeof ZapScanHistoryRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     "/create/decks/new": {
       id: "/create/decks/new";
       path: "/create/decks/new";
@@ -727,7 +807,9 @@ const rootRouteChildren: RootRouteChildren = {
   LibraryFavoritesRoute: LibraryFavoritesRoute,
   LibraryLikedRoute: LibraryLikedRoute,
   LibraryPlayLaterRoute: LibraryPlayLaterRoute,
+  LibraryRecentRoute: LibraryRecentRoute,
   LibrarySearchRoute: LibrarySearchRoute,
+  LibraryTopRoute: LibraryTopRoute,
   SettingsAboutRoute: SettingsAboutRoute,
   SettingsAccessibilityRoute: SettingsAccessibilityRoute,
   SettingsAdvancedRoute: SettingsAdvancedRoute,
@@ -740,6 +822,8 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsOnlineRoute: SettingsOnlineRoute,
   SettingsPlayControlsRoute: SettingsPlayControlsRoute,
   SettingsReadersRoute: SettingsReadersRoute,
+  ZapPlayHistoryRoute: ZapPlayHistoryRoute,
+  ZapScanHistoryRoute: ZapScanHistoryRoute,
   CreateIndexRoute: CreateIndexRoute,
   LibraryIndexRoute: LibraryIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,

@@ -1,5 +1,9 @@
 import { create } from "zustand";
-import type { MediaBrowseSort } from "@/lib/models";
+import type {
+  MediaBrowseEntry,
+  MediaBrowseSort,
+  SearchResultGame,
+} from "@/lib/models";
 import {
   type SessionSearchParams,
   useTabSessionStore,
@@ -7,6 +11,11 @@ import {
 import type { SystemReleasePeriod, SystemSort } from "@/lib/systemFilters";
 
 export type LibraryView = "systems" | "collections";
+
+export interface LibraryMediaSelection {
+  entry: MediaBrowseEntry;
+  result?: SearchResultGame;
+}
 
 export interface LibraryFolderLevel {
   name: string;
@@ -36,6 +45,18 @@ export interface LibraryBrowseWindow {
   loadedKeys: string[];
 }
 
+/** Exploration entries kept per device before the oldest is forgotten. */
+export const MAX_METADATA_SESSIONS = 20;
+
+/** Session scope owned by one metadata-exploration history entry. */
+export function libraryMetadataScope(
+  historyKey: string,
+  system: string | undefined,
+  tag: string | undefined,
+): string {
+  return `metadata:${historyKey}:${JSON.stringify([system, tag])}`;
+}
+
 export type LibraryBrowseWindowUpdater = (
   current: LibraryBrowseWindow | null,
 ) => LibraryBrowseWindow | null;
@@ -53,6 +74,21 @@ interface LibrarySessionState {
   embeddedSearchOpen: Record<string, boolean>;
   searches: Record<string, SessionSearchParams>;
   browseWindows: Record<string, LibraryBrowseWindow>;
+  selectedMedia: Record<string, LibraryMediaSelection>;
+  metadataReturns: Record<string, { owner: string; entry: MediaBrowseEntry }>;
+  /** Exploration scopes, least recently visited first. */
+  metadataScopes: string[];
+  touchMetadataScope: (scope: string) => void;
+  rememberMetadataReturn: (
+    historyKey: string,
+    owner: string,
+    entry: MediaBrowseEntry,
+  ) => void;
+  forgetMetadataReturn: (historyKey: string, owner: string) => void;
+  setSelectedMedia: (
+    scope: string,
+    selection: LibraryMediaSelection | null,
+  ) => void;
   setView: (view: LibraryView) => void;
   setCategory: (category: string) => void;
   setManufacturer: (manufacturer: string) => void;
@@ -69,6 +105,11 @@ interface LibrarySessionState {
   ) => void;
   resetNavigation: () => void;
   activateDevice: (deviceAddress: string) => void;
+  /**
+   * Chooses the Library root view from outside that page. The device is
+   * activated first, so the page's own activation does not reset the choice.
+   */
+  showView: (deviceAddress: string, view: LibraryView) => void;
   reset: () => void;
 }
 
@@ -85,10 +126,67 @@ const initialLibrarySessionState = {
   embeddedSearchOpen: {},
   searches: {},
   browseWindows: {},
+  selectedMedia: {},
+  metadataReturns: {},
+  metadataScopes: [] as string[],
 };
 
 export const useLibrarySessionStore = create<LibrarySessionState>()((set) => ({
   ...initialLibrarySessionState,
+  rememberMetadataReturn: (historyKey, owner, entry) =>
+    set((state) => {
+      // Re-inserting keeps key order least recently remembered first.
+      const metadataReturns = { ...state.metadataReturns };
+      delete metadataReturns[historyKey];
+      metadataReturns[historyKey] = { owner, entry };
+      const keys = Object.keys(metadataReturns);
+      for (const stale of keys.slice(
+        0,
+        Math.max(0, keys.length - MAX_METADATA_SESSIONS),
+      )) {
+        delete metadataReturns[stale];
+      }
+      return { metadataReturns };
+    }),
+  touchMetadataScope: (scope) => {
+    let evicted: string[] = [];
+    set((state) => {
+      if (state.metadataScopes.at(-1) === scope) return state;
+      const metadataScopes = [
+        ...state.metadataScopes.filter((known) => known !== scope),
+        scope,
+      ];
+      evicted = metadataScopes.splice(
+        0,
+        Math.max(0, metadataScopes.length - MAX_METADATA_SESSIONS),
+      );
+      if (evicted.length === 0) return { metadataScopes };
+      const searches = { ...state.searches };
+      const selectedMedia = { ...state.selectedMedia };
+      for (const stale of evicted) {
+        delete searches[stale];
+        delete selectedMedia[`search:${stale}`];
+      }
+      return { metadataScopes, searches, selectedMedia };
+    });
+    for (const stale of evicted) {
+      useTabSessionStore.getState().forgetScroll(librarySearchScrollKey(stale));
+    }
+  },
+  forgetMetadataReturn: (historyKey, owner) =>
+    set((state) => {
+      if (state.metadataReturns[historyKey]?.owner !== owner) return state;
+      const metadataReturns = { ...state.metadataReturns };
+      delete metadataReturns[historyKey];
+      return { metadataReturns };
+    }),
+  setSelectedMedia: (scope, selection) =>
+    set((state) => {
+      const selectedMedia = { ...state.selectedMedia };
+      if (selection) selectedMedia[scope] = selection;
+      else delete selectedMedia[scope];
+      return { selectedMedia };
+    }),
   setView: (view) => set({ view }),
   setCategory: (category) => set({ category }),
   setManufacturer: (manufacturer) => set({ manufacturer }),
@@ -134,12 +232,21 @@ export const useLibrarySessionStore = create<LibrarySessionState>()((set) => ({
       embeddedSearchOpen: {},
       searches: {},
       browseWindows: {},
+      selectedMedia: {},
+      metadataReturns: {},
+      metadataScopes: [],
     }),
   activateDevice: (deviceAddress) =>
     set((state) =>
       state.deviceAddress === deviceAddress
         ? state
         : { ...initialLibrarySessionState, deviceAddress },
+    ),
+  showView: (deviceAddress, view) =>
+    set((state) =>
+      state.deviceAddress === deviceAddress
+        ? { view }
+        : { ...initialLibrarySessionState, deviceAddress, view },
     ),
   reset: () => set(initialLibrarySessionState),
 }));

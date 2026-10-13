@@ -1,39 +1,43 @@
-import {
-  ArrowDownIcon,
-  ArrowUpIcon,
-  ChevronRightIcon,
-  GripVerticalIcon,
-} from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, GripVerticalIcon } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { DeckItem } from "@/lib/models";
 import { useHapticPress } from "@/hooks/useHapticPress";
+import { useSystemNameResolver } from "@/hooks/useSystemName";
 import { Button } from "@/components/wui/Button";
+import { RowSelectionChevron } from "@/components/RowSelectionChevron";
 import { DeckArtwork } from "@/components/library/DeckArtwork";
 
 export function SortableDeckItemRow({
   item,
+  systemName,
   index,
   count,
   editable,
   busy,
   accessibleLists,
+  selected = false,
   onSelect,
   onMove,
 }: {
   item: DeckItem;
+  /** Catalog name for the item's system, when it is known. */
+  systemName?: string;
   index: number;
   count: number;
   editable: boolean;
   busy: boolean;
   accessibleLists: boolean;
+  /** The item shown in the docked details pane. */
+  selected?: boolean;
   onSelect: (item: DeckItem) => void;
   onMove: (index: number, target: number) => void;
 }) {
   const { t } = useTranslation();
   const handleHapticPress = useHapticPress();
+  const resolveSystemName = useSystemNameResolver();
   const {
     attributes,
     listeners,
@@ -62,12 +66,17 @@ export function SortableDeckItemRow({
     <>
       <DeckArtwork item={item} />
       <span className="min-w-0">
-        <span className="block font-medium break-words">{name}</span>
+        <span className="library-browse-row-title block font-medium break-words">
+          {name}
+        </span>
         <span className="text-muted-foreground block text-sm">
           {item.kind === "card"
             ? t("decks.card")
             : item.media
-              ? item.media.system
+              ? resolveSystemName(
+                  item.media.system,
+                  systemName ?? item.media.system,
+                )
               : t("decks.script")}
         </span>
       </span>
@@ -75,7 +84,7 @@ export function SortableDeckItemRow({
   );
 
   return (
-    <li className="border-b border-white/25 last:border-b-0">
+    <li className="border-border border-b last:border-b-0">
       <div
         ref={setNodeRef}
         style={{
@@ -83,7 +92,7 @@ export function SortableDeckItemRow({
           transition,
           zIndex: isDragging ? 1 : undefined,
         }}
-        className={`relative flex min-h-14 items-center gap-1 px-1 py-3 sm:gap-2 ${isDragging ? "bg-background opacity-30" : ""}`}
+        className={`relative flex min-h-14 items-center gap-1 px-1 py-3 sm:gap-2 ${isDragging ? "bg-surface-raised opacity-30" : ""}`}
       >
         {editable && !accessibleLists && (
           <button
@@ -93,7 +102,7 @@ export function SortableDeckItemRow({
             {...listeners}
             aria-label={t("decks.reorderItem", { name })}
             aria-roledescription={t("decks.reorderRole")}
-            className="text-muted-foreground flex h-12 w-10 shrink-0 touch-none items-center justify-center rounded-md focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none sm:hidden"
+            className="text-muted-foreground focus-visible:ring-ring flex h-12 w-10 shrink-0 touch-none items-center justify-center rounded-md focus-visible:ring-2 focus-visible:outline-none sm:hidden"
             disabled={busy || count < 2}
           >
             <GripVerticalIcon size={20} aria-hidden="true" />
@@ -106,16 +115,13 @@ export function SortableDeckItemRow({
         ) : (
           <button
             type="button"
-            className="flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+            className="library-browse-row focus-visible:ring-ring flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-visible:ring-2 focus-visible:outline-none"
+            aria-current={selected ? "true" : undefined}
             onPointerUp={handleHapticPress}
             onClick={() => onSelect(item)}
           >
             {content}
-            <ChevronRightIcon
-              size={20}
-              aria-hidden="true"
-              className="text-muted-foreground ml-auto shrink-0"
-            />
+            <RowSelectionChevron selected={selected} className="ml-auto" />
           </button>
         )}
         {editable && (
@@ -127,22 +133,24 @@ export function SortableDeckItemRow({
             }
           >
             <Button
-              icon={<ArrowUpIcon size={18} />}
-              variant="text"
+              icon={<ArrowUpIcon size={20} />}
+              variant="ghost"
               aria-label={t("decks.moveUp", { name })}
               ref={upRef}
               disabled={busy || index === 0}
+              disabledAppearance={busy ? "busy" : "unavailable"}
               onClick={() => {
                 movedRef.current = "up";
                 onMove(index, index - 1);
               }}
             />
             <Button
-              icon={<ArrowDownIcon size={18} />}
-              variant="text"
+              icon={<ArrowDownIcon size={20} />}
+              variant="ghost"
               aria-label={t("decks.moveDown", { name })}
               ref={downRef}
               disabled={busy || index === count - 1}
+              disabledAppearance={busy ? "busy" : "unavailable"}
               onClick={() => {
                 movedRef.current = "down";
                 onMove(index, index + 1);

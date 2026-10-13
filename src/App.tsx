@@ -6,6 +6,9 @@ import { StatusBar, Style } from "@capacitor/status-bar";
 import { usePrevious } from "@uidotdev/usehooks";
 import { useTranslation } from "react-i18next";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
+import { getTrialAccessContext } from "@/lib/warpSubscription";
+import { useTrialAccessExpiry } from "@/hooks/useTrialAccessExpiry";
+import { useTheme } from "@/components/theme-provider";
 import { ErrorComponent } from "@/components/ErrorComponent.tsx";
 import { AppBadgeManager } from "@/components/AppBadgeManager";
 import { InboxModal } from "@/components/InboxModal";
@@ -22,7 +25,7 @@ import {
   getOnlineApiErrorContext,
   RequirementsNotMetError,
 } from "@/lib/errors";
-import { DatabaseIcon, PlayIcon } from "@/lib/images";
+import { DatabaseIcon, NfcIcon, PlayIcon } from "@/lib/images";
 import {
   ensurePurchasesUser,
   getPurchaseAccess,
@@ -44,7 +47,7 @@ import { useAccelerometerAvailabilityCheck } from "./hooks/useAccelerometerAvail
 import { usePreferenceHydrationRecovery } from "./hooks/usePreferenceHydrationRecovery";
 import { useRunQueueProcessor } from "./hooks/useRunQueueProcessor";
 import { useWriteQueueProcessor } from "./hooks/useWriteQueueProcessor";
-import { WriteModal } from "./components/WriteModal";
+import { ReaderActivityControl } from "./components/ReaderActivityControl";
 import { DeepLinkConfirmModal } from "./components/DeepLinkConfirmModal";
 import { usePassiveNfcListener } from "./hooks/usePassiveNfcListener";
 import { useLiveUpdate } from "./hooks/useLiveUpdate";
@@ -100,10 +103,10 @@ function isRetryableSubscriptionError(error: unknown): boolean {
 
 // Component to initialize queue processors and passive listeners after preferences hydrate
 // This ensures sessionManager.launchOnScan is set correctly before processing.
-// It also renders the UI for queue-driven flows: the write modal (bound to the
-// same writer instance that performs queued writes, on every route) and the
-// deep-link launch confirmation.
+// It also renders UI for queue-driven flows: compact reader activity (bound to
+// the writer instance that performs queued writes) and deep-link confirmation.
 function QueueProcessors() {
+  const { t } = useTranslation();
   const { pendingConfirm, confirmRun, cancelConfirm } = useRunQueueProcessor();
   const { nfcWriter } = useWriteQueueProcessor();
   // Listen for NFC intents on Android even when not in explicit scan mode
@@ -124,13 +127,13 @@ function QueueProcessors() {
     }
   }, [writeOpen, nfcWriter.status, nfcWriter.verifyError, setWriteOpen]);
 
-  const closeWriteModal = async () => {
+  const cancelReaderActivity = async () => {
     try {
       await nfcWriter.end();
     } catch (err) {
       logger.error("Failed to end NFC writer session", err, {
         category: "nfc",
-        action: "closeWriteModal",
+        action: "cancelReaderActivity",
         severity: "error",
       });
     } finally {
@@ -140,13 +143,37 @@ function QueueProcessors() {
 
   return (
     <>
-      <WriteModal
-        isOpen={writeOpen}
-        close={closeWriteModal}
-        verifyError={nfcWriter.verifyError !== null}
-        retry={() => void nfcWriter.retry()}
-        retapRequired={nfcWriter.retapRequired}
-      />
+      {writeOpen && (
+        <div className="app-global-reader-strip bg-surface-raised border-border fixed right-0 bottom-[var(--app-footer-overlay-clearance,64px)] z-30 border-t py-3 shadow-[0_-4px_12px_var(--material-shadow)]">
+          <div className="mx-auto max-w-md">
+            <ReaderActivityControl
+              state={
+                nfcWriter.verifyError
+                  ? "error"
+                  : nfcWriter.retapRequired
+                    ? "attention"
+                    : "waiting"
+              }
+              idleLabel={t("create.search.writeLabel")}
+              activeLabel={
+                nfcWriter.retapRequired
+                  ? t("spinner.retapTag")
+                  : t("spinner.holdTagReader")
+              }
+              errorMessage={
+                nfcWriter.verifyError
+                  ? t("spinner.verifyFailedRetry")
+                  : undefined
+              }
+              icon={<NfcIcon size={20} />}
+              buttonClassName="w-full"
+              onStart={() => undefined}
+              onCancel={() => void cancelReaderActivity()}
+              onRetry={() => void nfcWriter.retry()}
+            />
+          </div>
+        </div>
+      )}
       <DeepLinkConfirmModal
         item={pendingConfirm}
         onConfirm={confirmRun}
@@ -179,7 +206,7 @@ function NowPlayingToast() {
         (to) => (
           <button
             type="button"
-            className="flex grow flex-col text-left focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+            className="focus-visible:ring-ring flex grow flex-col text-left focus-visible:ring-2 focus-visible:outline-none"
             onClick={() => toast.dismiss(to.id)}
           >
             <span className="font-bold">{t("toast.nowPlayingHeading")}</span>
@@ -242,6 +269,7 @@ declare module "@tanstack/react-router" {
 }
 
 export default function App() {
+  useTrialAccessExpiry();
   useDeepLinks();
 
   // Wait for preferences to hydrate before rendering to prevent layout shifts
@@ -266,15 +294,21 @@ export default function App() {
   );
   const safeInsets = useStatusStore((state) => state.safeInsets);
 
-  // Initialize device info and status bar
+  const { resolvedTheme } = useTheme();
   useEffect(() => {
     initDeviceInfo();
+  }, []);
 
+  useEffect(() => {
+    // Capacitor's Dark style means light icons on a dark app surface.
+    // Keep both APIs in sync; SystemBars reapplies its setting on rotation.
     // Show status bar and configure style
     if (isNativePluginAvailable("StatusBar")) {
       Promise.all([
         StatusBar.show(),
-        StatusBar.setStyle({ style: Style.Dark }),
+        StatusBar.setStyle({
+          style: resolvedTheme === "dark" ? Style.Dark : Style.Light,
+        }),
       ]).catch((e) => {
         logger.warn("StatusBar setup failed:", e);
       });
@@ -283,11 +317,16 @@ export default function App() {
     // SystemBars re-applies its own style on every configuration change
     // (rotation, fold, theme), which overrides StatusBar unless it is set too.
     if (isNativePluginAvailable("SystemBars")) {
-      SystemBars.setStyle({ style: SystemBarsStyle.Dark }).catch((e) => {
+      SystemBars.setStyle({
+        style:
+          resolvedTheme === "dark"
+            ? SystemBarsStyle.Dark
+            : SystemBarsStyle.Light,
+      }).catch((e) => {
         logger.warn("SystemBars setup failed:", e);
       });
     }
-  }, []);
+  }, [resolvedTheme]);
 
   // Check Pro access status once at app startup
   useProAccessCheck();
@@ -407,11 +446,13 @@ export default function App() {
         useStatusStore.getState().loggedInUser?.uid === appUserID;
 
       try {
-        const { is_premium } = await getSubscriptionStatusWithRetry(
+        const subscription = await getSubscriptionStatusWithRetry(
           controller.signal,
         );
         if (!isCurrentCheck()) return;
-        setOnlinePremiumAccess(is_premium);
+        const trial = getTrialAccessContext(subscription, appUserID);
+        if (trial) setOnlinePremiumAccess(subscription.is_premium, trial);
+        else setOnlinePremiumAccess(subscription.is_premium);
       } catch (e) {
         if (!isCurrentCheck()) return;
         setOnlinePremiumAccess(false);
@@ -546,14 +587,12 @@ export default function App() {
       <Toaster
         position="top-center"
         toastOptions={{
-          className: "backdrop-blur",
           style: {
-            background: "rgba(17, 25, 40, 0.7)",
+            background: "var(--surface-raised)",
             mixBlendMode: "normal",
-            border: "1px solid rgba(255, 255, 255, 0.13)",
-            boxShadow: "0px 4px 9px rgba(0, 0, 0, 0.25)",
-            backdropFilter: "blur(8px)",
-            borderRadius: "12px",
+            border: "1px solid var(--edge-subtle)",
+            boxShadow: "0 4px 9px var(--material-shadow)",
+            borderRadius: "8px",
             width: "calc(100% - 2rem)",
             color: "var(--color-foreground)",
           },
@@ -583,8 +622,7 @@ export default function App() {
             <StagedTokenModal />
             <AppBadgeManager />
             {/* Must live inside A11yAnnouncerProvider and SlideModalProvider:
-                its WriteModal uses useAnnouncer and its confirm modal renders
-                a SlideModal */}
+                reader activity uses announcements and confirmation uses a SlideModal. */}
             <QueueProcessors />
             <WhatsNewInitializer />
           </ConnectionProvider>

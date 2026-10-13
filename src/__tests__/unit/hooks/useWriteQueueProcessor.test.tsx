@@ -59,14 +59,6 @@ describe("useWriteQueueProcessor", () => {
   });
 
   describe("initial state", () => {
-    it("should return reset function", () => {
-      // Arrange & Act
-      const { result } = renderHook(() => useWriteQueueProcessor());
-
-      // Assert
-      expect(result.current.reset).toBeInstanceOf(Function);
-    });
-
     it("should not process when queue is empty", async () => {
       // Arrange - queue is empty by default
       renderHook(() => useWriteQueueProcessor());
@@ -133,7 +125,7 @@ describe("useWriteQueueProcessor", () => {
       expect(useStatusStore.getState().writeQueue).toBe("");
     });
 
-    it("should open write modal when processing", async () => {
+    it("should open reader activity when processing", async () => {
       // Arrange
       usePreferencesStore.setState({ nfcAvailable: true });
       renderHook(() => useWriteQueueProcessor());
@@ -151,7 +143,7 @@ describe("useWriteQueueProcessor", () => {
       expect(useStatusStore.getState().writeOpen).toBe(true);
     });
 
-    it("should close the write modal after the write completes", async () => {
+    it("should close the reader activity after the write completes", async () => {
       // Arrange - default global mock skips verification (connect rejects)
       usePreferencesStore.setState({ nfcAvailable: true });
       renderHook(() => useWriteQueueProcessor());
@@ -176,7 +168,7 @@ describe("useWriteQueueProcessor", () => {
       });
     });
 
-    it("should keep the write modal open when write verification fails", async () => {
+    it("should keep the reader activity open when write verification fails", async () => {
       // Arrange - the read-back reports a tag without any NDEF message
       usePreferencesStore.setState({ nfcAvailable: true });
       vi.mocked(Nfc.connect).mockResolvedValue(undefined);
@@ -568,7 +560,7 @@ describe("useWriteQueueProcessor", () => {
         await vi.advanceTimersByTimeAsync(500);
       });
 
-      // Assert - Should have retried and eventually opened write modal
+      // Assert - Should have retried and eventually opened reader activity
       expect(CoreAPI.hasWriteCapableReader).toHaveBeenCalled();
       expect(useStatusStore.getState().writeOpen).toBe(true);
     });
@@ -600,58 +592,8 @@ describe("useWriteQueueProcessor", () => {
       // Assert - Should have attempted multiple times and show error
       expect(CoreAPI.hasWriteCapableReader).toHaveBeenCalled();
       expect(toast.error).toHaveBeenCalled();
-      // Write modal should NOT have opened since all attempts failed
+      // Reader activity should NOT have opened since all attempts failed
       expect(useStatusStore.getState().writeOpen).toBe(false);
-    });
-  });
-
-  describe("cleanup", () => {
-    it("should return reset function that can be called safely", () => {
-      // Arrange
-      const { result } = renderHook(() => useWriteQueueProcessor());
-
-      // Act - Call reset (should not throw)
-      act(() => {
-        result.current.reset();
-      });
-
-      // Assert
-      expect(result.current.reset).toBeInstanceOf(Function);
-    });
-
-    it("should allow processing new queue items after reset", async () => {
-      // Arrange
-      usePreferencesStore.setState({ nfcAvailable: true });
-      const { result } = renderHook(() => useWriteQueueProcessor());
-
-      // First write
-      act(() => {
-        useStatusStore.getState().setWriteQueue("first-content");
-      });
-
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(100);
-      });
-
-      expect(useStatusStore.getState().writeOpen).toBe(true);
-
-      // Reset the processor and clear state
-      act(() => {
-        result.current.reset();
-        useStatusStore.getState().setWriteOpen(false);
-      });
-
-      // Second write should work
-      act(() => {
-        useStatusStore.getState().setWriteQueue("second-content");
-      });
-
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(100);
-      });
-
-      // Assert - Should have processed second write
-      expect(useStatusStore.getState().writeOpen).toBe(true);
     });
   });
 

@@ -191,7 +191,7 @@ describe("PairingModal", () => {
       });
     });
 
-    it("should fall back to bare 'Zaparoo App platform' when Device.getInfo rejects", async () => {
+    it("should fall back to the translated default name when Device.getInfo rejects", async () => {
       mockedDeviceGetInfo.mockRejectedValue(new Error("native unavailable"));
 
       render(
@@ -208,7 +208,7 @@ describe("PairingModal", () => {
       ) as HTMLInputElement;
 
       await waitFor(() => {
-        expect(clientNameInput.value).toBe("Zaparoo App web");
+        expect(clientNameInput.value).toBe("pairing.defaultClientName");
       });
     });
   });

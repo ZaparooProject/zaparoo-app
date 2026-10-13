@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
-import { Purchases } from "@revenuecat/purchases-capacitor";
-import { Capacitor } from "@capacitor/core";
-import { LogOutIcon, ExternalLinkIcon, MailIcon } from "lucide-react";
+import { MailIcon } from "lucide-react";
+import { ExternalIcon } from "@/lib/images";
+import { signOutOnline } from "@/lib/onlineSignOut";
 import { SlideModal } from "@/components/SlideModal";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -18,7 +18,6 @@ import {
 import type { UpdateRequirementsRequest } from "@/lib/models";
 import { useStatusStore } from "@/lib/store";
 import { logger } from "@/lib/logger";
-import { isExpectedRevenueCatLogoutError } from "@/lib/errors";
 
 const TOS_URL = "https://zaparoo.com/terms";
 const PRIVACY_URL = "https://zaparoo.com/privacy";
@@ -128,7 +127,7 @@ export function RequirementsModal() {
       });
       setStatusMessage({
         type: "error",
-        text: t("error", { msg: "Failed to save" }),
+        text: t("requirements.saveFailed"),
       });
     } finally {
       setIsSaving(false);
@@ -137,28 +136,10 @@ export function RequirementsModal() {
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
-
-    // Revert RevenueCat to anonymous before Firebase signOut (skip on web)
-    if (Capacitor.getPlatform() !== "web") {
-      try {
-        const { isAnonymous } = await Purchases.isAnonymous();
-        if (!isAnonymous) {
-          await Purchases.logOut();
-        }
-      } catch (e) {
-        if (!isExpectedRevenueCatLogoutError(e)) {
-          logger.error("RevenueCat logout failed:", e, {
-            category: "purchase",
-            action: "logOut",
-            severity: "warning",
-          });
-        }
-      }
-    }
+    setStatusMessage(null);
 
     try {
-      await FirebaseAuthentication.signOut();
-      setLoggedInUser(null);
+      await signOutOnline();
       close();
     } catch (e) {
       logger.error("Firebase sign out failed:", e, {
@@ -166,6 +147,7 @@ export function RequirementsModal() {
         action: "signOut",
         severity: "warning",
       });
+      setStatusMessage({ type: "error", text: t("online.logoutFailed") });
     } finally {
       setIsLoggingOut(false);
     }
@@ -256,39 +238,39 @@ export function RequirementsModal() {
       close={close}
       dismissible={false}
       title={t("requirements.title")}
+      footerSkipLabel={t("accessibility.skipToActions")}
       footer={
-        <div className="flex flex-col gap-2">
-          {hasCheckboxRequirements ? (
-            <ModalActionBar
-              secondaryAction={
-                <Button
-                  label={isLoggingOut ? t("loading") : t("requirements.logout")}
-                  icon={<LogOutIcon size={18} />}
-                  variant="outline"
-                  onClick={handleLogout}
-                  disabled={isLoggingOut}
-                />
-              }
-              primaryAction={
-                <Button
-                  label={isSaving ? t("loading") : t("requirements.continue")}
-                  onClick={handleSave}
-                  disabled={!canSave || isSaving}
-                  intent="primary"
-                />
-              }
-            />
-          ) : (
-            <Button
-              label={isLoggingOut ? t("loading") : t("requirements.logout")}
-              icon={<LogOutIcon size={18} />}
-              variant="outline"
-              onClick={handleLogout}
-              disabled={isLoggingOut}
-              className="w-full"
-            />
-          )}
-        </div>
+        hasCheckboxRequirements ? (
+          <ModalActionBar
+            secondaryAction={
+              <Button
+                label={isLoggingOut ? t("loading") : t("requirements.logout")}
+                variant="outline"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                disabledAppearance="busy"
+              />
+            }
+            primaryAction={
+              <Button
+                label={isSaving ? t("loading") : t("requirements.continue")}
+                onClick={handleSave}
+                disabled={!canSave || isSaving}
+                disabledAppearance={isSaving ? "busy" : "unavailable"}
+                intent="primary"
+              />
+            }
+          />
+        ) : (
+          <Button
+            label={isLoggingOut ? t("loading") : t("requirements.logout")}
+            variant="outline"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            disabledAppearance="busy"
+            className="w-full"
+          />
+        )
       }
     >
       <div className="flex flex-col gap-4 py-2">
@@ -301,7 +283,7 @@ export function RequirementsModal() {
               onCheckedChange={(checked) => setLegalChecked(checked === true)}
               aria-label={t("requirements.legalLabel")}
             />
-            <div className="pt-0.5 text-sm leading-tight text-white">
+            <div className="text-foreground pt-0.5 text-sm leading-tight">
               <Label htmlFor="legal" className="inline leading-tight">
                 {t("requirements.legalPrefix")}
               </Label>
@@ -310,10 +292,10 @@ export function RequirementsModal() {
                 href={TOS_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 rounded-sm text-blue-400 underline hover:text-blue-300 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+                className="text-primary hover:text-primary focus-visible:ring-ring inline-flex items-center gap-1 rounded-sm underline focus-visible:ring-2 focus-visible:outline-none"
               >
                 {t("requirements.tosLink")}
-                <ExternalLinkIcon className="h-3 w-3" />
+                <ExternalIcon size="12" />
               </a>
               {legalSeparator}
               {t("requirements.legalAnd")}
@@ -322,10 +304,10 @@ export function RequirementsModal() {
                 href={PRIVACY_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 rounded-sm text-blue-400 underline hover:text-blue-300 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+                className="text-primary hover:text-primary focus-visible:ring-ring inline-flex items-center gap-1 rounded-sm underline focus-visible:ring-2 focus-visible:outline-none"
               >
                 {t("requirements.privacyLink")}
-                <ExternalLinkIcon className="h-3 w-3" />
+                <ExternalIcon size="12" />
               </a>
             </div>
           </div>
@@ -339,7 +321,10 @@ export function RequirementsModal() {
               checked={ageChecked}
               onCheckedChange={(checked) => setAgeChecked(checked === true)}
             />
-            <Label htmlFor="age" className="text-sm leading-tight text-white">
+            <Label
+              htmlFor="age"
+              className="text-foreground text-sm leading-tight"
+            >
               {t("requirements.ageLabel")}
             </Label>
           </div>
@@ -351,7 +336,7 @@ export function RequirementsModal() {
             {!emailSent ? (
               <Button
                 label={t("requirements.sendVerificationEmail")}
-                icon={<MailIcon size={18} />}
+                icon={<MailIcon size={20} />}
                 variant="outline"
                 onClick={handleSendVerificationEmail}
                 className="w-full"
@@ -370,15 +355,16 @@ export function RequirementsModal() {
                   variant="outline"
                   onClick={handleCheckEmailVerified}
                   disabled={emailVerifying}
+                  disabledAppearance="busy"
                   className="w-full"
                 />
-                <button
-                  type="button"
+                <Button
+                  label={t("requirements.resendEmail")}
+                  variant="text"
+                  size="sm"
                   onClick={handleSendVerificationEmail}
-                  className="text-muted-foreground rounded-sm text-center text-sm underline hover:text-white focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
-                >
-                  {t("requirements.resendEmail")}
-                </button>
+                  className="w-full"
+                />
               </>
             )}
           </div>
@@ -389,8 +375,8 @@ export function RequirementsModal() {
           <p
             className={
               statusMessage.type === "error"
-                ? "text-sm text-red-400"
-                : "text-sm text-green-400"
+                ? "text-error text-sm"
+                : "text-success text-sm"
             }
           >
             {statusMessage.text}

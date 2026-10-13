@@ -1,6 +1,17 @@
 import { create } from "zustand";
+import {
+  APP_SECTIONS,
+  appSectionForPath,
+  type AppSectionId,
+} from "@/lib/appSections";
 
-export type BottomTabId = "zap" | "library" | "create" | "settings";
+declare module "@tanstack/history" {
+  interface HistoryState {
+    appNavigationSource?: "desktop-sidebar";
+  }
+}
+
+export type BottomTabId = AppSectionId;
 
 export interface SessionSearchParams {
   query: string;
@@ -22,26 +33,12 @@ interface TabSessionState {
   reset: () => void;
 }
 
-const defaultLastHref: Record<BottomTabId, string> = {
-  zap: "/",
-  library: "/library",
-  create: "/create",
-  settings: "/settings",
-};
+const defaultLastHref = Object.fromEntries(
+  APP_SECTIONS.map(({ id, to }) => [id, to]),
+) as Record<BottomTabId, string>;
 
-export function bottomTabForPath(pathname: string): BottomTabId | null {
-  if (pathname === "/") return "zap";
-  if (pathname === "/library" || pathname.startsWith("/library/")) {
-    return "library";
-  }
-  if (pathname === "/create" || pathname.startsWith("/create/")) {
-    return "create";
-  }
-  if (pathname === "/settings" || pathname.startsWith("/settings/")) {
-    return "settings";
-  }
-  return null;
-}
+export const bottomTabForPath: (pathname: string) => BottomTabId | null =
+  appSectionForPath;
 
 export type AppBackDestination =
   | "/"
@@ -58,6 +55,7 @@ export function appBackDestination(
     pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
 
   if (normalizedPath === "/") return null;
+  if (normalizedPath.startsWith("/zap/")) return "/";
   if (
     normalizedPath === "/library" ||
     normalizedPath === "/create" ||
@@ -84,7 +82,12 @@ export function appBackNavigationOptions<T extends AppBackDestination>(to: T) {
 function scrollKeyBelongsToTab(key: string, tab: BottomTabId): boolean {
   switch (tab) {
     case "zap":
-      return key === "/" || key.startsWith("/?");
+      return (
+        key === "/" ||
+        key.startsWith("/?") ||
+        key.startsWith("/zap/") ||
+        key.startsWith("zap:")
+      );
     case "library":
       return (
         key === "/library" ||

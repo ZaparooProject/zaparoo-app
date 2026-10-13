@@ -1,19 +1,11 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import { ZapScriptInput } from "@/components/ZapScriptInput.tsx";
 import { BackIcon, CreateIcon } from "@/lib/images";
 import { HeaderButton } from "@/components/wui/HeaderButton";
-import { Button } from "@/components/wui/Button";
-import { WriteModal } from "@/components/WriteModal";
-import {
-  isWriteModalOpen,
-  useNfcWriter,
-  WriteAction,
-  WriteMethod,
-} from "@/lib/writeNfcHook";
-import { logger } from "@/lib/logger";
+import { ReaderActivityControl } from "@/components/ReaderActivityControl";
+import { useContextualNfcWrite } from "@/hooks/useContextualNfcWrite";
 import { PageFrame } from "@/components/PageFrame";
 import { usePreferencesStore, selectCustomText } from "@/lib/preferencesStore";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
@@ -31,17 +23,7 @@ export function CustomText() {
   const { customText, setCustomText } = usePreferencesStore(
     useShallow(selectCustomText),
   );
-  const preferRemoteWriter = usePreferencesStore(
-    (state) => state.preferRemoteWriter,
-  );
-  const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
-  // Track user intent to open modal; actual visibility derived from NFC status
-  const [writeIntent, setWriteIntent] = useState(false);
-  const writeOpen = isWriteModalOpen(writeIntent, nfcWriter);
-  const closeWriteModal = async () => {
-    setWriteIntent(false);
-    await nfcWriter.end();
-  };
+  const writeActivity = useContextualNfcWrite("create-custom", true);
 
   const router = useRouter();
   const goBack = () =>
@@ -50,6 +32,9 @@ export function CustomText() {
   return (
     <>
       <PageFrame
+        headerMode="content-wide"
+        layout="workspace"
+        breadcrumbs={[{ to: "/create", label: t("create.title") }]}
         onSwipeBack={goBack}
         headerLeft={
           <HeaderButton
@@ -64,40 +49,32 @@ export function CustomText() {
           </h1>
         }
       >
-        <div className="flex flex-col gap-3">
+        <div className="custom-zapscript-page flex flex-col gap-4">
           <ZapScriptInput
+            split
             value={customText}
             setValue={setCustomText}
-            showPalette
             rows={5}
+            // The tag gets the text captured at press time, so it cannot
+            // change underneath a pending write or its retry.
+            disabled={writeActivity.active}
           />
 
-          <Button
+          <ReaderActivityControl
+            state={writeActivity.state}
+            idleLabel={t("create.custom.write")}
+            activeLabel={writeActivity.activeLabel}
+            errorMessage={writeActivity.errorMessage}
             icon={<CreateIcon size="20" />}
-            label={t("create.custom.write")}
-            disabled={customText === ""}
-            onClick={() => {
-              if (customText !== "") {
-                nfcWriter.write(WriteAction.Write, customText).catch((e) => {
-                  logger.error("NFC write failed:", e, {
-                    category: "nfc",
-                    action: "writeCustomText",
-                    severity: "error",
-                  });
-                });
-                setWriteIntent(true);
-              }
-            }}
+            className="w-full"
+            buttonClassName="w-full"
+            onStart={() => void writeActivity.start(customText)}
+            onCancel={writeActivity.onCancel}
+            onRetry={writeActivity.onRetry}
+            disabled={customText === "" || writeActivity.externalWriteActive}
           />
         </div>
       </PageFrame>
-      <WriteModal
-        isOpen={writeOpen}
-        close={closeWriteModal}
-        verifyError={nfcWriter.verifyError !== null}
-        retry={() => void nfcWriter.retry()}
-        retapRequired={nfcWriter.retapRequired}
-      />
     </>
   );
 }

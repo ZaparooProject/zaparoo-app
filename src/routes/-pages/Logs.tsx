@@ -2,11 +2,18 @@ import { useRouter } from "@tanstack/react-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useState, useMemo, useRef } from "react";
-import { Download, Copy, RefreshCw, Upload, Loader2 } from "lucide-react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import {
+  DownloadIcon,
+  CopyIcon,
+  RefreshCwIcon,
+  UploadIcon,
+} from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { Clipboard } from "@capacitor/clipboard";
 import toast from "react-hot-toast";
 import { BackToTop } from "@/components/BackToTop";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { CoreAPI } from "@/lib/coreApi";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useStatusStore } from "@/lib/store";
@@ -16,6 +23,7 @@ import { TextInput } from "@/components/wui/TextInput";
 import { Button } from "@/components/wui/Button";
 import { BackIcon } from "@/lib/images";
 import { HeaderButton } from "@/components/wui/HeaderButton";
+import { HeaderOverflowMenu } from "@/components/HeaderOverflowMenu";
 import { ToggleChip } from "@/components/wui/ToggleChip";
 import { Badge, type BadgeVariant } from "@/components/wui/Badge";
 import { EmptyState } from "@/components/wui/EmptyState";
@@ -23,7 +31,12 @@ import { logger } from "@/lib/logger";
 import { uploadLogs } from "@/lib/logsApi";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
+import { useAccessibleLists } from "@/hooks/useAccessibleLists";
+import { useVirtualListScrollMargin } from "@/hooks/useVirtualListScrollMargin";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
+import { InlineLoading } from "@/components/InlineLoading";
+import { formatAppDateTime } from "@/lib/formatDate";
 
 interface LogEntry {
   level: string;
@@ -42,7 +55,7 @@ export function Logs() {
   const goBack = () =>
     void router.navigate(appBackNavigationOptions("/settings"));
   const connected = useStatusStore((state) => state.connected);
-  const { impact } = useHaptics();
+  const { impact, notification } = useHaptics();
   const [searchTerm, setSearchTerm] = useState("");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const levelFilters = usePreferencesStore((s) => s.logLevelFilters);
@@ -52,15 +65,15 @@ export function Logs() {
   );
   const [expandedFields, setExpandedFields] = useState<Set<string>>(new Set());
 
+  const deviceKey = useActiveDeviceKey();
   const logsQuery = useQuery({
-    queryKey: ["logs"],
+    queryKey: ["logs", deviceKey],
     queryFn: () => CoreAPI.settingsLogsDownload(),
     enabled: connected,
     refetchOnWindowFocus: false,
   });
 
   // Parse JSONL content into structured log entries
-  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- Intentional: optional chain for safety, actual dep is content property
   const logEntries = useMemo(() => {
     if (!logsQuery.data?.content) return [];
 
@@ -140,30 +153,36 @@ export function Logs() {
         action: "downloadLog",
         severity: "warning",
       });
+      toast.error(t("settings.logs.downloadError"));
     }
   };
 
-  const writeToClipboard = async (value: string) => {
-    if (isNative) {
-      await Clipboard.write({ string: value });
-    } else {
-      await navigator.clipboard.writeText(value);
+  // Same outcome reporting as CopyButton: success is confirmed, and a failed
+  // copy says so instead of leaving the user with a stale clipboard.
+  const copyText = async (read: () => string, action: string) => {
+    try {
+      const value = read();
+      if (isNative) {
+        await Clipboard.write({ string: value });
+      } else {
+        await navigator.clipboard.writeText(value);
+      }
+      void notification("success");
+      toast.success(t("copied"));
+    } catch (error) {
+      logger.warn("Failed to copy to clipboard:", error, {
+        category: "storage",
+        action,
+        severity: "warning",
+      });
+      toast.error(t("copyFailed"));
     }
   };
 
   const copyToClipboard = async () => {
-    if (!logsQuery.data) return;
-
-    try {
-      const decodedContent = atob(logsQuery.data.content);
-      await writeToClipboard(decodedContent);
-    } catch (error) {
-      logger.warn("Failed to copy to clipboard:", error, {
-        category: "storage",
-        action: "copyLog",
-        severity: "warning",
-      });
-    }
+    const data = logsQuery.data;
+    if (!data) return;
+    await copyText(() => atob(data.content), "copyLog");
   };
 
   const uploadMutation = useMutation({
@@ -177,27 +196,13 @@ export function Logs() {
   });
 
   const copyUploadUrl = async () => {
-    if (!uploadMutation.data) return;
-
-    try {
-      await writeToClipboard(uploadMutation.data);
-    } catch (error) {
-      logger.error("Failed to copy log URL:", error, {
-        category: "storage",
-        action: "copyUploadUrl",
-        severity: "warning",
-      });
-    }
+    const url = uploadMutation.data;
+    if (!url) return;
+    await copyText(() => url, "copyUploadUrl");
   };
 
-  const formatTimestamp = (timeStr: string) => {
-    try {
-      const date = new Date(timeStr);
-      return date.toLocaleString();
-    } catch {
-      return timeStr;
-    }
-  };
+  const formatTimestamp = (timeStr: string) =>
+    formatAppDateTime(timeStr) ?? timeStr;
 
   const getLevelVariant = (level: string): BadgeVariant => {
     switch (level.toLowerCase()) {
@@ -242,9 +247,111 @@ export function Logs() {
     });
   };
 
+  const accessibleLists = useAccessibleLists();
+  // Rows are measured as they appear; a screen reader gets every row instead.
+  const virtualise = !accessibleLists;
+  const { listRef, scrollMargin } =
+    useVirtualListScrollMargin(scrollContainerRef);
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const virtualizer = useVirtualizer({
+    count: virtualise ? filteredEntries.length : 0,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => 120,
+    overscan: 8,
+    scrollMargin,
+    getItemKey: (index) => filteredEntries[index]?._index ?? index,
+  });
+  const renderEntry = (
+    entry: (typeof filteredEntries)[number],
+    rowProps: Record<string, unknown> = {},
+  ) => (
+    <div
+      key={entry._index}
+      className="border-border border-b border-solid p-3 font-mono text-xs last:border-b-0"
+      {...rowProps}
+    >
+      <div className="mb-2 flex flex-row items-center gap-2 font-sans">
+        <Badge variant={getLevelVariant(entry.level)}>
+          {entry.level.charAt(0).toUpperCase() + entry.level.slice(1)}
+        </Badge>
+        <span className="text-muted-foreground text-xs">
+          {formatTimestamp(entry.time)}
+        </span>
+      </div>
+      <div className="text-foreground font-mono text-sm break-all whitespace-pre-wrap">
+        {entry.message && entry.message.length > MESSAGE_TRUNCATE_LENGTH ? (
+          <>
+            {expandedEntries.has(entry._index)
+              ? entry.message
+              : `${entry.message.slice(0, MESSAGE_TRUNCATE_LENGTH)}...`}
+            <Button
+              variant="text"
+              size="sm"
+              className="w-fit"
+              onClick={() => toggleExpandEntry(entry._index)}
+              aria-expanded={expandedEntries.has(entry._index)}
+              label={
+                expandedEntries.has(entry._index)
+                  ? t("settings.logs.showLess")
+                  : t("settings.logs.showMore")
+              }
+            />
+          </>
+        ) : (
+          entry.message
+        )}
+      </div>
+      {/* Additional fields */}
+      {Object.entries(entry)
+        .filter(
+          ([key]) =>
+            !["level", "time", "caller", "message", "_index"].includes(key),
+        )
+        .map(([key, value]) => {
+          const fieldId = `${entry._index}_${key}`;
+          const valueStr = JSON.stringify(value);
+          const isExpanded = expandedFields.has(fieldId);
+          const needsTruncation = valueStr.length > MESSAGE_TRUNCATE_LENGTH;
+
+          return (
+            <div
+              key={key}
+              className="text-muted-foreground mt-1 font-sans text-sm break-all"
+            >
+              <span className="font-medium">{key}:</span>{" "}
+              {needsTruncation ? (
+                <>
+                  {isExpanded
+                    ? valueStr
+                    : `${valueStr.slice(0, MESSAGE_TRUNCATE_LENGTH)}...`}
+                  <Button
+                    variant="text"
+                    size="sm"
+                    className="w-fit"
+                    onClick={() => toggleExpandField(entry._index, key)}
+                    aria-expanded={isExpanded}
+                    label={
+                      isExpanded
+                        ? t("settings.logs.showLess")
+                        : t("settings.logs.showMore")
+                    }
+                  />
+                </>
+              ) : (
+                valueStr
+              )}
+            </div>
+          );
+        })}
+    </div>
+  );
+
   return (
     <>
       <PageFrame
+        layout="workspace"
+        headerMode="content-wide"
+        breadcrumbs={[{ to: "/settings", label: t("settings.title") }]}
         onSwipeBack={goBack}
         headerLeft={
           <HeaderButton
@@ -259,40 +366,46 @@ export function Logs() {
           </h1>
         }
         headerRight={
-          <div className="flex gap-2">
-            {logsQuery.data && (
-              <>
-                <HeaderButton
-                  onClick={copyToClipboard}
-                  icon={<Copy size="20" />}
-                  title={t("settings.logs.copy")}
-                />
-                {!isNative && (
-                  <HeaderButton
-                    onClick={downloadFile}
-                    icon={<Download size="20" />}
-                    title={t("settings.logs.download")}
-                  />
-                )}
-              </>
-            )}
+          <div className="flex">
             <HeaderButton
               onClick={() => logsQuery.refetch()}
               disabled={!connected || logsQuery.isLoading}
-              icon={<RefreshCw size="20" />}
-              title={
+              icon={<RefreshCwIcon size="20" />}
+              aria-label={
                 logsQuery.isLoading ? t("loading") : t("settings.logs.refresh")
               }
             />
+            {logsQuery.data && (
+              <HeaderOverflowMenu
+                actions={[
+                  {
+                    id: "copy",
+                    label: t("settings.logs.copy"),
+                    icon: <CopyIcon size={20} />,
+                    onClick: copyToClipboard,
+                  },
+                  ...(!isNative
+                    ? [
+                        {
+                          id: "download",
+                          label: t("settings.logs.download"),
+                          icon: <DownloadIcon size={20} />,
+                          onClick: downloadFile,
+                        },
+                      ]
+                    : []),
+                ]}
+              />
+            )}
           </div>
         }
         scrollRef={scrollContainerRef}
       >
         <div className="flex h-full flex-col gap-3">
           {/* Control Bar */}
-          <div className="flex flex-col gap-3">
+          <div className="logs-toolbar">
             {logsQuery.data && (
-              <div className="flex flex-col gap-2">
+              <div className="logs-toolbar-upload">
                 <Button
                   className="w-full"
                   intent="primary"
@@ -303,17 +416,18 @@ export function Logs() {
                   }
                   icon={
                     uploadMutation.isPending ? (
-                      <Loader2 size="20" className="animate-spin" />
+                      <LoadingSpinner size={20} decorative />
                     ) : (
-                      <Upload size="20" />
+                      <UploadIcon size="20" />
                     )
                   }
                   disabled={uploadMutation.isPending}
+                  disabledAppearance="busy"
                   onClick={() => uploadMutation.mutate()}
                 />
 
                 {uploadMutation.data && (
-                  <div className="flex gap-2" aria-live="polite">
+                  <div className="logs-toolbar-result" aria-live="polite">
                     <TextInput
                       className="min-w-0 flex-1"
                       type="url"
@@ -324,7 +438,7 @@ export function Logs() {
                     <Button
                       variant="outline"
                       size="lg"
-                      icon={<Copy size="20" />}
+                      icon={<CopyIcon size="20" />}
                       aria-label={t("settings.logs.copyUploadLink")}
                       onClick={copyUploadUrl}
                     />
@@ -335,6 +449,7 @@ export function Logs() {
 
             {/* Search */}
             <TextInput
+              className="logs-toolbar-search"
               label=""
               aria-label={t("settings.logs.searchPlaceholder")}
               placeholder={t("settings.logs.searchPlaceholder")}
@@ -343,10 +458,10 @@ export function Logs() {
             />
 
             {/* Filters and Entry Count */}
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+            <div className="logs-toolbar-filters flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
               <div className="flex flex-row flex-wrap gap-1.5">
                 <ToggleChip
-                  label="Debug"
+                  label={t("settings.logs.levelDebug")}
                   state={levelFilters.debug}
                   setState={(state) =>
                     setLogLevelFilters({ ...levelFilters, debug: state })
@@ -354,7 +469,7 @@ export function Logs() {
                   compact
                 />
                 <ToggleChip
-                  label="Info"
+                  label={t("settings.logs.levelInfo")}
                   state={levelFilters.info}
                   setState={(state) =>
                     setLogLevelFilters({ ...levelFilters, info: state })
@@ -362,7 +477,7 @@ export function Logs() {
                   compact
                 />
                 <ToggleChip
-                  label="Warn"
+                  label={t("settings.logs.levelWarn")}
                   state={levelFilters.warn}
                   setState={(state) =>
                     setLogLevelFilters({ ...levelFilters, warn: state })
@@ -370,7 +485,7 @@ export function Logs() {
                   compact
                 />
                 <ToggleChip
-                  label="Error"
+                  label={t("settings.logs.levelError")}
                   state={levelFilters.error}
                   setState={(state) =>
                     setLogLevelFilters({ ...levelFilters, error: state })
@@ -380,136 +495,77 @@ export function Logs() {
               </div>
               {logsQuery.data && logEntries.length > 0 && (
                 <div className="text-muted-foreground text-sm sm:whitespace-nowrap">
-                  {searchTerm || Object.values(levelFilters).some((v) => !v) ? (
-                    <>
-                      Showing {filteredEntries.length} of {logEntries.length}{" "}
-                      entries
-                    </>
-                  ) : (
-                    <>{logEntries.length} entries</>
-                  )}
+                  {searchTerm || Object.values(levelFilters).some((v) => !v)
+                    ? t("settings.logs.entriesShowing", {
+                        shown: filteredEntries.length,
+                        total: logEntries.length,
+                      })
+                    : t("settings.logs.entryCount", {
+                        count: logEntries.length,
+                      })}
                 </div>
               )}
             </div>
-
-            {logsQuery.isError && (
-              <p className="text-error text-sm">
-                {t("settings.logs.fetchError")}
-              </p>
-            )}
           </div>
 
           {/* Log Entries */}
           {logsQuery.data && (
             <div className="flex-1 overflow-x-hidden overflow-y-auto">
               <div>
-                {filteredEntries.map((entry, index) => (
+                {virtualise ? (
                   <div
-                    key={entry._index}
-                    className="p-3 font-mono text-xs"
+                    ref={listRef}
                     style={{
-                      borderBottom:
-                        index === filteredEntries.length - 1
-                          ? ""
-                          : "1px solid rgba(255,255,255,0.6)",
+                      height: virtualizer.getTotalSize(),
+                      position: "relative",
                     }}
                   >
-                    <div className="mb-2 flex flex-row items-center gap-2 font-sans">
-                      <Badge variant={getLevelVariant(entry.level)}>
-                        {entry.level.charAt(0).toUpperCase() +
-                          entry.level.slice(1)}
-                      </Badge>
-                      <span className="text-muted-foreground text-xs">
-                        {formatTimestamp(entry.time)}
-                      </span>
-                    </div>
-                    <div className="text-foreground font-mono text-sm break-all whitespace-pre-wrap">
-                      {entry.message &&
-                      entry.message.length > MESSAGE_TRUNCATE_LENGTH ? (
-                        <>
-                          {expandedEntries.has(entry._index)
-                            ? entry.message
-                            : `${entry.message.slice(0, MESSAGE_TRUNCATE_LENGTH)}...`}
-                          <button
-                            onClick={() => toggleExpandEntry(entry._index)}
-                            className="text-muted-foreground hover:text-foreground ml-2 cursor-pointer font-sans text-sm underline"
-                            type="button"
-                          >
-                            {expandedEntries.has(entry._index)
-                              ? t("settings.logs.showLess")
-                              : t("settings.logs.showMore")}
-                          </button>
-                        </>
-                      ) : (
-                        entry.message
-                      )}
-                    </div>
-                    {/* Additional fields */}
-                    {Object.entries(entry)
-                      .filter(
-                        ([key]) =>
-                          ![
-                            "level",
-                            "time",
-                            "caller",
-                            "message",
-                            "_index",
-                          ].includes(key),
-                      )
-                      .map(([key, value]) => {
-                        const fieldId = `${entry._index}_${key}`;
-                        const valueStr = JSON.stringify(value);
-                        const isExpanded = expandedFields.has(fieldId);
-                        const needsTruncation =
-                          valueStr.length > MESSAGE_TRUNCATE_LENGTH;
-
-                        return (
-                          <div
-                            key={key}
-                            className="text-muted-foreground mt-1 font-sans text-sm break-all"
-                          >
-                            <span className="font-medium">{key}:</span>{" "}
-                            {needsTruncation ? (
-                              <>
-                                {isExpanded
-                                  ? valueStr
-                                  : `${valueStr.slice(0, MESSAGE_TRUNCATE_LENGTH)}...`}
-                                <button
-                                  onClick={() =>
-                                    toggleExpandField(entry._index, key)
-                                  }
-                                  className="text-muted-foreground hover:text-foreground ml-2 cursor-pointer font-sans text-sm underline"
-                                  type="button"
-                                >
-                                  {isExpanded
-                                    ? t("settings.logs.showLess")
-                                    : t("settings.logs.showMore")}
-                                </button>
-                              </>
-                            ) : (
-                              valueStr
-                            )}
-                          </div>
-                        );
-                      })}
+                    {virtualizer.getVirtualItems().map((item) => {
+                      const entry = filteredEntries[item.index];
+                      if (!entry) return null;
+                      return renderEntry(entry, {
+                        ref: virtualizer.measureElement,
+                        "data-index": item.index,
+                        style: {
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "100%",
+                          transform: `translateY(${item.start - scrollMargin}px)`,
+                        },
+                      });
+                    })}
                   </div>
-                ))}
+                ) : (
+                  filteredEntries.map((entry) => renderEntry(entry))
+                )}
               </div>
             </div>
           )}
 
+          {connected && logsQuery.isLoading && <InlineLoading />}
+
           {!connected && <EmptyState title={t("notConnected")} />}
+
+          {connected && logsQuery.isError && (
+            <EmptyState
+              title={t("settings.logs.fetchError")}
+              action={
+                <Button
+                  variant="outline"
+                  label={t("scan.retry")}
+                  onClick={() => void logsQuery.refetch()}
+                />
+              }
+            />
+          )}
 
           {connected && logsQuery.data && filteredEntries.length === 0 && (
             <EmptyState title={t("settings.logs.noEntriesFound")} />
           )}
         </div>
       </PageFrame>
-      <BackToTop
-        scrollContainerRef={scrollContainerRef}
-        threshold={200}
-        bottomOffset="calc(var(--bottom-nav-base-height) + 1rem)"
-      />
+      <BackToTop scrollContainerRef={scrollContainerRef} threshold={200} />
     </>
   );
 }

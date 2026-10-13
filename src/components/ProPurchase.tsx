@@ -7,8 +7,8 @@ import { useEffect, useRef, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { Clipboard } from "@capacitor/clipboard";
 import toast from "react-hot-toast";
-import { Loader2 } from "lucide-react";
 import { useRouter } from "@tanstack/react-router";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { SlideModal } from "@/components/SlideModal";
 import { logger } from "@/lib/logger";
 import {
@@ -39,6 +39,7 @@ import {
   runPurchasesOperation,
 } from "@/lib/purchasesSetup";
 import { Button } from "./wui/Button";
+import { ModalActionBar } from "./wui/ModalActionBar";
 
 type OfferingsStatus =
   | "loading"
@@ -253,20 +254,22 @@ const ProPurchaseModal = (props: {
       }
       footer={
         step === "account" ? (
-          <div className="flex flex-col gap-2">
-            <Button
-              label={t("scan.purchaseAccountAction")}
-              onClick={openOnlineSettings}
-              intent="primary"
-              className="w-full"
-            />
-            <Button
-              label={t("scan.purchaseAccountLater")}
-              variant="outline"
-              onClick={() => props.setProPurchaseModalOpen(false)}
-              className="w-full"
-            />
-          </div>
+          <ModalActionBar
+            secondaryAction={
+              <Button
+                label={t("scan.purchaseAccountLater")}
+                variant="secondary"
+                onClick={() => props.setProPurchaseModalOpen(false)}
+              />
+            }
+            primaryAction={
+              <Button
+                label={t("scan.purchaseAccountAction")}
+                onClick={openOnlineSettings}
+                intent="primary"
+              />
+            }
+          />
         ) : (
           <Button
             label={
@@ -275,13 +278,12 @@ const ProPurchaseModal = (props: {
                 : getPurchaseActionLabel(props.offeringsStatus)
             }
             icon={
-              isPurchasing ? (
-                <Loader2 size={20} className="animate-spin" />
-              ) : undefined
+              isPurchasing ? <LoadingSpinner size={20} decorative /> : undefined
             }
             disabled={!props.purchasePackage || isPurchasing}
+            disabledAppearance={isPurchasing ? "busy" : "unavailable"}
             onClick={handlePurchase}
-            intent="primary"
+            intent="pro"
             className="w-full"
           />
         )
@@ -292,7 +294,7 @@ const ProPurchaseModal = (props: {
           <p
             ref={accountIntroRef}
             tabIndex={-1}
-            className="rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            className="focus-visible:ring-ring rounded-sm outline-none focus-visible:ring-2"
           >
             {t("scan.purchaseAccountThanks")}
           </p>
@@ -310,6 +312,7 @@ const ProPurchaseModal = (props: {
                 variant="text"
                 onClick={openOnlineSettings}
                 disabled={isPurchasing}
+                disabledAppearance="busy"
                 className="w-full"
               />
             </>
@@ -560,17 +563,20 @@ export function PurchaseSupportActions({
   };
 
   const showRestore = variant !== "diagnosticsOnly";
+  // The lone Restore action on the Settings landing is a quiet text action;
+  // wherever diagnostics are offered, both are outline buttons.
   const showDiagnostics = variant !== "restoreOnly";
-  const useOutlineButtons = variant !== "restoreOnly";
+  const buttonVariant = showDiagnostics ? "outline" : "text";
 
   return (
     <div className="flex flex-col gap-2">
       {showDiagnostics && (
         <Button
           label={t("settings.app.copyBillingDiagnostics")}
-          variant={useOutlineButtons ? "outline" : "text"}
+          variant={buttonVariant}
           onClick={() => void handleCopyDiagnostics()}
           disabled={isRestoring || isCopyingDiagnostics}
+          disabledAppearance="busy"
           className="w-full"
         />
       )}
@@ -581,9 +587,10 @@ export function PurchaseSupportActions({
               ? t("online.warp.restoring")
               : t("settings.app.restorePurchases")
           }
-          variant={useOutlineButtons ? "outline" : "text"}
+          variant={buttonVariant}
           onClick={() => void handleRestore()}
           disabled={isRestoring || isCopyingDiagnostics}
+          disabledAppearance="busy"
           className="w-full"
         />
       )}

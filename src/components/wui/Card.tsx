@@ -19,24 +19,25 @@ export function Card(props: {
     }
   };
 
+  const isInteractive = props.onClick !== undefined || props.pressable;
   const isClickable = props.onClick && !props.disabled;
-  const isPressable =
-    (props.onClick !== undefined || props.pressable) && !props.disabled;
+  const isPressable = isInteractive && !props.disabled;
   const handleHapticPress = useHapticPress("light", isPressable);
 
   return (
     <div
+      data-interactive={isInteractive || undefined}
+      data-pressable={isPressable || undefined}
+      data-disabled={props.disabled || undefined}
       className={classNames(
-        "drop-shadow",
-        "rounded-xl",
+        "wui-card",
         "border",
         "border-solid",
-        "p-3",
-        "border-[rgba(255,255,255,0.13)]",
+        "p-4",
         {
-          "text-foreground-disabled": props.disabled,
-          "bg-card-pattern": !props.disabled,
-          "focus-visible:ring-offset-background cursor-pointer focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:outline-none":
+          "text-foreground-disabled cursor-not-allowed": props.disabled,
+
+          "focus-visible:ring-offset-background focus-visible:ring-ring cursor-pointer focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none":
             isClickable,
         },
         props.className,

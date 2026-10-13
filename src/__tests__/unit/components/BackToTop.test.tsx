@@ -1,7 +1,11 @@
 import { render, screen, fireEvent, waitFor } from "../../../test-utils";
 import { useRef } from "react";
-import { vi, describe, it, expect } from "vitest";
+import { afterEach, vi, describe, it, expect } from "vitest";
 import { BackToTop } from "@/components/BackToTop";
+import {
+  measureDialogScrollbar,
+  measurePageRightGap,
+} from "@/components/BackToTop.geometry";
 
 // Mock lodash debounce
 vi.mock("lodash", () => ({
@@ -42,6 +46,7 @@ function TestWrapper({
 
   return (
     <div>
+      <h1 tabIndex={-1}>Page title</h1>
       <div
         ref={scrollContainerRef}
         style={{ height: "400px", overflow: "auto" }}
@@ -58,6 +63,10 @@ function TestWrapper({
 }
 
 describe("BackToTop", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("should render the back to top button", () => {
     render(<TestWrapper />);
 
@@ -67,6 +76,26 @@ describe("BackToTop", () => {
       hidden: true,
     });
     expect(button).toBeInTheDocument();
+  });
+
+  it("retains pointer focus instead of moving it to the page heading", async () => {
+    render(<TestWrapper />);
+    const button = screen.getByRole("button", {
+      name: "backToTop",
+      hidden: true,
+    });
+    const container = screen.getByTestId("scroll-container");
+    container.scrollTop = 400;
+    fireEvent.scroll(container);
+    await waitFor(() =>
+      expect(button.parentElement).not.toHaveAttribute("inert"),
+    );
+    button.focus();
+    fireEvent.click(button, { detail: 1 });
+    expect(button).toHaveFocus();
+    expect(
+      screen.getByRole("heading", { name: "Page title" }),
+    ).not.toHaveFocus();
   });
 
   it("should be hidden and inert by default when scroll position is 0", () => {
@@ -159,6 +188,38 @@ describe("BackToTop", () => {
     });
   });
 
+  it("should avoid smooth scrolling when reduced motion is requested", () => {
+    vi.spyOn(window, "matchMedia").mockReturnValue({
+      matches: true,
+    } as MediaQueryList);
+    render(<TestWrapper />);
+
+    const container = screen.getByTestId("scroll-container");
+    const scrollToSpy = vi.fn();
+    container.scrollTo = scrollToSpy;
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "backToTop", hidden: true }),
+    );
+
+    expect(scrollToSpy).toHaveBeenCalledWith({
+      top: 0,
+      behavior: "auto",
+    });
+  });
+
+  it("should return keyboard focus to the page heading", () => {
+    render(<TestWrapper />);
+
+    const button = screen.getByRole("button", {
+      name: "backToTop",
+      hidden: true,
+    });
+    fireEvent.click(button, { detail: 0 });
+
+    expect(screen.getByRole("heading", { name: "Page title" })).toHaveFocus();
+  });
+
   it("should hide when scrolled back to top", async () => {
     render(<TestWrapper />);
 
@@ -209,5 +270,80 @@ describe("BackToTop", () => {
     // Clicking should not throw even without a scroll container
     fireEvent.click(button);
     expect(button).toBeInTheDocument();
+  });
+
+  it("measures the page client edge with classic or overlay scrollbars and borders", () => {
+    const container = document.createElement("div");
+    vi.spyOn(container, "getBoundingClientRect").mockReturnValue(
+      new DOMRect(256, 0, 844, 900),
+    );
+    let clientWidth = 829;
+    let clientLeft = 0;
+    Object.defineProperties(container, {
+      clientWidth: { get: () => clientWidth },
+      clientLeft: { get: () => clientLeft },
+    });
+    expect(measurePageRightGap(container, 1440)).toBe(355);
+    clientWidth = 844;
+    expect(measurePageRightGap(container, 1440)).toBe(340);
+    clientLeft = 2;
+    clientWidth = 827;
+    expect(measurePageRightGap(container, 1440)).toBe(355);
+  });
+
+  it("clears a dialog's classic scrollbar and leaves overlay scrollbars alone", () => {
+    const container = document.createElement("div");
+    let clientWidth = 485;
+    Object.defineProperties(container, {
+      offsetWidth: { get: () => 500 },
+      clientWidth: { get: () => clientWidth },
+      clientLeft: { get: () => 0 },
+    });
+    expect(measureDialogScrollbar(container)).toBe(15);
+    clientWidth = 500;
+    expect(measureDialogScrollbar(container)).toBe(0);
+  });
+
+  it("keeps an equal margin above the end of a dialog's scroll area", () => {
+    function DialogWrapper() {
+      const ref = useRef<HTMLDivElement>(null);
+      return (
+        <div role="dialog" aria-label="Dialog">
+          <div ref={ref} data-testid="dialog-scroll">
+            Content
+          </div>
+          <BackToTop scrollContainerRef={ref} />
+        </div>
+      );
+    }
+    const rect = (bottom: number) =>
+      ({
+        bottom,
+        top: 0,
+        left: 0,
+        right: 0,
+        width: 0,
+        height: bottom,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    vi.stubGlobal("innerHeight", 800);
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+      function (this: HTMLElement) {
+        return this.dataset.testid === "dialog-scroll" ? rect(700) : rect(0);
+      },
+    );
+
+    render(<DialogWrapper />);
+
+    const button = screen.getByRole("button", {
+      name: "backToTop",
+      hidden: true,
+    });
+    const wrapper = button.parentElement as HTMLElement;
+    expect(wrapper.style.bottom).toBe("calc(100px + 1rem)");
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 });

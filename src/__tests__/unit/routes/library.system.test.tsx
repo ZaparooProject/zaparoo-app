@@ -37,6 +37,9 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
     await importOriginal<typeof import("@tanstack/react-router")>();
   return {
     ...actual,
+    Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
+      <a href={to}>{children}</a>
+    ),
     createFileRoute: () => (options: unknown) => options,
     useNavigate: () => mockNavigate,
     useParams: () => ({ system: "SNES" }),

@@ -1,10 +1,8 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Capacitor } from "@capacitor/core";
 import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import classNames from "classnames";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
 import { SettingHelp } from "@/components/wui/SettingHelp";
 import { useStatusStore, ConnectionState } from "@/lib/store";
@@ -14,10 +12,11 @@ import {
   selectAppSettings,
   selectShakeSettings,
 } from "@/lib/preferencesStore";
-import { BackIcon, CheckIcon } from "@/lib/images";
+import { BackIcon } from "@/lib/images";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HeaderButton } from "@/components/wui/HeaderButton";
+import { ReaderStatusRow } from "@/components/ReaderStatusRow";
 import { SystemSelector } from "@/components/SystemSelector";
 import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
@@ -25,9 +24,17 @@ import { useProPurchase } from "@/components/ProPurchase";
 import { ProBadge } from "@/components/ProBadge";
 import { ZapScriptInput } from "@/components/ZapScriptInput";
 import { CoreAPI } from "@/lib/coreApi";
-import { ClientCapability, UpdateSettingsRequest } from "@/lib/models.ts";
+import { sortReaders } from "@/lib/readers";
+import { ClientCapability } from "@/lib/models.ts";
+import {
+  useCoreSettingsQueryKey,
+  useCoreSettingsUpdate,
+} from "@/hooks/useCoreSettingsUpdate";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
+import { useAppUi } from "@/hooks/useAppUi";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
-import { handleRadioGroupKeyDown } from "@/lib/radioGroup";
+import { RadioGroup } from "@/components/wui/RadioGroup";
+import { Card } from "@/components/wui/Card";
 import { useClientCapability } from "@/hooks/useClientCapability";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { GatedFeature } from "@/components/GatedFeature";
@@ -42,6 +49,8 @@ export function ReadersSettings() {
     t("settings.readers.title"),
   );
   const connected = useStatusStore((state) => state.connected);
+  const deviceKey = useActiveDeviceKey();
+  const settingsQueryKey = useCoreSettingsQueryKey();
   const connectionState = useStatusStore((state) => state.connectionState);
   const canWriteCoreSettings = useClientCapability(
     ClientCapability.SettingsWrite,
@@ -55,34 +64,23 @@ export function ReadersSettings() {
   const isConnecting =
     connectionState === ConnectionState.CONNECTING ||
     connectionState === ConnectionState.RECONNECTING;
-  const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
-  const accelerometerAvailable = usePreferencesStore(
-    (state) => state.accelerometerAvailable,
-  );
+  const appUi = useAppUi();
 
   // Core settings query
-  const {
-    data: coreSettings,
-    refetch,
-    isPending,
-  } = useQuery({
-    queryKey: ["settings"],
+  const { data: coreSettings, isPending } = useQuery({
+    queryKey: settingsQueryKey,
     queryFn: () => CoreAPI.settings(),
   });
 
   // Connected readers query - polls every 5 seconds while page is open
   const { data: readersData, isPending: isReadersPending } = useQuery({
-    queryKey: ["readers"],
+    queryKey: ["readers", deviceKey],
     queryFn: () => CoreAPI.readers(),
     enabled: connected && readersAvailable,
     refetchInterval: 5000,
   });
 
-  const updateCoreSetting = useMutation({
-    mutationFn: (params: UpdateSettingsRequest) =>
-      CoreAPI.settingsUpdate(params),
-    onSuccess: () => refetch(),
-  });
+  const updateCoreSetting = useCoreSettingsUpdate();
 
   // Get app settings from store
   const {
@@ -132,6 +130,10 @@ export function ReadersSettings() {
 
   return (
     <PageFrame
+      layout="workspace"
+      className="settings-panel-page wrap-anywhere"
+      headerMode="content-wide"
+      breadcrumbs={[{ to: "/settings", label: t("settings.title") }]}
       onSwipeBack={goBack}
       headerLeft={
         <HeaderButton
@@ -146,40 +148,33 @@ export function ReadersSettings() {
         </h1>
       }
     >
-      <div className="flex flex-col gap-3">
+      <div className="settings-panel-layout settings-reader-panels">
         {/* Readers List */}
         <GatedFeature featureId="readers">
-          <div className="py-2">
-            <span className="text-foreground">
+          <Card className="settings-reader-status flex flex-col gap-4">
+            <h2 className="text-foreground text-lg font-semibold">
               {t("settings.readers.connectedReaders")}
-            </span>
-            <div className="mt-2 flex flex-col gap-2">
+            </h2>
+            <div className="flex flex-col gap-2">
               {isReadersLoading ? (
-                <span className="text-muted-foreground">{t("loading")}</span>
+                <div
+                  className="flex flex-col gap-2"
+                  role="status"
+                  aria-label={t("loading")}
+                >
+                  <Skeleton className="h-6 w-full" />
+                  <Skeleton className="h-6 w-2/3" />
+                </div>
               ) : !connected ? (
-                <EmptyState
-                  size="compact"
-                  title={t("settings.readers.noReadersDetected")}
-                />
+                <EmptyState size="compact" title={t("settings.notConnected")} />
               ) : readersData?.readers && readersData.readers.length > 0 ? (
-                readersData.readers.map((reader) => (
-                  <div key={reader.id} className="flex items-center gap-2">
-                    <span
-                      className={classNames(
-                        "h-2 w-2 shrink-0 rounded-full",
-                        reader.connected ? "bg-green-500" : "bg-red-500",
-                      )}
-                      aria-hidden="true"
-                    />
-                    <span className="text-foreground">
-                      {reader.info || reader.id}
-                    </span>
-                    <span className="text-muted-foreground text-sm">
-                      {reader.connected
-                        ? t("scan.connectedHeading")
-                        : t("settings.notConnected")}
-                    </span>
-                  </div>
+                sortReaders(readersData.readers).map((reader) => (
+                  <ReaderStatusRow
+                    reflow
+                    key={reader.readerId ?? reader.id}
+                    name={reader.info || reader.id}
+                    connected={reader.connected}
+                  />
                 ))
               ) : (
                 <EmptyState
@@ -188,386 +183,211 @@ export function ReadersSettings() {
                 />
               )}
             </div>
-          </div>
+          </Card>
         </GatedFeature>
 
-        {/* Scan Mode - from Core */}
-        <div className="py-2">
-          <span className="flex items-center">
-            <span id="scan-mode-label">{t("settings.readers.scanMode")}</span>
-            <SettingHelp
-              title={t("settings.readers.scanMode")}
-              description={t("settings.readers.scanModeHelp")}
-            />
-          </span>
-          {isLoading ? (
-            <div className="mt-2 flex flex-row">
-              <Skeleton className="h-9 w-full rounded-s-full" />
-              <Skeleton className="h-9 w-full rounded-e-full" />
-            </div>
-          ) : (
-            <div
-              className="mt-2 flex flex-row"
-              role="radiogroup"
-              aria-labelledby="scan-mode-label"
-              onKeyDown={handleRadioGroupKeyDown}
-              tabIndex={-1}
-            >
-              <button
-                type="button"
-                role="radio"
-                aria-checked={
-                  coreSettings?.readersScanMode === "tap" && connected
-                }
-                tabIndex={
-                  canWriteCoreSettings &&
-                  coreSettings?.readersScanMode !== "hold"
-                    ? 0
-                    : -1
-                }
-                className={classNames(
-                  "flex",
-                  "flex-row",
-                  "w-full",
-                  "rounded-s-full",
-                  "items-center",
-                  "justify-center",
-                  "py-1",
-                  "font-medium",
-                  "gap-1",
-                  "tracking-[0.1px]",
-                  "h-9",
-                  "border",
-                  "border-solid",
-                  "border-bd-filled",
-                  {
-                    "bg-button-pattern text-primary-foreground":
-                      coreSettings?.readersScanMode === "tap" && connected,
-                  },
-                  {
-                    "bg-background": !connected,
-                    "border-foreground-disabled": !connected,
-                    "text-foreground-disabled": !connected,
-                  },
-                )}
-                onClick={() =>
-                  updateCoreSetting.mutate({ readersScanMode: "tap" })
-                }
-                disabled={!canWriteCoreSettings}
-              >
-                {coreSettings?.readersScanMode === "tap" && connected && (
-                  <span aria-hidden="true">
-                    <CheckIcon size="28" />
-                  </span>
-                )}
-                {t("settings.tapMode")}
-              </button>
-              <button
-                type="button"
-                role="radio"
-                aria-checked={
-                  coreSettings?.readersScanMode === "hold" && connected
-                }
-                tabIndex={
-                  coreSettings?.readersScanMode === "hold" && connected ? 0 : -1
-                }
-                className={classNames(
-                  "flex",
-                  "flex-row",
-                  "w-full",
-                  "rounded-e-full",
-                  "items-center",
-                  "justify-center",
-                  "py-1",
-                  "font-medium",
-                  "gap-1",
-                  "tracking-[0.1px]",
-                  "h-9",
-                  "border",
-                  "border-solid",
-                  "border-bd-filled",
-                  {
-                    "bg-button-pattern text-primary-foreground":
-                      coreSettings?.readersScanMode === "hold" && connected,
-                  },
-                  {
-                    "bg-background": !connected,
-                    "border-foreground-disabled": !connected,
-                    "text-foreground-disabled": !connected,
-                  },
-                )}
-                onClick={() =>
-                  updateCoreSetting.mutate({ readersScanMode: "hold" })
-                }
-                disabled={!canWriteCoreSettings}
-              >
-                {coreSettings?.readersScanMode === "hold" && connected && (
-                  <span aria-hidden="true">
-                    <CheckIcon size="28" />
-                  </span>
-                )}
-                {t("settings.insertMode")}
-              </button>
-            </div>
-          )}
-        </div>
+        <Card className="settings-reader-controls flex flex-col gap-4">
+          {/* Scan Mode - from Core */}
+          {/* Stays mounted while loading, unselected and unavailable, so the
+              label and help keep their place. */}
+          <RadioGroup
+            label={t("settings.readers.scanMode")}
+            help={
+              <SettingHelp
+                title={t("settings.readers.scanMode")}
+                description={t("settings.readers.scanModeHelp")}
+              />
+            }
+            layout="inline"
+            value={
+              connected && !isLoading
+                ? (coreSettings?.readersScanMode ?? "")
+                : ""
+            }
+            options={[
+              { value: "tap", label: t("settings.tapMode") },
+              { value: "hold", label: t("settings.insertMode") },
+            ]}
+            disabled={isLoading || !canWriteCoreSettings}
+            onChange={(value) => {
+              if (value === "tap" || value === "hold")
+                updateCoreSetting.mutate({ readersScanMode: value });
+            }}
+          />
 
-        {/* Continuous Scan - from App (always shown) */}
-        <ToggleSwitch
-          label={
-            <span className="flex items-center">
-              {t("settings.readers.continuousScan")}
+          {/* Continuous Scan - from App (always shown) */}
+          <ToggleSwitch
+            reflow
+            label={t("settings.readers.continuousScan")}
+            help={
               <SettingHelp
                 title={t("settings.readers.continuousScan")}
                 description={t("settings.readers.continuousScanHelp")}
               />
-            </span>
-          }
-          value={restartScan}
-          setValue={setRestartScan}
-        />
+            }
+            value={restartScan}
+            setValue={setRestartScan}
+          />
 
-        {/* Keep Screen On - from App (native only) */}
-        {Capacitor.isNativePlatform() && (
-          <ToggleSwitch
-            label={
-              <span className="flex items-center">
-                {t("settings.readers.keepScreenAwake")}
+          {/* Keep Screen On - from App (native only) */}
+          {appUi.enabled && (
+            <ToggleSwitch
+              reflow
+              label={t("settings.readers.keepScreenAwake")}
+              help={
                 <SettingHelp
                   title={t("settings.readers.keepScreenAwake")}
                   description={t("settings.readers.keepScreenAwakeHelp")}
                 />
-              </span>
-            }
-            value={keepScreenAwake}
-            setValue={setKeepScreenAwake}
-          />
-        )}
+              }
+              value={keepScreenAwake}
+              setValue={setKeepScreenAwake}
+            />
+          )}
 
-        {/* Launch On Scan - from App (native only, Pro feature) */}
-        {Capacitor.isNativePlatform() && connected && (
-          <ToggleSwitch
-            label={
-              <span className="flex items-center">
-                {t("settings.readers.launchOnScan")}
+          {/* Launch On Scan - from App (native only, Pro feature) */}
+          {appUi.enabled && connected && (
+            <ToggleSwitch
+              reflow
+              label={t("settings.readers.launchOnScan")}
+              help={
                 <SettingHelp
                   title={t("settings.readers.launchOnScan")}
                   description={t("settings.readers.launchOnScanHelp")}
                 />
-              </span>
-            }
-            suffix={
-              <ProBadge
-                onPress={() => setProPurchaseModalOpen(true)}
-                show={!launcherAccess}
-              />
-            }
-            value={launchOnScan}
-            setValue={setLaunchOnScan}
-          />
-        )}
+              }
+              suffix={
+                <ProBadge
+                  onPress={() => setProPurchaseModalOpen(true)}
+                  show={!launcherAccess}
+                />
+              }
+              value={launchOnScan}
+              setValue={setLaunchOnScan}
+            />
+          )}
 
-        {/* Prefer External Reader - from App (native + NFC) */}
-        {Capacitor.isNativePlatform() && nfcAvailable && (
-          <ToggleSwitch
-            label={
-              <span className="flex items-center">
-                {t("settings.readers.preferExternalReader")}
+          {/* Prefer External Reader - from App (native + NFC) */}
+          {appUi.nfc && (
+            <ToggleSwitch
+              reflow
+              label={t("settings.readers.preferExternalReader")}
+              help={
                 <SettingHelp
                   title={t("settings.readers.preferExternalReader")}
                   description={t("settings.readers.preferExternalReaderHelp")}
                 />
-              </span>
-            }
-            value={preferRemoteWriter}
-            setValue={setPreferRemoteWriter}
-          />
-        )}
+              }
+              value={preferRemoteWriter}
+              setValue={setPreferRemoteWriter}
+            />
+          )}
 
-        {/* Shake to Launch - from App (native + accelerometer, Pro feature) */}
-        {Capacitor.isNativePlatform() && accelerometerAvailable && (
-          <ToggleSwitch
-            label={
-              <span className="flex items-center">
-                {t("settings.readers.shakeToLaunch")}
+          {/* Shake to Launch - from App (native + accelerometer, Pro feature) */}
+          {appUi.accelerometer && (
+            <ToggleSwitch
+              reflow
+              label={t("settings.readers.shakeToLaunch")}
+              help={
                 <SettingHelp
                   title={t("settings.readers.shakeToLaunch")}
                   description={t("settings.readers.shakeToLaunchHelp")}
                 />
-              </span>
-            }
-            suffix={
-              <ProBadge
-                onPress={() => setProPurchaseModalOpen(true)}
-                show={!launcherAccess}
-              />
-            }
-            value={shakeEnabled}
-            setValue={setShakeEnabled}
-            disabled={!connected}
-            loading={isLoading}
-          />
-        )}
+              }
+              suffix={
+                <ProBadge
+                  onPress={() => setProPurchaseModalOpen(true)}
+                  show={!launcherAccess}
+                />
+              }
+              value={shakeEnabled}
+              setValue={setShakeEnabled}
+              disabled={!connected}
+              loading={isLoading}
+            />
+          )}
 
-        {Capacitor.isNativePlatform() &&
-          accelerometerAvailable &&
-          shakeEnabled && (
+          {appUi.accelerometer && shakeEnabled && (
             <>
-              <div
-                className="flex flex-row"
-                role="radiogroup"
-                aria-label={t("settings.app.shakeModeLabel")}
-                onKeyDown={handleRadioGroupKeyDown}
-                tabIndex={-1}
-              >
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={shakeMode === "random" && connected}
-                  tabIndex={shakeMode === "random" && connected ? 0 : -1}
-                  className={classNames(
-                    "flex",
-                    "flex-row",
-                    "w-full",
-                    "rounded-s-full",
-                    "items-center",
-                    "justify-center",
-                    "py-1",
-                    "font-medium",
-                    "gap-1",
-                    "tracking-[0.1px]",
-                    "h-9",
-                    "border",
-                    "border-solid",
-                    "border-bd-filled",
-                    {
-                      "bg-button-pattern text-primary-foreground":
-                        shakeMode === "random" && connected,
-                      "bg-background": shakeMode !== "random" || !connected,
-                      "border-foreground-disabled": !connected,
-                      "text-foreground-disabled": !connected,
-                    },
-                  )}
-                  onClick={() => setShakeMode("random")}
-                  disabled={!connected}
-                >
-                  {shakeMode === "random" && connected && (
-                    <span aria-hidden="true">
-                      <CheckIcon size="28" />
-                    </span>
-                  )}
-                  {t("settings.app.shakeRandomMedia")}
-                </button>
-
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={shakeMode === "custom" && connected}
-                  tabIndex={shakeMode === "custom" && connected ? 0 : -1}
-                  className={classNames(
-                    "flex",
-                    "flex-row",
-                    "w-full",
-                    "rounded-e-full",
-                    "items-center",
-                    "justify-center",
-                    "py-1",
-                    "font-medium",
-                    "gap-1",
-                    "tracking-[0.1px]",
-                    "h-9",
-                    "border",
-                    "border-solid",
-                    "border-bd-filled",
-                    {
-                      "bg-button-pattern text-primary-foreground":
-                        shakeMode === "custom" && connected,
-                      "bg-background": shakeMode !== "custom" || !connected,
-                      "border-foreground-disabled": !connected,
-                      "text-foreground-disabled": !connected,
-                    },
-                  )}
-                  onClick={() => setShakeMode("custom")}
-                  disabled={!connected}
-                >
-                  {shakeMode === "custom" && connected && (
-                    <span aria-hidden="true">
-                      <CheckIcon size="28" />
-                    </span>
-                  )}
-                  {t("settings.app.shakeCustom")}
-                </button>
-              </div>
+              <RadioGroup
+                label={t("settings.app.shakeModeLabel")}
+                labelHidden
+                value={connected ? shakeMode : ""}
+                options={[
+                  {
+                    value: "random",
+                    label: t("settings.app.shakeRandomMedia"),
+                  },
+                  { value: "custom", label: t("settings.app.shakeCustom") },
+                ]}
+                disabled={!connected}
+                onChange={(value) => {
+                  if (value === "random" || value === "custom")
+                    setShakeMode(value);
+                }}
+              />
 
               {shakeMode === "random" && (
-                <div>
-                  <div className="flex items-center justify-between gap-2">
-                    {shakeSystem ? (
-                      <span className="text-foreground">
-                        {shakeSystem === "all"
-                          ? t("systemSelector.allSystems")
-                          : shakeSystem}
-                      </span>
-                    ) : (
-                      <span className="text-foreground">-</span>
-                    )}
-                    <Button
-                      label={t("settings.app.shakeSelectSystem")}
-                      onClick={() => setSystemPickerOpen(true)}
-                      variant="outline"
-                      size="sm"
-                      disabled={!connected}
-                    />
-                  </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-foreground">
+                    {!shakeSystem
+                      ? "-"
+                      : shakeSystem === "all"
+                        ? t("systemSelector.allSystems")
+                        : shakeSystem}
+                  </span>
+                  <Button
+                    label={t("settings.app.shakeSelectSystem")}
+                    onClick={() => setSystemPickerOpen(true)}
+                    variant="outline"
+                    size="sm"
+                    disabled={!connected}
+                  />
                 </div>
               )}
 
               {shakeMode === "custom" && (
-                <div>
-                  <ZapScriptInput
-                    value={shakeZapscript}
-                    setValue={setShakeZapscript}
-                    showPalette={false}
-                    rows={2}
-                  />
-                </div>
+                <ZapScriptInput
+                  value={shakeZapscript}
+                  setValue={setShakeZapscript}
+                  rows={2}
+                />
               )}
             </>
           )}
 
-        {/* Audio Feedback - from Core */}
-        <ToggleSwitch
-          label={
-            <span className="flex items-center">
-              {t("settings.readers.audioFeedback")}
+          {/* Audio Feedback - from Core */}
+          <ToggleSwitch
+            reflow
+            label={t("settings.readers.audioFeedback")}
+            help={
               <SettingHelp
                 title={t("settings.readers.audioFeedback")}
                 description={t("settings.readers.audioFeedbackHelp")}
               />
-            </span>
-          }
-          value={coreSettings?.audioScanFeedback ?? false}
-          setValue={(v) => updateCoreSetting.mutate({ audioScanFeedback: v })}
-          disabled={!canWriteCoreSettings}
-          loading={isLoading}
-        />
+            }
+            value={coreSettings?.audioScanFeedback ?? false}
+            setValue={(v) => updateCoreSetting.mutate({ audioScanFeedback: v })}
+            disabled={!canWriteCoreSettings}
+            loading={isLoading}
+          />
 
-        {/* Auto Detect Readers - from Core */}
-        <ToggleSwitch
-          label={
-            <span className="flex items-center">
-              {t("settings.readers.autoDetectReaders")}
+          {/* Auto Detect Readers - from Core */}
+          <ToggleSwitch
+            reflow
+            label={t("settings.readers.autoDetectReaders")}
+            help={
               <SettingHelp
                 title={t("settings.readers.autoDetectReaders")}
                 description={t("settings.readers.autoDetectReadersHelp")}
               />
-            </span>
-          }
-          value={coreSettings?.readersAutoDetect ?? false}
-          setValue={(v) => updateCoreSetting.mutate({ readersAutoDetect: v })}
-          disabled={!canWriteCoreSettings}
-          loading={isLoading}
-        />
+            }
+            value={coreSettings?.readersAutoDetect ?? false}
+            setValue={(v) => updateCoreSetting.mutate({ readersAutoDetect: v })}
+            disabled={!canWriteCoreSettings}
+            loading={isLoading}
+          />
+        </Card>
       </div>
 
       <SystemSelector

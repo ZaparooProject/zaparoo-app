@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent } from "../../../../test-utils";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
+import userEvent from "@testing-library/user-event";
 
 // Mock useHaptics hook
 const mockImpact = vi.fn();
@@ -130,74 +131,6 @@ describe("ToggleSwitch", () => {
     expect(screen.getByRole("checkbox")).toBeInTheDocument();
   });
 
-  it("calls onDisabledClick when disabled and container clicked", () => {
-    const mockOnDisabledClick = vi.fn();
-    render(
-      <ToggleSwitch
-        label="Test Label"
-        value={false}
-        setValue={mockSetValue}
-        disabled={true}
-        onDisabledClick={mockOnDisabledClick}
-      />,
-    );
-
-    // Find the container with button role
-    const button = screen.getByRole("button");
-    fireEvent.click(button);
-
-    expect(mockOnDisabledClick).toHaveBeenCalled();
-  });
-
-  it("handles keyboard Enter for onDisabledClick", () => {
-    const mockOnDisabledClick = vi.fn();
-    render(
-      <ToggleSwitch
-        label="Test Label"
-        value={false}
-        setValue={mockSetValue}
-        disabled={true}
-        onDisabledClick={mockOnDisabledClick}
-      />,
-    );
-
-    const button = screen.getByRole("button");
-    fireEvent.keyDown(button, { key: "Enter" });
-
-    expect(mockOnDisabledClick).toHaveBeenCalled();
-  });
-
-  it("handles keyboard Space for onDisabledClick", () => {
-    const mockOnDisabledClick = vi.fn();
-    render(
-      <ToggleSwitch
-        label="Test Label"
-        value={false}
-        setValue={mockSetValue}
-        disabled={true}
-        onDisabledClick={mockOnDisabledClick}
-      />,
-    );
-
-    const button = screen.getByRole("button");
-    fireEvent.keyDown(button, { key: " " });
-
-    expect(mockOnDisabledClick).toHaveBeenCalled();
-  });
-
-  it("does not have button role when no onDisabledClick", () => {
-    render(
-      <ToggleSwitch
-        label="Test Label"
-        value={false}
-        setValue={mockSetValue}
-        disabled={true}
-      />,
-    );
-
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
-  });
-
   it("renders ReactNode as label", () => {
     render(
       <ToggleSwitch
@@ -210,15 +143,13 @@ describe("ToggleSwitch", () => {
     expect(screen.getByTestId("custom-label")).toBeInTheDocument();
   });
 
-  it("shows a visible focus ring on the rendered track", () => {
+  it("should keep the toggle keyboard focusable", async () => {
+    const user = userEvent.setup();
     render(
-      <ToggleSwitch label="Test Label" value={false} setValue={mockSetValue} />,
+      <ToggleSwitch label="Test toggle" value={false} setValue={vi.fn()} />,
     );
-
-    const checkbox = screen.getByRole("checkbox");
-    const track = checkbox.nextElementSibling;
-    expect(track).toHaveClass("peer-focus-visible:ring-2");
-    expect(track).toHaveClass("peer-focus-visible:ring-white/50");
+    await user.tab();
+    expect(screen.getByRole("checkbox", { name: "Test toggle" })).toHaveFocus();
   });
 
   it("has proper accessibility - checkbox is present", () => {

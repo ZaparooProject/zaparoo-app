@@ -281,7 +281,7 @@ describe("MediaSearchModal", () => {
       await within(picker).findByRole("checkbox", { name: /Platformer/ }),
     );
     await user.click(
-      within(picker).getByRole("button", { name: "tagSelector.apply" }),
+      within(picker).getByRole("button", { name: "tagSelector.applyCount" }),
     );
     await user.click(
       screen.getByRole("button", { name: "create.search.searchButton" }),
@@ -321,6 +321,61 @@ describe("MediaSearchModal", () => {
     expect(
       screen.queryByRole("button", { name: "create.search.tagsInput" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("requires a query, system or tag on Core versions without browse-all search", async () => {
+    const user = userEvent.setup();
+    mockStoreState.coreVersion = "2.9.1";
+    render(
+      <MediaSearchModal isOpen close={mockClose} onSelect={mockOnSelect} />,
+    );
+
+    const searchButton = screen.getByRole("button", {
+      name: "create.search.searchButton",
+    });
+    expect(searchButton).toBeDisabled();
+
+    await user.type(
+      screen.getByPlaceholderText("create.search.gameInputPlaceholder"),
+      "mario",
+    );
+
+    expect(searchButton).toBeEnabled();
+  });
+
+  it("searches for the trimmed query", async () => {
+    const user = userEvent.setup();
+    render(
+      <MediaSearchModal isOpen close={mockClose} onSelect={mockOnSelect} />,
+    );
+
+    await user.type(
+      screen.getByPlaceholderText("create.search.gameInputPlaceholder"),
+      "  mario  ",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "create.search.searchButton" }),
+    );
+
+    expect(screen.getByText("Search results for: mario")).toBeInTheDocument();
+  });
+
+  it("does not overwrite the Create search page's saved system filter", async () => {
+    const { Preferences } = await import("@capacitor/preferences");
+    const user = userEvent.setup();
+    render(
+      <MediaSearchModal isOpen close={mockClose} onSelect={mockOnSelect} />,
+    );
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "create.search.systemInput" }),
+      await screen.findByRole("option", { name: "Super Nintendo" }),
+    );
+
+    expect(
+      screen.getByRole("combobox", { name: "create.search.systemInput" }),
+    ).toHaveValue("snes");
+    expect(Preferences.set).not.toHaveBeenCalled();
   });
 
   it("should allow search while indexing", async () => {

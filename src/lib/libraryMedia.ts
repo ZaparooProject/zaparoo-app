@@ -67,19 +67,12 @@ const COMPACT_EDITION_LABELS: Record<string, string> = {
   remastered: "REMAS",
 };
 
-export type LibraryDetailFactType =
-  | "year"
-  | "players"
-  | "developer"
-  | "publisher"
-  | "genre"
-  | "rating"
-  | "gamefamily"
-  | "arcadeboard";
+/** A canonical Core tag type shown as its own labelled detail row. */
+export type LibraryDetailFactType = string;
 
 export interface LibraryDetailFact {
   type: LibraryDetailFactType;
-  values: string[];
+  tags: TagInfo[];
 }
 
 export interface LibraryMetadataView {
@@ -467,19 +460,89 @@ export function mergeLibraryTags(
   );
 }
 
+// Every canonical tag type with a display name becomes a labelled row, the
+// most-read facts first. Internal types (user, property, search, unknown) and
+// types Core adds later stay in the plain tag list.
 const LIBRARY_DETAIL_FACT_TYPES: readonly LibraryDetailFactType[] = [
   "year",
   "players",
   "developer",
   "publisher",
   "genre",
+  "gamegenre",
   "rating",
   "gamefamily",
+  "series",
   "arcadeboard",
+  "region",
+  "lang",
+  "edition",
+  "rev",
+  "disc",
+  "disctotal",
+  "release",
+  "rerelease",
+  "builddate",
+  "input",
+  "perspective",
+  "art",
+  "category",
+  "based",
+  "platform",
+  "port",
+  "media",
+  "video",
+  "save",
+  "addon",
+  "embedded",
+  "cabinet",
+  "protection",
+  "mameparent",
+  "compatibility",
+  "accessibility",
+  "distribution",
+  "copyright",
+  "credit",
+  "dump",
+  "alt",
+  "patch",
+  "unfinished",
+  "unlicensed",
+  "reboxed",
+  "multigame",
+  "set",
+  "supplement",
+  "season",
+  "episode",
+  "volume",
+  "issue",
+  "track",
+  "extension",
 ];
+
+// Reference facts about the dump or hardware; shown under Technical details.
+const LIBRARY_TECHNICAL_FACT_TYPES: ReadonlySet<LibraryDetailFactType> =
+  new Set([
+    "builddate",
+    "media",
+    "video",
+    "embedded",
+    "cabinet",
+    "protection",
+    "mameparent",
+    "compatibility",
+    "distribution",
+    "copyright",
+    "dump",
+    "alt",
+    "reboxed",
+    "set",
+    "extension",
+  ]);
 
 export function organizeLibraryDetailTags(tags: readonly TagInfo[]): {
   facts: LibraryDetailFact[];
+  technicalFacts: LibraryDetailFact[];
   tags: TagInfo[];
 } {
   const visibleTags = mergeLibraryTags(tags).filter(
@@ -487,16 +550,22 @@ export function organizeLibraryDetailTags(tags: readonly TagInfo[]): {
       !isMediaPreferenceTag(tag) && !isDeckTag(tag) && !isScraperTag(tag),
   );
   const factTypeSet = new Set<string>(LIBRARY_DETAIL_FACT_TYPES);
-  const facts = LIBRARY_DETAIL_FACT_TYPES.flatMap((type) => {
-    const values = visibleTags
-      .filter((tag) => tag.type.trim().toLowerCase() === type)
-      .map((tag) => (tag.label || tag.tag).trim())
-      .filter(Boolean);
-    return values.length > 0 ? [{ type, values }] : [];
+  const allFacts = LIBRARY_DETAIL_FACT_TYPES.flatMap((type) => {
+    const factTags = visibleTags.filter(
+      (tag) =>
+        tag.type.trim().toLowerCase() === type &&
+        (tag.label || tag.tag).trim() !== "",
+    );
+    return factTags.length > 0 ? [{ type, tags: factTags }] : [];
   });
 
   return {
-    facts,
+    facts: allFacts.filter(
+      (fact) => !LIBRARY_TECHNICAL_FACT_TYPES.has(fact.type),
+    ),
+    technicalFacts: allFacts.filter((fact) =>
+      LIBRARY_TECHNICAL_FACT_TYPES.has(fact.type),
+    ),
     tags: visibleTags.filter(
       (tag) => !factTypeSet.has(tag.type.trim().toLowerCase()),
     ),

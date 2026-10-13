@@ -2,13 +2,22 @@
   "translation": {
     "copy": "Copier",
     "copied": "Copié",
+    "copyToClipboard": "Copier dans le presse-papiers",
+    "copyFailed": "Impossible de copier dans le presse-papiers",
     "save": "Enregistrer",
     "clearSearch": "Effacer la recherche",
+    "settingHelp": {
+      "label": "Aide pour {{title}}"
+    },
     "backToTop": "Retour en haut",
     "error": "Erreur : {{msg}}",
     "loading": "Chargement...",
     "cancelling": "Annulation...",
     "resuming": "Reprise...",
+    "reader": {
+      "cancelAction": "Annuler l’activité du lecteur",
+      "pressAgainToCancel": "Appuyez à nouveau pour annuler"
+    },
     "shareFailed": "Échec du partage",
     "errorBoundary": {
       "title": "Oups, un problème grave est survenu !",
@@ -33,16 +42,29 @@
       "back": "Retour",
       "cancel": "Annuler",
       "close": "Fermer",
+      "moreActions": "Plus d’actions",
       "create": "Créer",
-      "assign": "Attribuer",
       "index": "Zap",
       "library": "Bibliothèque",
-      "design": "Conception",
       "settings": "Réglages",
+      "search": "Recherche",
+      "devices": "Appareils",
+      "media": "Médias",
+      "all": "Toutes",
       "settingsWithNotifications_one": "Réglages, {{count}} notification",
       "settingsWithNotifications_other": "Réglages, {{count}} notifications",
-      "run": "Exécuter",
-      "mainNavigation": "Navigation principale"
+      "mainNavigation": "Navigation principale",
+      "breadcrumbs": "Fil d’Ariane",
+      "menu": "Menu de navigation",
+      "currentDevice": "Appareil actuel",
+      "openMenu": "Ouvrir la navigation",
+      "expandSection": "Développer {{section}}",
+      "collapseSection": "Réduire {{section}}",
+      "collapseSidebar": "Réduire la barre latérale",
+      "fullScreen": "Plein écran",
+      "exitFullScreen": "Quitter le plein écran",
+      "lightMode": "Mode clair",
+      "darkMode": "Mode sombre"
     },
     "appBadge": {
       "title": "Badges de l’icône de l’application",
@@ -72,7 +94,6 @@
       "addError": "Impossible d’ajouter au deck",
       "added": "Ajouté au deck",
       "addAction": "Ajouter au deck",
-      "createWithGame": "Créer un deck avec ce jeu",
       "edit": "Modifier le deck",
       "readOnly": "Cette copie est en lecture seule",
       "locked": "Ce deck est verrouillé",
@@ -98,6 +119,7 @@
       "items_one": "{{count}} élément",
       "items_other": "{{count}} éléments",
       "noItems": "Ce deck est vide",
+      "selectItem": "Sélectionnez un élément",
       "unnamedItem": "Élément sans nom",
       "script": "Script",
       "zapScript": "ZapScript",
@@ -112,21 +134,18 @@
       "full": "Ce deck est plein",
       "moveUp": "Monter {{name}}",
       "moveDown": "Descendre {{name}}",
-      "removeItem": "Retirer {{name}}",
       "remove": "Retirer",
       "confirmRemove": "Retirer {{name}} de ce deck ?",
       "delete": "Supprimer le deck",
       "confirmDelete": "Supprimer {{name}} ? Cette action est irréversible."
     },
     "library": {
+      "selectMedia": "Sélectionnez un média",
       "title": "Bibliothèque",
       "collections": "Collections",
       "systems": "Systèmes",
       "browseBy": "Parcourir la bibliothèque",
-      "searchCollections": "Rechercher des collections",
-      "noMatchingCollections": "Aucune collection correspondante",
       "favorites": "Favoris",
-      "favoritesLabel": "Médias favoris",
       "favoritesList": "Médias favoris",
       "loadingFavorites": "Chargement des favoris...",
       "favoritesError": "Impossible de charger les favoris",
@@ -143,6 +162,7 @@
       "liked": "Aimés",
       "disliked": "Non aimés",
       "playLater": "À jouer plus tard",
+      "playLaterAction": "À jouer plus tard",
       "likedList": "Médias aimés",
       "dislikedList": "Médias non aimés",
       "playLaterList": "Médias à jouer plus tard",
@@ -161,6 +181,19 @@
       "noLikedHint": "Aimez un média depuis ses détails ou « Lecture en cours ».",
       "noDislikedHint": "Indiquez que vous n’aimez pas un média depuis ses détails ou « Lecture en cours ».",
       "noPlayLaterHint": "Gardez un média pour plus tard depuis ses détails ou « Lecture en cours ».",
+      "recentlyPlayed": "Joués récemment",
+      "recentlyPlayedShort": "Récents",
+      "recentlyPlayedList": "Médias joués récemment",
+      "loadingRecentlyPlayed": "Chargement des jeux récents...",
+      "recentlyPlayedError": "Impossible de charger les jeux récents",
+      "noRecentlyPlayed": "Rien n'a encore été joué",
+      "noRecentlyPlayedHint": "Les médias que vous lancez apparaîtront ici.",
+      "topPlayed": "Les plus joués",
+      "topPlayedList": "Médias les plus joués",
+      "loadingTopPlayed": "Chargement des plus joués...",
+      "topPlayedError": "Impossible de charger les plus joués",
+      "noTopPlayed": "Rien n'a encore été joué",
+      "noTopPlayedHint": "Vos médias les plus joués apparaîtront ici.",
       "like": "J’aime",
       "dislike": "Je n’aime pas",
       "addLike": "Aimer le média",
@@ -201,7 +234,6 @@
       "noLetterIndex": "La navigation alphabétique n’est pas disponible pour ce dossier",
       "jumpError": "Impossible d’accéder à cette lettre",
       "jumpingTo": "Chargement de {{label}}...",
-      "coverAlt": "Jaquette de {{title}}",
       "imageAlt": "{{type}} de {{title}}",
       "imageTypes": {
         "artwork": "Illustration",
@@ -273,22 +305,398 @@
       "sortTitleDesc": "Titre : Z–A",
       "sortFilenameAsc": "Nom de fichier : A–Z",
       "sortFilenameDesc": "Nom de fichier : Z–A",
-      "searchTitle": "Rechercher des jeux",
-      "searchInput": "Titre du jeu",
-      "searchPlaceholder": "Saisissez le titre d’un jeu",
-      "searchAction": "Rechercher"
+      "searchTitle": "Rechercher des médias",
+      "searchInput": "Nom",
+      "searchPlaceholder": "Saisissez le nom d’un média",
+      "searchAction": "Rechercher",
+      "tagValues": {
+        "region": {
+          "world": "Monde",
+          "us": "États-Unis",
+          "eu": "Europe",
+          "jp": "Japon",
+          "au": "Australie",
+          "kr": "Corée du Sud",
+          "cn": "Chine",
+          "tw": "Taïwan",
+          "hk": "Hong Kong",
+          "br": "Brésil",
+          "ca": "Canada",
+          "uk": "Royaume-Uni",
+          "fr": "France",
+          "de": "Allemagne",
+          "it": "Italie",
+          "es": "Espagne",
+          "scandinavia": "Scandinavie",
+          "asia": "Asie"
+        },
+        "lang": {
+          "en": "Anglais",
+          "fr": "Français",
+          "de": "Allemand",
+          "es": "Espagnol",
+          "it": "Italien",
+          "ja": "Japonais",
+          "ko": "Coréen",
+          "zh": "Chinois",
+          "pt": "Portugais",
+          "nl": "Néerlandais",
+          "sv": "Suédois",
+          "no": "Norvégien",
+          "da": "Danois",
+          "fi": "Finnois",
+          "pl": "Polonais",
+          "ru": "Russe",
+          "ar": "Arabe",
+          "en-US": "Anglais (États-Unis)",
+          "en-GB": "Anglais (Royaume-Uni)"
+        },
+        "edition": {
+          "directorsCut": "Director’s Cut",
+          "collectors": "Édition collector",
+          "limited": "Édition limitée",
+          "special": "Édition spéciale",
+          "deluxe": "Édition deluxe",
+          "ultimate": "Édition ultime",
+          "anniversary": "Édition anniversaire",
+          "remastered": "Remasterisé",
+          "remake": "Remake",
+          "remix": "Remix",
+          "complete": "Édition complète",
+          "goty": "Édition Jeu de l’année"
+        },
+        "genre": {
+          "action": "Action",
+          "action_platformer": "Plateforme",
+          "action_maze": "Labyrinthe",
+          "action_blockbreaker": "Casse-briques",
+          "action_runandgun": "Run and gun",
+          "action_hackandslash": "Hack and slash",
+          "action_metroidvania": "Metroidvania",
+          "action_roguelite": "Roguelite",
+          "adventure": "Aventure",
+          "adventure_pointandclick": "Point and click",
+          "adventure_visualnovel": "Visual novel",
+          "adventure_survivalhorror": "Survival horror",
+          "adventure_text": "Aventure textuelle",
+          "board": "Jeu de société",
+          "board_cards": "Cartes",
+          "board_hanafuda": "Hanafuda",
+          "board_chess": "Échecs",
+          "board_shougi": "Shogi",
+          "board_go": "Go",
+          "board_mahjong": "Mahjong",
+          "board_reversi": "Reversi",
+          "board_othello": "Othello",
+          "board_backgammon": "Backgammon",
+          "board_party": "Party game",
+          "board_jankenpon": "Pierre-feuille-ciseaux",
+          "brawler": "Beat 'em up",
+          "fighting": "Combat",
+          "fighting_melee": "Combat au corps à corps",
+          "minigames": "Mini-jeux",
+          "parlor": "Jeu de salle de jeux",
+          "parlor_pinball": "Flipper",
+          "parlor_jackpot": "Jackpot",
+          "parlor_pachinko": "Pachinko",
+          "parlor_darts": "Fléchettes",
+          "parlor_bowling": "Bowling",
+          "parlor_billiards": "Billard",
+          "parlor_mogurataiji": "Jeu de la taupe",
+          "parlor_kiddieride": "Manège pour enfants",
+          "parlor_mechanical": "Jeu mécanique",
+          "quiz": "Quiz",
+          "racing": "Course",
+          "racing_combat": "Course de combat",
+          "racing_driving": "Conduite",
+          "rpg": "RPG",
+          "rpg_a": "Action-RPG",
+          "rpg_j": "JRPG",
+          "rpg_s": "RPG tactique",
+          "rpg_dungeoncrawler": "Dungeon crawler",
+          "rpg_mmo": "MMORPG",
+          "rhythm": "Rythme",
+          "rhythm_karaoke": "Karaoké",
+          "rhythm_dance": "Danse",
+          "shmup": "Shoot 'em up",
+          "shmup_h": "Shoot 'em up horizontal",
+          "shmup_v": "Shoot 'em up vertical",
+          "shmup_i": "Shoot 'em up isométrique",
+          "shmup_danmaku": "Bullet hell",
+          "shooting": "Jeu de tir",
+          "shooting_gallery": "Stand de tir",
+          "shooting_rail": "Rail shooter",
+          "shooting_fps": "FPS",
+          "shooting_tps": "TPS",
+          "puzzle": "Réflexion",
+          "puzzle_drop": "Puzzle de blocs",
+          "puzzle_mind": "Jeu de logique",
+          "sim": "Simulation",
+          "sim_strategy": "Stratégie",
+          "sim_cardgame": "Jeu de cartes à collectionner",
+          "sim_flight": "Simulation de vol",
+          "sim_train": "Simulation ferroviaire",
+          "sim_date": "Simulation de drague",
+          "sim_otome": "Jeu otome",
+          "sim_life": "Simulation de vie",
+          "sim_farm": "Simulation agricole",
+          "sim_pet": "Simulation d’animaux",
+          "sim_fishing": "Pêche",
+          "sim_god": "God game",
+          "sim_derby": "Simulation hippique",
+          "sim_building": "Jeu de construction",
+          "sim_cooking": "Cuisine",
+          "sports": "Sport",
+          "sports_soccer": "Football",
+          "sports_basketball": "Basket-ball",
+          "sports_baseball": "Baseball",
+          "sports_volleyball": "Volley-ball",
+          "sports_rugby": "Rugby",
+          "sports_football": "Football américain",
+          "sports_dodgeball": "Balle aux prisonniers",
+          "sports_hockey": "Hockey",
+          "sports_skiing": "Ski",
+          "sports_skateboarding": "Skateboard",
+          "sports_snowboarding": "Snowboard",
+          "sports_tennis": "Tennis",
+          "sports_pingpong": "Tennis de table",
+          "sports_paddle": "Padel",
+          "sports_squash": "Squash",
+          "sports_badminton": "Badminton",
+          "sports_flyingdisc": "Frisbee",
+          "sports_cycling": "Cyclisme",
+          "sports_formula1": "Formule 1",
+          "sports_rally": "Rallye",
+          "sports_nascar": "NASCAR",
+          "sports_motogp": "MotoGP",
+          "sports_motocross": "Motocross",
+          "sports_karting": "Karting",
+          "sports_jetski": "Jet-ski",
+          "sports_golf": "Golf",
+          "sports_cricket": "Cricket",
+          "sports_boxing": "Boxe",
+          "sports_kickboxing": "Kick-boxing",
+          "sports_wrestling": "Catch",
+          "sports_sumo": "Sumo",
+          "sports_karate": "Karaté",
+          "sports_judo": "Judo",
+          "sports_kendo": "Kendo",
+          "sports_taekwondo": "Taekwondo",
+          "sports_mma": "MMA",
+          "sports_decathlon": "Décathlon",
+          "sports_running": "Course à pied",
+          "sports_archery": "Tir à l’arc",
+          "sports_swimming": "Natation",
+          "sports_rowing": "Aviron",
+          "sports_kayak": "Kayak",
+          "sports_surf": "Surf",
+          "notagame": "Pas un jeu",
+          "notagame_educational": "Éducatif",
+          "notagame_drawing": "Dessin",
+          "notagame_popcorn": "Machine à pop-corn",
+          "notagame_purikura": "Cabine photo",
+          "notagame_redemption": "Jeu à tickets",
+          "notagame_media": "Média",
+          "notagame_magazine": "Magazine",
+          "notagame_application": "Application",
+          "notagame_test": "Programme de test",
+          "notagame_sdk": "SDK",
+          "notagame_slideshow": "Diaporama",
+          "notagame_sound": "Son",
+          "sim_management": "Jeu de gestion",
+          "sports_roller": "Roller"
+        },
+        "players": {
+          "vs": "Versus",
+          "coop": "Coopératif",
+          "alt": "Alterné",
+          "simultaneous": "Simultané",
+          "mmo": "MMO"
+        },
+        "input": {
+          "joystick": "Joystick",
+          "joystick_2h": "Joystick 2 directions (horizontal)",
+          "joystick_2v": "Joystick 2 directions (vertical)",
+          "joystickWays": "Joystick {{value}} directions",
+          "joystick_double": "Double joystick",
+          "joystick_rotary": "Joystick rotatif",
+          "stick": "Stick",
+          "stick_twin": "Double stick",
+          "trackball": "Trackball",
+          "paddle": "Paddle",
+          "spinner": "Spinner",
+          "wheel": "Volant",
+          "dial": "Molette",
+          "lightgun": "Pistolet optique",
+          "optical": "Optique",
+          "positional": "Positionnel",
+          "positionalCount": "Positionnel : {{value}}",
+          "buttons": "Boutons",
+          "buttonsCount": "Boutons : {{value}}",
+          "buttons_pneumatic": "Boutons pneumatiques",
+          "pedals": "Pédales",
+          "pedalsCount": "Pédales : {{value}}",
+          "puncher": "Cible de frappe",
+          "puncherCount": "Cibles de frappe : {{value}}",
+          "motion": "Détection de mouvement",
+          "keyboard": "Clavier",
+          "keyboard_mahjong": "Panneau de mahjong",
+          "touchscreen": "Écran tactile",
+          "touchscreen_resistive": "Écran tactile résistif",
+          "touchscreen_capacitive": "Écran tactile capacitif",
+          "accelerometer": "Accéléromètre",
+          "ddrpad": "Tapis de danse",
+          "hrm": "Cardiofréquencemètre"
+        },
+        "save": {
+          "backup": "Sauvegarde",
+          "password": "Mot de passe"
+        },
+        "media": {
+          "disc": "Disque",
+          "disk": "Disquette",
+          "file": "Fichier",
+          "part": "Partie",
+          "side": "Face",
+          "sideLetter": "Face {{value}}",
+          "tape": "Cassette",
+          "cart": "Cartouche"
+        },
+        "unfinished": {
+          "alpha": "Alpha",
+          "beta": "Bêta",
+          "proto": "Prototype",
+          "demo": "Démo",
+          "demo_auto": "Démo automatique",
+          "demo_kiosk": "Démo de borne",
+          "demo_playable": "Démo jouable",
+          "demo_rolling": "Démo tournante",
+          "demo_slideshow": "Démo diaporama",
+          "sample": "Échantillon",
+          "debug": "Version de débogage",
+          "competition": "Version de compétition",
+          "preview": "Aperçu",
+          "prerelease": "Préversion",
+          "final": "Finale",
+          "wip": "En cours de développement"
+        },
+        "unlicensed": {
+          "unlicensed": "Sans licence",
+          "bootleg": "Bootleg",
+          "hack": "Hack",
+          "clone": "Clone",
+          "pirate": "Pirate",
+          "translation": "Traduction",
+          "translation_old": "Ancienne traduction",
+          "aftermarket": "Aftermarket"
+        },
+        "release": {
+          "homebrew": "Homebrew",
+          "unreleased": "Non commercialisé",
+          "public-domain": "Domaine public",
+          "reissue": "Réédition",
+          "classics": "Classiques",
+          "promo": "Promo",
+          "not-for-resale": "Vente interdite",
+          "kiosk": "Borne"
+        },
+        "dump": {
+          "cracked": "Cracké",
+          "fixed": "Corrigé",
+          "hacked": "Hacké",
+          "modified": "Modifié",
+          "pirated": "Piraté",
+          "trained": "Avec trainer",
+          "translated": "Traduit",
+          "overdump": "Overdump",
+          "underdump": "Underdump",
+          "virus": "Virus",
+          "bad": "Dump défectueux",
+          "alternate": "Alternatif",
+          "verified": "Vérifié",
+          "pending": "En attente",
+          "checksum-bad": "Somme de contrôle incorrecte",
+          "checksum-unknown": "Somme de contrôle inconnue",
+          "hacked_intro": "Intro ajoutée",
+          "hacked_intro-removed": "Intro supprimée",
+          "no-boot": "Ne démarre pas"
+        },
+        "copyright": {
+          "cw": "Cardware",
+          "cw-r": "Cardware (enregistré)",
+          "fw": "Freeware",
+          "gw": "Giftware",
+          "gw-r": "Giftware (enregistré)",
+          "lw": "Licenceware",
+          "pd": "Domaine public",
+          "sw": "Shareware",
+          "sw-r": "Shareware (enregistré)"
+        },
+        "perspective": {
+          "firstperson": "Première personne",
+          "thirdperson": "Troisième personne",
+          "topdown": "Vue de dessus",
+          "isometric": "Isométrique",
+          "fixedcamera": "Caméra fixe",
+          "sidescroll_horizontal": "Défilement horizontal",
+          "sidescroll_vertical": "Défilement vertical"
+        },
+        "art": {
+          "pixelart": "Pixel art",
+          "celshaded": "Cel-shading",
+          "vector": "Vectoriel",
+          "digitized": "Numérisé",
+          "handdrawn": "Dessiné à la main"
+        },
+        "accessibility": {
+          "visual_colorblindmode": "Mode daltonien",
+          "visual_highcontrast": "Contraste élevé",
+          "visual_textsizeadjust": "Taille du texte réglable",
+          "audio_subtitles": "Sous-titres",
+          "audio_monoaudio": "Audio mono",
+          "audio_visualcues": "Indices visuels",
+          "input_remappablecontrols": "Commandes reconfigurables",
+          "input_onebuttonmode": "Mode un bouton"
+        },
+        "cabinet": {
+          "upright": "Borne verticale",
+          "cocktail": "Table cocktail",
+          "cabaret": "Cabaret",
+          "sitdown": "Borne assise"
+        },
+        "protection": {
+          "no-protection": "Sans protection",
+          "encrypted": "Chiffré",
+          "decrypted": "Déchiffré"
+        },
+        "supplement": {
+          "update": "Mise à jour",
+          "expansion": "Extension",
+          "theme": "Thème",
+          "avatar": "Avatar"
+        },
+        "based": {
+          "manganime": "Manga/anime",
+          "movie": "Film"
+        },
+        "multigame": {
+          "compilation": "Compilation",
+          "menu": "Menu",
+          "volume": "Volume {{value}}"
+        },
+        "alt": {
+          "alt": "Alternatif"
+        }
+      },
+      "revisionValue": "Révision {{value}}",
+      "tagValueNumbered": "{{name}} {{value}}"
     },
     "spinner": {
       "deleting": "Suppression...",
-      "notSupportedLabel": "L’appareil ne prend pas en charge le NFC",
-      "notSupportedSub": "Les fonctions de lecture et d’écriture NFC ne seront pas disponibles dans cette application",
       "nfcDisabledLabel": "Accès NFC désactivé",
-      "nfcDisabledSub": "Activez l’accès NFC dans les réglages de votre appareil pour utiliser les fonctions de lecture et d’écriture NFC",
       "openNfcSettings": "Ouvrir les réglages NFC",
       "holdTag": "Maintenez le tag contre le téléphone",
       "holdTagReader": "Maintenez le tag contre le lecteur",
-      "scanning": "Scan en cours",
-      "pressToScan": "Appuyer pour scanner",
       "writeSuccess": "Tag écrit avec succès",
       "writeFailed": "Échec de l’écriture du tag",
       "readSuccess": "Tag lu avec succès",
@@ -300,27 +708,24 @@
       "makeReadOnlySuccess": "Tag défini en lecture seule",
       "makeReadOnlyFailed": "Échec du passage du tag en lecture seule",
       "formatErrorRetry": "Impossible de formater ce tag. Réessayez ou utilisez un autre tag.",
+      "sessionBusy": "Une autre opération NFC est déjà en cours.",
+      "tagLost": "Le tag a été éloigné trop tôt. Maintenez-le immobile et réessayez.",
       "verifying": "Vérification du tag...",
       "verifyFailed": "Le tag n’a pas été enregistré correctement",
       "verifyFailedRetry": "Le tag n’a pas été enregistré correctement. Maintenez-le contre votre téléphone et réessayez.",
       "retapTag": "Tag formaté. Éloignez-le, puis maintenez-le à nouveau contre votre téléphone."
     },
     "toast": {
-      "updateDbHeading": "Mise à jour de la base de données de médias",
       "preparingDb": "Préparation de la base de données",
-      "hideLabel": "Masquer",
       "updatedDb": "Base de données de médias mise à jour",
       "filesFound": "Éléments scannés : {{count}}",
-      "nowPlayingHeading": "Lecture en cours",
-      "indexingProgress": "Progression de l’indexation de la base de données"
+      "nowPlayingHeading": "Lecture en cours"
     },
     "whatsNew": {
-      "title": "Nouveautés",
       "gotIt": "Compris"
     },
     "write": {
-      "noWriteMethodAvailable": "Aucune méthode d’écriture NFC disponible",
-      "nfcNotSupported": "Le NFC n’est pas pris en charge sur cet appareil"
+      "noWriteMethodAvailable": "Aucune méthode d’écriture NFC disponible"
     },
     "accessibility": {
       "skipToContent": "Aller au contenu principal",
@@ -331,7 +736,6 @@
       "title": "Confirmer le token en attente ?",
       "waitingDescription": "Ce token attend une confirmation.",
       "readyDescription": "Ce token est prêt à être confirmé.",
-      "tokenValue": "Valeur du token",
       "confirm": "Confirmer",
       "dismiss": "Masquer",
       "confirmError": "Impossible de confirmer le token en attente",
@@ -341,29 +745,17 @@
     },
     "scan": {
       "cameraMode": "Appareil photo",
-      "cameraAvailable": "Utiliser l’appareil photo pour scanner",
       "nfcMode": "NFC",
       "scanError": "Erreur lors du scan du tag",
-      "scanSuccess": "Tag scanné avec succès",
-      "noDevices": "Aucun appareil Zaparoo trouvé",
-      "connecting": "Connexion...",
-      "reconnecting": "Reconnexion...",
       "connectionError": "Erreur de connexion",
       "retry": "Réessayer",
-      "continuous": "Scan continu",
-      "launchOnScan": "Lancer après le scan",
       "connectedHeading": "Connecté",
-      "connectedSub": "Adresse : {{ip}}",
       "nowPlayingHeading": "Lecture en cours",
       "mediaPreferences": "Préférences du média",
-      "nothingPlaying": "Aucune lecture en cours",
-      "nowPlayingName": "Nom : {{game}}",
-      "nowPlayingSystem": "Système : {{system}}",
       "stopPlayingButton": "Arrêter la lecture",
       "backgroundMediaHeading": "Arrière-plan",
       "stopBackgroundMediaButton": "Arrêter le média en arrière-plan",
       "stopBackgroundMediaError": "Impossible d’arrêter le média en arrière-plan",
-      "playlistName": "Playlist : {{playlist}}",
       "playlistPosition": "Élément {{current}} sur {{total}}",
       "playlistControls": "Commandes de la playlist {{section}}",
       "playlistPrevious": "Élément précédent",
@@ -371,12 +763,14 @@
       "playlistPlay": "Lire la playlist",
       "playlistNext": "Élément suivant",
       "playlistControlError": "Impossible de contrôler la playlist",
-      "lastScannedHeading": "Dernier scan",
-      "lastScannedTime": "Heure : {{time}}",
+      "mediaControls": "Commandes de {{section}}",
+      "mediaPause": "Mettre en pause",
+      "mediaResume": "Reprendre",
+      "mediaControlError": "Impossible de contrôler le média",
       "lastScannedUid": "ID : {{uid}}",
-      "lastScannedText": "Valeur : {{text}}",
-      "historyTitle": "Historique des scans",
+      "historyTitle": "Historique",
       "historyReplay": "Relancer le scan",
+      "historyUnknown": "Scan inconnu",
       "historyReplayError": "Impossible de relancer le scan",
       "historyFailed": "Échec",
       "purchaseProTitle": "Zaparoo Pro",
@@ -397,11 +791,45 @@
       "purchaseAccountDescription": "Associez Pro à un compte Zaparoo Online gratuit. Vous disposerez d’une sauvegarde si votre boutique d’applications perd la trace de l’achat, et vous pourrez utiliser Pro sur autant d’appareils Android et iOS que vous le souhaitez.",
       "purchaseAccountAction": "Configurer Zaparoo Online",
       "purchaseAccountLater": "Pas maintenant",
-      "completeIntro": "Let’s Zaparoo",
       "statusScanning": "Recherche d’un tag NFC",
       "statusSuccess": "Tag scanné avec succès",
       "statusError": "Échec du scan du tag",
-      "remoteKeyboard": "Commandes"
+      "remoteKeyboard": "Commandes",
+      "tapTag": "Scanner un tag",
+      "tapTagScanning": "Scan en cours",
+      "tapTagStop": "Arrêter le scan",
+      "scanCode": "Scanner un code",
+      "statusStopped": "Scan arrêté",
+      "noReaderTitle": "Aucun lecteur sur ce téléphone",
+      "noReaderSub": "Ce téléphone ne dispose ni du NFC ni d’un appareil photo ; il ne peut donc pas scanner. Vous pouvez tout de même l’utiliser pour gérer votre appareil.",
+      "devicePill": "{{device}}, {{status}}",
+      "deviceNone": "Aucun appareil",
+      "deviceSheetTitle": "Appareil",
+      "deviceSheetRecent": "Changer d’appareil",
+      "deviceSheetAllDevices": "Gérer les appareils",
+      "nowPlayingIdle": "Aucune lecture en cours",
+      "lastPlayed": "Dernière lecture : {{media}}",
+      "playLastPlayed": "Relancer {{media}}",
+      "playLastPlayedUnavailable": "Lire le dernier média joué",
+      "playLastPlayedError": "Impossible de lancer ce média",
+      "readersHeading": "Lecteurs",
+      "readerHolding": "Média présent",
+      "recentsHeading": "Joués récemment",
+      "favoritesHeading": "Favoris",
+      "coverRowLaunch": "Jouer à {{game}}",
+      "coverRowDetails": "Afficher les détails de {{media}}",
+      "coverRowLaunchError": "Impossible de lancer ce média",
+      "historyTabs": "Type d’historique",
+      "historyTabScans": "Scans",
+      "historyTabPlayed": "Joués",
+      "historyPlayedEmpty": "Rien n’a encore été joué sur cet appareil",
+      "history": {
+        "empty": "Aucun scan pour le moment"
+      },
+      "scanHistoryTitle": "Historique des scans",
+      "playHistoryTitle": "Historique de lecture",
+      "historyRefresh": "Actualiser l’historique",
+      "historyLoadError": "Impossible de charger l’historique"
     },
     "create": {
       "title": "Créer",
@@ -421,7 +849,6 @@
         "searchButton": "Rechercher",
         "gamesDbUpdate": "La base de données de médias doit être mise à jour avant la recherche",
         "searchError": "Erreur lors de la recherche de médias",
-        "noGamesFound": "Aucun média trouvé",
         "title": "Rechercher un média",
         "gameInput": "Nom",
         "gameInputPlaceholder": "Saisissez le nom d’un média",
@@ -430,7 +857,6 @@
         "tagsInput": "Tags",
         "allTags": "Tous les tags",
         "systemLabel": "Système",
-        "categoryLabel": "Catégorie",
         "pathLabel": "Chemin",
         "zapscriptLabel": "ZapScript",
         "tagsLabel": "Tags",
@@ -446,8 +872,6 @@
         "resultsFound_one": "{{count}} résultat trouvé",
         "resultsFound_other": "{{count}} résultats trouvés",
         "loadMore": "Charger plus de résultats",
-        "loadedMore_one": "{{count}} résultat supplémentaire chargé",
-        "loadedMore_other": "{{count}} résultats supplémentaires chargés",
         "startSearching": "Prêt pour la recherche",
         "startSearchingHint": "Saisissez le nom d’un média ou sélectionnez des filtres pour lancer la recherche",
         "noResultsFound": "Aucun résultat trouvé pour « {{query}} »",
@@ -458,34 +882,35 @@
         "clearFilters": "Effacer les filtres",
         "tryAgain": "Réessayer",
         "recentSearches": "Recherches récentes",
+        "searchAgain": "Rechercher {{query}}",
+        "recentSystem": "Système : {{system}}",
+        "recentTags": "Tags : {{tags}}",
+        "recentAllMedia": "Tous les médias",
         "noRecentSearches": "Aucune recherche récente",
         "noRecentSearchesHint": "Lancez une recherche pour créer votre historique",
         "clearHistory": "Effacer l’historique",
-        "gamesDbSettings": "Ouvrir les réglages de la base de données",
-        "searchResult": "Sélectionner le résultat de recherche"
+        "gamesDbSettings": "Ouvrir les réglages de la base de données"
       },
       "custom": {
         "title": "ZapScript personnalisé",
         "textPlaceholder": "Saisissez un ZapScript",
         "textareaLabel": "Éditeur ZapScript",
         "write": "Écrire sur le tag",
-        "run": "Exécuter",
+        "run": "Tester",
         "clear": "Effacer",
         "failMsg": "Échec de l’exécution du ZapScript",
         "characters": "Nombre de caractères : {{count}}",
         "searchMedia": "Média",
         "commands": "Commande",
+        "commandsTitle": "Commandes",
         "selectSystem": "Système",
         "zapscriptHelp": "Aide",
         "clearConfirmTitle": "Effacer le ZapScript ?",
-        "commandPalette": "Palette de commandes",
-        "insertCommandStart": "Insérer le début de commande",
-        "insertCommandSeparator": "Insérer un séparateur de commandes",
         "insertMedia": "Insérer le chemin du média",
         "insert": "Insérer",
         "insertSystem": "Insérer un système",
         "insertCommand": "Insérer une commande",
-        "runZapScript": "Exécuter le ZapScript"
+        "runZapScript": "Tester le ZapScript"
       },
       "nfc": {
         "title": "Utilitaires NFC",
@@ -497,9 +922,7 @@
         "confirm": "Êtes-vous sûr ?",
         "tabs": {
           "read": "Lecture",
-          "write": "Écriture",
-          "tools": "Outils",
-          "history": "Historique"
+          "tools": "Outils"
         },
         "readTab": {
           "scanTag": "Scanner le tag",
@@ -530,35 +953,11 @@
           "historicalBytes": "Octets historiques (ISO-DEP)",
           "manufacturer": "Fabricant (NFC-F)",
           "systemCode": "Code système (NFC-F)",
-          "copiedToClipboard": "{{label}} copié dans le presse-papiers",
-          "copyFailed": "Échec de la copie dans le presse-papiers",
-          "tagData": "Données du tag",
           "shareTitle": "Données du tag NFC",
           "shareText": "UID : {{uid}}\nTexte : {{text}}",
           "shareTagData": "Partager les données du tag"
         },
-        "write": {
-          "templates": {
-            "text": "Texte",
-            "url": "URL",
-            "wifi": "Wi-Fi",
-            "contact": "Contact",
-            "custom": "Personnalisé"
-          },
-          "writeToTag": "Écrire sur le tag",
-          "preview": "Aperçu",
-          "estimatedSize": "Taille estimée"
-        },
-        "history": {
-          "title": "Historique NFC",
-          "empty": "Aucun historique",
-          "clearAll": "Tout effacer",
-          "writeAgain": "Écrire à nouveau",
-          "remove": "Supprimer"
-        },
         "tools": {
-          "dangerousOperations": "Opérations dangereuses",
-          "platformInfo": "Informations sur la plateforme",
           "formatDescription": "Formate le tag selon la norme NDEF et supprime toutes les données",
           "formatWarning": "Cette action supprimera définitivement toutes les données du tag",
           "eraseDescription": "Supprime toutes les données NDEF du tag",
@@ -579,6 +978,8 @@
           "reload": "Recharger les fichiers de configuration",
           "reloadedSuccess": "Mappages rechargés depuis les fichiers de configuration",
           "reloadFailed": "Échec du rechargement des mappages",
+          "loadFailed": "Impossible de charger les mappages",
+          "retry": "Réessayer",
           "disabledBadge": "Désactivé",
           "readOnlyBadge": "Lecture seule",
           "noOverride": "Aucune action",
@@ -605,7 +1006,6 @@
           "matchRegexHelp": "Le motif est une expression régulière.",
           "matchRegexInvalid": "Expression régulière non valide",
           "pattern": "Motif",
-          "patternRequired": "Le motif est obligatoire",
           "override": "ZapScript",
           "overrideHelp": "S’exécute lorsque le mappage correspond.",
           "enabled": "Activé",
@@ -634,7 +1034,7 @@
       "loginGoogle": "Se connecter avec Google",
       "loginApple": "Se connecter avec Apple",
       "logout": "Se déconnecter",
-      "loginSuccess": "Connexion réussie",
+      "logoutFailed": "Impossible de se déconnecter",
       "loginWrong": "E-mail ou mot de passe incorrect",
       "loginFail": "Une erreur est survenue lors de la connexion",
       "mfaTitle": "Authentification à deux facteurs",
@@ -646,7 +1046,6 @@
       "mfaBack": "Retour à la connexion",
       "mfaExpired": "La vérification a expiré. Reconnectez-vous.",
       "mfaFailed": "Échec de la vérification du code. Réessayez.",
-      "signUpSuccess": "Compte créé avec succès",
       "signUpFail": "Échec de la création du compte",
       "emailExists": "Un compte associé à cet e-mail existe déjà",
       "weakPassword": "Le mot de passe est trop faible",
@@ -658,16 +1057,9 @@
       "resetEmailSent": "E-mail de réinitialisation du mot de passe envoyé",
       "resetEmailFailed": "Échec de l’envoi de l’e-mail de réinitialisation",
       "enterEmailFirst": "Saisissez d’abord votre adresse e-mail",
-      "oauthNotAvailable": "La connexion via un réseau social nécessite l’application Zaparoo",
       "settingsStatusSignedOut": "Non connecté",
       "settingsStatusSignedIn": "Connecté",
-      "settingsStatusFree": "Compte gratuit",
       "settingsStatusWarpActive": "Warp actif",
-      "settingsLoggedInAs": "Connecté en tant que {{email}}",
-      "loggedInAs": "Connecté en tant que {{email}}",
-      "loggedInWithGoogle": "Connecté avec Google",
-      "loggedInWithApple": "Connecté avec Apple",
-      "loggedInWithPassword": "Connecté avec un e-mail et un mot de passe",
       "dashboard": "Tableau de bord",
       "changePassword": "Modifier le mot de passe",
       "deleteAccount": "Supprimer le compte",
@@ -690,7 +1082,6 @@
       "ageConfirmRequired": "Confirmation de l’âge requise",
       "deviceLink": {
         "title": "Appareil connecté",
-        "description": "L’association ajoute cet appareil à votre compte pour lui permettre d’utiliser les fonctions Online. La synchronisation de l’historique de jeu est gratuite. L’association ne téléverse ni l’historique de jeu ni les sauvegardes tant que vous ne les activez pas.",
         "help": "L’association ajoute cet appareil à votre compte pour lui permettre d’utiliser les fonctions Online. L’association seule ne téléverse rien. La synchronisation de l’historique de jeu et la sauvegarde cloud doivent être activées séparément.",
         "disconnected": "Connectez-vous à un appareil Core avant de l’associer à Zaparoo Online.",
         "backToSettings": "Retour aux paramètres",
@@ -699,7 +1090,6 @@
         "checking": "Vérification de l’association de l’appareil...",
         "linking": "Association de l’appareil...",
         "linked": "Appareil associé à Zaparoo Online",
-        "linkedAs": "Associé en tant que",
         "linkedSince": "Associé depuis",
         "warp": "Warp",
         "warpActive": "Actif",
@@ -722,7 +1112,6 @@
         "loading": "Vérification des fonctions Online...",
         "allFeatures": "Toutes les fonctions Online",
         "allFeaturesHelp": "Activez ou désactivez toutes les fonctions Online en même temps. Chacune peut toujours être modifiée séparément. La sauvegarde cloud n’est activée que si Warp est actif.",
-        "someOn": "Partiellement activées",
         "remoteControl": "Contrôle à distance",
         "remoteControlHelp": "Autorisez votre compte Zaparoo Online associé à envoyer des commandes approuvées à cet appareil.",
         "remoteControlSummary": "Autorisez votre compte Zaparoo Online associé à envoyer des commandes approuvées à cet appareil.",
@@ -730,19 +1119,17 @@
         "playHistoryHelp": "Conservez les médias auxquels vous avez joué et leur date dans votre compte Zaparoo Online. Cette fonction est gratuite.\n\nLa première synchronisation téléverse l’historique de jeu local conservé. La désactivation arrête les prochains téléversements.",
         "playHistorySummary": "Gratuit. Conservez les médias auxquels vous avez joué et leur date dans votre compte Zaparoo Online.",
         "librarySync": "Synchroniser la bibliothèque",
-        "librarySyncHelp": "Synchronisez votre liste de jeux, vos favoris, vos « J’aime » et vos decks avec votre compte Zaparoo Online associé.",
-        "librarySyncSummary": "Synchronisez votre liste de jeux, vos favoris, vos « J’aime » et vos decks avec votre compte Zaparoo Online associé.",
+        "librarySyncHelp": "Synchronisez votre liste de médias, vos favoris, vos « J’aime » et vos decks avec votre compte Zaparoo Online associé.",
+        "librarySyncSummary": "Synchronisez votre liste de médias, vos favoris, vos « J’aime » et vos decks avec votre compte Zaparoo Online associé.",
         "automaticBackup": "Sauvegarde cloud automatique",
         "automaticBackupHelp": "Protégez les réglages, entrées, sauvegardes et états de sauvegarde pris en charge grâce à des sauvegardes planifiées hors appareil. Les téléversements nécessitent un abonnement Warp actif.\n\nLa désactivation arrête les téléversements automatiques. Les sauvegardes cloud existantes restent disponibles pour la restauration.",
         "automaticBackupSummary": "Inclus avec Warp. Protégez les données d’appareil prises en charge grâce à des sauvegardes planifiées hors appareil.",
-        "free": "Gratuit",
         "requiresWarp": "Warp requis",
         "checkingWarp": "Vérification de Warp",
         "schedule": "Fréquence de sauvegarde",
         "scheduleDaily": "Quotidienne",
         "scheduleWeekly": "Hebdomadaire",
         "scheduleManual": "Manuelle uniquement",
-        "backupStatus": "État de la sauvegarde cloud",
         "checkingStatus": "Vérification...",
         "statusUnavailable": "Indisponible",
         "backupInProgress": "Sauvegarde...",
@@ -750,7 +1137,6 @@
         "lastBackup": "Dernière sauvegarde : {{date}}",
         "neverBackedUp": "Aucune sauvegarde pour le moment",
         "notConfigured": "Non configuré",
-        "remoteStatus": "État du contrôle à distance",
         "remoteStates": {
           "unknown": "Inconnu",
           "disabled": "Désactivé",
@@ -776,6 +1162,7 @@
       "termsOfService": "Conditions d’utilisation",
       "privacyPolicy": "Politique de confidentialité",
       "and": "et notre",
+      "or": "ou",
       "warp": {
         "title": "Zaparoo Warp",
         "description": "Protégez les données d’appareil prises en charge avec des sauvegardes cloud et utilisez Zaparoo Pro tant que Warp est actif.",
@@ -827,7 +1214,14 @@
         "manage": "Gérer l’abonnement",
         "openingManagement": "Ouverture des réglages de l’abonnement...",
         "manageUnavailable": "La gestion de l’abonnement est indisponible ici",
-        "manageFailed": "Impossible d’ouvrir la gestion de l’abonnement"
+        "manageFailed": "Impossible d’ouvrir la gestion de l’abonnement",
+        "trialActive": "L’essai de Warp est actif",
+        "trialEnds": "L’essai se termine le {{date}}",
+        "trialPending": "Votre essai de Warp est en cours de confirmation.",
+        "trialExpired": "Votre essai de Warp est terminé.",
+        "trialImmediateBilling": "Si vous vous abonnez pendant l’essai, la facturation commence immédiatement.",
+        "trialLastDay": "Votre essai de Warp se termine dans moins de 24 heures.",
+        "trialEnding": "Votre essai de Warp se termine dans moins de 3 jours."
       }
     },
     "requirements": {
@@ -847,6 +1241,7 @@
       "emailNotVerified": "E-mail pas encore vérifié",
       "emailSendFailed": "Échec de l’envoi de l’e-mail de vérification",
       "emailCheckFailed": "Échec de la vérification",
+      "saveFailed": "Échec de l’enregistrement",
       "emailVerified": "E-mail vérifié",
       "saved": "Enregistré",
       "save": "Enregistrer",
@@ -854,22 +1249,30 @@
       "logout": "Se déconnecter"
     },
     "settings": {
+      "groups": {
+        "device": "Appareil",
+        "app": "Application",
+        "support": "Assistance"
+      },
       "title": "Réglages",
-      "moreSettings": "Plus de réglages",
       "device": "Adresse de l’appareil",
+      "deviceSetup": {
+        "addDeviceManually": "Ajouter un appareil manuellement",
+        "enterAddress": "Saisir une adresse",
+        "connect": "Connecter"
+      },
       "deviceAddressRequired": "Saisissez une adresse d’appareil",
       "deviceAddressInvalid": "Saisissez un nom d’hôte, une adresse IP ou une adresse hôte:port valide.",
-      "modeLabel": "Mode de scan",
       "tapMode": "Appuyer",
       "insertMode": "Maintenir",
       "updateDb": "Mettre à jour la base de données de médias",
       "updateDb.cancel": "Annuler",
       "updateDb.resume": "Reprendre",
       "updateDb.status.ready": "La base de données est prête",
+      "updateDb.status.noDatabase": "Aucune base de données trouvée",
       "updateDb.status.optimizing": "Optimisation de la base de données (prête à l’emploi)",
       "updateDb.status.paused": "En pause",
       "updateDb.status.throttled": "Fonctionnement à vitesse réduite",
-      "updateDb.status.reconnecting": "Reconnexion...",
       "updateDb.status.mediaCount": "Base de données prête : {{formattedCount}} titres multimédias",
       "updateDb.status.noConnection": "Non connecté",
       "updateDb.status.checking": "Vérification de l’état de la base de données...",
@@ -877,7 +1280,7 @@
       "updateDb.status.setupMissing": "La base de données de médias n’est pas prête. Mettez-la à jour pour la reconstruire.",
       "updateDb.startError": "Échec du démarrage de la mise à jour de la base de données de médias",
       "updateDb.blockedByScrape": "La récupération des métadonnées est en cours. Les mises à jour de la base de données sont indisponibles jusqu’à la fin de l’opération.",
-      "updateDb.selectSystemsTitle": "Sélectionner les systèmes à mettre à jour",
+      "updateDb.selectSystemsTitle": "Systèmes à mettre à jour",
       "updateDb.allSystems": "Tous les systèmes",
       "updateDb.progressLabel": "Progression de la mise à jour de la base de données",
       "updateDb.cleanOrphans": "Nettoyer les médias manquants",
@@ -893,6 +1296,8 @@
       "scrapeMedia.cancel": "Annuler",
       "scrapeMedia.starting": "Démarrage...",
       "scrapeMedia.startError": "Échec du démarrage de la récupération des métadonnées",
+      "scrapeMedia.cancelError": "Échec de l’annulation de la récupération des métadonnées",
+      "scrapeMedia.resumeError": "Échec de la reprise de la récupération des métadonnées",
       "scrapeMedia.scraperPlaceholder": "Sélectionner une source de métadonnées",
       "scrapeMedia.allSystems": "Tous les systèmes",
       "scrapeMedia.selectSystemsTitle": "Sélectionner les systèmes à traiter",
@@ -923,7 +1328,6 @@
       "scrapeMedia.status.paused": "En pause",
       "scrapeMedia.status.throttled": "Fonctionnement à vitesse réduite",
       "scrapeMedia.status.reconnecting": "Reconnexion...",
-      "scrapeMedia.status.totalScraped": "Enregistrements multimédias récupérés : {{formattedCount}}",
       "scrapeMedia.force": "Récupérer à nouveau les métadonnées déjà obtenues",
       "scrapeMedia.resume": "Reprendre",
       "media": {
@@ -931,7 +1335,6 @@
         "databaseTitle": "Base de données de médias",
         "scraperTitle": "Récupération des métadonnées"
       },
-      "designer": "Zaparoo Designer",
       "getApp": "Obtenir l’application Zaparoo",
       "language": "Langue",
       "languageRegion": {
@@ -949,13 +1352,15 @@
       "networkScan": {
         "title": "Rechercher des appareils",
         "searching": "Recherche d’appareils...",
-        "stillSearching": "Recherche toujours en cours...",
-        "noDevices": "Aucun appareil trouvé",
+        "refresh": "Rechercher à nouveau",
+        "noOtherDevices": "Aucun autre appareil trouvé",
         "addresses_one": "Adresse IP : {{addresses}}",
         "addresses_other": "Adresses IP : {{addresses}}",
-        "version": "v{{version}}"
+        "version": "v{{version}}",
+        "scanFailed": "Impossible de rechercher des appareils"
       },
       "connectionFailed": "Impossible de se connecter à l’appareil",
+      "updateFailed": "Impossible d’enregistrer le réglage",
       "notConnected": "Non connecté",
       "coreOutdated": {
         "title": "Mise à jour de Core recommandée (v{{version}}+)",
@@ -965,7 +1370,6 @@
       "deviceHistoryEmpty": "Aucun appareil enregistré.",
       "deviceHistoryError": "Impossible de charger les appareils enregistrés.",
       "deviceHistoryLoading": "Chargement des appareils enregistrés...",
-      "deviceDetails": "Détails de l’appareil",
       "activeDevice": "Appareil actif",
       "deviceDetail": {
         "nameLabel": "Nom de l’appareil",
@@ -997,10 +1401,10 @@
       "about": {
         "title": "À propos",
         "version": "Version : {{version}}",
-        "createdBy": "Créé par",
         "translationsBy": "Traductions par",
-        "contributors": "Contributeurs Zaparoo",
         "wizzodev": "Mécènes Wizzo.dev",
+        "roleDeveloper": "Développeur",
+        "roleDesigner": "Designer UX",
         "joinPatreon": "Soutenir sur Patreon"
       },
       "licenses": {
@@ -1040,9 +1444,6 @@
       "playControls": {
         "title": "Commandes de lecture"
       },
-      "playtime": {
-        "title": "Temps de jeu"
-      },
       "advanced": {
         "title": "Avancé",
         "errorReporting": "Rapports d’erreurs",
@@ -1055,6 +1456,14 @@
         "showFilenamesHelp": "Dans les résultats de recherche de l’application, affiche le nom de fichier complet du média au lieu de sa version simplifiée. Utile si les noms de vos fichiers contiennent de nombreux tags personnalisés.",
         "appIconBadges": "Badges de l’icône de l’application",
         "appIconBadgesHelp": "Afficher le nombre de messages non lus de la boîte de réception sur l’icône de l’application. iOS peut demander l’autorisation d’envoyer des notifications, car les badges sont gérés dans les réglages des notifications.",
+        "appPreview": "App preview",
+        "appPreviewHelp": "Render app-only screens in the browser for design work. Nothing behind them is functional: NFC, camera and purchases are simulated.",
+        "appPreviewNfcResult": "Preview NFC result",
+        "appPreviewNfcHold": "Wait for a tag",
+        "appPreviewNfcSuccess": "Success",
+        "appPreviewNfcVerifyFailed": "Verification failed",
+        "appPreviewNfcRetap": "Re-tap required",
+        "appPreviewNfcError": "Error",
         "purchasePreview": "Aperçu des achats",
         "purchasePreviewLive": "État réel",
         "purchasePreviewFree": "Compte gratuit",
@@ -1066,12 +1475,6 @@
         "viewLogs": "Afficher les journaux"
       },
       "core": {
-        "title": "Réglages Core",
-        "soundEffects": "Émettre des sons lors du scan",
-        "autoDetect": "Détecter automatiquement le lecteur NFC externe",
-        "debug": "Mode débogage",
-        "nfcDriver": "Chaîne de connexion du pilote NFC",
-        "insertModeBlocklist": "Liste de blocage Core en mode Maintenir",
         "playtime": {
           "title": "Limites de temps de jeu",
           "enabled": "Activer les limites de temps de jeu",
@@ -1110,7 +1513,10 @@
           "lastUsed": "Dernière utilisation : {{date}}",
           "neverUsed": "Jamais",
           "roleLabel": "Rôle",
-          "role": { "admin": "Administrateur", "member": "Membre" },
+          "role": {
+            "admin": "Administrateur",
+            "member": "Membre"
+          },
           "name": "Nom",
           "nameRequiredLabel": "Nom *",
           "nameRequired": "Saisissez un nom de profil",
@@ -1132,7 +1538,6 @@
           "limitsOff": "Désactivées",
           "dailyLimit": "Limite quotidienne",
           "sessionLimit": "Limite de session",
-          "inherit": "Hériter",
           "unlimitedHelp": "Réglez les deux champs sur 0 pour un temps de jeu illimité.",
           "durationInvalid": "Les heures doivent être supérieures ou égales à 0 et les minutes comprises entre 0 et 59",
           "saved": "Profil enregistré",
@@ -1153,7 +1558,8 @@
           "switch": "Changer de profil",
           "shared": "Profil partagé",
           "switched": "Profil changé",
-          "switchFailed": "Impossible de changer de profil"
+          "switchFailed": "Impossible de changer de profil",
+          "switchOptionActive": "{{name}} (actif)"
         },
         "launchGuard": {
           "title": "Protection du lancement",
@@ -1167,8 +1573,6 @@
         }
       },
       "app": {
-        "title": "Réglages de l’App",
-        "preferRemoteWriter": "Préférer le lecteur connecté pour l’écriture",
         "restorePurchases": "Restaurer les achats",
         "restoreSuccess": "Achats restaurés",
         "restoreNotFound": "Aucun achat trouvé. Si votre boutique indique que vous possédez déjà Pro, touchez Débloquer Pro pour vérifier l’achat.",
@@ -1177,36 +1581,35 @@
         "copyBillingDiagnostics": "Copier le diagnostic de facturation",
         "billingDiagnosticsCopied": "Diagnostic de facturation copié",
         "billingDiagnosticsCopyFailed": "Impossible de copier le diagnostic de facturation",
-        "shakeToLaunch": "Secouer pour lancer",
         "proFeature": "Pro",
         "proActive": "Zaparoo Pro actif",
         "shakeRandomMedia": "Média aléatoire",
         "shakeCustom": "Personnalisé",
         "shakeSelectSystem": "Sélectionner un système",
-        "shakeZapscript": "ZapScript à lancer",
         "shakeModeLabel": "Mode de lancement par secousse"
       },
       "logs": {
         "title": "Journaux",
         "refresh": "Actualiser",
-        "filters": "Filtres",
         "download": "Télécharger",
         "copy": "Copier dans le presse-papiers",
         "upload": "Téléverser les journaux",
         "uploading": "Téléversement des journaux...",
         "uploadSuccess": "Journaux téléversés",
         "uploadError": "Échec du téléversement des journaux",
+        "downloadError": "Échec du téléchargement des journaux",
         "uploadResult": "Lien du journal téléversé",
         "copyUploadLink": "Copier le lien du journal téléversé",
-        "filename": "Nom de fichier",
-        "fileSize": "Taille du fichier",
         "searchPlaceholder": "Filtrer les journaux...",
-        "levelFilters": "Niveaux des journaux",
-        "totalEntries": "Nombre total d’entrées",
-        "filteredEntries": "Affichées",
+        "entriesShowing": "{{shown}} entrées affichées sur {{total}}",
+        "entryCount_one": "{{count}} entrée",
+        "entryCount_other": "{{count}} entrées",
+        "levelDebug": "Débogage",
+        "levelInfo": "Info",
+        "levelWarn": "Avertissement",
+        "levelError": "Erreur",
         "noEntriesFound": "Aucune entrée de journal ne correspond aux filtres",
         "fetchError": "Échec de la récupération des journaux",
-        "notConnected": "Connectez-vous à un appareil Zaparoo pour accéder aux journaux",
         "showMore": "Afficher plus",
         "showLess": "Afficher moins"
       },
@@ -1218,7 +1621,11 @@
         "textSizeSmall": "S",
         "textSizeDefault": "M",
         "textSizeLarge": "L",
-        "textSizeExtraLarge": "XL"
+        "textSizeExtraLarge": "XL",
+        "appearance": "Apparence",
+        "appearanceSystem": "Système",
+        "appearanceLight": "Clair",
+        "appearanceDark": "Sombre"
       },
       "help": {
         "title": "Aide",
@@ -1226,7 +1633,6 @@
         "taptoWiki": "Documentation Zaparoo",
         "documentationLabel": "Documentation",
         "gettingStarted": "Bien démarrer avec Zaparoo",
-        "softwareSetup": "Configuration du logiciel Zaparoo",
         "commandReference": "Aide de ZapScript",
         "communityLabel": "Communauté",
         "discord": "Rejoindre le serveur Discord",
@@ -1234,14 +1640,18 @@
         "technicalSupport": "Assistance technique",
         "reportIssue": "Signaler un problème sur GitHub",
         "emailLabel": "E-mail de l’assistance :"
-      }
+      },
+      "connectDevice": "Se connecter à {{device}}",
+      "savedDevices": "Appareils enregistrés"
     },
     "systemSelector": {
+      "loadError": "Impossible de charger les systèmes",
+      "clear": "Effacer",
+      "done": "Terminé",
       "title": "Sélectionner des systèmes",
       "searchPlaceholder": "Rechercher des systèmes...",
       "searchSystems": "Rechercher des systèmes",
-      "clearSearch": "Effacer la recherche",
-      "systemsList": "Liste des systèmes",
+      "otherCategory": "Autres",
       "selected": "{{name}} sélectionné",
       "deselected": "{{name}} désélectionné",
       "allSystems": "Tous les systèmes",
@@ -1250,25 +1660,32 @@
       "noResults": "Aucun système trouvé",
       "noResultsHint": "Utilisez une requête plus courte ou effacez la recherche.",
       "noSystems": "Aucun système disponible",
-      "selectedCount": "Nombre de systèmes sélectionnés : {{count}}",
       "multipleSelected": "Nombre de systèmes sélectionnés : {{count}}",
-      "clearAll": "Tout effacer",
-      "apply": "Appliquer"
+      "clearAll": "Tout effacer"
+    },
+    "launcherSelector": {
+      "title": "Sélectionner un lanceur",
+      "search": "Rechercher des lanceurs",
+      "loadError": "Impossible de charger les lanceurs",
+      "noResults": "Aucun lanceur trouvé",
+      "noLaunchers": "Aucun lanceur disponible",
+      "unavailable": "Indisponible sur cet appareil"
     },
     "tagSelector": {
+      "expandAll": "Tout développer",
+      "collapseAll": "Tout réduire",
+      "unavailable": "Tags indisponibles",
       "title": "Sélectionner des tags",
       "searchPlaceholder": "Filtrer les tags...",
       "searchTags": "Filtrer les tags",
-      "clearSearch": "Effacer la recherche",
       "resultsLabel": "Tags correspondants",
-      "allTypes": "Tous les types",
       "noResults": "Aucun tag trouvé",
       "noResultsHint": "Utilisez une requête plus courte ou effacez la recherche.",
       "noTags": "Aucun tag disponible",
-      "selectedCount": "Nombre de tags sélectionnés : {{count}}",
       "multipleSelected": "Nombre de tags sélectionnés : {{count}}",
       "clearAll": "Tout effacer",
       "apply": "Appliquer",
+      "applyCount": "Appliquer ({{count}})",
       "selected": "{{name}} sélectionné",
       "deselected": "{{name}} désélectionné",
       "type": {
@@ -1278,9 +1695,12 @@
         "arcadeboard": "Carte d’arcade",
         "art": "Style graphique",
         "based": "Basé sur",
+        "builddate": "Date de compilation",
+        "cabinet": "Borne d’arcade",
         "category": "Catégorie",
         "compatibility": "Compatibilité",
         "copyright": "Droits d’auteur",
+        "credit": "Crédit",
         "developer": "Développeur",
         "disc": "Disque",
         "disctotal": "Nombre total de disques",
@@ -1288,32 +1708,44 @@
         "dump": "État du dump",
         "edition": "Édition",
         "embedded": "Intégré",
+        "episode": "Épisode",
         "extension": "Extension",
+        "gamefamily": "Série de jeux",
         "gamegenre": "Genre de jeu",
         "genre": "Genre",
         "input": "Entrée",
+        "issue": "Numéro",
         "lang": "Langue",
         "mameparent": "Parent MAME",
         "media": "Média",
         "multigame": "Multi-jeux",
+        "patch": "Correctif",
         "perspective": "Perspective",
         "platform": "Plateforme",
         "players": "Joueurs",
         "port": "Port",
+        "property": "Propriété",
+        "protection": "Protection anticopie",
         "publisher": "Éditeur",
+        "rating": "Note",
         "reboxed": "Reboîté",
         "region": "Région",
+        "release": "Sortie",
         "rerelease": "Réédition",
         "rev": "Révision",
         "save": "Sauvegarde",
         "search": "Recherche",
+        "season": "Saison",
         "series": "Série",
         "set": "Ensemble",
         "supplement": "Supplément",
-        "unlicensed": "Sans licence",
+        "track": "Piste",
         "unfinished": "Inachevé",
         "unknown": "Inconnu",
+        "unlicensed": "Sans licence",
+        "user": "Utilisateur",
         "video": "Vidéo",
+        "volume": "Volume",
         "year": "Année"
       }
     },
@@ -1353,7 +1785,10 @@
       "deviceLinking": "Association d’appareils Zaparoo Online",
       "onlineRemoteControl": "Contrôle à distance Zaparoo Online",
       "onlineLibrarySync": "Synchronisation de la bibliothèque Zaparoo Online",
-      "profiles": "Profils"
+      "profiles": "Profils",
+      "mediaRecents": "Joués récemment",
+      "mediaHistoryDistinct": "Historique de lecture dédupliqué",
+      "launchers": "Liste des lanceurs"
     },
     "inbox": {
       "title": "Notifications",
@@ -1364,6 +1799,8 @@
       "deleteOne": "Supprimer {{title}}",
       "clearAll": "Tout effacer",
       "confirmClear": "Effacer toutes les notifications ?",
+      "deleteFailed": "Impossible de supprimer la notification",
+      "clearFailed": "Impossible d’effacer les notifications",
       "confirmClearYes": "Tout effacer",
       "confirmClearNo": "Annuler",
       "severity": {
@@ -1414,12 +1851,13 @@
       "description": "Saisissez le code PIN à 6 chiffres affiché sur votre appareil.",
       "noAddress": "Définissez une adresse d’appareil dans les réglages avant l’association.",
       "pinLabel": "PIN",
-      "pinPlaceholder": "000000",
       "clientNameLabel": "Nom de l’appareil",
       "startPairing": "Associer",
       "pairing": "Association...",
       "success": "Association réussie",
       "openPairing": "Associer un appareil",
+      "defaultClientName": "Zaparoo App {{platform}}",
+      "unknownDeviceName": "Inconnu",
       "connectionError": {
         "encryptionRequired": "Cet appareil nécessite une association.",
         "credentialsRevoked": "L’association a été perdue. Associez à nouveau l’appareil.",
@@ -1450,7 +1888,7 @@
       },
       "deviceAddress": {
         "title": "Connectez votre appareil",
-        "text": "Appuyez sur l’icône de recherche pour trouver les appareils Zaparoo sur votre réseau ou saisissez manuellement l’adresse IP d’un appareil si nécessaire."
+        "text": "Ouvrez la sélection des appareils pour choisir un appareil Zaparoo enregistré ou à proximité, ou saisissez son adresse manuellement."
       },
       "mediaDatabase": {
         "title": "Mettez à jour la bibliothèque multimédia",
@@ -1471,6 +1909,315 @@
         "next": "Suivant",
         "finish": "Terminer"
       }
+    },
+    "zapscript": {
+      "builder": {
+        "view": "Vue de l’éditeur",
+        "steps": "Étapes",
+        "text": "Texte",
+        "addStep": "Ajouter une étape",
+        "empty": "Aucune étape pour l’instant",
+        "emptyHint": "Ajoutez une étape pour choisir ce qui se passe lors du scan",
+        "stepLabel": "Étape {{position}} : {{name}}",
+        "moveUp": "Monter l’étape {{position}}",
+        "moveDown": "Descendre l’étape {{position}}",
+        "remove": "Supprimer l’étape {{position}}",
+        "options": "Avancé",
+        "textStep": "Texte ZapScript",
+        "textStepDescription": "Cette étape utilise une syntaxe qui ne peut être modifiée que sous forme de texte",
+        "textStepField": "ZapScript de l’étape {{position}}",
+        "textOnly": "Ce script ne peut être modifié que sous forme de texte",
+        "textOnlyHint": "Il utilise une syntaxe que la vue par étapes ne peut pas découper",
+        "editAsText": "Modifier le texte",
+        "noChoice": "Non défini",
+        "searchMediaFor": "Rechercher un média pour {{field}}",
+        "chooseSystemFor": "Choisir un système pour {{field}}",
+        "chooseLauncherFor": "Choisir un lanceur pour {{field}}",
+        "searchCommands": "Rechercher des commandes",
+        "noCommands": "Aucune commande trouvée"
+      },
+      "groups": {
+        "launch": "Lancement",
+        "playlist": "Playlist",
+        "input": "Saisie",
+        "ui": "À l'écran",
+        "profile": "Profils",
+        "mister": "MiSTer",
+        "http": "Requêtes web",
+        "utility": "Utilitaires"
+      },
+      "commands": {
+        "launch": {
+          "description": "Lancer un média à partir d'un chemin ou d'un titre"
+        },
+        "launch_system": {
+          "description": "Ouvrir un système sans charger de média"
+        },
+        "launch_random": {
+          "description": "Lancer un jeu aléatoire d'un système"
+        },
+        "launch_search": {
+          "description": "Lancer le premier média correspondant à une recherche"
+        },
+        "launch_title": {
+          "description": "Lancer un média à partir de son système et de son titre"
+        },
+        "launch_last": {
+          "description": "Lancer un média joué récemment"
+        },
+        "playlist_play": {
+          "description": "Démarrer une playlist ou reprendre celle en pause"
+        },
+        "playlist_stop": {
+          "description": "Arrêter la playlist et la fermer"
+        },
+        "playlist_next": {
+          "description": "Passer à l'élément suivant de la playlist"
+        },
+        "playlist_previous": {
+          "description": "Revenir à l'élément précédent de la playlist"
+        },
+        "playlist_goto": {
+          "description": "Aller à un élément précis de la playlist"
+        },
+        "playlist_pause": {
+          "description": "Mettre la playlist en pause"
+        },
+        "playlist_load": {
+          "description": "Charger une playlist sans la démarrer"
+        },
+        "playlist_open": {
+          "description": "Afficher une playlist à l'écran pour y choisir un élément"
+        },
+        "execute": {
+          "description": "Exécuter une commande sur l'appareil"
+        },
+        "delay": {
+          "description": "Attendre avant d'exécuter l'étape suivante"
+        },
+        "evaluate": {
+          "description": "Exécuter un autre ZapScript"
+        },
+        "write": {
+          "description": "Écrire du texte sur le prochain tag scanné"
+        },
+        "stop": {
+          "description": "Arrêter le média en cours"
+        },
+        "echo": {
+          "description": "Écrire un message dans le journal de Zaparoo"
+        },
+        "control": {
+          "description": "Contrôler le média en cours, par exemple mettre en pause ou sauvegarder"
+        },
+        "screenshot": {
+          "description": "Prendre une capture d'écran"
+        },
+        "mister_ini": {
+          "description": "Passer à un autre fichier INI MiSTer"
+        },
+        "mister_core": {
+          "description": "Lancer un core MiSTer"
+        },
+        "mister_script": {
+          "description": "Exécuter un script du dossier Scripts de MiSTer"
+        },
+        "mister_mgl": {
+          "description": "Lancer à partir d'un contenu MGL MiSTer"
+        },
+        "mister_wallpaper": {
+          "description": "Définir ou retirer le fond d'écran du menu MiSTer"
+        },
+        "http_get": {
+          "description": "Appeler une adresse web en arrière-plan"
+        },
+        "http_post": {
+          "description": "Envoyer des données à une adresse web"
+        },
+        "input_keyboard": {
+          "description": "Appuyer sur des touches du clavier"
+        },
+        "input_gamepad": {
+          "description": "Appuyer sur des boutons de la manette"
+        },
+        "input_text": {
+          "description": "Saisir du texte au clavier"
+        },
+        "input_coinp1": {
+          "description": "Insérer des pièces pour le joueur 1"
+        },
+        "input_coinp2": {
+          "description": "Insérer des pièces pour le joueur 2"
+        },
+        "input_coinp3": {
+          "description": "Insérer des pièces pour le joueur 3"
+        },
+        "input_coinp4": {
+          "description": "Insérer des pièces pour le joueur 4"
+        },
+        "ui_notice": {
+          "description": "Afficher un message à l'écran"
+        },
+        "ui_picker": {
+          "description": "Afficher une liste de choix à l'écran"
+        },
+        "traits": {
+          "description": "Ajouter des informations supplémentaires à ce script"
+        },
+        "profile": {
+          "description": "Passer à un profil"
+        },
+        "profile_clear": {
+          "description": "Désactiver le profil actif"
+        },
+        "playtime_extend": {
+          "description": "Accorder du temps de jeu supplémentaire"
+        }
+      },
+      "args": {
+        "system": "Système",
+        "media": "Média",
+        "search": "Texte de recherche",
+        "title": "Titre",
+        "historyOffset": "Combien en arrière",
+        "playlist": "Playlist",
+        "position": "Numéro de l'élément",
+        "command": "Commande",
+        "duration": "Temps d'attente",
+        "text": "Texte",
+        "controlAction": "Action",
+        "iniNumber": "Numéro d'INI",
+        "corePath": "Chemin du core",
+        "script": "Script",
+        "mgl": "Contenu MGL",
+        "wallpaper": "Fichier de fond d'écran",
+        "url": "Adresse web",
+        "contentType": "Type de contenu",
+        "body": "Données à envoyer",
+        "keys": "Touches",
+        "buttons": "Boutons",
+        "coins": "Pièces",
+        "profileId": "ID de changement de profil",
+        "extraTime": "Temps supplémentaire",
+        "keyCode": "Code de touche"
+      },
+      "advArgs": {
+        "when": "Exécuter seulement si",
+        "launcher": "Lanceur",
+        "system": "Système",
+        "action": "Action",
+        "name": "Nom",
+        "pre_notice": "Message avant le lancement",
+        "slot": "Emplacement média",
+        "tags": "Tags",
+        "set_name": "Nom de set",
+        "set_name_same_dir": "Conserver le dossier du jeu avec le nom de set",
+        "mode": "Ordre de lecture",
+        "repeat": "Répéter",
+        "speed": "Délai entre les appuis",
+        "hidden": "Exécuter en arrière-plan",
+        "profile": "Profil qui autorise"
+      }
+    },
+    "zapLayout": {
+      "customise": "Personnaliser",
+      "title": "Personnaliser la page Zap",
+      "resetDefault": "Rétablir par défaut",
+      "cancel": "Annuler",
+      "done": "Terminé",
+      "reorder": "Réorganiser {{name}}",
+      "reorderRole": "widget déplaçable",
+      "dragInstructions": "Appuyez sur Espace pour saisir un widget, déplacez-le avec les flèches, puis appuyez sur Espace pour le déposer. Échap pour annuler.",
+      "dragStart": "{{name}} saisi.",
+      "dragOver": "{{name}} est au-dessus de {{place}}.",
+      "dragEnd": "{{name}} déposé dans {{place}}.",
+      "dragCancel": "Déplacement de {{name}} annulé.",
+      "moveUp": "Monter {{name}}",
+      "moveDown": "Descendre {{name}}",
+      "hideWidget": "Masquer {{name}}",
+      "showWidget": "Afficher {{name}}",
+      "show": "Afficher",
+      "dropHere": "Déposez les widgets ici",
+      "hiddenEmpty": "Les widgets masqués apparaissent ici.",
+      "stackNote": "Sur les écrans étroits, les colonnes s’empilent dans cet ordre.",
+      "unavailable": "Indisponible sur cet appareil pour le moment.",
+      "emptyNow": "S’affiche quand il y a quelque chose à montrer.",
+      "widgets": {
+        "nowPlaying": "En cours de lecture",
+        "scan": "Scanner un tag ou un code",
+        "controls": "Commandes",
+        "readers": "Lecteurs",
+        "favourites": "Favoris",
+        "recents": "Joués récemment"
+      },
+      "places": {
+        "main": "Colonne principale",
+        "side": "Colonne latérale",
+        "bottom": "Pleine largeur",
+        "hidden": "Masqué"
+      },
+      "addButton": "Ajouter",
+      "addButtonTitle": "Ajouter un bouton",
+      "editButtonTitle": "Modifier le bouton",
+      "buttonUnnamed": "Bouton",
+      "buttonLabel": "Libellé",
+      "buttonIcon": "Icône",
+      "iconNone": "Aucune",
+      "buttonStyle": "Style",
+      "buttonScript": "ZapScript",
+      "askFirst": "Demander avant d’exécuter",
+      "deleteButton": "Supprimer le bouton",
+      "moveEarlier": "Avancer {{name}}",
+      "moveLater": "Reculer {{name}}",
+      "editButton": "Modifier {{name}}",
+      "confirmRunTitle": "Exécuter {{name}} ?",
+      "confirmRun": "Exécuter",
+      "copyFrom": "Copier depuis un autre appareil",
+      "icons": {
+        "play": "Lecture",
+        "pause": "Pause",
+        "stop": "Arrêt",
+        "next": "Suivant",
+        "volume": "Volume",
+        "mute": "Muet",
+        "gamepad": "Manette",
+        "tv": "TV",
+        "save": "Enregistrer",
+        "folder": "Dossier",
+        "power": "Alimentation",
+        "refresh": "Actualiser",
+        "home": "Accueil",
+        "star": "Étoile",
+        "music": "Musique",
+        "zap": "Éclair"
+      },
+      "styles": {
+        "primary": "Bleu",
+        "secondary": "Simple",
+        "destructive": "Rouge"
+      },
+      "buttonSize": "Taille",
+      "moreOptions": "Plus d’options",
+      "sizes": {
+        "small": "Petit",
+        "medium": "Moyen",
+        "large": "Grand"
+      },
+      "addChooserTitle": "Ajouter à la page Zap",
+      "addKindButton": "Bouton",
+      "addKindButtonHint": "Exécute un ZapScript lorsqu’on appuie dessus.",
+      "addKindCollection": "Collection",
+      "addKindCollectionHint": "Une rangée de jaquettes d’une collection ou d’un deck.",
+      "addCollectionTitle": "Ajouter une collection",
+      "editCollectionTitle": "Modifier la collection",
+      "collectionSource": "Afficher",
+      "collectionGroup": "Collections",
+      "deckGroup": "Decks",
+      "deckMissing": "Deck introuvable",
+      "collectionTitle": "Titre",
+      "deleteCollection": "Supprimer la collection",
+      "editCollection": "Modifier {{name}}",
+      "moved": "{{name}} déplacé vers {{place}}, position {{position}} sur {{count}}."
     }
   }
 }

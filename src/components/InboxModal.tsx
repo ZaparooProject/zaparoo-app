@@ -2,12 +2,12 @@ import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
 import {
-  Bell,
-  ChevronDown,
-  Info,
-  OctagonAlert,
-  Trash2,
-  TriangleAlert,
+  BellIcon,
+  ChevronDownIcon,
+  InfoIcon,
+  OctagonAlertIcon,
+  Trash2Icon,
+  TriangleAlertIcon,
 } from "lucide-react";
 import { useStatusStore } from "@/lib/store";
 import { CoreAPI } from "@/lib/coreApi";
@@ -18,25 +18,27 @@ import { SlideModal } from "@/components/SlideModal";
 import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { Card } from "@/components/wui/Card";
+import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { useHapticPress } from "@/hooks/useHapticPress";
+import { formatAppDateTime } from "@/lib/formatDate";
 
 function severityIcon(severity: InboxSeverity) {
   switch (severity) {
     case InboxSeverity.Error:
       return (
-        <OctagonAlert className="text-error" size={20} aria-hidden="true" />
+        <OctagonAlertIcon className="text-error" size={20} aria-hidden="true" />
       );
     case InboxSeverity.Warning:
       return (
-        <TriangleAlert
-          className="text-amber-400"
+        <TriangleAlertIcon
+          className="text-warning"
           size={20}
           aria-hidden="true"
         />
       );
     case InboxSeverity.Info:
     default:
-      return <Info className="text-[#3faeec]" size={20} aria-hidden="true" />;
+      return <InfoIcon className="text-primary" size={20} aria-hidden="true" />;
   }
 }
 
@@ -53,8 +55,7 @@ function severityKey(severity: InboxSeverity): string {
 }
 
 function formatTimestamp(iso: string): string {
-  const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? iso : date.toLocaleString();
+  return formatAppDateTime(iso) ?? iso;
 }
 
 function InboxRow(props: { message: InboxMessage; onDelete: () => void }) {
@@ -91,7 +92,7 @@ function InboxRow(props: { message: InboxMessage; onDelete: () => void }) {
         </span>
       </span>
       {hasBody && (
-        <ChevronDown
+        <ChevronDownIcon
           size={18}
           aria-hidden="true"
           className={classNames(
@@ -115,7 +116,7 @@ function InboxRow(props: { message: InboxMessage; onDelete: () => void }) {
           onClick={() => setExpanded((prev) => !prev)}
           aria-expanded={expanded}
           aria-controls={bodyId}
-          className="focus-visible:ring-offset-background flex min-w-0 flex-1 cursor-pointer items-start gap-2 rounded-md text-left focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="focus-visible:ring-offset-background focus-visible:ring-ring flex min-w-0 flex-1 cursor-pointer items-start gap-2 rounded-md text-left focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
           {messageContent}
         </button>
@@ -125,7 +126,7 @@ function InboxRow(props: { message: InboxMessage; onDelete: () => void }) {
         </div>
       )}
       <Button
-        icon={<Trash2 size={18} aria-hidden="true" />}
+        icon={<Trash2Icon size={20} aria-hidden="true" />}
         variant="text"
         size="sm"
         intent="destructive"
@@ -158,7 +159,7 @@ export function InboxModal() {
           severity: "error",
         });
         showRateLimitedErrorToast(
-          t("error", { msg: err?.message || "Inbox delete failed" }),
+          t("error", { msg: err?.message || t("inbox.deleteFailed") }),
         );
       });
   };
@@ -176,7 +177,7 @@ export function InboxModal() {
           severity: "error",
         });
         showRateLimitedErrorToast(
-          t("error", { msg: err?.message || "Inbox clear failed" }),
+          t("error", { msg: err?.message || t("inbox.clearFailed") }),
         );
       });
   };
@@ -192,28 +193,30 @@ export function InboxModal() {
         {confirmingClear ? (
           <>
             <p className="text-center text-sm">{t("inbox.confirmClear")}</p>
-            <div className="flex flex-row gap-2">
-              <Button
-                label={t("inbox.confirmClearNo")}
-                variant="outline"
-                className="flex-1"
-                onClick={() => setConfirmingClear(false)}
-              />
-              <Button
-                label={t("inbox.confirmClearYes")}
-                variant="outline"
-                intent="destructive"
-                className="border-error text-error flex-1"
-                onClick={handleClearAll}
-              />
-            </div>
+            <ModalActionBar
+              secondaryAction={
+                <Button
+                  label={t("inbox.confirmClearNo")}
+                  variant="secondary"
+                  onClick={() => setConfirmingClear(false)}
+                />
+              }
+              primaryAction={
+                <Button
+                  label={t("inbox.confirmClearYes")}
+                  variant="outline"
+                  intent="destructive"
+                  onClick={handleClearAll}
+                />
+              }
+            />
           </>
         ) : (
           <Button
             label={t("inbox.clearAll")}
             variant="outline"
             intent="destructive"
-            className="border-error text-error"
+            className="w-full"
             onClick={() => setConfirmingClear(true)}
           />
         )}
@@ -226,10 +229,11 @@ export function InboxModal() {
       close={close}
       title={t("inbox.title")}
       footer={footer}
+      footerSkipLabel={t("accessibility.skipToActions")}
     >
       {messages.length === 0 ? (
         <EmptyState
-          icon={<Bell size={32} aria-hidden="true" />}
+          icon={<BellIcon size={32} aria-hidden="true" />}
           title={t("inbox.empty")}
         />
       ) : (

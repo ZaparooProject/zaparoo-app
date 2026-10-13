@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, render, screen, waitFor } from "@/test-utils";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
 import {
   credentialKeyForRecord,
@@ -162,6 +163,25 @@ describe("Settings Devices Route", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("should let the user retry a failed registry read", async () => {
+    const user = userEvent.setup();
+    vi.mocked(Preferences.get).mockRejectedValueOnce(
+      new Error("storage unavailable"),
+    );
+    await deviceRegistry.hydrate();
+    renderRoute();
+    await screen.findByText("settings.deviceHistoryError");
+    const readsBeforeRetry = vi.mocked(Preferences.get).mock.calls.length;
+
+    await user.click(screen.getByRole("button", { name: "scan.retry" }));
+
+    await waitFor(() => {
+      expect(vi.mocked(Preferences.get).mock.calls.length).toBeGreaterThan(
+        readsBeforeRetry,
+      );
+    });
+  });
+
   it("should distinguish a failed registry read from having no devices", async () => {
     // Telling a user whose registry failed to load that they have never saved a
     // device invites them to re-pair devices they already own.
@@ -212,6 +232,66 @@ describe("Settings Devices Route", () => {
     ).toBeInTheDocument();
   });
 
+  it("should show the lock icon once a device is paired from this page", async () => {
+    const [record] = await seedRecords(
+      [{ address: "192.168.1.10", name: "Living room" }],
+      0,
+    );
+    renderRoute();
+    await screen.findByText("Living room");
+    expect(
+      screen.queryByLabelText("connection.encrypted"),
+    ).not.toBeInTheDocument();
+
+    // Pairing stores the credential, then the restarted connection settles.
+    await credentialStore.set(
+      credentialKeyForRecord(record!.recordId),
+      credentials,
+    );
+    act(() => {
+      useStatusStore.setState({ encryptionState: "encrypted" });
+    });
+
+    expect(
+      await screen.findByLabelText("connection.encrypted"),
+    ).toBeInTheDocument();
+  });
+
+  it("should expose the active device marker as an image", async () => {
+    await seedRecords([{ address: "192.168.1.10", name: "Active" }], 0);
+    renderRoute();
+
+    expect(
+      await screen.findByRole("img", { name: "settings.activeDevice" }),
+    ).toBeInTheDocument();
+  });
+
+  it("should use settings section headings, not the Home status heading", async () => {
+    await seedRecords([{ address: "192.168.1.10", name: "Alpha" }]);
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+    try {
+      renderRoute();
+
+      expect(
+        await screen.findByRole("heading", {
+          level: 2,
+          name: "settings.networkScan.title",
+        }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", {
+          level: 2,
+          name: "settings.savedDevices",
+        }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("heading", { level: 3 }),
+      ).not.toBeInTheDocument();
+    } finally {
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
+    }
+  });
+
   it("should show the lock icon only on rows whose record holds credentials", async () => {
     const [, paired] = await seedRecords([
       { address: "192.168.1.10", name: "Unpaired" },
@@ -248,7 +328,7 @@ describe("Settings Devices Route", () => {
     });
   });
 
-  it("should make the tapped record active and return to settings", async () => {
+  it("should open a device's details without changing the active device", async () => {
     const user = userEvent.setup();
     const [first, second] = await seedRecords(
       [
@@ -262,13 +342,15 @@ describe("Settings Devices Route", () => {
     renderRoute();
     await user.click(screen.getByText("Pick me"));
 
-    await waitFor(() => {
-      expect(deviceRegistry.getSnapshot().activeRecordId).toBe(first!.recordId);
+    expect(deviceRegistry.getSnapshot().activeRecordId).toBe(second!.recordId);
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/settings/devices/$recordId",
+      params: { recordId: first!.recordId },
     });
-    expect(mockNavigate).toHaveBeenCalledWith({ to: "/settings" });
   });
 
-  it("should link each row to its record's detail page", async () => {
+  it("should present management with one detail action per device", async () => {
+    const user = userEvent.setup();
     const [record] = await seedRecords([
       { address: "192.168.1.30", name: "With Info" },
     ]);
@@ -276,8 +358,14 @@ describe("Settings Devices Route", () => {
     renderRoute();
 
     expect(
-      await screen.findByLabelText("settings.deviceDetails"),
-    ).toHaveAttribute("href", `/settings/devices/${record!.recordId}`);
+      screen.getByRole("heading", { name: "scan.deviceSheetAllDevices" }),
+    ).toBeVisible();
+    await user.click(await screen.findByRole("button", { name: /With Info/ }));
+
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/settings/devices/$recordId",
+      params: { recordId: record!.recordId },
+    });
   });
 
   it("should combine two manually selected records after confirmation", async () => {

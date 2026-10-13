@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import classNames from "classnames";
 import { Capacitor } from "@capacitor/core";
+import { Card } from "@/components/wui/Card";
 import { PurchaseSupportActions } from "@/components/ProPurchase";
 import { CoreAPI } from "@/lib/coreApi";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
@@ -11,7 +11,10 @@ import { SettingHelp } from "@/components/wui/SettingHelp";
 import { useStatusStore, ConnectionState } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { PageFrame } from "@/components/PageFrame";
-import { UpdateSettingsRequest } from "@/lib/models.ts";
+import {
+  useCoreSettingsQueryKey,
+  useCoreSettingsUpdate,
+} from "@/hooks/useCoreSettingsUpdate";
 import { BackIcon, NextIcon } from "@/lib/images";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
@@ -19,6 +22,7 @@ import { useClientCapability } from "@/hooks/useClientCapability";
 import { SlideModal } from "@/components/SlideModal";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 import { Button } from "@/components/wui/Button";
+import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { ClientCapability } from "@/lib/models";
 import { isNativePluginAvailable } from "@/lib/capacitorBridge";
 import {
@@ -26,6 +30,13 @@ import {
   usePurchasePreviewStore,
   type PurchasePreviewState,
 } from "@/lib/purchasePreviewStore";
+import {
+  isAppPreviewAvailable,
+  useAppPreviewStore,
+  type AppPreviewNfcResult,
+} from "@/lib/appPreviewStore";
+import { useAppUi } from "@/hooks/useAppUi";
+import { Select } from "@/components/wui/Select";
 
 export const Route = createFileRoute("/settings/advanced")({
   component: AdvancedSettings,
@@ -49,6 +60,13 @@ export function AdvancedSettings() {
   const setPurchasePreviewState = usePurchasePreviewStore(
     (state) => state.setPreviewState,
   );
+  const appPreviewEnabled = useAppPreviewStore((state) => state.enabled);
+  const setAppPreviewEnabled = useAppPreviewStore((state) => state.setEnabled);
+  const appPreviewNfcResult = useAppPreviewStore((state) => state.nfcResult);
+  const setAppPreviewNfcResult = useAppPreviewStore(
+    (state) => state.setNfcResult,
+  );
+  const appUi = useAppUi();
 
   const [showErrorReportingModal, setShowErrorReportingModal] = useState(false);
 
@@ -57,16 +75,13 @@ export function AdvancedSettings() {
     connectionState === ConnectionState.CONNECTING ||
     connectionState === ConnectionState.RECONNECTING;
 
-  const { data, refetch, isPending } = useQuery({
-    queryKey: ["settings"],
+  const settingsQueryKey = useCoreSettingsQueryKey();
+  const { data, isPending } = useQuery({
+    queryKey: settingsQueryKey,
     queryFn: () => CoreAPI.settings(),
   });
 
-  const update = useMutation({
-    mutationFn: (params: UpdateSettingsRequest) =>
-      CoreAPI.settingsUpdate(params),
-    onSuccess: () => refetch(),
-  });
+  const update = useCoreSettingsUpdate();
 
   const handleErrorReportingToggle = (value: boolean) => {
     if (!canWriteCoreSettings) return;
@@ -92,6 +107,8 @@ export function AdvancedSettings() {
 
   return (
     <PageFrame
+      headerMode="content-wide"
+      breadcrumbs={[{ to: "/settings", label: t("settings.title") }]}
       onSwipeBack={goBack}
       headerLeft={
         <HeaderButton
@@ -106,16 +123,15 @@ export function AdvancedSettings() {
         </h1>
       }
     >
-      <div className="flex flex-col gap-5">
+      <Card className="settings-form-rows flex flex-col gap-4">
         <ToggleSwitch
-          label={
-            <span className="flex items-center">
-              {t("settings.advanced.errorReporting")}
-              <SettingHelp
-                title={t("settings.advanced.errorReporting")}
-                description={t("settings.advanced.errorReportingHelp")}
-              />
-            </span>
+          reflow
+          label={t("settings.advanced.errorReporting")}
+          help={
+            <SettingHelp
+              title={t("settings.advanced.errorReporting")}
+              description={t("settings.advanced.errorReportingHelp")}
+            />
           }
           value={data?.errorReporting ?? false}
           setValue={handleErrorReportingToggle}
@@ -124,14 +140,13 @@ export function AdvancedSettings() {
         />
 
         <ToggleSwitch
-          label={
-            <span className="flex items-center">
-              {t("settings.advanced.debugLogging")}
-              <SettingHelp
-                title={t("settings.advanced.debugLogging")}
-                description={t("settings.advanced.debugLoggingHelp")}
-              />
-            </span>
+          reflow
+          label={t("settings.advanced.debugLogging")}
+          help={
+            <SettingHelp
+              title={t("settings.advanced.debugLogging")}
+              description={t("settings.advanced.debugLoggingHelp")}
+            />
           }
           value={data?.debugLogging ?? false}
           setValue={(v) => update.mutate({ debugLogging: v })}
@@ -140,14 +155,13 @@ export function AdvancedSettings() {
         />
 
         <ToggleSwitch
-          label={
-            <span className="flex items-center">
-              {t("settings.advanced.showFilenames")}
-              <SettingHelp
-                title={t("settings.advanced.showFilenames")}
-                description={t("settings.advanced.showFilenamesHelp")}
-              />
-            </span>
+          reflow
+          label={t("settings.advanced.showFilenames")}
+          help={
+            <SettingHelp
+              title={t("settings.advanced.showFilenames")}
+              description={t("settings.advanced.showFilenamesHelp")}
+            />
           }
           value={showFilenames}
           setValue={setShowFilenames}
@@ -156,103 +170,147 @@ export function AdvancedSettings() {
         {Capacitor.getPlatform() === "ios" &&
           isNativePluginAvailable("Badge") && (
             <ToggleSwitch
-              label={
-                <span className="flex items-center">
-                  {t("settings.advanced.appIconBadges")}
-                  <SettingHelp
-                    title={t("settings.advanced.appIconBadges")}
-                    description={t("settings.advanced.appIconBadgesHelp")}
-                  />
-                </span>
+              reflow
+              label={t("settings.advanced.appIconBadges")}
+              help={
+                <SettingHelp
+                  title={t("settings.advanced.appIconBadges")}
+                  description={t("settings.advanced.appIconBadgesHelp")}
+                />
               }
               value={appBadgeEnabled}
               setValue={setAppBadgeEnabled}
             />
           )}
 
-        {isPurchasePreviewEnabled() && (
-          <div className="flex flex-col">
-            <label className="text-white" htmlFor="purchase-preview-state">
-              {t("settings.advanced.purchasePreview")}
-            </label>
-            <select
-              id="purchase-preview-state"
-              className="border-bd-input bg-background text-foreground rounded-md border border-solid p-3"
-              value={purchasePreviewState}
-              onChange={(event) =>
-                setPurchasePreviewState(
-                  event.target.value as PurchasePreviewState,
-                )
+        {isAppPreviewAvailable() && (
+          <>
+            <ToggleSwitch
+              reflow
+              label={t("settings.advanced.appPreview")}
+              help={
+                <SettingHelp
+                  title={t("settings.advanced.appPreview")}
+                  description={t("settings.advanced.appPreviewHelp")}
+                />
               }
-            >
-              <option value="live">
-                {t("settings.advanced.purchasePreviewLive")}
-              </option>
-              <option value="free">
-                {t("settings.advanced.purchasePreviewFree")}
-              </option>
-              <option value="checkout">
-                {t("settings.advanced.purchasePreviewCheckout")}
-              </option>
-              <option value="pro">
-                {t("settings.advanced.purchasePreviewPro")}
-              </option>
-              <option value="warp">
-                {t("settings.advanced.purchasePreviewWarp")}
-              </option>
-              <option value="loading">
-                {t("settings.advanced.purchasePreviewLoading")}
-              </option>
-              <option value="error">
-                {t("settings.advanced.purchasePreviewError")}
-              </option>
-            </select>
-          </div>
+              value={appPreviewEnabled}
+              setValue={setAppPreviewEnabled}
+            />
+
+            {appPreviewEnabled && (
+              <Select
+                id="app-preview-nfc-result"
+                label={t("settings.advanced.appPreviewNfcResult")}
+                value={appPreviewNfcResult}
+                onChange={(event) =>
+                  setAppPreviewNfcResult(
+                    event.target.value as AppPreviewNfcResult,
+                  )
+                }
+              >
+                <option value="hold">
+                  {t("settings.advanced.appPreviewNfcHold")}
+                </option>
+                <option value="success">
+                  {t("settings.advanced.appPreviewNfcSuccess")}
+                </option>
+                <option value="verifyFailed">
+                  {t("settings.advanced.appPreviewNfcVerifyFailed")}
+                </option>
+                <option value="retap">
+                  {t("settings.advanced.appPreviewNfcRetap")}
+                </option>
+                <option value="error">
+                  {t("settings.advanced.appPreviewNfcError")}
+                </option>
+              </Select>
+            )}
+          </>
+        )}
+
+        {isPurchasePreviewEnabled() && (
+          <Select
+            id="purchase-preview-state"
+            label={t("settings.advanced.purchasePreview")}
+            value={purchasePreviewState}
+            onChange={(event) =>
+              setPurchasePreviewState(
+                event.target.value as PurchasePreviewState,
+              )
+            }
+          >
+            <option value="live">
+              {t("settings.advanced.purchasePreviewLive")}
+            </option>
+            <option value="free">
+              {t("settings.advanced.purchasePreviewFree")}
+            </option>
+            <option value="checkout">
+              {t("settings.advanced.purchasePreviewCheckout")}
+            </option>
+            <option value="pro">
+              {t("settings.advanced.purchasePreviewPro")}
+            </option>
+            <option value="warp">
+              {t("settings.advanced.purchasePreviewWarp")}
+            </option>
+            <option value="loading">
+              {t("settings.advanced.purchasePreviewLoading")}
+            </option>
+            <option value="error">
+              {t("settings.advanced.purchasePreviewError")}
+            </option>
+          </Select>
         )}
 
         {connected ? (
-          <Link to="/settings/logs">
-            <div className="flex flex-row items-center justify-between">
-              <p>{t("settings.advanced.viewLogs")}</p>
+          <Link to="/settings/logs" className="settings-nav-row">
+            <span>{t("settings.advanced.viewLogs")}</span>
+            <span aria-hidden="true" className="shrink-0">
               <NextIcon size="20" />
-            </div>
+            </span>
           </Link>
         ) : (
           <div
-            className={classNames(
-              "flex flex-row items-center justify-between",
-              "text-foreground-disabled",
-            )}
+            className="settings-nav-row text-muted-foreground cursor-not-allowed hover:bg-transparent"
+            aria-disabled="true"
           >
-            <p>{t("settings.advanced.viewLogs")}</p>
-            <NextIcon size="20" />
+            <span>{t("settings.advanced.viewLogs")}</span>
+            <span aria-hidden="true" className="shrink-0">
+              <NextIcon size="20" />
+            </span>
           </div>
         )}
 
-        {Capacitor.isNativePlatform() && <PurchaseSupportActions />}
-      </div>
+        {appUi.enabled && <PurchaseSupportActions />}
+      </Card>
 
       <SlideModal
         isOpen={showErrorReportingModal}
         close={() => setShowErrorReportingModal(false)}
         title={t("settings.advanced.errorReportingConfirmTitle")}
         footer={
-          <div className="flex flex-row justify-center gap-4">
-            <Button
-              label={t("nav.cancel")}
-              variant="outline"
-              onClick={() => setShowErrorReportingModal(false)}
-            />
-            <Button
-              label={t("yes")}
-              intent="primary"
-              onClick={confirmEnableErrorReporting}
-              disabled={!canWriteCoreSettings}
-            />
-          </div>
+          <ModalActionBar
+            secondaryAction={
+              <Button
+                label={t("nav.cancel")}
+                variant="secondary"
+                onClick={() => setShowErrorReportingModal(false)}
+              />
+            }
+            primaryAction={
+              <Button
+                label={t("yes")}
+                intent="primary"
+                onClick={confirmEnableErrorReporting}
+                disabled={!canWriteCoreSettings}
+              />
+            }
+          />
         }
       >
-        <div className="p-4">
+        <div className="py-4">
           <p className="text-center">
             {t("settings.advanced.errorReportingConfirmText")}
           </p>

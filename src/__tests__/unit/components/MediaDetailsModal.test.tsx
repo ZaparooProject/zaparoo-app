@@ -100,13 +100,15 @@ describe("MediaDetailsModal", () => {
     expect(screen.queryByLabelText("user playlater")).not.toBeInTheDocument();
   });
 
-  it("should show labels for interactive media tags", () => {
+  it("should show type prefixes and friendly labels for interactive media tags", () => {
     renderModal({
       media: {
         ...mediaWithZapScript,
         tags: [
           ...mediaWithZapScript.tags,
           { type: "edition", tag: "special", label: "Special Edition" },
+          { type: "region", tag: "eu" },
+          { type: "lang", tag: "en" },
         ],
       },
     });
@@ -114,11 +116,13 @@ describe("MediaDetailsModal", () => {
     expect(
       screen.getByRole("button", { name: "edition Special Edition" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Special Edition")).toBeInTheDocument();
+    expect(screen.getByText("edition:Special Edition")).toBeInTheDocument();
+    expect(screen.getByText("region:eu")).toBeInTheDocument();
+    expect(screen.getByText("lang:en")).toBeInTheDocument();
     expect(screen.queryByText("edition:special")).not.toBeInTheDocument();
   });
 
-  it("should show labels for read-only media tags", () => {
+  it("should show type prefixes and friendly labels for read-only media tags", () => {
     renderModal({
       media: {
         ...mediaWithZapScript,
@@ -130,7 +134,7 @@ describe("MediaDetailsModal", () => {
       },
     });
 
-    expect(screen.getByText("Special Edition")).toBeInTheDocument();
+    expect(screen.getByText("edition:Special Edition")).toBeInTheDocument();
     expect(screen.queryByText("edition:special")).not.toBeInTheDocument();
   });
 
@@ -169,6 +173,93 @@ describe("MediaDetailsModal", () => {
     ).toBeTruthy();
   });
 
+  it.each(["waiting", "attention"] as const)(
+    "should keep the selected target and primary reader control through %s and cancel",
+    async (state) => {
+      const user = userEvent.setup();
+      const readerActivity = {
+        state: "idle" as const,
+        activeLabel:
+          state === "attention" ? "spinner.retapTag" : "spinner.holdTagReader",
+        onCancel: vi.fn(),
+        onRetry: vi.fn(),
+      };
+      const view = renderModal({ readerActivity });
+      const path = screen.getByRole("radio", {
+        name: /create\.search\.pathLabel/i,
+      });
+      await user.click(path);
+      const write = screen.getByRole("button", {
+        name: "create.search.writeLabel",
+      });
+      await user.click(write);
+      expect(view.props.onWrite).toHaveBeenCalledWith(mediaWithZapScript.path);
+
+      view.rerender(
+        <MediaDetailsModal
+          {...view.props}
+          readerActivity={{ ...readerActivity, state }}
+        />,
+      );
+      const cancel = screen.getByRole("button", {
+        name: "reader.cancelAction",
+      });
+      expect(cancel).toBe(write);
+      expect(cancel).toHaveFocus();
+      expect(cancel).toHaveAttribute("aria-pressed", "true");
+      expect(path).toBeChecked();
+      expect(
+        within(
+          screen.getByRole("group", { name: "create.search.mediaActions" }),
+        ).queryByRole("button", { name: "reader.cancelAction" }),
+      ).not.toBeInTheDocument();
+
+      await user.keyboard("{Enter}");
+      expect(readerActivity.onCancel).toHaveBeenCalledOnce();
+      expect(view.props.close).not.toHaveBeenCalled();
+      expect(
+        screen.getByRole("dialog", { name: "Super Mario World" }),
+      ).toBeVisible();
+    },
+  );
+
+  it("should keep verification recovery actions in the media footer", async () => {
+    const user = userEvent.setup();
+    const readerActivity = {
+      state: "error" as const,
+      activeLabel: "spinner.holdTagReader",
+      errorMessage: "spinner.verifyFailedRetry",
+      onCancel: vi.fn(),
+      onRetry: vi.fn(),
+    };
+    const { props } = renderModal({ readerActivity });
+    const dialog = screen.getByRole("dialog", { name: "Super Mario World" });
+    await user.click(
+      within(dialog).getByRole("button", { name: "scan.retry" }),
+    );
+    expect(readerActivity.onRetry).toHaveBeenCalledOnce();
+    await user.click(
+      within(dialog).getByRole("button", { name: "nav.cancel" }),
+    );
+    expect(readerActivity.onCancel).toHaveBeenCalledOnce();
+    expect(props.close).not.toHaveBeenCalled();
+    expect(dialog).toBeVisible();
+  });
+
+  it("should offer only its action when it is just picking a value", () => {
+    renderModal({ showFavorite: false });
+
+    expect(
+      screen.queryByRole("button", { name: "library.addFavorite" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("group", { name: "create.search.mediaActions" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "create.search.writeLabel" }),
+    ).toBeEnabled();
+  });
+
   it("should add a favorite from indexed-media details", async () => {
     const updateSpy = vi.spyOn(CoreAPI, "mediaTagsUpdate").mockResolvedValue({
       tags: [{ type: "user", tag: "favorite" }],
@@ -187,29 +278,99 @@ describe("MediaDetailsModal", () => {
     });
   });
 
-  it("should default to ZapScript when available", () => {
+  it("should offer a skip link from the details to their actions", () => {
     renderModal();
 
     expect(
-      screen.getByRole("radio", {
-        name: /create\.search\.zapscriptLabel/i,
-      }),
-    ).toBeChecked();
+      screen.getByRole("link", { name: "accessibility.skipToActions" }),
+    ).toBeInTheDocument();
   });
 
-  it("should remember the selected write mode for the session", async () => {
+  it("should not offer to write media that has nothing to write", () => {
+    renderModal({
+      media: { ...mediaWithZapScript, path: "", zapScript: undefined },
+    });
+
+    expect(
+      screen.getByRole("button", { name: "create.search.writeLabel" }),
+    ).toBeDisabled();
+  });
+
+  it("should put ZapScript first and select it by default", () => {
+    renderModal();
+
+    const zapScript = screen.getByRole("radio", {
+      name: /create\.search\.zapscriptLabel/i,
+    });
+    const path = screen.getByRole("radio", {
+      name: /create\.search\.pathLabel/i,
+    });
+    expect(zapScript).toBeChecked();
+    expect(
+      zapScript.compareDocumentPosition(path) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("should put Path first and select it when filenames are preferred", () => {
+    usePreferencesStore.setState({ showFilenames: true });
+    renderModal();
+
+    const path = screen.getByRole("radio", {
+      name: /create\.search\.pathLabel/i,
+    });
+    const zapScript = screen.getByRole("radio", {
+      name: /create\.search\.zapscriptLabel/i,
+    });
+    expect(path).toBeChecked();
+    expect(
+      path.compareDocumentPosition(zapScript) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("should disable tag choices while Path is selected", async () => {
     const user = userEvent.setup();
-    const view = renderModal();
+    renderModal();
+
+    const tag = screen.getByRole("button", { name: "genre platformer" });
+    expect(tag).toBeEnabled();
+    expect(
+      within(tag).getByTestId("tag-selection-indicator"),
+    ).toBeInTheDocument();
+    await user.click(tag);
+    expect(tag).toHaveAttribute("aria-pressed", "true");
 
     await user.click(
       screen.getByRole("radio", { name: /create\.search\.pathLabel/i }),
     );
-    view.unmount();
-    renderModal();
-
+    expect(tag).toBeDisabled();
     expect(
-      screen.getByRole("radio", { name: /create\.search\.pathLabel/i }),
-    ).toBeChecked();
+      within(tag).queryByTestId("tag-selection-indicator"),
+    ).not.toBeInTheDocument();
+    const otherTag = screen.getByRole("button", { name: "year 1990" });
+    expect(
+      within(otherTag).queryByTestId("tag-selection-indicator"),
+    ).not.toBeInTheDocument();
+    expect(within(tag).getByText("genre:platformer")).toBeInTheDocument();
+    await user.click(tag);
+    expect(tag).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(
+      screen.getByRole("radio", {
+        name: /create\.search\.zapscriptLabel/i,
+      }),
+    );
+    expect(tag).toBeEnabled();
+    expect(
+      within(tag).getByTestId("tag-selection-indicator"),
+    ).toBeInTheDocument();
+    expect(tag).toHaveAttribute("aria-pressed", "true");
+    tag.focus();
+    await user.keyboard(" ");
+    expect(tag).toHaveAttribute("aria-pressed", "false");
+    await user.keyboard("{Enter}");
+    expect(tag).toHaveAttribute("aria-pressed", "true");
   });
 
   it("should select and remove Core ZapScript tags", async () => {

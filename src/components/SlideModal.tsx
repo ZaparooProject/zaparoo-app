@@ -1,13 +1,15 @@
 import {
   ReactNode,
   RefObject,
+  useCallback,
+  useSyncExternalStore,
   useEffect,
   useId,
   useLayoutEffect,
   useRef,
 } from "react";
 import classNames from "classnames";
-import { X } from "lucide-react";
+import { XIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useStatusStore } from "@/lib/store.ts";
 import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
@@ -15,10 +17,18 @@ import { useSlideModalManager } from "@/hooks/useSlideModalManager";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useScreenReaderEnabled } from "@/hooks/useScreenReaderEnabled";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { SkipLink } from "@/components/SkipLink";
 
 const OPEN_TRANSFORM = "translate3d(0, 0, 0)";
 const CLOSED_TRANSFORM = "translate3d(0, 100%, 0)";
+
+// Individual CSS translate is unavailable in Core's legacy browser targets.
+function modalTransform(open: boolean, wide: boolean): string {
+  if (!wide) return open ? OPEN_TRANSFORM : CLOSED_TRANSFORM;
+  return "translate3d(-50%, -50%, 0)";
+}
+
 const DRAG_TRANSITION = "transform 0.2s ease-in-out";
 const DRAG_START_THRESHOLD_PX = 8;
 const DRAG_CLOSE_THRESHOLD = 0.25;
@@ -98,6 +108,15 @@ export function SlideModal(props: {
   /** Whether overlay, Escape, back, close buttons, and drag may dismiss the modal. */
   dismissible?: boolean;
   fixedHeight?: string;
+  /** Complex search/chooser workspaces can use more width; forms stay bounded. */
+  layout?: "default" | "workspace";
+  scrollClassName?: string;
+  /** Opt-in nonmodal supporting region; feature content stays mounted through resize. */
+  presentation?: "modal" | "pane";
+  /** Home sections keep their heading outside the material owned by their body. */
+  paneLayout?: "card" | "section";
+  /** Do not replace another active dialog solely because a pane collapses. */
+  suspendWhenCovered?: boolean;
 }) {
   const { t } = useTranslation();
   const modalId = useId();
@@ -110,10 +129,30 @@ export function SlideModal(props: {
   const screenReaderEnabled = useScreenReaderEnabled();
   const wasOpenRef = useRef(props.isOpen);
   const dismissible = props.dismissible ?? true;
-  const requestedOpen = props.isOpen;
-  const requestClose = props.close;
+  const isPane = props.presentation === "pane";
+  const wideDialog = useMediaQuery("(min-width: 760px)");
+  const isSection = isPane && props.paneLayout === "section";
+  const subscribe = useCallback(
+    (listener: () => void) => modalManager.subscribe?.(listener) ?? (() => {}),
+    [modalManager],
+  );
+  const getCovered = useCallback(
+    () =>
+      Boolean(
+        props.suspendWhenCovered && modalManager.hasOpenModalExcept?.(modalId),
+      ),
+    [props.suspendWhenCovered, modalManager, modalId],
+  );
+  const covered = useSyncExternalStore(subscribe, getCovered, () => false);
+  const surfaceOpen = props.isOpen && (isPane || !covered);
+  const modalOpen = surfaceOpen && !isPane;
+  // Sheets below 760px dismiss through their drag handle; floating dialogs
+  // and docked panes show the close button instead.
+  const hasCloseButton = isPane || wideDialog;
 
-  useEffect(() => {
+  // Registration and Back handling read the latest close callback through a
+  // ref, so an inline `close` prop does not re-register an open modal.
+  useLayoutEffect(() => {
     closeRef.current = props.close;
   }, [props.close]);
 
@@ -127,17 +166,19 @@ export function SlideModal(props: {
 
   // Trap focus within modal when open
   useFocusTrap({
-    isActive: props.isOpen,
+    isActive: modalOpen,
     containerRef: modalRef,
-    restoreFocus: true,
+    restoreFocus: !isPane,
     autoFocus: false, // The dialog heading receives initial focus.
     onEscape: dismissible ? props.close : undefined,
   });
 
   // Focus the title when modal opens (better for screen readers)
   useEffect(() => {
-    if (props.isOpen) titleRef.current?.focus();
-  }, [props.isOpen]);
+    if (modalOpen && !modalRef.current?.contains(document.activeElement)) {
+      titleRef.current?.focus();
+    }
+  }, [modalOpen]);
 
   // Install drag handling before paint so a sheet revealed after a covering
   // modal closes cannot briefly appear without responding to touchstart.
@@ -145,10 +186,17 @@ export function SlideModal(props: {
     const modal = modalRef.current;
     if (!modal) return;
 
-    if (!props.isOpen || screenReaderEnabled || !dismissible) {
+    if (isPane) {
       modal.removeAttribute("data-dragging");
-      modal.style.transition = DRAG_TRANSITION;
-      modal.style.transform = props.isOpen ? OPEN_TRANSFORM : CLOSED_TRANSFORM;
+      modal.style.transition = "none";
+      modal.style.transform = "none";
+      return;
+    }
+
+    if (!surfaceOpen || screenReaderEnabled || !dismissible || wideDialog) {
+      modal.removeAttribute("data-dragging");
+      modal.style.transition = wideDialog ? "none" : DRAG_TRANSITION;
+      modal.style.transform = modalTransform(surfaceOpen, wideDialog);
       return;
     }
 
@@ -299,33 +347,41 @@ export function SlideModal(props: {
       modal.removeEventListener("touchend", handleTouchEnd);
       modal.removeEventListener("touchcancel", handleTouchCancel);
     };
-  }, [props.isOpen, screenReaderEnabled, dismissible, impact]);
+  }, [
+    surfaceOpen,
+    isPane,
+    screenReaderEnabled,
+    dismissible,
+    wideDialog,
+    impact,
+  ]);
 
   // Handle Android back button
   useBackButtonHandler(
     "slide-modal",
     () => {
-      if (props.isOpen) {
-        if (dismissible) props.close();
+      if (modalOpen) {
+        if (dismissible) closeRef.current();
         return true; // Consume the event
       }
       return false; // Let other handlers process it
     },
     100, // High priority
-    props.isOpen, // Only active when modal is open
+    modalOpen, // Supporting panes never consume modal-priority Back.
   );
 
   // Register before paint so a blocking modal can reject later sheets without a visible or focusable flash.
   useLayoutEffect(() => {
-    if (requestedOpen) {
+    if (modalOpen) {
       const accepted = modalManager.closeAllExcept(modalId);
       if (!accepted) {
-        requestClose();
+        closeRef.current();
         return;
       }
 
-      modalManager.registerModal(modalId, requestClose, {
+      modalManager.registerModal(modalId, () => closeRef.current(), {
         blocking: !dismissible,
+        overlay: true,
       });
 
       return () => {
@@ -334,108 +390,199 @@ export function SlideModal(props: {
     }
 
     modalManager.unregisterModal(modalId);
-  }, [requestedOpen, requestClose, modalId, modalManager, dismissible]);
+  }, [modalOpen, modalId, modalManager, dismissible]);
 
   const safeInsets = useStatusStore((state) => state.safeInsets) ?? {
     top: "0px",
     bottom: "0px",
+    left: "0px",
+    right: "0px",
   };
+  const safeLeft = safeInsets.left ?? "0px";
+  const safeRight = safeInsets.right ?? "0px";
 
   return (
     <>
-      {/* Overlay - click to dismiss, hidden from screen readers */}
-      <div
-        data-testid="modal-overlay"
-        data-focus-trap-exempt
-        className="fixed inset-0 z-40 bg-black/50 transition-opacity duration-200 ease-in-out"
-        style={{
-          opacity: props.isOpen ? 1 : 0,
-          pointerEvents: props.isOpen ? "auto" : "none",
-        }}
-        onClick={dismissible ? props.close : undefined}
-        aria-hidden="true"
-      />
+      {/* Standalone managers retain local backdrop ownership. */}
+      {!modalManager.ownsOverlay && (
+        <div
+          data-testid="modal-overlay"
+          data-focus-trap-exempt
+          className="fixed inset-0 z-40 bg-black/60 transition-opacity duration-200 ease-in-out"
+          style={{
+            opacity: modalOpen ? 1 : 0,
+            pointerEvents: modalOpen ? "auto" : "none",
+          }}
+          onClick={dismissible ? props.close : undefined}
+          aria-hidden="true"
+        />
+      )}
 
       {/* Modal */}
       <div
         ref={modalRef}
-        role="dialog"
-        aria-modal={props.isOpen || undefined}
-        aria-hidden={!props.isOpen}
+        role={isPane ? "region" : "dialog"}
+        aria-modal={modalOpen || undefined}
+        aria-hidden={!surfaceOpen}
         aria-labelledby={`${modalId}-title`}
-        inert={!props.isOpen}
+        inert={!surfaceOpen || covered}
         tabIndex={-1}
-        className={classNames(
-          "fixed",
-          "z-50",
-          "left-0", // Mobile: align to left edge
-          "sm:left-1/2", // Desktop: center horizontally
-          "sm:-translate-x-1/2", // Desktop: translate back to center
-          "w-full",
-          "max-w-none", // Mobile: full width
-          "sm:max-w-2xl", // Desktop: responsive width (672px)
-          "flex",
-          "flex-col",
-          "rounded-tl-md",
-          "rounded-tr-md",
-          "border",
-          "border-b-0",
-          "border-solid",
-          "border-[rgba(255,255,255,0.13)]",
-          "bg-[rgb(17,25,40)]",
-          "px-3",
-          "pt-3",
-          "mix-blend-normal",
-          props.className,
-        )}
-        style={{
-          bottom: 0,
-          transform: props.isOpen ? OPEN_TRANSFORM : CLOSED_TRANSFORM,
-          transition: DRAG_TRANSITION,
-          willChange: props.isOpen ? "transform" : "auto",
-          pointerEvents: props.isOpen ? "auto" : "none",
-          paddingBottom: `calc(${safeInsets.bottom} + 0.75rem)`,
-          maxHeight: `min(80vh, calc(100vh - ${safeInsets.top} - 75px))`,
-          ...(props.fixedHeight ? { height: props.fixedHeight } : {}),
+        onKeyDown={(event) => {
+          if (
+            !isPane ||
+            !dismissible ||
+            event.defaultPrevented ||
+            event.key !== "Escape"
+          )
+            return;
+          const target = event.target;
+          if (
+            target instanceof Element &&
+            target.closest("input, textarea, select, [contenteditable='true']")
+          )
+            return;
+          event.preventDefault();
+          event.stopPropagation();
+          props.close();
         }}
+        className={
+          isPane
+            ? classNames(
+                isSection
+                  ? "slide-modal-section flex w-full min-w-0 flex-col"
+                  : "library-details-panel wui-card",
+                props.className,
+              )
+            : classNames(
+                "fixed",
+                "z-50",
+                "flex",
+                "flex-col",
+                "max-w-2xl", // Bounded to 42rem; workspace dialogs widen inline.
+                // Sheets center through auto margins, so no transform is needed.
+                wideDialog
+                  ? "rounded-lg"
+                  : "inset-x-0 mx-auto w-full rounded-t-lg border-b-0",
+                "shadow-[0_-8px_32px_var(--material-shadow),inset_0_1px_0_var(--material-highlight)]",
+                "border",
+                "border-solid",
+                "border-border",
+                "bg-surface-raised",
+                "px-4",
+                "pt-3",
+                "mix-blend-normal",
+                props.className,
+              )
+        }
+        style={
+          isPane
+            ? {
+                display: surfaceOpen ? undefined : "none",
+                transform: "none",
+                transition: "none",
+              }
+            : {
+                bottom: wideDialog ? undefined : 0,
+                top: wideDialog
+                  ? `calc((100% + ${safeInsets.top} - ${safeInsets.bottom}) / 2)`
+                  : undefined,
+                left: wideDialog
+                  ? `calc((100% + ${safeLeft} - ${safeRight}) / 2)`
+                  : undefined,
+                width: wideDialog
+                  ? `calc(100% - ${safeLeft} - ${safeRight} - 2rem)`
+                  : undefined,
+                maxWidth:
+                  wideDialog && props.layout === "workspace"
+                    ? "60rem"
+                    : undefined,
+                // Closed floating dialogs cannot rely on translating below the viewport.
+                // Children must not transition `visibility` (no `transition-all`),
+                // or they linger on screen after the dialog has gone.
+                visibility: wideDialog && !surfaceOpen ? "hidden" : undefined,
+                transform: modalTransform(surfaceOpen, wideDialog),
+                transition: wideDialog ? "none" : DRAG_TRANSITION,
+                willChange: surfaceOpen && !wideDialog ? "transform" : "auto",
+                pointerEvents: surfaceOpen ? "auto" : "none",
+                boxShadow: surfaceOpen ? undefined : "none",
+                paddingBottom: wideDialog
+                  ? "1rem"
+                  : `calc(${safeInsets.bottom} + 1rem)`,
+                maxHeight: wideDialog
+                  ? `min(80vh, calc(100vh - ${safeInsets.top} - ${safeInsets.bottom} - 2rem))`
+                  : `min(80vh, calc(100vh - ${safeInsets.top} - 75px))`,
+                ...(props.fixedHeight ? { height: props.fixedHeight } : {}),
+              }
+        }
       >
         {/* Swipeable handle and title area */}
         <div style={{ touchAction: "pan-x pinch-zoom" }}>
           {/* Mobile drag handle */}
-          {dismissible && (
-            <div className="-mt-3 sm:hidden">
+          {dismissible && !isPane && !wideDialog && (
+            <div className="-mt-3">
               <button
                 type="button"
                 onClick={props.close}
                 aria-label={t("nav.close")}
                 data-slide-modal-drag-handle
-                className="flex h-[29px] w-full items-center justify-center bg-transparent focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+                className="focus-visible:outline-ring relative flex h-[29px] w-full items-center justify-center bg-transparent after:absolute after:inset-x-0 after:-inset-y-[10px] after:content-[''] focus-visible:outline-2 focus-visible:-outline-offset-2"
               >
                 <span
                   aria-hidden="true"
-                  className="h-[5px] w-[80px] rounded-full bg-[#00E0FF]"
+                  className="bg-muted-foreground h-1 w-12 rounded-full"
                 />
               </button>
             </div>
           )}
           {/* Shared visible title and desktop close action */}
-          <div className="relative pb-2">
+          <div
+            className={classNames("relative", {
+              "pb-2": !isSection,
+              "min-h-11": !isSection && hasCloseButton,
+            })}
+          >
             <h2
               ref={titleRef}
               id={`${modalId}-title`}
               tabIndex={-1}
-              className="text-center text-lg outline-none"
+              style={
+                !isPane && wideDialog
+                  ? {
+                      // Align title with the glyph, not the larger close target.
+                      paddingLeft: "calc(0.625rem - 7px)",
+                      minHeight: "calc(3rem - 14px)",
+                      display: "flex",
+                      alignItems: "center",
+                    }
+                  : undefined
+              }
+              className={
+                isSection
+                  ? "text-muted-foreground mb-2 font-bold wrap-anywhere capitalize outline-none"
+                  : classNames(
+                      "text-lg leading-snug font-semibold tracking-tight wrap-anywhere outline-none",
+                      hasCloseButton ? "pr-10 text-left" : "text-center",
+                    )
+              }
             >
               {props.title}
             </h2>
-            {dismissible && (
+            {dismissible && hasCloseButton && (
               <button
                 type="button"
                 onClick={props.close}
-                className="absolute top-[-5px] right-0 hidden h-8 w-8 items-center justify-center rounded-md opacity-70 transition-opacity hover:bg-white/10 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none sm:flex"
+                className="hover:before:bg-foreground/10 focus-visible:outline-ring absolute top-[-7px] right-0 flex h-12 w-12 items-center justify-center rounded-full opacity-70 transition-opacity before:absolute before:inset-0.5 before:rounded-full before:content-[''] hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-1"
+                style={
+                  !isPane && wideDialog
+                    ? {
+                        // Shell side padding exceeds top padding by 0.25rem.
+                        right: "calc(-0.25rem - 7px)",
+                      }
+                    : undefined
+                }
                 aria-label={t("nav.close")}
               >
-                <X className="h-5 w-5" aria-hidden="true" />
+                <XIcon className="relative h-5 w-5" aria-hidden="true" />
               </button>
             )}
           </div>
@@ -444,16 +591,29 @@ export function SlideModal(props: {
           <SkipLink targetId={footerId} label={props.footerSkipLabel} />
         )}
         {/* eslint-disable react-hooks/refs -- False positives: scrollRef is passed as ref prop, children/footer are ReactNode props */}
-        <div ref={props.scrollRef} className="flex-1 overflow-y-auto">
+        <div
+          ref={props.scrollRef}
+          className={classNames(
+            // The 4px inset (cancelled by the negative side and top margins)
+            // keeps focus outlines from being clipped by this scroll container.
+            // No bottom margin: it would pull the footer over the content.
+            "-mx-1 -mt-1 min-h-0 flex-1 overflow-y-auto p-1",
+            props.scrollClassName,
+          )}
+        >
           {props.children}
         </div>
         {props.footer && (
           <div
             id={footerId}
             tabIndex={props.footerSkipLabel ? -1 : undefined}
-            className="max-h-[33dvh] flex-shrink-0 overflow-y-auto overscroll-contain border-t border-solid border-[rgba(255,255,255,0.13)] pt-3"
+            className="border-border flex max-h-[33dvh] flex-shrink-0 flex-col border-t border-solid"
           >
-            {props.footer}
+            {/* Paint into the existing shell gutters without moving the actions.
+                The inner viewport still scrolls on short or zoomed screens. */}
+            <div className="-mx-4 -mb-4 min-h-0 scroll-px-4 scroll-pt-2 scroll-pb-4 overflow-y-auto overscroll-contain px-4 pt-2 pb-4">
+              {props.footer}
+            </div>
           </div>
         )}
         {/* eslint-enable react-hooks/refs */}

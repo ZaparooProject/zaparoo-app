@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Link, useRouter } from "@tanstack/react-router";
+import { useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { ListChecks, Pencil, X } from "lucide-react";
+import { ListChecksIcon, MonitorIcon, XIcon } from "lucide-react";
+import { DeviceConnectionPanel } from "@/components/home/DeviceConnectionPanel";
+import { useSelectDevice } from "@/hooks/useSelectDevice";
 import { useConnection } from "@/hooks/useConnection";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
-import { useSelectDevice } from "@/hooks/useSelectDevice";
 import {
   credentialKeyForRecord,
   credentialStore,
@@ -28,7 +29,8 @@ import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { SlideModal } from "@/components/SlideModal";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DelayedLoading } from "@/components/DelayedLoading";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { InlineLoading } from "@/components/InlineLoading";
+import { useStatusStore } from "@/lib/store";
 import { BackIcon } from "@/lib/images";
 import { DeviceRow } from "@/components/DeviceRow";
 
@@ -56,7 +58,7 @@ const selectRegistrySettled = (state: {
 export function Devices() {
   const { t } = useTranslation();
   const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
-    t("settings.deviceHistory"),
+    t("scan.deviceSheetAllDevices"),
   );
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -74,8 +76,8 @@ export function Devices() {
   // same misleading empty state, just from a different cause.
   const registrySettled = useDeviceRegistry(selectRegistrySettled);
   const { isConnected } = useConnection();
-
   const { selectRecord } = useSelectDevice();
+
   const [pairedKeys, setPairedKeys] = useState<Set<string>>(new Set());
   const [isEditing, setIsEditing] = useState(false);
   const [selectedRecordIds, setSelectedRecordIds] = useState<Set<string>>(
@@ -84,6 +86,10 @@ export function Devices() {
   const [combineOpen, setCombineOpen] = useState(false);
   const [combineFailed, setCombineFailed] = useState(false);
   const [isCombining, setIsCombining] = useState(false);
+
+  // Pairing from this page stores a credential and restarts the connection, so
+  // the lock icons are re-read whenever the encryption state settles again.
+  const encryptionState = useStatusStore((state) => state.encryptionState);
 
   useEffect(() => {
     let cancelled = false;
@@ -105,7 +111,7 @@ export function Devices() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [encryptionState, isConnected]);
 
   const sortedRecords = useMemo(() => {
     return Object.values(records)
@@ -155,8 +161,10 @@ export function Devices() {
       toggleSelected(recordId);
       return;
     }
-    void selectRecord(recordId);
-    router.navigate({ to: "/settings" });
+    void router.navigate({
+      to: "/settings/devices/$recordId",
+      params: { recordId },
+    });
   };
 
   const closeEditMode = () => {
@@ -241,6 +249,10 @@ export function Devices() {
 
   return (
     <PageFrame
+      className="wrap-anywhere"
+      headerMode="content-wide"
+      breadcrumbs={[{ to: "/settings", label: t("settings.title") }]}
+      layout="workspace"
       onSwipeBack={goBack}
       headerLeft={
         <HeaderButton
@@ -249,11 +261,7 @@ export function Devices() {
           aria-label={t("nav.back")}
         />
       }
-      headerCenter={
-        <h1 ref={headingRef} className="text-foreground text-xl">
-          {t("settings.deviceHistory")}
-        </h1>
-      }
+      headerCenter={<h1 ref={headingRef}>{t("scan.deviceSheetAllDevices")}</h1>}
       headerRight={
         sortedRecords.length >= 2 ? (
           <HeaderButton
@@ -264,7 +272,9 @@ export function Devices() {
                 setIsEditing(true);
               }
             }}
-            icon={isEditing ? <X size={20} /> : <ListChecks size={20} />}
+            icon={
+              isEditing ? <XIcon size={24} /> : <ListChecksIcon size={24} />
+            }
             aria-label={t(
               isEditing
                 ? "settings.deviceCombine.cancelEdit"
@@ -276,78 +286,97 @@ export function Devices() {
         ) : undefined
       }
     >
-      <div className="flex flex-col gap-3 pt-2">
-        {!registrySettled ? (
-          <DelayedLoading>
-            <div className="text-muted-foreground flex items-center justify-center gap-2 py-8">
-              <LoadingSpinner size={16} className="text-primary" />
-              <span>{t("settings.deviceHistoryLoading")}</span>
-            </div>
-          </DelayedLoading>
-        ) : sortedRecords.length === 0 ? (
-          <EmptyState
-            size="compact"
-            title={t(
-              hydrationError
-                ? "settings.deviceHistoryError"
-                : "settings.deviceHistoryEmpty",
-            )}
-          />
-        ) : (
-          sortedRecords.map(({ record, endpoint }) => (
-            <DeviceRow
-              key={record.recordId}
-              entry={{
-                address: endpoint.address,
-                name: record.name,
-                platform: record.platform,
-                version: record.version,
-              }}
-              isActive={isConnected && activeRecordId === record.recordId}
-              // A record migrated from an older build still holds its pairing
-              // under the pre-V2 address key until its first encrypted connect,
-              // so the lock icon has to accept either key.
-              isPaired={hasCredentials(record)}
-              onSelect={() => handleSelect(record.recordId)}
-              rightSlot={
-                isEditing ? (
-                  <Checkbox
-                    checked={selectedRecordIds.has(record.recordId)}
-                    onCheckedChange={() => toggleSelected(record.recordId)}
-                    aria-label={t("settings.deviceCombine.select", {
-                      device: record.name || endpoint.address,
-                    })}
-                    disabled={
-                      selectedRecordIds.size >= 2 &&
-                      !selectedRecordIds.has(record.recordId)
-                    }
+      <div className="settings-panel-layout">
+        <DeviceConnectionPanel isOpen={registrySettled} />
+        <section
+          aria-labelledby="saved-devices-heading"
+          className="flex min-w-0 flex-col gap-3"
+        >
+          <h2 id="saved-devices-heading" className="text-lg font-semibold">
+            {t("settings.savedDevices")}
+          </h2>
+          {!registrySettled ? (
+            <DelayedLoading>
+              <InlineLoading label={t("settings.deviceHistoryLoading")} />
+            </DelayedLoading>
+          ) : sortedRecords.length === 0 ? (
+            <EmptyState
+              size="compact"
+              title={t(
+                hydrationError
+                  ? "settings.deviceHistoryError"
+                  : "settings.deviceHistoryEmpty",
+              )}
+              action={
+                hydrationError ? (
+                  <Button
+                    variant="outline"
+                    label={t("scan.retry")}
+                    onClick={() => void deviceRegistry.hydrate()}
                   />
-                ) : (
-                  <Link
-                    to="/settings/devices/$recordId"
-                    params={{ recordId: record.recordId }}
-                    aria-label={t("settings.deviceDetails")}
-                    className="bg-background border-bd-outline focus-visible:ring-offset-background flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-solid px-1.5 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:outline-none"
-                  >
-                    <Pencil size={18} />
-                  </Link>
-                )
+                ) : undefined
               }
             />
-          ))
-        )}
-        {isEditing && sortedRecords.length > 0 && (
-          <Button
-            label={t("settings.deviceCombine.action")}
-            intent="primary"
-            onClick={() => {
-              setCombineFailed(false);
-              setCombineOpen(true);
-            }}
-            disabled={selectedRecordIds.size !== 2}
-            className="mt-3 w-full"
-          />
-        )}
+          ) : (
+            sortedRecords.map(({ record, endpoint }) => (
+              <DeviceRow
+                key={record.recordId}
+                entry={{
+                  address: endpoint.address,
+                  name: record.name,
+                  platform: record.platform,
+                  version: record.version,
+                }}
+                isActive={isConnected && activeRecordId === record.recordId}
+                // A record migrated from an older build still holds its pairing
+                // under the pre-V2 address key until its first encrypted connect,
+                // so the lock icon has to accept either key.
+                isPaired={hasCredentials(record)}
+                onSelect={() => handleSelect(record.recordId)}
+                rightSlot={
+                  isEditing ? (
+                    <Checkbox
+                      checked={selectedRecordIds.has(record.recordId)}
+                      onCheckedChange={() => toggleSelected(record.recordId)}
+                      aria-label={t("settings.deviceCombine.select", {
+                        device: record.name || endpoint.address,
+                      })}
+                      disabled={
+                        selectedRecordIds.size >= 2 &&
+                        !selectedRecordIds.has(record.recordId)
+                      }
+                    />
+                  ) : (
+                    <Button
+                      icon={<MonitorIcon size={20} />}
+                      variant="ghost"
+                      shape="square"
+                      aria-label={t("settings.connectDevice", {
+                        device: record.name || endpoint.address,
+                      })}
+                      disabled={
+                        isConnected && activeRecordId === record.recordId
+                      }
+                      onClick={() => void selectRecord(record.recordId)}
+                    />
+                  )
+                }
+              />
+            ))
+          )}
+          {isEditing && sortedRecords.length > 0 && (
+            <Button
+              label={t("settings.deviceCombine.action")}
+              intent="primary"
+              onClick={() => {
+                setCombineFailed(false);
+                setCombineOpen(true);
+              }}
+              disabled={selectedRecordIds.size !== 2}
+              className="mt-3 w-full"
+            />
+          )}
+        </section>
       </div>
 
       <SlideModal
@@ -361,10 +390,11 @@ export function Devices() {
           <ModalActionBar
             secondaryAction={
               <Button
-                variant="outline"
+                variant="secondary"
                 label={t("settings.deviceCombine.cancel")}
                 onClick={() => setCombineOpen(false)}
                 disabled={isCombining}
+                disabledAppearance="busy"
               />
             }
             primaryAction={
@@ -373,26 +403,27 @@ export function Devices() {
                 label={t("settings.deviceCombine.confirm")}
                 onClick={() => void handleConfirmCombine()}
                 disabled={isCombining}
+                disabledAppearance="busy"
               />
             }
           />
         }
       >
-        <div className="flex flex-col gap-4 py-4">
-          <p className="text-center">
+        <div className="flex flex-col gap-4 py-4 text-center">
+          <p>
             {t("settings.deviceCombine.body", {
               first:
-                combineTarget?.name ??
-                parsedEndpointForRecord(combineTarget)?.address ??
+                combineTarget?.name ||
+                parsedEndpointForRecord(combineTarget)?.address ||
                 "",
               second:
-                combineSource?.name ??
-                parsedEndpointForRecord(combineSource)?.address ??
+                combineSource?.name ||
+                parsedEndpointForRecord(combineSource)?.address ||
                 "",
             })}
           </p>
           {combineFailed && (
-            <p className="text-error text-center text-sm" role="alert">
+            <p className="text-error text-sm" role="alert">
               {t("settings.deviceCombine.failed")}
             </p>
           )}

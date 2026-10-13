@@ -42,6 +42,47 @@ describe("Button", () => {
       ).toBeInTheDocument();
     });
 
+    it("keeps reader status inside the face without changing its accessible name", () => {
+      render(
+        <Button
+          label="Hold tag to reader"
+          aria-label="Cancel"
+          readerState="waiting"
+          readerStatus="Press again to cancel"
+        />,
+      );
+
+      const button = screen.getByRole("button", { name: "Cancel" });
+      expect(button).toContainElement(
+        screen.getByText("Press again to cancel"),
+      );
+      expect(button).toHaveTextContent("Hold tag to reader");
+    });
+
+    it("should expose only the current caption when reserving space for state changes", () => {
+      const { rerender } = render(
+        <Button
+          label="Write"
+          labelAlternatives={["Write", "Cancel", "Retry"]}
+        />,
+      );
+      const button = screen.getByRole("button", { name: "Write" });
+      expect(screen.getByText("Write")).toBeVisible();
+      expect(screen.getByText("Cancel")).toHaveAttribute("aria-hidden", "true");
+      expect(screen.getByText("Retry")).toHaveAttribute("aria-hidden", "true");
+
+      rerender(
+        <Button
+          label="Cancel"
+          labelAlternatives={["Write", "Cancel", "Retry"]}
+        />,
+      );
+      expect(screen.getByRole("button", { name: "Cancel" })).toBe(button);
+      expect(screen.getByText("Cancel")).toBeVisible();
+      expect(screen.getByText("Write")).toHaveAttribute("aria-hidden", "true");
+      expect(screen.getByText("Retry")).toHaveAttribute("aria-hidden", "true");
+    });
+
     it("should render icon-only button", () => {
       render(
         <Button
@@ -54,6 +95,35 @@ describe("Button", () => {
       expect(
         screen.getByRole("button", { name: "Icon button" }),
       ).toBeInTheDocument();
+    });
+
+    it("should use unavailable as the default disabled appearance", () => {
+      render(<Button label="Unavailable" disabled />);
+
+      expect(screen.getByRole("button")).toHaveAttribute(
+        "data-disabled-appearance",
+        "unavailable",
+      );
+    });
+
+    it("should expose a busy disabled appearance", () => {
+      render(<Button label="Launching" disabled disabledAppearance="busy" />);
+
+      expect(screen.getByRole("button")).toHaveAttribute(
+        "data-disabled-appearance",
+        "busy",
+      );
+    });
+
+    it("should expose the chrome-free ghost variant", () => {
+      render(
+        <Button variant="ghost" icon={<span>↻</span>} aria-label="Refresh" />,
+      );
+
+      expect(screen.getByRole("button")).toHaveAttribute(
+        "data-variant",
+        "ghost",
+      );
     });
   });
 
@@ -177,8 +247,8 @@ describe("Button", () => {
         touches: [{ clientX: 0, clientY: 0 }],
       });
 
-      // Pressed state applies opacity-80 class
-      expect(button).toHaveClass("opacity-80");
+      // Press feedback is independent of the chosen material.
+      expect(button).toHaveAttribute("data-pressed", "true");
     });
 
     it("should clear pressed state on touch end", () => {
@@ -189,11 +259,11 @@ describe("Button", () => {
         touches: [{ clientX: 0, clientY: 0 }],
       });
 
-      expect(button).toHaveClass("opacity-80");
+      expect(button).toHaveAttribute("data-pressed", "true");
 
       fireEvent.touchEnd(button);
 
-      expect(button).not.toHaveClass("opacity-80");
+      expect(button).toHaveAttribute("data-pressed", "false");
     });
 
     it("should clear pressed state on touch cancel", () => {
@@ -204,11 +274,11 @@ describe("Button", () => {
         touches: [{ clientX: 0, clientY: 0 }],
       });
 
-      expect(button).toHaveClass("opacity-80");
+      expect(button).toHaveAttribute("data-pressed", "true");
 
       fireEvent.touchCancel(button);
 
-      expect(button).not.toHaveClass("opacity-80");
+      expect(button).toHaveAttribute("data-pressed", "false");
     });
 
     it("should detect horizontal scroll gesture", () => {
@@ -227,7 +297,7 @@ describe("Button", () => {
       });
 
       // Should have cleared pressed state
-      expect(button).not.toHaveClass("opacity-80");
+      expect(button).toHaveAttribute("data-pressed", "false");
 
       fireEvent.touchEnd(button);
       fireEvent.click(button);
@@ -293,7 +363,7 @@ describe("Button", () => {
       fireEvent.touchStart(button, { touches: [] });
 
       // Should not throw and button should not be pressed
-      expect(button).not.toHaveClass("opacity-80");
+      expect(button).toHaveAttribute("data-pressed", "false");
     });
 
     it("should handle touch move with no touches gracefully", () => {
@@ -309,7 +379,7 @@ describe("Button", () => {
       fireEvent.touchMove(button, { touches: [] });
 
       // Should not throw
-      expect(button).toHaveClass("opacity-80");
+      expect(button).toHaveAttribute("data-pressed", "true");
     });
 
     it("should reset state after touch end timeout", () => {
@@ -324,7 +394,7 @@ describe("Button", () => {
       fireEvent.touchEnd(button);
 
       // Before timeout
-      expect(button).not.toHaveClass("opacity-80");
+      expect(button).toHaveAttribute("data-pressed", "false");
 
       // After timeout, internal state should be reset
       act(() => {
@@ -332,7 +402,7 @@ describe("Button", () => {
       });
 
       // Button should still not be pressed (state was reset)
-      expect(button).not.toHaveClass("opacity-80");
+      expect(button).toHaveAttribute("data-pressed", "false");
     });
   });
 
@@ -343,7 +413,7 @@ describe("Button", () => {
       const button = screen.getByRole("button");
       fireEvent.mouseDown(button);
 
-      expect(button).toHaveClass("opacity-80");
+      expect(button).toHaveAttribute("data-pressed", "true");
     });
 
     it("should clear pressed state on mouse up", () => {
@@ -353,7 +423,7 @@ describe("Button", () => {
       fireEvent.mouseDown(button);
       fireEvent.mouseUp(button);
 
-      expect(button).not.toHaveClass("opacity-80");
+      expect(button).toHaveAttribute("data-pressed", "false");
     });
 
     it("should clear pressed state on mouse leave", () => {
@@ -363,7 +433,7 @@ describe("Button", () => {
       fireEvent.mouseDown(button);
       fireEvent.mouseLeave(button);
 
-      expect(button).not.toHaveClass("opacity-80");
+      expect(button).toHaveAttribute("data-pressed", "false");
     });
   });
 
@@ -423,7 +493,7 @@ describe("Button", () => {
       });
 
       // Pressed state (opacity-80) should not be applied when disabled
-      expect(button).not.toHaveClass("opacity-80");
+      expect(button).toHaveAttribute("data-pressed", "false");
     });
   });
 

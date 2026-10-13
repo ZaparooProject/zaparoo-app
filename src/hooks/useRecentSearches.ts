@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Preferences } from "@capacitor/preferences";
+import { useTranslation } from "react-i18next";
 import { logger } from "@/lib/logger";
 
 export interface RecentSearch {
@@ -13,6 +14,7 @@ const RECENT_SEARCHES_KEY = "recentSearches";
 const MAX_RECENT_SEARCHES = 10;
 
 export function useRecentSearches() {
+  const { t } = useTranslation();
   const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -109,23 +111,30 @@ export function useRecentSearches() {
   }, [saveToPreferences]);
 
   // Get formatted display text for a search
-  const getSearchDisplayText = useCallback((search: RecentSearch) => {
-    const parts: string[] = [];
+  const getSearchDisplayText = useCallback(
+    (search: RecentSearch) => {
+      const parts: string[] = [];
 
-    if (search.query.trim()) {
-      parts.push(`"${search.query.trim()}"`);
-    }
+      if (search.query.trim()) {
+        parts.push(`"${search.query.trim()}"`);
+      }
 
-    if (search.system !== "all") {
-      parts.push(`System: ${search.system}`);
-    }
+      if (search.system !== "all") {
+        parts.push(t("create.search.recentSystem", { system: search.system }));
+      }
 
-    if (search.tags.length > 0) {
-      parts.push(`Tags: ${search.tags.join(", ")}`);
-    }
+      if (search.tags.length > 0) {
+        parts.push(
+          t("create.search.recentTags", { tags: search.tags.join(", ") }),
+        );
+      }
 
-    return parts.length > 0 ? parts.join(" • ") : "All Media";
-  }, []);
+      return parts.length > 0
+        ? parts.join(" • ")
+        : t("create.search.recentAllMedia");
+    },
+    [t],
+  );
 
   return {
     recentSearches,

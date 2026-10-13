@@ -1,6 +1,8 @@
 import type { ComponentType } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "../../../test-utils";
+import { render, screen, within } from "../../../test-utils";
+
+import { useStatusStore } from "@/lib/store";
 
 const { componentRef, mockNavigate } = vi.hoisted(() => ({
   componentRef: { current: null as ComponentType | null },
@@ -12,6 +14,9 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
     await importOriginal<typeof import("@tanstack/react-router")>();
   return {
     ...actual,
+    Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
+      <a href={to}>{children}</a>
+    ),
     createFileRoute: () => (options: { component: ComponentType }) => {
       componentRef.current = options.component;
       return { options };
@@ -28,29 +33,6 @@ vi.mock("@/hooks/usePageHeadingFocus", () => ({
   usePageHeadingFocus: vi.fn(),
 }));
 
-vi.mock("@/components/CoreOutdatedNotice", () => ({
-  CoreOutdatedNotice: () => <div>Core outdated notice</div>,
-}));
-
-vi.mock("@/components/MediaDatabaseCard", () => ({
-  MediaDatabaseCard: ({
-    showMaintenanceActions,
-    variant,
-  }: {
-    showMaintenanceActions?: boolean;
-    variant?: string;
-  }) => (
-    <div>
-      Media database card {showMaintenanceActions ? "maintenance" : ""}{" "}
-      {variant}
-    </div>
-  ),
-}));
-
-vi.mock("@/components/MediaScrapeCard", () => ({
-  MediaScrapeCard: () => <div>Media scrape card</div>,
-}));
-
 import "@/routes/settings.media";
 
 const getMediaSettings = () => {
@@ -63,6 +45,11 @@ const getMediaSettings = () => {
 describe("Settings Media Route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useStatusStore.setState({
+      connected: false,
+      coreVersion: "2.12.0",
+      coreVersionPending: false,
+    });
   });
 
   it("should render the media settings page content", () => {
@@ -73,16 +60,38 @@ describe("Settings Media Route", () => {
     expect(
       screen.getByRole("heading", { name: "settings.media.title" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Core outdated notice")).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "settings.media.databaseTitle" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "settings.media.scraperTitle" }),
     ).toBeInTheDocument();
+    const database = screen.getByRole("region", {
+      name: "settings.media.databaseTitle",
+    });
+    const scraper = screen.getByRole("region", {
+      name: "settings.media.scraperTitle",
+    });
     expect(
-      screen.getByText("Media database card maintenance plain"),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Media scrape card")).toBeInTheDocument();
+      within(database).getByRole("button", { name: "settings.updateDb" }),
+    ).toBeDisabled();
+    expect(
+      within(scraper).getByRole("combobox", {
+        name: "settings.scrapeMedia.scraperPlaceholder",
+      }),
+    ).toBeDisabled();
+    expect(
+      within(scraper).getByRole("checkbox", {
+        name: "settings.scrapeMedia.force",
+      }),
+    ).toBeDisabled();
+    expect(
+      within(database).queryByRole("combobox", {
+        name: "settings.scrapeMedia.scraperPlaceholder",
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(scraper).queryByRole("button", { name: "settings.updateDb" }),
+    ).not.toBeInTheDocument();
   });
 });

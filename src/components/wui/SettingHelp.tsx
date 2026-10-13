@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { HelpCircleIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { SlideModal } from "@/components/SlideModal";
 
 /**
@@ -48,6 +49,7 @@ export function SettingHelp({
   description,
   ariaLabel,
 }: SettingHelpProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const formattedDescription = useMemo(
     () => parseFormattedText(description),
@@ -56,19 +58,33 @@ export function SettingHelp({
   const close = useCallback(() => setOpen(false), []);
 
   return (
-    <>
+    <span
+      className="inline-flex shrink-0 items-center align-middle"
+      role="presentation"
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => {
+        // Isolate row activation while letting modal focus/dismissal keys through.
+        if (event.key === "Enter" || event.key === " ") event.stopPropagation();
+      }}
+    >
       <button
         type="button"
-        onClick={() => setOpen(true)}
-        className="text-foreground-hint hover:text-muted-foreground focus-visible:text-muted-foreground -my-2 ml-1 rounded-full p-2 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
-        aria-label={ariaLabel ?? `Help for ${title}`}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setOpen(true);
+        }}
+        className="text-foreground-hint hover:text-muted-foreground focus-visible:text-muted-foreground focus-visible:ring-ring -my-2 ml-1 inline-flex items-center justify-center rounded-full p-2 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+        aria-label={ariaLabel ?? t("settingHelp.label", { title })}
       >
         <HelpCircleIcon size={18} />
       </button>
 
       <SlideModal isOpen={open} close={close} title={title}>
-        <div className="text-muted-foreground py-2">{formattedDescription}</div>
+        <div className="text-muted-foreground py-2 wrap-anywhere">
+          {formattedDescription}
+        </div>
       </SlideModal>
-    </>
+    </span>
   );
 }

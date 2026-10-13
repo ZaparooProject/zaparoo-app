@@ -31,6 +31,28 @@ export function getPurchasePreviewState(
   return isPurchasePreviewEnabled() ? configuredState : "live";
 }
 
+/**
+ * The Warp state a screen should display: the live value, or the one the
+ * active preview stands for. Null means it is not known yet.
+ */
+export function getDisplayedWarpAccess(
+  previewState: PurchasePreviewState,
+  liveAccess: boolean | null,
+): boolean | null {
+  switch (previewState) {
+    case "live":
+      return liveAccess;
+    case "warp":
+      return true;
+    case "free":
+    case "checkout":
+    case "pro":
+      return false;
+    default:
+      return null;
+  }
+}
+
 export function resetPurchasePreviewState(): void {
   usePurchasePreviewStore.setState({ state: "live" });
 }

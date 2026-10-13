@@ -63,15 +63,15 @@ export function MappingRow({ mapping, onTap, isLast }: MappingRowProps) {
       className={classNames(
         "flex flex-row items-center justify-between gap-3 px-1 py-3",
         {
-          "cursor-pointer focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none":
+          "focus-visible:ring-ring cursor-pointer focus-visible:ring-2 focus-visible:outline-none":
             isInteractive,
-          "border-bd-outline border-b border-solid": !isLast,
+          "border-border border-b border-solid": !isLast,
         },
       )}
     >
       {isInteractive && <span className="sr-only">{accessibleName}</span>}
-      <div className="flex min-w-0 flex-col gap-1">
-        <div className="flex items-center gap-2">
+      <div className="mapping-row-body">
+        <div className="flex min-w-0 items-center gap-2">
           <span
             className={classNames("min-w-0 truncate font-medium", {
               "text-muted-foreground": !mapping.enabled,
@@ -88,7 +88,7 @@ export function MappingRow({ mapping, onTap, isLast }: MappingRowProps) {
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex min-w-0 items-center gap-1.5">
           <Badge>{typeLabel}</Badge>
           <Badge>{matchLabel}</Badge>
           {mapping.label.trim() !== "" && mapping.pattern && (
@@ -98,7 +98,7 @@ export function MappingRow({ mapping, onTap, isLast }: MappingRowProps) {
           )}
         </div>
         <div
-          className={classNames("truncate font-mono text-sm", {
+          className={classNames("min-w-0 truncate font-mono text-sm", {
             "text-muted-foreground": !mapping.enabled,
           })}
         >

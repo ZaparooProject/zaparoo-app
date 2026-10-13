@@ -25,20 +25,37 @@ describe("TextInput", () => {
     expect(mockSetValue).toHaveBeenCalledWith("test input");
   });
 
-  it("renders save button when saveValue prop is provided", async () => {
+  it("should keep Save mounted through editing and keyboard saving", async () => {
     const mockSaveValue = vi.fn();
     const user = userEvent.setup();
 
-    render(<TextInput value="initial" saveValue={mockSaveValue} />);
+    render(
+      <TextInput
+        label="Device name"
+        value="initial"
+        saveValue={mockSaveValue}
+      />,
+    );
 
-    const input = screen.getByDisplayValue("initial");
+    const input = screen.getByRole("textbox", { name: "Device name" });
+    const saveButton = screen.getByRole("button", { name: "save" });
+    expect(saveButton).toBeDisabled();
+    await user.click(saveButton);
+    expect(mockSaveValue).not.toHaveBeenCalled();
+
     await user.clear(input);
     await user.type(input, "modified text");
 
-    const saveButton = screen.getByRole("button");
-    await user.click(saveButton);
+    expect(screen.getByRole("button", { name: "save" })).toBe(saveButton);
+    expect(saveButton).toBeEnabled();
+    await user.tab();
+    expect(saveButton).toHaveFocus();
+    await user.keyboard("{Enter}");
 
-    expect(mockSaveValue).toHaveBeenCalledWith("modified text");
+    expect(mockSaveValue).toHaveBeenCalledExactlyOnceWith("modified text");
+    expect(screen.getByRole("button", { name: "save" })).toBe(saveButton);
+    expect(saveButton).toBeDisabled();
+    expect(input).toHaveValue("modified text");
   });
 
   it("should hide clear and save actions when changed to read-only", async () => {

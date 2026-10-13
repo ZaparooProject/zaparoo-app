@@ -2,13 +2,22 @@
   "translation": {
     "copy": "复制",
     "copied": "已复制",
+    "copyToClipboard": "复制到剪贴板",
+    "copyFailed": "无法复制到剪贴板",
     "save": "保存",
     "clearSearch": "清除搜索",
+    "settingHelp": {
+      "label": "{{title}}的帮助"
+    },
     "backToTop": "返回顶部",
     "error": "错误：{{msg}}",
     "loading": "正在加载...",
     "cancelling": "正在取消...",
     "resuming": "正在恢复...",
+    "reader": {
+      "cancelAction": "取消读卡器操作",
+      "pressAgainToCancel": "再次按下即可取消"
+    },
     "shareFailed": "分享失败",
     "errorBoundary": {
       "title": "糟糕，发生了严重错误！",
@@ -33,16 +42,29 @@
       "back": "返回",
       "cancel": "取消",
       "close": "关闭",
+      "moreActions": "更多操作",
       "create": "创建",
-      "assign": "分配",
       "index": "Zap",
       "library": "媒体库",
-      "design": "设计",
       "settings": "设置",
+      "search": "搜索",
+      "devices": "设备",
+      "media": "媒体",
+      "all": "全部",
       "settingsWithNotifications_one": "设置，{{count}} 条通知",
       "settingsWithNotifications_other": "设置，{{count}} 条通知",
-      "run": "运行",
-      "mainNavigation": "主导航"
+      "mainNavigation": "主导航",
+      "breadcrumbs": "面包屑导航",
+      "menu": "导航菜单",
+      "currentDevice": "当前设备",
+      "openMenu": "打开导航",
+      "expandSection": "展开{{section}}",
+      "collapseSection": "收起{{section}}",
+      "collapseSidebar": "收起侧边栏",
+      "fullScreen": "全屏",
+      "exitFullScreen": "退出全屏",
+      "lightMode": "浅色模式",
+      "darkMode": "深色模式"
     },
     "appBadge": {
       "title": "应用图标角标",
@@ -72,7 +94,6 @@
       "addError": "无法添加到卡组",
       "added": "已添加到卡组",
       "addAction": "添加到卡组",
-      "createWithGame": "用此游戏创建卡组",
       "edit": "编辑卡组",
       "readOnly": "此副本为只读",
       "locked": "此卡组已锁定",
@@ -98,6 +119,7 @@
       "items_one": "{{count}} 个项目",
       "items_other": "{{count}} 个项目",
       "noItems": "此卡组为空",
+      "selectItem": "选择项目",
       "unnamedItem": "未命名项目",
       "script": "脚本",
       "zapScript": "ZapScript",
@@ -112,21 +134,18 @@
       "full": "此卡组已满",
       "moveUp": "上移 {{name}}",
       "moveDown": "下移 {{name}}",
-      "removeItem": "移除 {{name}}",
       "remove": "移除",
       "confirmRemove": "从此卡组中移除 {{name}}？",
       "delete": "删除卡组",
       "confirmDelete": "删除 {{name}}？此操作无法撤销。"
     },
     "library": {
+      "selectMedia": "选择媒体",
       "title": "媒体库",
       "collections": "合集",
       "systems": "系统",
       "browseBy": "浏览媒体库",
-      "searchCollections": "搜索合集",
-      "noMatchingCollections": "没有匹配的合集",
       "favorites": "收藏",
-      "favoritesLabel": "收藏的媒体",
       "favoritesList": "收藏的媒体",
       "loadingFavorites": "正在加载收藏...",
       "favoritesError": "无法加载收藏",
@@ -143,6 +162,7 @@
       "liked": "喜欢",
       "disliked": "不喜欢",
       "playLater": "稍后游玩",
+      "playLaterAction": "稍后游玩",
       "likedList": "喜欢的媒体",
       "dislikedList": "不喜欢的媒体",
       "playLaterList": "稍后游玩的媒体",
@@ -161,6 +181,19 @@
       "noLikedHint": "可在媒体详细信息或正在播放中标记喜欢。",
       "noDislikedHint": "可在媒体详细信息或正在播放中标记不喜欢。",
       "noPlayLaterHint": "可在媒体详细信息或正在播放中将媒体保存到稍后游玩。",
+      "recentlyPlayed": "最近玩过",
+      "recentlyPlayedShort": "最近",
+      "recentlyPlayedList": "最近玩过的媒体",
+      "loadingRecentlyPlayed": "正在加载最近玩过...",
+      "recentlyPlayedError": "无法加载最近玩过",
+      "noRecentlyPlayed": "还没有玩过任何内容",
+      "noRecentlyPlayedHint": "你启动过的媒体会显示在这里。",
+      "topPlayed": "玩得最多",
+      "topPlayedList": "玩得最多的媒体",
+      "loadingTopPlayed": "正在加载玩得最多...",
+      "topPlayedError": "无法加载玩得最多",
+      "noTopPlayed": "还没有玩过任何内容",
+      "noTopPlayedHint": "你玩得最多的媒体会显示在这里。",
       "like": "喜欢",
       "dislike": "不喜欢",
       "addLike": "喜欢此媒体",
@@ -201,7 +234,6 @@
       "noLetterIndex": "此文件夹不支持字母导航",
       "jumpError": "无法跳转到该字母",
       "jumpingTo": "正在加载 {{label}}...",
-      "coverAlt": "{{title}} 的封面图",
       "imageAlt": "{{type}}（{{title}}）",
       "imageTypes": {
         "artwork": "插图",
@@ -273,22 +305,398 @@
       "sortTitleDesc": "标题：Z–A",
       "sortFilenameAsc": "文件名：A–Z",
       "sortFilenameDesc": "文件名：Z–A",
-      "searchTitle": "搜索游戏",
-      "searchInput": "游戏标题",
-      "searchPlaceholder": "输入游戏标题",
-      "searchAction": "搜索"
+      "searchTitle": "搜索媒体",
+      "searchInput": "名称",
+      "searchPlaceholder": "输入媒体名称",
+      "searchAction": "搜索",
+      "tagValues": {
+        "region": {
+          "world": "全球",
+          "us": "美国",
+          "eu": "欧洲",
+          "jp": "日本",
+          "au": "澳大利亚",
+          "kr": "韩国",
+          "cn": "中国",
+          "tw": "台湾",
+          "hk": "香港",
+          "br": "巴西",
+          "ca": "加拿大",
+          "uk": "英国",
+          "fr": "法国",
+          "de": "德国",
+          "it": "意大利",
+          "es": "西班牙",
+          "scandinavia": "斯堪的纳维亚",
+          "asia": "亚洲"
+        },
+        "lang": {
+          "en": "英语",
+          "fr": "法语",
+          "de": "德语",
+          "es": "西班牙语",
+          "it": "意大利语",
+          "ja": "日语",
+          "ko": "韩语",
+          "zh": "中文",
+          "pt": "葡萄牙语",
+          "nl": "荷兰语",
+          "sv": "瑞典语",
+          "no": "挪威语",
+          "da": "丹麦语",
+          "fi": "芬兰语",
+          "pl": "波兰语",
+          "ru": "俄语",
+          "ar": "阿拉伯语",
+          "en-US": "英语（美国）",
+          "en-GB": "英语（英国）"
+        },
+        "edition": {
+          "directorsCut": "导演剪辑版",
+          "collectors": "典藏版",
+          "limited": "限定版",
+          "special": "特别版",
+          "deluxe": "豪华版",
+          "ultimate": "终极版",
+          "anniversary": "周年纪念版",
+          "remastered": "重制版",
+          "remake": "完全重制版",
+          "remix": "混音版",
+          "complete": "完全版",
+          "goty": "年度版"
+        },
+        "genre": {
+          "action": "动作",
+          "action_platformer": "平台",
+          "action_maze": "迷宫",
+          "action_blockbreaker": "打砖块",
+          "action_runandgun": "跑动射击",
+          "action_hackandslash": "砍杀",
+          "action_metroidvania": "类银河战士恶魔城",
+          "action_roguelite": "Roguelite",
+          "adventure": "冒险",
+          "adventure_pointandclick": "点击式冒险",
+          "adventure_visualnovel": "视觉小说",
+          "adventure_survivalhorror": "生存恐怖",
+          "adventure_text": "文字冒险",
+          "board": "桌面游戏",
+          "board_cards": "纸牌",
+          "board_hanafuda": "花札",
+          "board_chess": "国际象棋",
+          "board_shougi": "将棋",
+          "board_go": "围棋",
+          "board_mahjong": "麻将",
+          "board_reversi": "黑白棋",
+          "board_othello": "奥赛罗棋",
+          "board_backgammon": "双陆棋",
+          "board_party": "派对游戏",
+          "board_jankenpon": "石头剪刀布",
+          "brawler": "清版动作",
+          "fighting": "格斗",
+          "fighting_melee": "近战格斗",
+          "minigames": "小游戏",
+          "parlor": "游艺厅游戏",
+          "parlor_pinball": "弹珠台",
+          "parlor_jackpot": "头奖机",
+          "parlor_pachinko": "柏青哥",
+          "parlor_darts": "飞镖",
+          "parlor_bowling": "保龄球",
+          "parlor_billiards": "台球",
+          "parlor_mogurataiji": "打地鼠",
+          "parlor_kiddieride": "儿童摇摇车",
+          "parlor_mechanical": "机械式游戏",
+          "quiz": "问答",
+          "racing": "竞速",
+          "racing_combat": "战斗竞速",
+          "racing_driving": "驾驶",
+          "rpg": "角色扮演",
+          "rpg_a": "动作角色扮演",
+          "rpg_j": "日式角色扮演",
+          "rpg_s": "战略角色扮演",
+          "rpg_dungeoncrawler": "地牢探索",
+          "rpg_mmo": "MMORPG",
+          "rhythm": "节奏",
+          "rhythm_karaoke": "卡拉OK",
+          "rhythm_dance": "舞蹈",
+          "shmup": "卷轴射击",
+          "shmup_h": "横版卷轴射击",
+          "shmup_v": "纵版卷轴射击",
+          "shmup_i": "等距视角射击",
+          "shmup_danmaku": "弹幕射击",
+          "shooting": "射击",
+          "shooting_gallery": "射击场",
+          "shooting_rail": "轨道射击",
+          "shooting_fps": "第一人称射击",
+          "shooting_tps": "第三人称射击",
+          "puzzle": "益智",
+          "puzzle_drop": "下落方块",
+          "puzzle_mind": "逻辑解谜",
+          "sim": "模拟",
+          "sim_strategy": "策略",
+          "sim_cardgame": "卡牌游戏",
+          "sim_flight": "飞行模拟",
+          "sim_train": "铁路模拟",
+          "sim_date": "恋爱模拟",
+          "sim_otome": "乙女游戏",
+          "sim_life": "生活模拟",
+          "sim_farm": "农场模拟",
+          "sim_pet": "宠物养成",
+          "sim_fishing": "钓鱼",
+          "sim_god": "上帝模拟",
+          "sim_derby": "赛马模拟",
+          "sim_building": "建造模拟",
+          "sim_cooking": "烹饪",
+          "sports": "体育",
+          "sports_soccer": "足球",
+          "sports_basketball": "篮球",
+          "sports_baseball": "棒球",
+          "sports_volleyball": "排球",
+          "sports_rugby": "橄榄球",
+          "sports_football": "美式橄榄球",
+          "sports_dodgeball": "躲避球",
+          "sports_hockey": "冰球",
+          "sports_skiing": "滑雪",
+          "sports_skateboarding": "滑板",
+          "sports_snowboarding": "单板滑雪",
+          "sports_tennis": "网球",
+          "sports_pingpong": "乒乓球",
+          "sports_paddle": "板式网球",
+          "sports_squash": "壁球",
+          "sports_badminton": "羽毛球",
+          "sports_flyingdisc": "飞盘",
+          "sports_cycling": "自行车",
+          "sports_formula1": "一级方程式",
+          "sports_rally": "拉力赛",
+          "sports_nascar": "NASCAR",
+          "sports_motogp": "MotoGP",
+          "sports_motocross": "越野摩托",
+          "sports_karting": "卡丁车",
+          "sports_jetski": "水上摩托",
+          "sports_golf": "高尔夫",
+          "sports_cricket": "板球",
+          "sports_boxing": "拳击",
+          "sports_kickboxing": "踢拳",
+          "sports_wrestling": "摔角",
+          "sports_sumo": "相扑",
+          "sports_karate": "空手道",
+          "sports_judo": "柔道",
+          "sports_kendo": "剑道",
+          "sports_taekwondo": "跆拳道",
+          "sports_mma": "综合格斗",
+          "sports_decathlon": "十项全能",
+          "sports_running": "跑步",
+          "sports_archery": "射箭",
+          "sports_swimming": "游泳",
+          "sports_rowing": "赛艇",
+          "sports_kayak": "皮划艇",
+          "sports_surf": "冲浪",
+          "notagame": "非游戏",
+          "notagame_educational": "教育",
+          "notagame_drawing": "绘画",
+          "notagame_popcorn": "爆米花机",
+          "notagame_purikura": "大头贴",
+          "notagame_redemption": "彩票机",
+          "notagame_media": "媒体",
+          "notagame_magazine": "杂志",
+          "notagame_application": "应用程序",
+          "notagame_test": "测试程序",
+          "notagame_sdk": "SDK",
+          "notagame_slideshow": "幻灯片",
+          "notagame_sound": "声音",
+          "sim_management": "经营模拟",
+          "sports_roller": "轮滑"
+        },
+        "players": {
+          "vs": "对战",
+          "coop": "合作",
+          "alt": "轮流",
+          "simultaneous": "同时",
+          "mmo": "大型多人在线"
+        },
+        "input": {
+          "joystick": "摇杆",
+          "joystick_2h": "2向摇杆（水平）",
+          "joystick_2v": "2向摇杆（垂直）",
+          "joystickWays": "{{value}}向摇杆",
+          "joystick_double": "双摇杆",
+          "joystick_rotary": "旋转摇杆",
+          "stick": "操纵杆",
+          "stick_twin": "双操纵杆",
+          "trackball": "轨迹球",
+          "paddle": "桨式控制器",
+          "spinner": "旋钮",
+          "wheel": "方向盘",
+          "dial": "转盘",
+          "lightgun": "光枪",
+          "optical": "光学",
+          "positional": "位置式",
+          "positionalCount": "位置式：{{value}}",
+          "buttons": "按钮",
+          "buttonsCount": "按钮：{{value}}",
+          "buttons_pneumatic": "气动按钮",
+          "pedals": "踏板",
+          "pedalsCount": "踏板：{{value}}",
+          "puncher": "拳击垫",
+          "puncherCount": "拳击垫：{{value}}",
+          "motion": "体感操作",
+          "keyboard": "键盘",
+          "keyboard_mahjong": "麻将面板",
+          "touchscreen": "触摸屏",
+          "touchscreen_resistive": "电阻式触摸屏",
+          "touchscreen_capacitive": "电容式触摸屏",
+          "accelerometer": "加速度计",
+          "ddrpad": "跳舞毯",
+          "hrm": "心率监测器"
+        },
+        "save": {
+          "backup": "备份存档",
+          "password": "密码"
+        },
+        "media": {
+          "disc": "光盘",
+          "disk": "磁盘",
+          "file": "文件",
+          "part": "部分",
+          "side": "面",
+          "sideLetter": "{{value}}面",
+          "tape": "磁带",
+          "cart": "卡带"
+        },
+        "unfinished": {
+          "alpha": "Alpha 版",
+          "beta": "Beta 版",
+          "proto": "原型",
+          "demo": "试玩版",
+          "demo_auto": "自动演示",
+          "demo_kiosk": "店头试玩版",
+          "demo_playable": "可玩试玩版",
+          "demo_rolling": "循环演示",
+          "demo_slideshow": "幻灯片演示",
+          "sample": "样品",
+          "debug": "调试版",
+          "competition": "比赛版",
+          "preview": "预览版",
+          "prerelease": "预发布版",
+          "final": "最终版",
+          "wip": "开发中"
+        },
+        "unlicensed": {
+          "unlicensed": "未授权",
+          "bootleg": "私制版",
+          "hack": "改版",
+          "clone": "克隆版",
+          "pirate": "盗版",
+          "translation": "翻译",
+          "translation_old": "旧版翻译",
+          "aftermarket": "后市场发行"
+        },
+        "release": {
+          "homebrew": "自制软件",
+          "unreleased": "未发售",
+          "public-domain": "公有领域",
+          "reissue": "再版",
+          "classics": "经典版",
+          "promo": "宣传版",
+          "not-for-resale": "非卖品",
+          "kiosk": "店头版"
+        },
+        "dump": {
+          "cracked": "已破解",
+          "fixed": "已修复",
+          "hacked": "已黑改",
+          "modified": "已改动",
+          "pirated": "盗版",
+          "trained": "带修改器",
+          "translated": "已翻译",
+          "overdump": "过量转储",
+          "underdump": "不完整转储",
+          "virus": "含病毒",
+          "bad": "损坏转储",
+          "alternate": "替代版本",
+          "verified": "已验证",
+          "pending": "待定",
+          "checksum-bad": "校验和错误",
+          "checksum-unknown": "校验和未知",
+          "hacked_intro": "添加片头",
+          "hacked_intro-removed": "移除片头",
+          "no-boot": "无法启动"
+        },
+        "copyright": {
+          "cw": "Cardware",
+          "cw-r": "Cardware（注册版）",
+          "fw": "免费软件",
+          "gw": "Giftware",
+          "gw-r": "Giftware（注册版）",
+          "lw": "Licenceware",
+          "pd": "公有领域",
+          "sw": "共享软件",
+          "sw-r": "共享软件（注册版）"
+        },
+        "perspective": {
+          "firstperson": "第一人称",
+          "thirdperson": "第三人称",
+          "topdown": "俯视",
+          "isometric": "等距视角",
+          "fixedcamera": "固定视角",
+          "sidescroll_horizontal": "横版卷轴",
+          "sidescroll_vertical": "纵版卷轴"
+        },
+        "art": {
+          "pixelart": "像素画",
+          "celshaded": "卡通渲染",
+          "vector": "矢量",
+          "digitized": "数字化",
+          "handdrawn": "手绘"
+        },
+        "accessibility": {
+          "visual_colorblindmode": "色盲模式",
+          "visual_highcontrast": "高对比度",
+          "visual_textsizeadjust": "可调文字大小",
+          "audio_subtitles": "字幕",
+          "audio_monoaudio": "单声道音频",
+          "audio_visualcues": "视觉提示",
+          "input_remappablecontrols": "可重映射按键",
+          "input_onebuttonmode": "单键模式"
+        },
+        "cabinet": {
+          "upright": "立式",
+          "cocktail": "桌式",
+          "cabaret": "小型立式",
+          "sitdown": "坐式"
+        },
+        "protection": {
+          "no-protection": "无保护",
+          "encrypted": "已加密",
+          "decrypted": "已解密"
+        },
+        "supplement": {
+          "update": "更新",
+          "expansion": "扩展包",
+          "theme": "主题",
+          "avatar": "头像"
+        },
+        "based": {
+          "manganime": "漫画/动画",
+          "movie": "电影"
+        },
+        "multigame": {
+          "compilation": "合集",
+          "menu": "菜单",
+          "volume": "第{{value}}卷"
+        },
+        "alt": {
+          "alt": "替代版本"
+        }
+      },
+      "revisionValue": "修订版 {{value}}",
+      "tagValueNumbered": "{{name}} {{value}}"
     },
     "spinner": {
       "deleting": "正在删除...",
-      "notSupportedLabel": "设备不支持 NFC",
-      "notSupportedSub": "您将无法使用此应用中的任何 NFC 读取或写入功能",
       "nfcDisabledLabel": "NFC 访问权限已禁用",
-      "nfcDisabledSub": "请在设备设置中启用 NFC 访问权限，以使用 NFC 读取和写入功能",
       "openNfcSettings": "打开 NFC 设置",
       "holdTag": "将标签贴近手机",
       "holdTagReader": "将标签贴近读卡器",
-      "scanning": "正在扫描",
-      "pressToScan": "按下以扫描",
       "writeSuccess": "标签写入成功",
       "writeFailed": "标签写入失败",
       "readSuccess": "标签读取成功",
@@ -300,27 +708,24 @@
       "makeReadOnlySuccess": "标签已设为只读",
       "makeReadOnlyFailed": "无法将标签设为只读",
       "formatErrorRetry": "无法格式化此标签。请重试或使用其他标签。",
+      "sessionBusy": "另一个 NFC 操作正在进行中。",
+      "tagLost": "标签移开得太快。请保持不动后重试。",
       "verifying": "正在验证标签...",
       "verifyFailed": "标签未正确保存",
       "verifyFailedRetry": "标签未正确保存。请将其贴近手机后重试。",
       "retapTag": "标签已格式化。请先将标签移开，然后再次贴近手机。"
     },
     "toast": {
-      "updateDbHeading": "正在更新媒体数据库",
       "preparingDb": "正在准备数据库",
-      "hideLabel": "隐藏",
       "updatedDb": "媒体数据库已更新",
       "filesFound": "已扫描 {{count}} 个项目",
-      "nowPlayingHeading": "正在播放",
-      "indexingProgress": "数据库索引进度"
+      "nowPlayingHeading": "正在播放"
     },
     "whatsNew": {
-      "title": "新功能",
       "gotIt": "知道了"
     },
     "write": {
-      "noWriteMethodAvailable": "没有可用的 NFC 写入功能",
-      "nfcNotSupported": "此设备不支持 NFC"
+      "noWriteMethodAvailable": "没有可用的 NFC 写入功能"
     },
     "accessibility": {
       "skipToContent": "跳到主要内容",
@@ -331,7 +736,6 @@
       "title": "确认暂存的令牌？",
       "waitingDescription": "此令牌正在等待确认。",
       "readyDescription": "此令牌已可确认。",
-      "tokenValue": "令牌值",
       "confirm": "确认",
       "dismiss": "隐藏",
       "confirmError": "无法确认暂存的令牌",
@@ -341,29 +745,17 @@
     },
     "scan": {
       "cameraMode": "相机",
-      "cameraAvailable": "使用相机扫描",
       "nfcMode": "NFC",
       "scanError": "扫描标签时出错",
-      "scanSuccess": "标签扫描成功",
-      "noDevices": "未找到 Zaparoo 设备",
-      "connecting": "正在连接...",
-      "reconnecting": "正在重新连接...",
       "connectionError": "连接错误",
       "retry": "重试",
-      "continuous": "连续扫描",
-      "launchOnScan": "扫描时启动",
       "connectedHeading": "已连接",
-      "connectedSub": "地址：{{ip}}",
       "nowPlayingHeading": "正在播放",
       "mediaPreferences": "媒体偏好",
-      "nothingPlaying": "当前没有正在播放的内容",
-      "nowPlayingName": "名称：{{game}}",
-      "nowPlayingSystem": "系统：{{system}}",
       "stopPlayingButton": "停止播放",
       "backgroundMediaHeading": "后台",
       "stopBackgroundMediaButton": "停止后台媒体",
       "stopBackgroundMediaError": "无法停止后台媒体",
-      "playlistName": "播放列表：{{playlist}}",
       "playlistPosition": "第 {{current}} 项，共 {{total}} 项",
       "playlistControls": "{{section}}播放列表控件",
       "playlistPrevious": "上一项",
@@ -371,12 +763,14 @@
       "playlistPlay": "播放该播放列表",
       "playlistNext": "下一项",
       "playlistControlError": "无法控制播放列表",
-      "lastScannedHeading": "上次扫描",
-      "lastScannedTime": "时间：{{time}}",
+      "mediaControls": "{{section}}控件",
+      "mediaPause": "暂停",
+      "mediaResume": "继续",
+      "mediaControlError": "无法控制媒体",
       "lastScannedUid": "ID：{{uid}}",
-      "lastScannedText": "值：{{text}}",
-      "historyTitle": "扫描历史记录",
+      "historyTitle": "历史记录",
       "historyReplay": "重新执行扫描",
+      "historyUnknown": "未知扫描",
       "historyReplayError": "无法重新执行扫描",
       "historyFailed": "失败",
       "purchaseProTitle": "Zaparoo Pro",
@@ -397,11 +791,45 @@
       "purchaseAccountDescription": "将 Pro 关联到免费的 Zaparoo Online 账户。即使应用商店找不到这笔购买，你仍有备份可用，并且可以在任意数量的 Android 和 iOS 设备上使用 Pro。",
       "purchaseAccountAction": "设置 Zaparoo Online",
       "purchaseAccountLater": "暂不",
-      "completeIntro": "开始使用 Zaparoo",
       "statusScanning": "正在扫描 NFC 标签",
       "statusSuccess": "标签扫描成功",
       "statusError": "标签扫描失败",
-      "remoteKeyboard": "控制"
+      "remoteKeyboard": "控制",
+      "tapTag": "扫描标签",
+      "tapTagScanning": "正在扫描",
+      "tapTagStop": "停止扫描",
+      "scanCode": "扫码",
+      "statusStopped": "已停止扫描",
+      "noReaderTitle": "此手机没有读卡器",
+      "noReaderSub": "此手机没有可用的 NFC 或相机，因此无法扫描。您仍可以用它管理设备。",
+      "devicePill": "{{device}}，{{status}}",
+      "deviceNone": "无设备",
+      "deviceSheetTitle": "设备",
+      "deviceSheetRecent": "切换设备",
+      "deviceSheetAllDevices": "管理设备",
+      "nowPlayingIdle": "当前没有播放内容",
+      "lastPlayed": "上次播放：{{media}}",
+      "playLastPlayed": "再次播放 {{media}}",
+      "playLastPlayedUnavailable": "播放上次播放的媒体",
+      "playLastPlayedError": "无法启动该媒体",
+      "readersHeading": "读卡器",
+      "readerHolding": "已放置媒体",
+      "recentsHeading": "最近玩过",
+      "favoritesHeading": "收藏",
+      "coverRowLaunch": "游玩 {{game}}",
+      "coverRowDetails": "查看 {{media}} 的详细信息",
+      "coverRowLaunchError": "无法启动该媒体",
+      "historyTabs": "历史记录类型",
+      "historyTabScans": "扫描",
+      "historyTabPlayed": "玩过",
+      "historyPlayedEmpty": "此设备上还没有玩过任何内容",
+      "history": {
+        "empty": "还没有扫描记录"
+      },
+      "scanHistoryTitle": "扫描历史",
+      "playHistoryTitle": "播放历史",
+      "historyRefresh": "刷新历史",
+      "historyLoadError": "无法加载历史记录"
     },
     "create": {
       "title": "创建",
@@ -421,7 +849,6 @@
         "searchButton": "搜索",
         "gamesDbUpdate": "搜索前必须更新媒体数据库",
         "searchError": "搜索媒体时出错",
-        "noGamesFound": "未找到媒体",
         "title": "搜索媒体",
         "gameInput": "名称",
         "gameInputPlaceholder": "输入媒体名称",
@@ -430,7 +857,6 @@
         "tagsInput": "标签",
         "allTags": "任意标签",
         "systemLabel": "系统",
-        "categoryLabel": "类别",
         "pathLabel": "路径",
         "zapscriptLabel": "ZapScript",
         "tagsLabel": "标签",
@@ -446,8 +872,6 @@
         "resultsFound_one": "找到 {{count}} 个结果",
         "resultsFound_other": "找到 {{count}} 个结果",
         "loadMore": "加载更多结果",
-        "loadedMore_one": "已加载另外 {{count}} 个结果",
-        "loadedMore_other": "已加载另外 {{count}} 个结果",
         "startSearching": "可以开始搜索",
         "startSearchingHint": "输入媒体名称或选择筛选条件以开始搜索",
         "noResultsFound": "未找到“{{query}}”的结果",
@@ -458,34 +882,35 @@
         "clearFilters": "清除筛选条件",
         "tryAgain": "重试",
         "recentSearches": "最近搜索",
+        "searchAgain": "搜索 {{query}}",
+        "recentSystem": "系统：{{system}}",
+        "recentTags": "标签：{{tags}}",
+        "recentAllMedia": "所有媒体",
         "noRecentSearches": "暂无最近搜索",
         "noRecentSearchesHint": "开始搜索后，这里会显示搜索历史记录",
         "clearHistory": "清除历史记录",
-        "gamesDbSettings": "打开数据库设置",
-        "searchResult": "选择搜索结果"
+        "gamesDbSettings": "打开数据库设置"
       },
       "custom": {
         "title": "自定义 ZapScript",
         "textPlaceholder": "输入 ZapScript",
         "textareaLabel": "ZapScript 编辑器",
         "write": "写入标签",
-        "run": "运行",
+        "run": "测试",
         "clear": "清除",
         "failMsg": "ZapScript 运行失败",
         "characters": "{{count}} 个字符",
         "searchMedia": "媒体",
         "commands": "命令",
+        "commandsTitle": "命令",
         "selectSystem": "系统",
         "zapscriptHelp": "帮助",
         "clearConfirmTitle": "清除 ZapScript？",
-        "commandPalette": "命令面板",
-        "insertCommandStart": "插入命令开头",
-        "insertCommandSeparator": "插入命令分隔符",
         "insertMedia": "插入媒体路径",
         "insert": "插入",
         "insertSystem": "插入系统",
         "insertCommand": "插入命令",
-        "runZapScript": "运行 ZapScript"
+        "runZapScript": "测试 ZapScript"
       },
       "nfc": {
         "title": "NFC 工具",
@@ -497,9 +922,7 @@
         "confirm": "确定吗？",
         "tabs": {
           "read": "读取",
-          "write": "写入",
-          "tools": "工具",
-          "history": "历史记录"
+          "tools": "工具"
         },
         "readTab": {
           "scanTag": "扫描标签",
@@ -530,35 +953,11 @@
           "historicalBytes": "历史字节（ISO-DEP）",
           "manufacturer": "制造商（NFC-F）",
           "systemCode": "系统代码（NFC-F）",
-          "copiedToClipboard": "已将{{label}}复制到剪贴板",
-          "copyFailed": "复制到剪贴板失败",
-          "tagData": "标签数据",
           "shareTitle": "NFC 标签数据",
           "shareText": "UID：{{uid}}\n文本：{{text}}",
           "shareTagData": "分享标签数据"
         },
-        "write": {
-          "templates": {
-            "text": "文本",
-            "url": "URL",
-            "wifi": "WiFi",
-            "contact": "联系人",
-            "custom": "自定义"
-          },
-          "writeToTag": "写入标签",
-          "preview": "预览",
-          "estimatedSize": "预计大小"
-        },
-        "history": {
-          "title": "NFC 历史记录",
-          "empty": "无历史记录",
-          "clearAll": "全部清除",
-          "writeAgain": "再次写入",
-          "remove": "移除"
-        },
         "tools": {
-          "dangerousOperations": "危险操作",
-          "platformInfo": "平台信息",
           "formatDescription": "将标签格式化为 NDEF 标准并移除所有数据",
           "formatWarning": "这将永久删除标签上的所有数据",
           "eraseDescription": "移除标签上的所有 NDEF 数据",
@@ -579,6 +978,8 @@
           "reload": "重新加载配置文件",
           "reloadedSuccess": "已从配置文件重新加载映射",
           "reloadFailed": "映射重新加载失败",
+          "loadFailed": "无法加载映射",
+          "retry": "重试",
           "disabledBadge": "已禁用",
           "readOnlyBadge": "只读",
           "noOverride": "无操作",
@@ -605,7 +1006,6 @@
           "matchRegexHelp": "模式是正则表达式。",
           "matchRegexInvalid": "正则表达式无效",
           "pattern": "模式",
-          "patternRequired": "模式为必填项",
           "override": "ZapScript",
           "overrideHelp": "映射匹配时运行。",
           "enabled": "已启用",
@@ -634,7 +1034,7 @@
       "loginGoogle": "使用 Google 登录",
       "loginApple": "使用 Apple 登录",
       "logout": "退出登录",
-      "loginSuccess": "登录成功",
+      "logoutFailed": "无法退出登录",
       "loginWrong": "电子邮箱或密码无效",
       "loginFail": "登录时出错",
       "mfaTitle": "双重身份验证",
@@ -646,7 +1046,6 @@
       "mfaBack": "返回登录",
       "mfaExpired": "验证已过期。请重新登录。",
       "mfaFailed": "验证码验证失败。请重试。",
-      "signUpSuccess": "账户创建成功",
       "signUpFail": "账户创建失败",
       "emailExists": "使用此电子邮箱的账户已存在",
       "weakPassword": "密码强度太低",
@@ -658,16 +1057,9 @@
       "resetEmailSent": "密码重置邮件已发送",
       "resetEmailFailed": "密码重置邮件发送失败",
       "enterEmailFirst": "请先输入电子邮箱地址",
-      "oauthNotAvailable": "社交账号登录需要使用 Zaparoo 应用",
       "settingsStatusSignedOut": "未登录",
       "settingsStatusSignedIn": "已登录",
-      "settingsStatusFree": "免费账户",
       "settingsStatusWarpActive": "Warp 已启用",
-      "settingsLoggedInAs": "当前登录账户：{{email}}",
-      "loggedInAs": "当前登录账户：{{email}}",
-      "loggedInWithGoogle": "已使用 Google 登录",
-      "loggedInWithApple": "已使用 Apple 登录",
-      "loggedInWithPassword": "已使用电子邮箱和密码登录",
       "dashboard": "控制面板",
       "changePassword": "更改密码",
       "deleteAccount": "删除账户",
@@ -690,7 +1082,6 @@
       "ageConfirmRequired": "需要确认年龄",
       "deviceLink": {
         "title": "已连接的设备",
-        "description": "关联后，此设备将添加到您的账户并可使用 Online 功能。游玩历史记录同步免费。在您开启相应功能前，关联操作不会上传游玩历史记录或备份。",
         "help": "关联后，此设备将添加到您的账户并可使用 Online 功能。仅关联设备不会上传任何内容。游玩历史记录同步和云备份必须分别启用。",
         "disconnected": "请先连接 Core 设备，再将其关联到 Zaparoo Online。",
         "backToSettings": "返回设置",
@@ -699,7 +1090,6 @@
         "checking": "正在检查设备关联...",
         "linking": "正在关联设备...",
         "linked": "设备已关联到 Zaparoo Online",
-        "linkedAs": "关联账户",
         "linkedSince": "关联时间",
         "warp": "Warp",
         "warpActive": "已启用",
@@ -722,7 +1112,6 @@
         "loading": "正在检查 Online 功能...",
         "allFeatures": "所有 Online 功能",
         "allFeaturesHelp": "一次性开启或关闭所有 Online 功能。每项功能仍可单独更改。仅在 Warp 已启用时才会开启云备份。",
-        "someOn": "部分开启",
         "remoteControl": "远程控制",
         "remoteControlHelp": "允许已关联的 Zaparoo Online 账户向此设备发送经批准的命令。",
         "remoteControlSummary": "允许已关联的 Zaparoo Online 账户向此设备发送经批准的命令。",
@@ -730,19 +1119,17 @@
         "playHistoryHelp": "在 Zaparoo Online 账户中保存您玩过的内容和时间。此功能免费。\n\n首次同步会上传本地保留的游玩历史记录。关闭后将停止后续上传。",
         "playHistorySummary": "免费。在 Zaparoo Online 账户中保存您玩过的内容和时间。",
         "librarySync": "同步媒体库",
-        "librarySyncHelp": "将您的游戏列表、收藏、喜欢和卡组与已关联的 Zaparoo Online 账户同步。",
-        "librarySyncSummary": "将您的游戏列表、收藏、喜欢和卡组与已关联的 Zaparoo Online 账户同步。",
+        "librarySyncHelp": "将您的媒体列表、收藏、喜欢和卡组与已关联的 Zaparoo Online 账户同步。",
+        "librarySyncSummary": "将您的媒体列表、收藏、喜欢和卡组与已关联的 Zaparoo Online 账户同步。",
         "automaticBackup": "自动云备份",
         "automaticBackupHelp": "定期将支持的设置、输入配置、游戏存档和即时存档备份到云端。上传需要有效的 Warp 订阅。\n\n关闭后将停止自动上传。现有云备份仍可用于恢复。",
         "automaticBackupSummary": "Warp 包含此功能。定期将支持的设备数据备份到云端。",
-        "free": "免费",
         "requiresWarp": "需要 Warp",
         "checkingWarp": "正在检查 Warp",
         "schedule": "备份计划",
         "scheduleDaily": "每天",
         "scheduleWeekly": "每周",
         "scheduleManual": "仅手动",
-        "backupStatus": "云备份状态",
         "checkingStatus": "正在检查...",
         "statusUnavailable": "不可用",
         "backupInProgress": "正在备份...",
@@ -750,7 +1137,6 @@
         "lastBackup": "上次备份：{{date}}",
         "neverBackedUp": "尚未备份",
         "notConfigured": "未配置",
-        "remoteStatus": "远程控制状态",
         "remoteStates": {
           "unknown": "未知",
           "disabled": "关闭",
@@ -776,6 +1162,7 @@
       "termsOfService": "服务条款",
       "privacyPolicy": "隐私政策",
       "and": "和",
+      "or": "或",
       "warp": {
         "title": "Zaparoo Warp",
         "description": "使用云备份保护支持的设备数据，并在 Warp 有效期间使用 Zaparoo Pro。",
@@ -827,7 +1214,14 @@
         "manage": "管理订阅",
         "openingManagement": "正在打开订阅设置...",
         "manageUnavailable": "此处无法管理订阅",
-        "manageFailed": "无法打开订阅管理"
+        "manageFailed": "无法打开订阅管理",
+        "trialActive": "Warp 试用已生效",
+        "trialEnds": "试用将于 {{date}} 结束",
+        "trialPending": "正在确认你的 Warp 试用。",
+        "trialExpired": "你的 Warp 试用已结束。",
+        "trialImmediateBilling": "在试用期间订阅会立即开始计费。",
+        "trialLastDay": "你的 Warp 试用将在 24 小时内结束。",
+        "trialEnding": "你的 Warp 试用将在 3 天内结束。"
       }
     },
     "requirements": {
@@ -847,6 +1241,7 @@
       "emailNotVerified": "电子邮箱尚未验证",
       "emailSendFailed": "验证邮件发送失败",
       "emailCheckFailed": "验证状态检查失败",
+      "saveFailed": "保存失败",
       "emailVerified": "电子邮箱已验证",
       "saved": "已保存",
       "save": "保存",
@@ -854,22 +1249,30 @@
       "logout": "退出登录"
     },
     "settings": {
+      "groups": {
+        "device": "设备",
+        "app": "应用",
+        "support": "支持"
+      },
       "title": "设置",
-      "moreSettings": "更多设置",
       "device": "设备地址",
+      "deviceSetup": {
+        "addDeviceManually": "手动添加设备",
+        "enterAddress": "输入地址",
+        "connect": "连接"
+      },
       "deviceAddressRequired": "请输入设备地址",
       "deviceAddressInvalid": "请输入有效的主机名、IP 地址或主机:端口。",
-      "modeLabel": "扫描模式",
       "tapMode": "轻触",
       "insertMode": "保持",
       "updateDb": "更新媒体数据库",
       "updateDb.cancel": "取消",
       "updateDb.resume": "继续",
       "updateDb.status.ready": "数据库已就绪",
+      "updateDb.status.noDatabase": "未找到数据库",
       "updateDb.status.optimizing": "正在优化数据库（可正常使用）",
       "updateDb.status.paused": "已暂停",
       "updateDb.status.throttled": "正在降速运行",
-      "updateDb.status.reconnecting": "正在重新连接...",
       "updateDb.status.mediaCount": "数据库已就绪：{{formattedCount}} 个媒体标题",
       "updateDb.status.noConnection": "未连接",
       "updateDb.status.checking": "正在检查数据库状态...",
@@ -877,7 +1280,7 @@
       "updateDb.status.setupMissing": "媒体数据库尚未就绪。请更新数据库以重新构建。",
       "updateDb.startError": "媒体数据库更新启动失败",
       "updateDb.blockedByScrape": "正在抓取数据。完成前无法更新数据库。",
-      "updateDb.selectSystemsTitle": "选择要更新的系统",
+      "updateDb.selectSystemsTitle": "要更新的系统",
       "updateDb.allSystems": "所有系统",
       "updateDb.progressLabel": "数据库更新进度",
       "updateDb.cleanOrphans": "清理缺失媒体",
@@ -893,6 +1296,8 @@
       "scrapeMedia.cancel": "取消",
       "scrapeMedia.starting": "正在启动...",
       "scrapeMedia.startError": "无法启动媒体抓取",
+      "scrapeMedia.cancelError": "无法取消媒体抓取",
+      "scrapeMedia.resumeError": "无法继续媒体抓取",
       "scrapeMedia.scraperPlaceholder": "选择抓取器",
       "scrapeMedia.allSystems": "所有系统",
       "scrapeMedia.selectSystemsTitle": "选择要抓取的系统",
@@ -923,7 +1328,6 @@
       "scrapeMedia.status.paused": "已暂停",
       "scrapeMedia.status.throttled": "正在降速运行",
       "scrapeMedia.status.reconnecting": "正在重新连接...",
-      "scrapeMedia.status.totalScraped": "已抓取 {{formattedCount}} 条媒体记录",
       "scrapeMedia.force": "重新抓取已抓取的媒体",
       "scrapeMedia.resume": "继续",
       "media": {
@@ -931,7 +1335,6 @@
         "databaseTitle": "媒体数据库",
         "scraperTitle": "元数据抓取器"
       },
-      "designer": "Zaparoo Designer",
       "getApp": "获取 Zaparoo 应用",
       "language": "语言",
       "languageRegion": {
@@ -949,13 +1352,15 @@
       "networkScan": {
         "title": "查找设备",
         "searching": "正在搜索设备...",
-        "stillSearching": "仍在搜索...",
-        "noDevices": "未找到设备",
+        "refresh": "重新搜索",
+        "noOtherDevices": "未找到其他设备",
         "addresses_one": "IP 地址：{{addresses}}",
         "addresses_other": "IP 地址：{{addresses}}",
-        "version": "v{{version}}"
+        "version": "v{{version}}",
+        "scanFailed": "无法搜索设备"
       },
       "connectionFailed": "无法连接到设备",
+      "updateFailed": "无法保存设置",
       "notConnected": "未连接",
       "coreOutdated": {
         "title": "建议更新 Core（v{{version}}+）",
@@ -965,7 +1370,6 @@
       "deviceHistoryEmpty": "暂无已保存的设备。",
       "deviceHistoryError": "无法加载已保存的设备。",
       "deviceHistoryLoading": "正在加载已保存的设备...",
-      "deviceDetails": "设备详细信息",
       "activeDevice": "当前设备",
       "deviceDetail": {
         "nameLabel": "设备名称",
@@ -997,10 +1401,10 @@
       "about": {
         "title": "关于",
         "version": "版本：{{version}}",
-        "createdBy": "创建者",
         "translationsBy": "翻译者",
-        "contributors": "Zaparoo 贡献者",
         "wizzodev": "Wizzo.dev 赞助者",
+        "roleDeveloper": "开发者",
+        "roleDesigner": "用户体验设计师",
         "joinPatreon": "加入 Patreon"
       },
       "licenses": {
@@ -1040,9 +1444,6 @@
       "playControls": {
         "title": "播放控制"
       },
-      "playtime": {
-        "title": "游玩时间"
-      },
       "advanced": {
         "title": "高级",
         "errorReporting": "错误报告",
@@ -1055,6 +1456,14 @@
         "showFilenamesHelp": "在应用内搜索结果中显示媒体的完整文件名，而不是整理后的版本。如果文件名中使用了大量自定义标签，此选项会很有帮助。",
         "appIconBadges": "应用图标角标",
         "appIconBadgesHelp": "在应用图标上显示收件箱未读消息数量。由于角标通过通知设置管理，iOS 可能会请求通知权限。",
+        "appPreview": "App preview",
+        "appPreviewHelp": "Render app-only screens in the browser for design work. Nothing behind them is functional: NFC, camera and purchases are simulated.",
+        "appPreviewNfcResult": "Preview NFC result",
+        "appPreviewNfcHold": "Wait for a tag",
+        "appPreviewNfcSuccess": "Success",
+        "appPreviewNfcVerifyFailed": "Verification failed",
+        "appPreviewNfcRetap": "Re-tap required",
+        "appPreviewNfcError": "Error",
         "purchasePreview": "购买预览",
         "purchasePreviewLive": "实时状态",
         "purchasePreviewFree": "免费账户",
@@ -1066,12 +1475,6 @@
         "viewLogs": "查看日志"
       },
       "core": {
-        "title": "Core 设置",
-        "soundEffects": "扫描时播放音效",
-        "autoDetect": "自动检测外部 NFC 读卡器",
-        "debug": "调试模式",
-        "nfcDriver": "NFC 驱动程序连接字符串",
-        "insertModeBlocklist": "保持模式 Core 屏蔽列表",
         "playtime": {
           "title": "游玩时间限制",
           "enabled": "启用游玩时间限制",
@@ -1110,7 +1513,10 @@
           "lastUsed": "上次使用：{{date}}",
           "neverUsed": "从未使用",
           "roleLabel": "角色",
-          "role": { "admin": "管理员", "member": "成员" },
+          "role": {
+            "admin": "管理员",
+            "member": "成员"
+          },
           "name": "名称",
           "nameRequiredLabel": "名称 *",
           "nameRequired": "请输入个人资料名称",
@@ -1132,7 +1538,6 @@
           "limitsOff": "关闭",
           "dailyLimit": "每日限制",
           "sessionLimit": "单次限制",
-          "inherit": "继承",
           "unlimitedHelp": "将两个字段都设为 0 即可允许无限游玩时间。",
           "durationInvalid": "小时必须大于或等于 0，分钟必须介于 0 和 59 之间",
           "saved": "个人资料已保存",
@@ -1153,7 +1558,8 @@
           "switch": "切换个人资料",
           "shared": "共享个人资料",
           "switched": "已切换个人资料",
-          "switchFailed": "无法切换个人资料"
+          "switchFailed": "无法切换个人资料",
+          "switchOptionActive": "{{name}}（当前使用）"
         },
         "launchGuard": {
           "title": "启动保护",
@@ -1167,8 +1573,6 @@
         }
       },
       "app": {
-        "title": "应用设置",
-        "preferRemoteWriter": "写入时优先使用已连接的读卡器",
         "restorePurchases": "恢复购买",
         "restoreSuccess": "购买已恢复",
         "restoreNotFound": "未找到购买项目。如果商店显示您已拥有 Pro，请点按“解锁 Pro”以验证所有权。",
@@ -1177,36 +1581,35 @@
         "copyBillingDiagnostics": "复制账单诊断",
         "billingDiagnosticsCopied": "账单诊断已复制",
         "billingDiagnosticsCopyFailed": "无法复制账单诊断",
-        "shakeToLaunch": "摇动启动",
         "proFeature": "Pro",
         "proActive": "Zaparoo Pro 已启用",
         "shakeRandomMedia": "随机媒体",
         "shakeCustom": "自定义",
         "shakeSelectSystem": "选择系统",
-        "shakeZapscript": "要启动的 ZapScript",
         "shakeModeLabel": "摇动模式"
       },
       "logs": {
         "title": "日志",
         "refresh": "刷新",
-        "filters": "筛选条件",
         "download": "下载",
         "copy": "复制到剪贴板",
         "upload": "上传日志",
         "uploading": "正在上传日志...",
         "uploadSuccess": "日志已上传",
         "uploadError": "日志上传失败",
+        "downloadError": "日志下载失败",
         "uploadResult": "已上传日志链接",
         "copyUploadLink": "复制已上传日志链接",
-        "filename": "文件名",
-        "fileSize": "文件大小",
         "searchPlaceholder": "筛选日志...",
-        "levelFilters": "日志级别",
-        "totalEntries": "条目总数",
-        "filteredEntries": "正在显示",
+        "entriesShowing": "显示 {{total}} 条中的 {{shown}} 条",
+        "entryCount_one": "{{count}} 条记录",
+        "entryCount_other": "{{count}} 条记录",
+        "levelDebug": "调试",
+        "levelInfo": "信息",
+        "levelWarn": "警告",
+        "levelError": "错误",
         "noEntriesFound": "没有符合筛选条件的日志条目",
         "fetchError": "日志获取失败",
-        "notConnected": "连接到 Zaparoo 设备以访问日志",
         "showMore": "显示更多",
         "showLess": "收起"
       },
@@ -1218,7 +1621,11 @@
         "textSizeSmall": "小",
         "textSizeDefault": "中",
         "textSizeLarge": "大",
-        "textSizeExtraLarge": "特大"
+        "textSizeExtraLarge": "特大",
+        "appearance": "外观",
+        "appearanceSystem": "系统",
+        "appearanceLight": "浅色",
+        "appearanceDark": "深色"
       },
       "help": {
         "title": "帮助",
@@ -1226,7 +1633,6 @@
         "taptoWiki": "Zaparoo 文档",
         "documentationLabel": "文档",
         "gettingStarted": "Zaparoo 入门",
-        "softwareSetup": "Zaparoo 软件设置",
         "commandReference": "ZapScript 帮助",
         "communityLabel": "社区",
         "discord": "加入 Discord 服务器",
@@ -1234,14 +1640,18 @@
         "technicalSupport": "技术支持",
         "reportIssue": "在 GitHub 上报告问题",
         "emailLabel": "支持邮箱："
-      }
+      },
+      "connectDevice": "连接到{{device}}",
+      "savedDevices": "已保存的设备"
     },
     "systemSelector": {
+      "loadError": "无法加载系统",
+      "clear": "清除",
+      "done": "完成",
       "title": "选择系统",
       "searchPlaceholder": "搜索系统...",
       "searchSystems": "搜索系统",
-      "clearSearch": "清除搜索",
-      "systemsList": "系统列表",
+      "otherCategory": "其他",
       "selected": "已选择 {{name}}",
       "deselected": "已取消选择 {{name}}",
       "allSystems": "所有系统",
@@ -1250,25 +1660,32 @@
       "noResults": "未找到系统",
       "noResultsHint": "请尝试更短的关键词或清除搜索。",
       "noSystems": "没有可用的系统",
-      "selectedCount": "已选择 {{count}} 个系统",
       "multipleSelected": "已选择 {{count}} 个系统",
-      "clearAll": "全部清除",
-      "apply": "应用"
+      "clearAll": "全部清除"
+    },
+    "launcherSelector": {
+      "title": "选择启动器",
+      "search": "搜索启动器",
+      "loadError": "无法加载启动器",
+      "noResults": "未找到启动器",
+      "noLaunchers": "没有可用的启动器",
+      "unavailable": "在此设备上不可用"
     },
     "tagSelector": {
+      "expandAll": "全部展开",
+      "collapseAll": "全部折叠",
+      "unavailable": "标签不可用",
       "title": "选择标签",
       "searchPlaceholder": "筛选标签...",
       "searchTags": "筛选标签",
-      "clearSearch": "清除搜索",
       "resultsLabel": "匹配的标签",
-      "allTypes": "所有类型",
       "noResults": "未找到标签",
       "noResultsHint": "请尝试更短的关键词或清除搜索。",
       "noTags": "没有可用的标签",
-      "selectedCount": "已选择 {{count}} 个标签",
       "multipleSelected": "已选择 {{count}} 个标签",
       "clearAll": "全部清除",
       "apply": "应用",
+      "applyCount": "应用（{{count}}）",
       "selected": "已选择 {{name}}",
       "deselected": "已取消选择 {{name}}",
       "type": {
@@ -1278,9 +1695,12 @@
         "arcadeboard": "街机基板",
         "art": "美术风格",
         "based": "改编自",
+        "builddate": "构建日期",
+        "cabinet": "街机机柜",
         "category": "类别",
         "compatibility": "兼容性",
         "copyright": "版权",
+        "credit": "制作人员",
         "developer": "开发商",
         "disc": "光盘",
         "disctotal": "光盘总数",
@@ -1288,32 +1708,44 @@
         "dump": "转储状态",
         "edition": "版本",
         "embedded": "内置",
+        "episode": "剧集",
         "extension": "扩展名",
+        "gamefamily": "游戏系列",
         "gamegenre": "游戏类型",
         "genre": "类型",
         "input": "输入",
+        "issue": "期号",
         "lang": "语言",
         "mameparent": "MAME 父项",
         "media": "媒体",
         "multigame": "多游戏",
+        "patch": "补丁",
         "perspective": "视角",
         "platform": "平台",
         "players": "玩家人数",
         "port": "移植版",
+        "property": "属性",
+        "protection": "复制保护",
         "publisher": "发行商",
+        "rating": "评分",
         "reboxed": "重新包装",
         "region": "地区",
+        "release": "发行",
         "rerelease": "再发行",
         "rev": "修订版",
         "save": "存档",
         "search": "搜索",
+        "season": "季",
         "series": "系列",
         "set": "套装",
         "supplement": "补充内容",
-        "unlicensed": "未授权",
+        "track": "曲目",
         "unfinished": "未完成",
         "unknown": "未知",
+        "unlicensed": "未授权",
+        "user": "用户",
         "video": "视频",
+        "volume": "卷",
         "year": "年份"
       }
     },
@@ -1353,7 +1785,10 @@
       "deviceLinking": "Zaparoo Online 设备关联",
       "onlineRemoteControl": "Zaparoo Online 远程控制",
       "onlineLibrarySync": "Zaparoo Online 媒体库同步",
-      "profiles": "个人资料"
+      "profiles": "个人资料",
+      "mediaRecents": "最近玩过",
+      "mediaHistoryDistinct": "去重的播放历史",
+      "launchers": "启动器列表"
     },
     "inbox": {
       "title": "通知",
@@ -1364,6 +1799,8 @@
       "deleteOne": "删除“{{title}}”",
       "clearAll": "全部清除",
       "confirmClear": "清除所有通知？",
+      "deleteFailed": "无法删除通知",
+      "clearFailed": "无法清除通知",
       "confirmClearYes": "全部清除",
       "confirmClearNo": "取消",
       "severity": {
@@ -1414,12 +1851,13 @@
       "description": "输入设备上显示的 6 位 PIN。",
       "noAddress": "配对前，请在设置中填写设备地址。",
       "pinLabel": "PIN",
-      "pinPlaceholder": "000000",
       "clientNameLabel": "设备名称",
       "startPairing": "配对",
       "pairing": "正在配对...",
       "success": "配对成功",
       "openPairing": "与设备配对",
+      "defaultClientName": "Zaparoo App {{platform}}",
+      "unknownDeviceName": "未知",
       "connectionError": {
         "encryptionRequired": "此设备需要配对。",
         "credentialsRevoked": "配对已失效。请重新配对。",
@@ -1450,7 +1888,7 @@
       },
       "deviceAddress": {
         "title": "连接设备",
-        "text": "轻触搜索图标以查找网络中的 Zaparoo 设备；也可根据需要手动输入设备 IP 地址。"
+        "text": "打开设备选择，选择已保存或附近的 Zaparoo 设备，或手动输入设备地址。"
       },
       "mediaDatabase": {
         "title": "更新媒体库",
@@ -1471,6 +1909,315 @@
         "next": "下一步",
         "finish": "完成"
       }
+    },
+    "zapscript": {
+      "builder": {
+        "view": "编辑器视图",
+        "steps": "步骤",
+        "text": "文本",
+        "addStep": "添加步骤",
+        "empty": "还没有步骤",
+        "emptyHint": "添加步骤以选择扫描时执行的操作",
+        "stepLabel": "步骤 {{position}}：{{name}}",
+        "moveUp": "上移步骤 {{position}}",
+        "moveDown": "下移步骤 {{position}}",
+        "remove": "删除步骤 {{position}}",
+        "options": "高级",
+        "textStep": "ZapScript 文本",
+        "textStepDescription": "此步骤使用的语法只能以文本形式编辑",
+        "textStepField": "步骤 {{position}} 的 ZapScript",
+        "textOnly": "此脚本只能以文本形式编辑",
+        "textOnlyHint": "它使用了步骤视图无法拆分的语法",
+        "editAsText": "以文本形式编辑",
+        "noChoice": "未设置",
+        "searchMediaFor": "为{{field}}搜索媒体",
+        "chooseSystemFor": "为{{field}}选择系统",
+        "chooseLauncherFor": "为{{field}}选择启动器",
+        "searchCommands": "搜索命令",
+        "noCommands": "未找到命令"
+      },
+      "groups": {
+        "launch": "启动",
+        "playlist": "播放列表",
+        "input": "输入",
+        "ui": "屏幕显示",
+        "profile": "个人资料",
+        "mister": "MiSTer",
+        "http": "网络请求",
+        "utility": "实用工具"
+      },
+      "commands": {
+        "launch": {
+          "description": "通过路径或标题启动媒体"
+        },
+        "launch_system": {
+          "description": "打开系统而不加载任何媒体"
+        },
+        "launch_random": {
+          "description": "随机启动某个系统中的游戏"
+        },
+        "launch_search": {
+          "description": "启动与搜索匹配的第一个媒体"
+        },
+        "launch_title": {
+          "description": "按系统和标题启动媒体"
+        },
+        "launch_last": {
+          "description": "启动最近玩过的媒体"
+        },
+        "playlist_play": {
+          "description": "开始播放列表，或继续已暂停的播放列表"
+        },
+        "playlist_stop": {
+          "description": "停止并关闭播放列表"
+        },
+        "playlist_next": {
+          "description": "转到播放列表中的下一项"
+        },
+        "playlist_previous": {
+          "description": "转到播放列表中的上一项"
+        },
+        "playlist_goto": {
+          "description": "跳转到播放列表中指定序号的项目"
+        },
+        "playlist_pause": {
+          "description": "暂停播放列表"
+        },
+        "playlist_load": {
+          "description": "加载播放列表但不开始播放"
+        },
+        "playlist_open": {
+          "description": "在屏幕上显示播放列表以选择项目"
+        },
+        "execute": {
+          "description": "在设备上运行命令"
+        },
+        "delay": {
+          "description": "在运行下一步之前等待"
+        },
+        "evaluate": {
+          "description": "运行另一段 ZapScript"
+        },
+        "write": {
+          "description": "将文本写入下一个扫描的标签"
+        },
+        "stop": {
+          "description": "停止正在播放的媒体"
+        },
+        "echo": {
+          "description": "向 Zaparoo 日志写入一条消息"
+        },
+        "control": {
+          "description": "控制正在播放的媒体，例如暂停或存档"
+        },
+        "screenshot": {
+          "description": "截取屏幕截图"
+        },
+        "mister_ini": {
+          "description": "切换到另一个 MiSTer INI 文件"
+        },
+        "mister_core": {
+          "description": "启动 MiSTer 核心"
+        },
+        "mister_script": {
+          "description": "运行 MiSTer Scripts 文件夹中的脚本"
+        },
+        "mister_mgl": {
+          "description": "使用 MiSTer MGL 内容启动"
+        },
+        "mister_wallpaper": {
+          "description": "设置或清除 MiSTer 菜单壁纸"
+        },
+        "http_get": {
+          "description": "在后台访问一个网址"
+        },
+        "http_post": {
+          "description": "向一个网址发送数据"
+        },
+        "input_keyboard": {
+          "description": "按下键盘按键"
+        },
+        "input_gamepad": {
+          "description": "按下手柄按钮"
+        },
+        "input_text": {
+          "description": "用键盘输入文本"
+        },
+        "input_coinp1": {
+          "description": "为玩家 1 投币"
+        },
+        "input_coinp2": {
+          "description": "为玩家 2 投币"
+        },
+        "input_coinp3": {
+          "description": "为玩家 3 投币"
+        },
+        "input_coinp4": {
+          "description": "为玩家 4 投币"
+        },
+        "ui_notice": {
+          "description": "在屏幕上显示通知"
+        },
+        "ui_picker": {
+          "description": "在屏幕上显示选项列表"
+        },
+        "traits": {
+          "description": "为此脚本附加额外信息"
+        },
+        "profile": {
+          "description": "切换到某个个人资料"
+        },
+        "profile_clear": {
+          "description": "停用当前个人资料"
+        },
+        "playtime_extend": {
+          "description": "给予额外的游戏时间"
+        }
+      },
+      "args": {
+        "system": "系统",
+        "media": "媒体",
+        "search": "搜索文本",
+        "title": "标题",
+        "historyOffset": "往前第几个",
+        "playlist": "播放列表",
+        "position": "项目序号",
+        "command": "命令",
+        "duration": "等待时间",
+        "text": "文本",
+        "controlAction": "操作",
+        "iniNumber": "INI 编号",
+        "corePath": "核心路径",
+        "script": "脚本",
+        "mgl": "MGL 内容",
+        "wallpaper": "壁纸文件",
+        "url": "网址",
+        "contentType": "内容类型",
+        "body": "要发送的数据",
+        "keys": "按键",
+        "buttons": "按钮",
+        "coins": "投币数",
+        "profileId": "个人资料切换 ID",
+        "extraTime": "额外时间",
+        "keyCode": "按键代码"
+      },
+      "advArgs": {
+        "when": "仅在以下情况运行",
+        "launcher": "启动器",
+        "system": "系统",
+        "action": "操作",
+        "name": "名称",
+        "pre_notice": "启动前通知",
+        "slot": "媒体槽位",
+        "tags": "标签",
+        "set_name": "设置名称",
+        "set_name_same_dir": "使用设置名称时保留游戏文件夹",
+        "mode": "播放顺序",
+        "repeat": "重复",
+        "speed": "按键间隔",
+        "hidden": "隐藏运行",
+        "profile": "授权的个人资料"
+      }
+    },
+    "zapLayout": {
+      "customise": "自定义",
+      "title": "自定义 Zap 页面",
+      "resetDefault": "恢复默认",
+      "cancel": "取消",
+      "done": "完成",
+      "reorder": "调整{{name}}的顺序",
+      "reorderRole": "可移动的小组件",
+      "dragInstructions": "按空格键拿起小组件，用方向键移动，再按空格键放下。按 Esc 取消。",
+      "dragStart": "已拿起{{name}}。",
+      "dragOver": "{{name}}位于{{place}}上方。",
+      "dragEnd": "已将{{name}}放入{{place}}。",
+      "dragCancel": "已停止移动{{name}}。",
+      "moveUp": "将{{name}}上移",
+      "moveDown": "将{{name}}下移",
+      "hideWidget": "隐藏{{name}}",
+      "showWidget": "显示{{name}}",
+      "show": "显示",
+      "dropHere": "将小组件放在这里",
+      "hiddenEmpty": "隐藏的小组件会显示在这里。",
+      "stackNote": "在窄屏幕上，各列将按此顺序堆叠。",
+      "unavailable": "此设备目前不可用。",
+      "emptyNow": "有内容可显示时才会出现。",
+      "widgets": {
+        "nowPlaying": "正在播放",
+        "scan": "扫描标签或代码",
+        "controls": "控制",
+        "readers": "读卡器",
+        "favourites": "收藏",
+        "recents": "最近玩过"
+      },
+      "places": {
+        "main": "主列",
+        "side": "侧列",
+        "bottom": "全宽",
+        "hidden": "已隐藏"
+      },
+      "addButton": "添加",
+      "addButtonTitle": "添加按钮",
+      "editButtonTitle": "编辑按钮",
+      "buttonUnnamed": "按钮",
+      "buttonLabel": "标签",
+      "buttonIcon": "图标",
+      "iconNone": "无",
+      "buttonStyle": "样式",
+      "buttonScript": "ZapScript",
+      "askFirst": "运行前询问",
+      "deleteButton": "删除按钮",
+      "moveEarlier": "将{{name}}前移",
+      "moveLater": "将{{name}}后移",
+      "editButton": "编辑{{name}}",
+      "confirmRunTitle": "运行{{name}}？",
+      "confirmRun": "运行",
+      "copyFrom": "从其他设备复制",
+      "icons": {
+        "play": "播放",
+        "pause": "暂停",
+        "stop": "停止",
+        "next": "下一个",
+        "volume": "音量",
+        "mute": "静音",
+        "gamepad": "手柄",
+        "tv": "电视",
+        "save": "保存",
+        "folder": "文件夹",
+        "power": "电源",
+        "refresh": "刷新",
+        "home": "主页",
+        "star": "星标",
+        "music": "音乐",
+        "zap": "闪电"
+      },
+      "styles": {
+        "primary": "蓝色",
+        "secondary": "普通",
+        "destructive": "红色"
+      },
+      "buttonSize": "大小",
+      "moreOptions": "更多选项",
+      "sizes": {
+        "small": "小",
+        "medium": "中",
+        "large": "大"
+      },
+      "addChooserTitle": "添加到 Zap 页面",
+      "addKindButton": "按钮",
+      "addKindButtonHint": "按下时运行 ZapScript。",
+      "addKindCollection": "收藏集",
+      "addKindCollectionHint": "来自某个收藏集或卡组的一排封面。",
+      "addCollectionTitle": "添加收藏集",
+      "editCollectionTitle": "编辑收藏集",
+      "collectionSource": "显示内容",
+      "collectionGroup": "收藏集",
+      "deckGroup": "卡组",
+      "deckMissing": "找不到卡组",
+      "collectionTitle": "标题",
+      "deleteCollection": "删除收藏集",
+      "editCollection": "编辑{{name}}",
+      "moved": "已将{{name}}移至{{place}}，第 {{position}} 个，共 {{count}} 个。"
     }
   }
 }

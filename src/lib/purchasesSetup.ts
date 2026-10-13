@@ -159,6 +159,17 @@ export function getPurchaseAccess(customerInfo: CustomerInfo): PurchaseAccess {
   };
 }
 
+// Promotional Warp enables features, but does not represent store ownership.
+// Unknown active products still block duplicate checkout conservatively.
+export function hasNonPromotionalWarp(customerInfo: CustomerInfo): boolean {
+  const warp = customerInfo.entitlements?.active?.[WARP_ENTITLEMENT_ID];
+  return Boolean(
+    warp &&
+    warp.store !== "PROMOTIONAL" &&
+    !warp.productIdentifier?.startsWith("rc_promo_"),
+  );
+}
+
 export function getProPackage(
   offerings: PurchasesOfferings,
 ): PurchasesPackage | null {

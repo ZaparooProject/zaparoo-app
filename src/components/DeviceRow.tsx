@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Lock } from "lucide-react";
+import { LockIcon } from "lucide-react";
 import { Card } from "./wui/Card";
 
 export interface DeviceRowEntry {
@@ -29,33 +29,33 @@ export function DeviceRow({
   const { t } = useTranslation();
 
   return (
-    <div className="flex flex-row items-center gap-2">
+    <div className="flex flex-row flex-wrap items-center gap-2">
       <Card
         onClick={onSelect}
-        className="flex flex-1 flex-row items-center gap-3"
+        className="flex min-w-0 flex-[1_1_8rem] flex-row items-center gap-3 wrap-anywhere"
       >
-        <span
-          aria-label={isActive ? t("settings.activeDevice") : undefined}
-          style={
-            isActive ? { backgroundColor: "var(--color-success)" } : undefined
-          }
-          className="h-2 w-2 shrink-0 rounded-full"
-        />
+        {isActive && (
+          <span
+            role="img"
+            aria-label={t("settings.activeDevice")}
+            className="bg-success h-2 w-2 shrink-0 rounded-full"
+          />
+        )}
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex items-center justify-between gap-2">
             <span className="text-foreground truncate font-medium">
               {entry.name || entry.address}
             </span>
             {isPaired && (
-              <Lock
+              <LockIcon
                 className="text-success h-4 w-4 shrink-0"
                 aria-label={t("connection.encrypted")}
               />
             )}
           </div>
           {entry.name && (
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-muted-foreground truncate text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-muted-foreground min-w-0 truncate text-sm">
                 {entry.address}
               </span>
               {entry.platform && (
@@ -74,7 +74,7 @@ export function DeviceRow({
             </span>
           )}
           {entry.version && (
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-muted-foreground text-xs">
                 {t("settings.networkScan.version", { version: entry.version })}
               </span>

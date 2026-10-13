@@ -1,114 +1,154 @@
+import { memo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import classNames from "classnames";
-import { memo } from "react";
-import { EmptyState } from "@/components/wui/EmptyState";
-import { Button } from "@/components/wui/Button";
-import { CoreAPI, logRunFailure } from "@/lib/coreApi";
-import { RepeatIcon } from "@/lib/images";
-import type { HistoryResponse, HistoryResponseEntry } from "@/lib/models";
+import { useQuery } from "@tanstack/react-query";
+import { TabBar } from "@/components/wui/TabBar";
+import { getTabBarPanelId } from "@/components/wui/tabBarIds";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
+import { useCoreFeature } from "@/hooks/useCoreFeature";
+import { useHistoryReplay } from "@/hooks/useHistoryReplay";
+import { CoreAPI } from "@/lib/coreApi";
+import {
+  dedupeHistoryByMedia,
+  historyPageLimit,
+  MEDIA_HISTORY_QUERY_KEYS,
+} from "@/lib/mediaHistory";
+import type { HistoryResponse, MediaBrowseEntry } from "@/lib/models";
 import { useStatusStore } from "@/lib/store";
-import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { SlideModal } from "../SlideModal";
-import { CopyButton } from "../CopyButton";
-import { errorColor } from "../ScanSpinner";
+import { HistoryQueryState } from "./HistoryQueryState";
+import { PlayedHistoryList } from "./PlayedHistoryList";
+import { ScanHistoryList } from "./ScanHistoryList";
+
+type HistoryTab = "scans" | "played";
+
+const SCANS_TAB_ID = "history-scans";
+const PLAYED_TAB_ID = "history-played";
 
 interface HistoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   historyData: HistoryResponse | undefined;
+  /** The scan history request failed. */
+  historyError?: boolean;
+  onRetryHistory?: () => unknown;
+  /** Opens game details for a played entry; the owner swaps the sheets. */
+  onSelectMedia?: (entry: MediaBrowseEntry) => void;
 }
 
 export const HistoryModal = memo(function HistoryModal({
   isOpen,
   onClose,
   historyData,
+  historyError = false,
+  onRetryHistory,
+  onSelectMedia,
 }: HistoryModalProps) {
   const { t } = useTranslation();
   const connected = useStatusStore((state) => state.connected);
+  const deviceKey = useActiveDeviceKey();
+  const [tab, setTab] = useState<HistoryTab>("scans");
+  const replay = useHistoryReplay();
+  const recentsFeature = useCoreFeature("mediaRecents", {
+    requireKnownSupport: true,
+  });
+  // Without play history there is only one list, so tabs would be furniture.
+  const showTabs = recentsFeature.available;
 
-  const replayScan = (item: HistoryResponseEntry) => {
-    void CoreAPI.run({
-      type: item.type,
-      uid: item.uid,
-      text: item.text,
-      data: item.data,
-    }).catch((error) => {
-      logRunFailure("Failed to replay scan", error, { action: "replayScan" });
-      showRateLimitedErrorToast(t("scan.historyReplayError"));
-    });
-  };
+  const coreDedupes = useCoreFeature("mediaHistoryDistinct", {
+    requireKnownSupport: true,
+  }).available;
+  const playedQuery = useQuery({
+    queryKey: [MEDIA_HISTORY_QUERY_KEYS.history, deviceKey, "played"],
+    queryFn: ({ signal }) =>
+      CoreAPI.mediaHistory(
+        {
+          limit: historyPageLimit(50, coreDedupes),
+          distinctMedia: true,
+        },
+        signal,
+      ),
+    // Start alongside scan history so switching tabs does not introduce a
+    // second visible loading phase.
+    enabled: isOpen && showTabs && connected,
+    staleTime: 30_000,
+  });
+  const playedEntries = dedupeHistoryByMedia(
+    playedQuery.data?.entries ?? [],
+    50,
+  );
 
-  const isEmpty =
-    !!historyData && (!historyData.entries || historyData.entries.length === 0);
+  const activeTabId = tab === "scans" ? SCANS_TAB_ID : PLAYED_TAB_ID;
 
   return (
-    <SlideModal isOpen={isOpen} close={onClose} title={t("scan.historyTitle")}>
-      {isEmpty && <EmptyState title={t("scan.history.empty")} />}
-      {historyData && !isEmpty && (
-        <div>
-          {historyData.entries &&
-            historyData.entries.map((item, i) => (
-              <div
-                key={i}
-                className={classNames("text-sm")}
-                style={{
-                  color: item.success ? "" : errorColor,
-                  borderBottom:
-                    i === historyData.entries.length - 1
-                      ? ""
-                      : "1px solid rgba(255,255,255,0.6)",
-                  padding: "0.5rem",
-                }}
-              >
-                <div className="flex items-start gap-2">
-                  <div className="min-w-0 flex-1">
-                    {!item.success && (
-                      <p className="font-medium">{t("scan.historyFailed")}</p>
-                    )}
-                    <p>
-                      {t("scan.lastScannedTime", {
-                        time:
-                          item.uid === "" && item.text === ""
-                            ? "-"
-                            : new Date(item.time).toLocaleString(),
-                      })}
-                    </p>
-                    <p style={{ wordBreak: "break-all" }}>
-                      {t("scan.lastScannedUid", {
-                        uid:
-                          item.uid === "" || item.uid === "__api__"
-                            ? "-"
-                            : item.uid,
-                      })}
-                      {item.uid !== "" && item.uid !== "__api__" && (
-                        <CopyButton text={item.uid} className="ml-1" />
-                      )}
-                    </p>
-                    <p style={{ wordBreak: "break-all" }}>
-                      {t("scan.lastScannedText", {
-                        text: item.text === "" ? "-" : item.text,
-                      })}
-                      {item.text !== "" && (
-                        <CopyButton text={item.text} className="ml-1" />
-                      )}
-                    </p>
-                  </div>
-                  <Button
-                    icon={<RepeatIcon size="20" />}
-                    variant="outline"
-                    size="sm"
-                    aria-label={t("scan.historyReplay")}
-                    disabled={
-                      !connected ||
-                      (item.uid === "" && item.text === "" && item.data === "")
-                    }
-                    onClick={() => replayScan(item)}
-                  />
-                </div>
-              </div>
-            ))}
+    <SlideModal
+      isOpen={isOpen}
+      close={onClose}
+      title={t("scan.historyTitle")}
+      fixedHeight="70vh"
+    >
+      {showTabs && (
+        <div className="pt-1 pb-3">
+          <TabBar
+            role="tab"
+            label={t("scan.historyTabs")}
+            options={[
+              {
+                value: "scans",
+                label: t("scan.historyTabScans"),
+                id: SCANS_TAB_ID,
+              },
+              {
+                value: "played",
+                label: t("scan.historyTabPlayed"),
+                id: PLAYED_TAB_ID,
+              },
+            ]}
+            value={tab}
+            onChange={setTab}
+          />
         </div>
       )}
+
+      <div
+        role={showTabs ? "tabpanel" : undefined}
+        id={showTabs ? getTabBarPanelId(activeTabId) : undefined}
+        aria-labelledby={showTabs ? activeTabId : undefined}
+      >
+        {tab === "played" ? (
+          <HistoryQueryState
+            offline={!connected && playedQuery.data === undefined}
+            isPending={playedQuery.isPending}
+            isError={playedQuery.isError}
+            hasData={playedQuery.data !== undefined}
+            isEmpty={playedEntries.length === 0}
+            emptyTitle={t("scan.historyPlayedEmpty")}
+            onRetry={() => void playedQuery.refetch()}
+          >
+            <PlayedHistoryList
+              entries={playedEntries}
+              launchAvailable={replay.available}
+              onSelect={onSelectMedia}
+              onLaunch={replay.launchMedia}
+            />
+          </HistoryQueryState>
+        ) : (
+          <HistoryQueryState
+            offline={!connected && historyData === undefined}
+            isPending={historyData === undefined}
+            isError={historyError}
+            hasData={historyData !== undefined}
+            isEmpty={historyData?.entries.length === 0}
+            emptyTitle={t("scan.history.empty")}
+            onRetry={() => void onRetryHistory?.()}
+          >
+            <ScanHistoryList
+              entries={historyData?.entries ?? []}
+              connected={replay.available}
+              onReplay={replay.replayScan}
+            />
+          </HistoryQueryState>
+        )}
+      </div>
     </SlideModal>
   );
 });

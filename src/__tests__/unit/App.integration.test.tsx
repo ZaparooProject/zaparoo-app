@@ -6,6 +6,7 @@ import App from "@/App";
 import { PAGE_SCROLL_RESTORATION_SELECTOR } from "@/components/PageFrame";
 import { isNativePluginAvailable } from "@/lib/capacitorBridge";
 import { logger } from "@/lib/logger";
+import { useTheme } from "@/components/theme-provider";
 
 const {
   mockUseDeepLinks,
@@ -68,6 +69,14 @@ Object.defineProperty(window, "location", {
   configurable: true,
 });
 
+vi.mock("@/components/theme-provider", () => ({
+  useTheme: vi.fn(() => ({
+    theme: "system",
+    resolvedTheme: "dark",
+    setTheme: vi.fn(),
+  })),
+}));
+
 // Mock all the hooks and dependencies
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual =
@@ -108,6 +117,7 @@ vi.mock("@capacitor/core", () => ({
   },
   SystemBarsStyle: {
     Dark: "DARK",
+    Light: "LIGHT",
   },
 }));
 
@@ -234,6 +244,7 @@ vi.mock("@capacitor/status-bar", () => ({
   },
   Style: {
     Dark: "DARK",
+    Light: "LIGHT",
   },
 }));
 
@@ -280,6 +291,11 @@ vi.mock("@/lib/purchasesSetup", () => ({ purchasesReady: Promise.resolve() }));
 
 describe("App Integration", () => {
   beforeEach(() => {
+    vi.mocked(useTheme).mockReturnValue({
+      theme: "system",
+      resolvedTheme: "dark",
+      setTheme: vi.fn(),
+    });
     vi.useRealTimers();
     vi.clearAllMocks();
     Object.assign(mockPreferencesState, {
@@ -467,6 +483,22 @@ describe("App Integration", () => {
     render(<App />);
 
     expect(SystemBars.setStyle).toHaveBeenCalledWith({ style: "DARK" });
+  });
+
+  it("should update both native bar APIs when appearance changes", async () => {
+    const { SystemBars } = await import("@capacitor/core");
+    const { StatusBar } = await import("@capacitor/status-bar");
+    const { rerender } = render(<App />);
+    vi.mocked(useTheme).mockReturnValue({
+      theme: "light",
+      resolvedTheme: "light",
+      setTheme: vi.fn(),
+    });
+    rerender(<App />);
+    await waitFor(() => {
+      expect(SystemBars.setStyle).toHaveBeenLastCalledWith({ style: "LIGHT" });
+      expect(StatusBar.setStyle).toHaveBeenLastCalledWith({ style: "LIGHT" });
+    });
   });
 
   it("should skip SystemBars setup when native plugin is unavailable", async () => {

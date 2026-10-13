@@ -2,13 +2,22 @@
   "translation": {
     "copy": "コピー",
     "copied": "コピーしました",
+    "copyToClipboard": "クリップボードにコピー",
+    "copyFailed": "クリップボードにコピーできませんでした",
     "save": "保存",
     "clearSearch": "検索をクリア",
+    "settingHelp": {
+      "label": "{{title}}のヘルプ"
+    },
     "backToTop": "トップに戻る",
     "error": "エラー: {{msg}}",
     "loading": "読み込み中...",
     "cancelling": "キャンセル中...",
     "resuming": "再開中...",
+    "reader": {
+      "cancelAction": "リーダー操作をキャンセル",
+      "pressAgainToCancel": "もう一度押してキャンセル"
+    },
     "shareFailed": "共有に失敗しました",
     "errorBoundary": {
       "title": "重大なエラーが発生しました",
@@ -33,16 +42,29 @@
       "back": "戻る",
       "cancel": "キャンセル",
       "close": "閉じる",
+      "moreActions": "その他の操作",
       "create": "作成",
-      "assign": "割り当てる",
       "index": "Zap",
       "library": "ライブラリ",
-      "design": "デザイン",
       "settings": "設定",
+      "search": "検索",
+      "devices": "デバイス",
+      "media": "メディア",
+      "all": "すべて",
       "settingsWithNotifications_one": "設定、通知{{count}}件",
       "settingsWithNotifications_other": "設定、通知{{count}}件",
-      "run": "実行",
-      "mainNavigation": "メインナビゲーション"
+      "mainNavigation": "メインナビゲーション",
+      "breadcrumbs": "パンくずリスト",
+      "menu": "ナビゲーションメニュー",
+      "currentDevice": "現在のデバイス",
+      "openMenu": "ナビゲーションを開く",
+      "expandSection": "{{section}}を展開",
+      "collapseSection": "{{section}}を折りたたむ",
+      "collapseSidebar": "サイドバーを折りたたむ",
+      "fullScreen": "全画面",
+      "exitFullScreen": "全画面を終了",
+      "lightMode": "ライトモード",
+      "darkMode": "ダークモード"
     },
     "appBadge": {
       "title": "アプリアイコンのバッジ",
@@ -72,7 +94,6 @@
       "addError": "デッキに追加できませんでした",
       "added": "デッキに追加しました",
       "addAction": "デッキに追加",
-      "createWithGame": "ゲームでデッキを作成",
       "edit": "デッキを編集",
       "readOnly": "このコピーは読み取り専用です",
       "locked": "このデッキはロックされています",
@@ -98,6 +119,7 @@
       "items_one": "{{count}}件",
       "items_other": "{{count}}件",
       "noItems": "このデッキは空です",
+      "selectItem": "項目を選択",
       "unnamedItem": "名前のないアイテム",
       "script": "スクリプト",
       "zapScript": "ZapScript",
@@ -112,21 +134,18 @@
       "full": "このデッキはいっぱいです",
       "moveUp": "{{name}}を上に移動",
       "moveDown": "{{name}}を下に移動",
-      "removeItem": "{{name}}を削除",
       "remove": "削除",
       "confirmRemove": "{{name}}をこのデッキから削除しますか？",
       "delete": "デッキを削除",
       "confirmDelete": "{{name}}を削除しますか？この操作は元に戻せません。"
     },
     "library": {
+      "selectMedia": "メディアを選択",
       "title": "ライブラリ",
       "collections": "コレクション",
       "systems": "システム",
       "browseBy": "ライブラリを閲覧",
-      "searchCollections": "コレクションを検索",
-      "noMatchingCollections": "一致するコレクションはありません",
       "favorites": "お気に入り",
-      "favoritesLabel": "お気に入りのメディア",
       "favoritesList": "お気に入りのメディア",
       "loadingFavorites": "お気に入りを読み込み中...",
       "favoritesError": "お気に入りを読み込めませんでした",
@@ -143,6 +162,7 @@
       "liked": "高評価",
       "disliked": "低評価",
       "playLater": "あとでプレイ",
+      "playLaterAction": "あとでプレイ",
       "likedList": "高評価したメディア",
       "dislikedList": "低評価したメディア",
       "playLaterList": "あとでプレイするメディア",
@@ -161,6 +181,19 @@
       "noLikedHint": "メディアの詳細または再生中の画面から高評価できます。",
       "noDislikedHint": "メディアの詳細または再生中の画面から低評価できます。",
       "noPlayLaterHint": "メディアの詳細または再生中の画面から、あとでプレイに保存できます。",
+      "recentlyPlayed": "最近プレイした",
+      "recentlyPlayedShort": "最近",
+      "recentlyPlayedList": "最近プレイしたメディア",
+      "loadingRecentlyPlayed": "最近プレイしたメディアを読み込み中...",
+      "recentlyPlayedError": "最近プレイしたメディアを読み込めませんでした",
+      "noRecentlyPlayed": "まだプレイしていません",
+      "noRecentlyPlayedHint": "起動したメディアはここに表示されます。",
+      "topPlayed": "よくプレイする",
+      "topPlayedList": "よくプレイするメディア",
+      "loadingTopPlayed": "よくプレイするメディアを読み込み中...",
+      "topPlayedError": "よくプレイするメディアを読み込めませんでした",
+      "noTopPlayed": "まだプレイしていません",
+      "noTopPlayedHint": "よくプレイするメディアはここに表示されます。",
       "like": "高評価",
       "dislike": "低評価",
       "addLike": "メディアを高評価",
@@ -201,7 +234,6 @@
       "noLetterIndex": "このフォルダーでは文字ナビゲーションを利用できません",
       "jumpError": "その文字に移動できませんでした",
       "jumpingTo": "{{label}}を読み込み中...",
-      "coverAlt": "{{title}}のカバーアート",
       "imageAlt": "{{title}}の{{type}}",
       "imageTypes": {
         "artwork": "アートワーク",
@@ -273,22 +305,398 @@
       "sortTitleDesc": "タイトル: Z–A",
       "sortFilenameAsc": "ファイル名: A–Z",
       "sortFilenameDesc": "ファイル名: Z–A",
-      "searchTitle": "ゲームを検索",
-      "searchInput": "ゲームタイトル",
-      "searchPlaceholder": "ゲームタイトルを入力",
-      "searchAction": "検索"
+      "searchTitle": "メディアを検索",
+      "searchInput": "名前",
+      "searchPlaceholder": "メディア名を入力",
+      "searchAction": "検索",
+      "tagValues": {
+        "region": {
+          "world": "全世界",
+          "us": "アメリカ",
+          "eu": "ヨーロッパ",
+          "jp": "日本",
+          "au": "オーストラリア",
+          "kr": "韓国",
+          "cn": "中国",
+          "tw": "台湾",
+          "hk": "香港",
+          "br": "ブラジル",
+          "ca": "カナダ",
+          "uk": "イギリス",
+          "fr": "フランス",
+          "de": "ドイツ",
+          "it": "イタリア",
+          "es": "スペイン",
+          "scandinavia": "スカンジナビア",
+          "asia": "アジア"
+        },
+        "lang": {
+          "en": "英語",
+          "fr": "フランス語",
+          "de": "ドイツ語",
+          "es": "スペイン語",
+          "it": "イタリア語",
+          "ja": "日本語",
+          "ko": "韓国語",
+          "zh": "中国語",
+          "pt": "ポルトガル語",
+          "nl": "オランダ語",
+          "sv": "スウェーデン語",
+          "no": "ノルウェー語",
+          "da": "デンマーク語",
+          "fi": "フィンランド語",
+          "pl": "ポーランド語",
+          "ru": "ロシア語",
+          "ar": "アラビア語",
+          "en-US": "英語（アメリカ）",
+          "en-GB": "英語（イギリス）"
+        },
+        "edition": {
+          "directorsCut": "ディレクターズカット",
+          "collectors": "コレクターズエディション",
+          "limited": "限定版",
+          "special": "スペシャルエディション",
+          "deluxe": "デラックスエディション",
+          "ultimate": "アルティメットエディション",
+          "anniversary": "アニバーサリーエディション",
+          "remastered": "リマスター",
+          "remake": "リメイク",
+          "remix": "リミックス",
+          "complete": "コンプリートエディション",
+          "goty": "ゲーム・オブ・ザ・イヤー・エディション"
+        },
+        "genre": {
+          "action": "アクション",
+          "action_platformer": "プラットフォーム",
+          "action_maze": "迷路",
+          "action_blockbreaker": "ブロック崩し",
+          "action_runandgun": "ラン&ガン",
+          "action_hackandslash": "ハックアンドスラッシュ",
+          "action_metroidvania": "メトロイドヴァニア",
+          "action_roguelite": "ローグライト",
+          "adventure": "アドベンチャー",
+          "adventure_pointandclick": "ポイント&クリック",
+          "adventure_visualnovel": "ビジュアルノベル",
+          "adventure_survivalhorror": "サバイバルホラー",
+          "adventure_text": "テキストアドベンチャー",
+          "board": "ボードゲーム",
+          "board_cards": "トランプ",
+          "board_hanafuda": "花札",
+          "board_chess": "チェス",
+          "board_shougi": "将棋",
+          "board_go": "囲碁",
+          "board_mahjong": "麻雀",
+          "board_reversi": "リバーシ",
+          "board_othello": "オセロ",
+          "board_backgammon": "バックギャモン",
+          "board_party": "パーティーゲーム",
+          "board_jankenpon": "じゃんけん",
+          "brawler": "ベルトスクロールアクション",
+          "fighting": "格闘",
+          "fighting_melee": "近接格闘",
+          "minigames": "ミニゲーム",
+          "parlor": "パーラーゲーム",
+          "parlor_pinball": "ピンボール",
+          "parlor_jackpot": "ジャックポット",
+          "parlor_pachinko": "パチンコ",
+          "parlor_darts": "ダーツ",
+          "parlor_bowling": "ボウリング",
+          "parlor_billiards": "ビリヤード",
+          "parlor_mogurataiji": "もぐら叩き",
+          "parlor_kiddieride": "キッズライド",
+          "parlor_mechanical": "エレメカ",
+          "quiz": "クイズ",
+          "racing": "レース",
+          "racing_combat": "バトルレース",
+          "racing_driving": "ドライブ",
+          "rpg": "RPG",
+          "rpg_a": "アクションRPG",
+          "rpg_j": "JRPG",
+          "rpg_s": "シミュレーションRPG",
+          "rpg_dungeoncrawler": "ダンジョンRPG",
+          "rpg_mmo": "MMORPG",
+          "rhythm": "リズム",
+          "rhythm_karaoke": "カラオケ",
+          "rhythm_dance": "ダンス",
+          "shmup": "シューティング",
+          "shmup_h": "横スクロールシューティング",
+          "shmup_v": "縦スクロールシューティング",
+          "shmup_i": "クォータービューシューティング",
+          "shmup_danmaku": "弾幕シューティング",
+          "shooting": "シューター",
+          "shooting_gallery": "射的",
+          "shooting_rail": "レールシューター",
+          "shooting_fps": "FPS",
+          "shooting_tps": "TPS",
+          "puzzle": "パズル",
+          "puzzle_drop": "落ち物パズル",
+          "puzzle_mind": "思考パズル",
+          "sim": "シミュレーション",
+          "sim_strategy": "ストラテジー",
+          "sim_cardgame": "カードゲーム",
+          "sim_flight": "フライトシミュレーター",
+          "sim_train": "鉄道シミュレーション",
+          "sim_date": "恋愛シミュレーション",
+          "sim_otome": "乙女ゲーム",
+          "sim_life": "ライフシミュレーション",
+          "sim_farm": "農場シミュレーション",
+          "sim_pet": "ペット育成",
+          "sim_fishing": "釣り",
+          "sim_god": "ゴッドゲーム",
+          "sim_derby": "競馬シミュレーション",
+          "sim_building": "建設シミュレーション",
+          "sim_cooking": "料理",
+          "sports": "スポーツ",
+          "sports_soccer": "サッカー",
+          "sports_basketball": "バスケットボール",
+          "sports_baseball": "野球",
+          "sports_volleyball": "バレーボール",
+          "sports_rugby": "ラグビー",
+          "sports_football": "アメリカンフットボール",
+          "sports_dodgeball": "ドッジボール",
+          "sports_hockey": "ホッケー",
+          "sports_skiing": "スキー",
+          "sports_skateboarding": "スケートボード",
+          "sports_snowboarding": "スノーボード",
+          "sports_tennis": "テニス",
+          "sports_pingpong": "卓球",
+          "sports_paddle": "パドルテニス",
+          "sports_squash": "スカッシュ",
+          "sports_badminton": "バドミントン",
+          "sports_flyingdisc": "フライングディスク",
+          "sports_cycling": "自転車競技",
+          "sports_formula1": "F1",
+          "sports_rally": "ラリー",
+          "sports_nascar": "NASCAR",
+          "sports_motogp": "MotoGP",
+          "sports_motocross": "モトクロス",
+          "sports_karting": "カート",
+          "sports_jetski": "ジェットスキー",
+          "sports_golf": "ゴルフ",
+          "sports_cricket": "クリケット",
+          "sports_boxing": "ボクシング",
+          "sports_kickboxing": "キックボクシング",
+          "sports_wrestling": "プロレス",
+          "sports_sumo": "相撲",
+          "sports_karate": "空手",
+          "sports_judo": "柔道",
+          "sports_kendo": "剣道",
+          "sports_taekwondo": "テコンドー",
+          "sports_mma": "総合格闘技",
+          "sports_decathlon": "十種競技",
+          "sports_running": "ランニング",
+          "sports_archery": "アーチェリー",
+          "sports_swimming": "水泳",
+          "sports_rowing": "ボート",
+          "sports_kayak": "カヤック",
+          "sports_surf": "サーフィン",
+          "notagame": "非ゲーム",
+          "notagame_educational": "教育",
+          "notagame_drawing": "お絵かき",
+          "notagame_popcorn": "ポップコーンマシン",
+          "notagame_purikura": "プリクラ",
+          "notagame_redemption": "リデンプションゲーム",
+          "notagame_media": "メディア",
+          "notagame_magazine": "マガジン",
+          "notagame_application": "アプリケーション",
+          "notagame_test": "テストプログラム",
+          "notagame_sdk": "SDK",
+          "notagame_slideshow": "スライドショー",
+          "notagame_sound": "サウンド",
+          "sim_management": "経営シミュレーション",
+          "sports_roller": "ローラースケート"
+        },
+        "players": {
+          "vs": "対戦",
+          "coop": "協力",
+          "alt": "交互プレイ",
+          "simultaneous": "同時プレイ",
+          "mmo": "MMO"
+        },
+        "input": {
+          "joystick": "ジョイスティック",
+          "joystick_2h": "2方向レバー（左右）",
+          "joystick_2v": "2方向レバー（上下）",
+          "joystickWays": "{{value}}方向レバー",
+          "joystick_double": "ダブルレバー",
+          "joystick_rotary": "ロータリーレバー",
+          "stick": "スティック",
+          "stick_twin": "ツインスティック",
+          "trackball": "トラックボール",
+          "paddle": "パドル",
+          "spinner": "スピナー",
+          "wheel": "ハンドル",
+          "dial": "ダイヤル",
+          "lightgun": "ライトガン",
+          "optical": "光学式",
+          "positional": "ポジショナル",
+          "positionalCount": "ポジショナル: {{value}}",
+          "buttons": "ボタン",
+          "buttonsCount": "ボタン: {{value}}",
+          "buttons_pneumatic": "空気圧式ボタン",
+          "pedals": "ペダル",
+          "pedalsCount": "ペダル: {{value}}",
+          "puncher": "パンチパッド",
+          "puncherCount": "パンチパッド: {{value}}",
+          "motion": "モーションコントロール",
+          "keyboard": "キーボード",
+          "keyboard_mahjong": "麻雀パネル",
+          "touchscreen": "タッチスクリーン",
+          "touchscreen_resistive": "感圧式タッチスクリーン",
+          "touchscreen_capacitive": "静電容量式タッチスクリーン",
+          "accelerometer": "加速度センサー",
+          "ddrpad": "ダンスマット",
+          "hrm": "心拍計"
+        },
+        "save": {
+          "backup": "バックアップ保存",
+          "password": "パスワード"
+        },
+        "media": {
+          "disc": "ディスク",
+          "disk": "フロッピーディスク",
+          "file": "ファイル",
+          "part": "パート",
+          "side": "サイド",
+          "sideLetter": "{{value}}面",
+          "tape": "テープ",
+          "cart": "カートリッジ"
+        },
+        "unfinished": {
+          "alpha": "アルファ版",
+          "beta": "ベータ版",
+          "proto": "プロトタイプ",
+          "demo": "デモ",
+          "demo_auto": "自動デモ",
+          "demo_kiosk": "店頭デモ",
+          "demo_playable": "プレイアブルデモ",
+          "demo_rolling": "ローリングデモ",
+          "demo_slideshow": "スライドショーデモ",
+          "sample": "サンプル",
+          "debug": "デバッグ版",
+          "competition": "大会用バージョン",
+          "preview": "プレビュー版",
+          "prerelease": "プレリリース版",
+          "final": "最終版",
+          "wip": "開発中"
+        },
+        "unlicensed": {
+          "unlicensed": "非ライセンス",
+          "bootleg": "ブートレグ",
+          "hack": "ハック",
+          "clone": "クローン",
+          "pirate": "海賊版",
+          "translation": "翻訳",
+          "translation_old": "旧翻訳",
+          "aftermarket": "アフターマーケット"
+        },
+        "release": {
+          "homebrew": "自作ソフト",
+          "unreleased": "未発売",
+          "public-domain": "パブリックドメイン",
+          "reissue": "再発売",
+          "classics": "クラシックス",
+          "promo": "販促用",
+          "not-for-resale": "非売品",
+          "kiosk": "店頭用"
+        },
+        "dump": {
+          "cracked": "クラック済み",
+          "fixed": "修正済み",
+          "hacked": "ハック済み",
+          "modified": "改変済み",
+          "pirated": "海賊版",
+          "trained": "トレーナー付き",
+          "translated": "翻訳済み",
+          "overdump": "オーバーダンプ",
+          "underdump": "アンダーダンプ",
+          "virus": "ウイルス感染",
+          "bad": "不良ダンプ",
+          "alternate": "別バージョン",
+          "verified": "検証済み",
+          "pending": "保留中",
+          "checksum-bad": "チェックサム不一致",
+          "checksum-unknown": "チェックサム不明",
+          "hacked_intro": "イントロ追加",
+          "hacked_intro-removed": "イントロ削除",
+          "no-boot": "起動不可"
+        },
+        "copyright": {
+          "cw": "カードウェア",
+          "cw-r": "カードウェア（登録版）",
+          "fw": "フリーウェア",
+          "gw": "ギフトウェア",
+          "gw-r": "ギフトウェア（登録版）",
+          "lw": "ライセンスウェア",
+          "pd": "パブリックドメイン",
+          "sw": "シェアウェア",
+          "sw-r": "シェアウェア（登録版）"
+        },
+        "perspective": {
+          "firstperson": "一人称視点",
+          "thirdperson": "三人称視点",
+          "topdown": "見下ろし視点",
+          "isometric": "クォータービュー",
+          "fixedcamera": "固定カメラ",
+          "sidescroll_horizontal": "横スクロール",
+          "sidescroll_vertical": "縦スクロール"
+        },
+        "art": {
+          "pixelart": "ドット絵",
+          "celshaded": "セルシェーディング",
+          "vector": "ベクタースキャン",
+          "digitized": "実写取り込み",
+          "handdrawn": "手描き"
+        },
+        "accessibility": {
+          "visual_colorblindmode": "色覚サポート",
+          "visual_highcontrast": "ハイコントラスト",
+          "visual_textsizeadjust": "文字サイズ調整",
+          "audio_subtitles": "字幕",
+          "audio_monoaudio": "モノラル音声",
+          "audio_visualcues": "視覚的な合図",
+          "input_remappablecontrols": "ボタン配置変更",
+          "input_onebuttonmode": "ワンボタンモード"
+        },
+        "cabinet": {
+          "upright": "アップライト",
+          "cocktail": "テーブル筐体",
+          "cabaret": "キャバレー",
+          "sitdown": "コックピット筐体"
+        },
+        "protection": {
+          "no-protection": "プロテクトなし",
+          "encrypted": "暗号化",
+          "decrypted": "復号済み"
+        },
+        "supplement": {
+          "update": "アップデート",
+          "expansion": "拡張パック",
+          "theme": "テーマ",
+          "avatar": "アバター"
+        },
+        "based": {
+          "manganime": "漫画・アニメ",
+          "movie": "映画"
+        },
+        "multigame": {
+          "compilation": "コンピレーション",
+          "menu": "メニュー",
+          "volume": "Vol.{{value}}"
+        },
+        "alt": {
+          "alt": "別バージョン"
+        }
+      },
+      "revisionValue": "リビジョン {{value}}",
+      "tagValueNumbered": "{{name}} {{value}}"
     },
     "spinner": {
       "deleting": "削除中...",
-      "notSupportedLabel": "このデバイスはNFCに対応していません",
-      "notSupportedSub": "このアプリでは、NFCの読み取りや書き込み機能を使用できません",
       "nfcDisabledLabel": "NFCアクセスが無効になっています",
-      "nfcDisabledSub": "NFCの読み取りおよび書き込み機能を使用するには、デバイスの設定でNFCアクセスを有効にしてください",
       "openNfcSettings": "NFC設定を開く",
       "holdTag": "タグをスマートフォンにかざしてください",
       "holdTagReader": "タグをリーダーにかざしてください",
-      "scanning": "スキャン中",
-      "pressToScan": "タップしてスキャン",
       "writeSuccess": "タグの書き込みに成功しました",
       "writeFailed": "タグの書き込みに失敗しました",
       "readSuccess": "タグの読み取りに成功しました",
@@ -300,27 +708,24 @@
       "makeReadOnlySuccess": "タグを読み取り専用に設定しました",
       "makeReadOnlyFailed": "タグの読み取り専用設定に失敗しました",
       "formatErrorRetry": "このタグをフォーマットできません。再試行するか、別のタグを使用してください。",
+      "sessionBusy": "別のNFC操作がすでに進行中です。",
+      "tagLost": "タグが早く離れすぎました。動かさずにもう一度お試しください。",
       "verifying": "タグを検証中...",
       "verifyFailed": "タグが正しく保存されませんでした",
       "verifyFailedRetry": "タグが正しく保存されませんでした。スマートフォンにかざして再試行してください。",
       "retapTag": "タグをフォーマットしました。いったん離してから、もう一度スマートフォンにかざしてください。"
     },
     "toast": {
-      "updateDbHeading": "メディアデータベースを更新中",
       "preparingDb": "データベースを準備中",
-      "hideLabel": "非表示",
       "updatedDb": "メディアデータベースを更新しました",
       "filesFound": "{{count}}件のアイテムをスキャンしました",
-      "nowPlayingHeading": "再生中",
-      "indexingProgress": "データベースのインデックス作成状況"
+      "nowPlayingHeading": "再生中"
     },
     "whatsNew": {
-      "title": "新機能",
       "gotIt": "了解"
     },
     "write": {
-      "noWriteMethodAvailable": "NFC書き込み機能が利用できません",
-      "nfcNotSupported": "このデバイスではNFCがサポートされていません"
+      "noWriteMethodAvailable": "NFC書き込み機能が利用できません"
     },
     "accessibility": {
       "skipToContent": "メインコンテンツへスキップ",
@@ -331,7 +736,6 @@
       "title": "保留中のトークンを確認しますか？",
       "waitingDescription": "このトークンは確認待ちです。",
       "readyDescription": "このトークンを確認できます。",
-      "tokenValue": "トークンの値",
       "confirm": "確認",
       "dismiss": "非表示",
       "confirmError": "保留中のトークンを確認できませんでした",
@@ -341,29 +745,17 @@
     },
     "scan": {
       "cameraMode": "カメラ",
-      "cameraAvailable": "カメラでスキャン",
       "nfcMode": "NFC",
       "scanError": "タグのスキャンエラー",
-      "scanSuccess": "タグのスキャンに成功しました",
-      "noDevices": "Zaparooデバイスが見つかりません",
-      "connecting": "接続中...",
-      "reconnecting": "再接続中...",
       "connectionError": "接続エラー",
       "retry": "再試行",
-      "continuous": "連続スキャン",
-      "launchOnScan": "スキャン時に起動",
       "connectedHeading": "接続済み",
-      "connectedSub": "アドレス: {{ip}}",
       "nowPlayingHeading": "再生中",
       "mediaPreferences": "メディアの設定",
-      "nothingPlaying": "再生中のメディアはありません",
-      "nowPlayingName": "名前: {{game}}",
-      "nowPlayingSystem": "システム: {{system}}",
       "stopPlayingButton": "再生を停止",
       "backgroundMediaHeading": "バックグラウンド",
       "stopBackgroundMediaButton": "バックグラウンドメディアを停止",
       "stopBackgroundMediaError": "バックグラウンドメディアを停止できませんでした",
-      "playlistName": "プレイリスト: {{playlist}}",
       "playlistPosition": "{{total}}件中{{current}}件目",
       "playlistControls": "{{section}}のプレイリスト操作",
       "playlistPrevious": "前のアイテム",
@@ -371,12 +763,14 @@
       "playlistPlay": "プレイリストを再生",
       "playlistNext": "次のアイテム",
       "playlistControlError": "プレイリストを操作できませんでした",
-      "lastScannedHeading": "最後にスキャン",
-      "lastScannedTime": "時刻: {{time}}",
+      "mediaControls": "{{section}}の操作",
+      "mediaPause": "一時停止",
+      "mediaResume": "再開",
+      "mediaControlError": "メディアを操作できませんでした",
       "lastScannedUid": "ID: {{uid}}",
-      "lastScannedText": "値: {{text}}",
-      "historyTitle": "スキャン履歴",
+      "historyTitle": "履歴",
       "historyReplay": "スキャンを再実行",
+      "historyUnknown": "不明なスキャン",
       "historyReplayError": "スキャンを再実行できませんでした",
       "historyFailed": "失敗",
       "purchaseProTitle": "Zaparoo Pro",
@@ -397,11 +791,45 @@
       "purchaseAccountDescription": "Proを無料のZaparoo Onlineアカウントにリンクできます。ストアで購入が見つからなくなった場合にもバックアップとなり、AndroidとiOSのデバイスで台数に制限なくProを使用できます。",
       "purchaseAccountAction": "Zaparoo Onlineを設定",
       "purchaseAccountLater": "後で",
-      "completeIntro": "Zaparooを始める",
       "statusScanning": "NFCタグをスキャン中",
       "statusSuccess": "タグのスキャンに成功しました",
       "statusError": "タグのスキャンに失敗しました",
-      "remoteKeyboard": "操作"
+      "remoteKeyboard": "操作",
+      "tapTag": "タグをかざす",
+      "tapTagScanning": "スキャン中",
+      "tapTagStop": "スキャンを停止",
+      "scanCode": "コードをスキャン",
+      "statusStopped": "スキャンを停止しました",
+      "noReaderTitle": "このスマートフォンにはリーダーがありません",
+      "noReaderSub": "このスマートフォンではNFCもカメラも利用できないため、スキャンできません。デバイスの管理には引き続き使用できます。",
+      "devicePill": "{{device}}、{{status}}",
+      "deviceNone": "デバイスなし",
+      "deviceSheetTitle": "デバイス",
+      "deviceSheetRecent": "デバイスを切り替え",
+      "deviceSheetAllDevices": "デバイスを管理",
+      "nowPlayingIdle": "再生中のものはありません",
+      "lastPlayed": "前回の再生: {{media}}",
+      "playLastPlayed": "{{media}}をもう一度再生",
+      "playLastPlayedUnavailable": "前回再生したメディアを再生",
+      "playLastPlayedError": "そのメディアを起動できませんでした",
+      "readersHeading": "リーダー",
+      "readerHolding": "メディアを保持中",
+      "recentsHeading": "最近プレイした",
+      "favoritesHeading": "お気に入り",
+      "coverRowLaunch": "{{game}}をプレイ",
+      "coverRowDetails": "{{media}}の詳細を表示",
+      "coverRowLaunchError": "そのメディアを起動できませんでした",
+      "historyTabs": "履歴の種類",
+      "historyTabScans": "スキャン",
+      "historyTabPlayed": "プレイ済み",
+      "historyPlayedEmpty": "このデバイスではまだ何もプレイしていません",
+      "history": {
+        "empty": "スキャンはまだありません"
+      },
+      "scanHistoryTitle": "スキャン履歴",
+      "playHistoryTitle": "再生履歴",
+      "historyRefresh": "履歴を更新",
+      "historyLoadError": "履歴を読み込めませんでした"
     },
     "create": {
       "title": "作成",
@@ -421,7 +849,6 @@
         "searchButton": "検索",
         "gamesDbUpdate": "検索する前にメディアデータベースを更新する必要があります",
         "searchError": "メディアの検索中にエラーが発生しました",
-        "noGamesFound": "メディアが見つかりません",
         "title": "メディアを検索",
         "gameInput": "名前",
         "gameInputPlaceholder": "メディア名を入力",
@@ -430,7 +857,6 @@
         "tagsInput": "タグ",
         "allTags": "すべてのタグ",
         "systemLabel": "システム",
-        "categoryLabel": "カテゴリ",
         "pathLabel": "パス",
         "zapscriptLabel": "ZapScript",
         "tagsLabel": "タグ",
@@ -446,8 +872,6 @@
         "resultsFound_one": "{{count}}件の結果が見つかりました",
         "resultsFound_other": "{{count}}件の結果が見つかりました",
         "loadMore": "さらに結果を読み込む",
-        "loadedMore_one": "さらに{{count}}件の結果を読み込みました",
-        "loadedMore_other": "さらに{{count}}件の結果を読み込みました",
         "startSearching": "検索の準備ができました",
         "startSearchingHint": "メディア名を入力するかフィルターを選択して検索を開始してください",
         "noResultsFound": "「{{query}}」の結果が見つかりません",
@@ -458,34 +882,35 @@
         "clearFilters": "フィルターをクリア",
         "tryAgain": "再試行",
         "recentSearches": "最近の検索",
+        "searchAgain": "{{query}}を検索",
+        "recentSystem": "システム: {{system}}",
+        "recentTags": "タグ: {{tags}}",
+        "recentAllMedia": "すべてのメディア",
         "noRecentSearches": "最近の検索はまだありません",
         "noRecentSearchesHint": "検索すると検索履歴が作成されます",
         "clearHistory": "履歴をクリア",
-        "gamesDbSettings": "データベース設定を開く",
-        "searchResult": "検索結果を選択"
+        "gamesDbSettings": "データベース設定を開く"
       },
       "custom": {
         "title": "カスタムZapScript",
         "textPlaceholder": "ZapScriptを入力",
         "textareaLabel": "ZapScriptエディター",
         "write": "タグに書き込む",
-        "run": "実行",
+        "run": "テスト",
         "clear": "クリア",
         "failMsg": "ZapScriptの実行に失敗しました",
         "characters": "{{count}}文字",
         "searchMedia": "メディア",
         "commands": "コマンド",
+        "commandsTitle": "コマンド",
         "selectSystem": "システム",
         "zapscriptHelp": "ヘルプ",
         "clearConfirmTitle": "ZapScriptをクリアしますか？",
-        "commandPalette": "コマンドパレット",
-        "insertCommandStart": "コマンド開始を挿入",
-        "insertCommandSeparator": "コマンド区切りを挿入",
         "insertMedia": "メディアパスを挿入",
         "insert": "挿入",
         "insertSystem": "システムを挿入",
         "insertCommand": "コマンドを挿入",
-        "runZapScript": "ZapScriptを実行"
+        "runZapScript": "ZapScriptをテスト"
       },
       "nfc": {
         "title": "NFCユーティリティ",
@@ -497,9 +922,7 @@
         "confirm": "よろしいですか？",
         "tabs": {
           "read": "読み取り",
-          "write": "書き込み",
-          "tools": "ツール",
-          "history": "履歴"
+          "tools": "ツール"
         },
         "readTab": {
           "scanTag": "タグをスキャン",
@@ -530,35 +953,11 @@
           "historicalBytes": "ヒストリカルバイト (ISO-DEP)",
           "manufacturer": "メーカー (NFC-F)",
           "systemCode": "システムコード (NFC-F)",
-          "copiedToClipboard": "{{label}}をクリップボードにコピーしました",
-          "copyFailed": "クリップボードへのコピーに失敗しました",
-          "tagData": "タグデータ",
           "shareTitle": "NFCタグデータ",
           "shareText": "UID: {{uid}}\nテキスト: {{text}}",
           "shareTagData": "タグデータを共有"
         },
-        "write": {
-          "templates": {
-            "text": "テキスト",
-            "url": "URL",
-            "wifi": "WiFi",
-            "contact": "連絡先",
-            "custom": "カスタム"
-          },
-          "writeToTag": "タグに書き込む",
-          "preview": "プレビュー",
-          "estimatedSize": "推定サイズ"
-        },
-        "history": {
-          "title": "NFC履歴",
-          "empty": "履歴がありません",
-          "clearAll": "すべてクリア",
-          "writeAgain": "再度書き込む",
-          "remove": "削除"
-        },
         "tools": {
-          "dangerousOperations": "危険な操作",
-          "platformInfo": "プラットフォーム情報",
           "formatDescription": "タグをNDEF標準にフォーマットし、すべてのデータを削除します",
           "formatWarning": "タグ上のすべてのデータが完全に削除されます",
           "eraseDescription": "タグからすべてのNDEFデータを削除します",
@@ -579,6 +978,8 @@
           "reload": "設定ファイルを再読み込み",
           "reloadedSuccess": "設定ファイルからマッピングを再読み込みしました",
           "reloadFailed": "マッピングの再読み込みに失敗しました",
+          "loadFailed": "マッピングを読み込めませんでした",
+          "retry": "再試行",
           "disabledBadge": "無効",
           "readOnlyBadge": "読み取り専用",
           "noOverride": "アクションなし",
@@ -605,7 +1006,6 @@
           "matchRegexHelp": "パターンを正規表現として使用します。",
           "matchRegexInvalid": "無効な正規表現です",
           "pattern": "パターン",
-          "patternRequired": "パターンを入力してください",
           "override": "ZapScript",
           "overrideHelp": "マッピングが一致したときに実行されます。",
           "enabled": "有効",
@@ -634,7 +1034,7 @@
       "loginGoogle": "Googleでサインイン",
       "loginApple": "Appleでサインイン",
       "logout": "サインアウト",
-      "loginSuccess": "サインインしました",
+      "logoutFailed": "サインアウトできませんでした",
       "loginWrong": "メールアドレスまたはパスワードが正しくありません",
       "loginFail": "サインイン中にエラーが発生しました",
       "mfaTitle": "2要素認証",
@@ -646,7 +1046,6 @@
       "mfaBack": "サインインに戻る",
       "mfaExpired": "認証の有効期限が切れました。もう一度サインインしてください。",
       "mfaFailed": "コードを認証できませんでした。再試行してください。",
-      "signUpSuccess": "アカウントを作成しました",
       "signUpFail": "アカウントの作成に失敗しました",
       "emailExists": "このメールアドレスのアカウントはすでに存在します",
       "weakPassword": "パスワードの強度が不足しています",
@@ -658,16 +1057,9 @@
       "resetEmailSent": "パスワード再設定メールを送信しました",
       "resetEmailFailed": "再設定メールの送信に失敗しました",
       "enterEmailFirst": "先にメールアドレスを入力してください",
-      "oauthNotAvailable": "ソーシャルログインにはZaparooアプリが必要です",
       "settingsStatusSignedOut": "サインインしていません",
       "settingsStatusSignedIn": "サインイン済み",
-      "settingsStatusFree": "無料アカウント",
       "settingsStatusWarpActive": "Warp有効",
-      "settingsLoggedInAs": "{{email}}でサインイン中",
-      "loggedInAs": "{{email}}でサインイン中",
-      "loggedInWithGoogle": "Googleでサインイン中",
-      "loggedInWithApple": "Appleでサインイン中",
-      "loggedInWithPassword": "メールアドレスとパスワードでサインイン中",
       "dashboard": "ダッシュボード",
       "changePassword": "パスワードを変更",
       "deleteAccount": "アカウントを削除",
@@ -690,7 +1082,6 @@
       "ageConfirmRequired": "年齢の確認が必要です",
       "deviceLink": {
         "title": "接続中のデバイス",
-        "description": "リンクすると、このデバイスがアカウントに追加され、Online機能を使用できます。プレイ履歴の同期は無料です。有効にするまで、リンクによってプレイ履歴やバックアップがアップロードされることはありません。",
         "help": "リンクすると、このデバイスがアカウントに追加され、Online機能を使用できます。リンクだけでは何もアップロードされません。プレイ履歴の同期とクラウドバックアップは個別に有効にする必要があります。",
         "disconnected": "Zaparoo Online にリンクする前に Core デバイスへ接続してください。",
         "backToSettings": "設定に戻る",
@@ -699,7 +1090,6 @@
         "checking": "デバイスのリンクを確認中...",
         "linking": "デバイスをリンク中...",
         "linked": "デバイスをZaparoo Onlineにリンクしました",
-        "linkedAs": "リンク先",
         "linkedSince": "リンク日",
         "warp": "Warp",
         "warpActive": "有効",
@@ -722,7 +1112,6 @@
         "loading": "Online機能を確認中...",
         "allFeatures": "すべてのOnline機能",
         "allFeaturesHelp": "すべてのOnline機能をまとめてオン/オフにします。個別に変更することもできます。クラウドバックアップはWarpが有効な場合のみオンになります。",
-        "someOn": "一部オン",
         "remoteControl": "リモートコントロール",
         "remoteControlHelp": "リンクされたZaparoo Onlineアカウントから、このデバイスに承認済みのコマンドを送信できるようにします。",
         "remoteControlSummary": "リンクされたZaparoo Onlineアカウントから、このデバイスに承認済みのコマンドを送信できるようにします。",
@@ -730,19 +1119,17 @@
         "playHistoryHelp": "プレイした内容と日時をZaparoo Onlineアカウントに保存します。この機能は無料です。\n\n初回の同期では、保持されているローカルのプレイ履歴がアップロードされます。無効にすると、以降のアップロードは停止します。",
         "playHistorySummary": "無料。プレイした内容と日時をZaparoo Onlineアカウントに保存します。",
         "librarySync": "ライブラリを同期",
-        "librarySyncHelp": "ゲームリスト、お気に入り、高評価、デッキをリンクされたZaparoo Onlineアカウントと同期します。",
-        "librarySyncSummary": "ゲームリスト、お気に入り、高評価、デッキをリンクされたZaparoo Onlineアカウントと同期します。",
+        "librarySyncHelp": "メディアリスト、お気に入り、高評価、デッキをリンクされたZaparoo Onlineアカウントと同期します。",
+        "librarySyncSummary": "メディアリスト、お気に入り、高評価、デッキをリンクされたZaparoo Onlineアカウントと同期します。",
         "automaticBackup": "自動クラウドバックアップ",
         "automaticBackupHelp": "対応する設定、入力、セーブデータ、セーブステートを、スケジュールされたデバイス外バックアップで保護します。アップロードには有効なWarpサブスクリプションが必要です。\n\n無効にすると自動アップロードが停止します。既存のクラウドバックアップは引き続き復元できます。",
         "automaticBackupSummary": "Warpに含まれます。対応するデバイスデータをスケジュールされたデバイス外バックアップで保護します。",
-        "free": "無料",
         "requiresWarp": "Warpが必要",
         "checkingWarp": "Warpを確認中",
         "schedule": "バックアップスケジュール",
         "scheduleDaily": "毎日",
         "scheduleWeekly": "毎週",
         "scheduleManual": "手動のみ",
-        "backupStatus": "クラウドバックアップの状態",
         "checkingStatus": "確認中...",
         "statusUnavailable": "利用不可",
         "backupInProgress": "バックアップ中...",
@@ -750,7 +1137,6 @@
         "lastBackup": "前回のバックアップ: {{date}}",
         "neverBackedUp": "まだバックアップされていません",
         "notConfigured": "未設定",
-        "remoteStatus": "リモートコントロールの状態",
         "remoteStates": {
           "unknown": "不明",
           "disabled": "オフ",
@@ -776,6 +1162,7 @@
       "termsOfService": "利用規約",
       "privacyPolicy": "プライバシーポリシー",
       "and": "および",
+      "or": "または",
       "warp": {
         "title": "Zaparoo Warp",
         "description": "クラウドバックアップで対応するデバイスデータを保護し、Warpが有効な間はZaparoo Proを利用できます。",
@@ -827,7 +1214,14 @@
         "manage": "サブスクリプションを管理",
         "openingManagement": "サブスクリプション設定を開いています...",
         "manageUnavailable": "ここではサブスクリプションを管理できません",
-        "manageFailed": "サブスクリプション管理を開けませんでした"
+        "manageFailed": "サブスクリプション管理を開けませんでした",
+        "trialActive": "Warpの体験期間中です",
+        "trialEnds": "体験期間は{{date}}に終了します",
+        "trialPending": "Warpの体験期間を確認しています。",
+        "trialExpired": "Warpの体験期間は終了しました。",
+        "trialImmediateBilling": "体験期間中に登録すると、すぐに課金が始まります。",
+        "trialLastDay": "Warpの体験期間は24時間以内に終了します。",
+        "trialEnding": "Warpの体験期間は3日以内に終了します。"
       }
     },
     "requirements": {
@@ -847,6 +1241,7 @@
       "emailNotVerified": "メールアドレスはまだ確認されていません",
       "emailSendFailed": "確認メールの送信に失敗しました",
       "emailCheckFailed": "確認状況の取得に失敗しました",
+      "saveFailed": "保存できませんでした",
       "emailVerified": "メールアドレスを確認しました",
       "saved": "保存しました",
       "save": "保存",
@@ -854,22 +1249,30 @@
       "logout": "サインアウト"
     },
     "settings": {
+      "groups": {
+        "device": "デバイス",
+        "app": "アプリ",
+        "support": "サポート"
+      },
       "title": "設定",
-      "moreSettings": "その他の設定",
       "device": "デバイスアドレス",
+      "deviceSetup": {
+        "addDeviceManually": "デバイスを手動で追加",
+        "enterAddress": "アドレスを入力",
+        "connect": "接続"
+      },
       "deviceAddressRequired": "デバイスアドレスを入力してください",
       "deviceAddressInvalid": "有効なホスト名、IPアドレス、またはhost:portを入力してください。",
-      "modeLabel": "スキャンモード",
       "tapMode": "タップ",
       "insertMode": "保持",
       "updateDb": "メディアデータベースを更新",
       "updateDb.cancel": "キャンセル",
       "updateDb.resume": "再開",
       "updateDb.status.ready": "データベースの準備完了",
+      "updateDb.status.noDatabase": "データベースが見つかりません",
       "updateDb.status.optimizing": "データベースを最適化中（使用可能）",
       "updateDb.status.paused": "一時停止中",
       "updateDb.status.throttled": "低速で実行中",
-      "updateDb.status.reconnecting": "再接続中...",
       "updateDb.status.mediaCount": "データベース準備完了: メディアタイトル{{formattedCount}}件",
       "updateDb.status.noConnection": "未接続",
       "updateDb.status.checking": "データベースの状態を確認中...",
@@ -877,7 +1280,7 @@
       "updateDb.status.setupMissing": "メディアデータベースの準備ができていません。データベースを更新して再構築してください。",
       "updateDb.startError": "メディアデータベースの更新を開始できませんでした",
       "updateDb.blockedByScrape": "スクレイピングを実行中です。完了するまでデータベースを更新できません。",
-      "updateDb.selectSystemsTitle": "更新するシステムを選択",
+      "updateDb.selectSystemsTitle": "更新するシステム",
       "updateDb.allSystems": "すべてのシステム",
       "updateDb.progressLabel": "データベースの更新状況",
       "updateDb.cleanOrphans": "存在しないメディアを整理",
@@ -893,6 +1296,8 @@
       "scrapeMedia.cancel": "キャンセル",
       "scrapeMedia.starting": "開始中...",
       "scrapeMedia.startError": "メディアのスクレイピングを開始できませんでした",
+      "scrapeMedia.cancelError": "メディアのスクレイピングをキャンセルできませんでした",
+      "scrapeMedia.resumeError": "メディアのスクレイピングを再開できませんでした",
       "scrapeMedia.scraperPlaceholder": "スクレイパーを選択",
       "scrapeMedia.allSystems": "すべてのシステム",
       "scrapeMedia.selectSystemsTitle": "スクレイピングするシステムを選択",
@@ -923,7 +1328,6 @@
       "scrapeMedia.status.paused": "一時停止中",
       "scrapeMedia.status.throttled": "低速で実行中",
       "scrapeMedia.status.reconnecting": "再接続中...",
-      "scrapeMedia.status.totalScraped": "メディアレコード{{formattedCount}}件を取得しました",
       "scrapeMedia.force": "取得済みのメディアも再スクレイピング",
       "scrapeMedia.resume": "再開",
       "media": {
@@ -931,7 +1335,6 @@
         "databaseTitle": "メディアデータベース",
         "scraperTitle": "メタデータスクレイパー"
       },
-      "designer": "Zaparoo Designer",
       "getApp": "Zaparooアプリを入手",
       "language": "言語",
       "languageRegion": {
@@ -949,13 +1352,15 @@
       "networkScan": {
         "title": "デバイスを検索",
         "searching": "デバイスを検索中...",
-        "stillSearching": "引き続き検索中...",
-        "noDevices": "デバイスが見つかりません",
+        "refresh": "再検索",
+        "noOtherDevices": "他のデバイスが見つかりません",
         "addresses_one": "IPアドレス: {{addresses}}",
         "addresses_other": "IPアドレス: {{addresses}}",
-        "version": "v{{version}}"
+        "version": "v{{version}}",
+        "scanFailed": "デバイスを検索できませんでした"
       },
       "connectionFailed": "デバイスに接続できません",
+      "updateFailed": "設定を保存できませんでした",
       "notConnected": "未接続",
       "coreOutdated": {
         "title": "Coreの更新を推奨（v{{version}}以降）",
@@ -965,7 +1370,6 @@
       "deviceHistoryEmpty": "保存済みのデバイスはまだありません。",
       "deviceHistoryError": "保存済みのデバイスを読み込めませんでした。",
       "deviceHistoryLoading": "保存済みのデバイスを読み込み中...",
-      "deviceDetails": "デバイスの詳細",
       "activeDevice": "使用中のデバイス",
       "deviceDetail": {
         "nameLabel": "デバイス名",
@@ -997,10 +1401,10 @@
       "about": {
         "title": "このアプリについて",
         "version": "バージョン: {{version}}",
-        "createdBy": "作成者",
         "translationsBy": "翻訳者",
-        "contributors": "Zaparoo貢献者",
         "wizzodev": "Wizzo.dev Patrons",
+        "roleDeveloper": "開発者",
+        "roleDesigner": "UXデザイナー",
         "joinPatreon": "Patreonに参加"
       },
       "licenses": {
@@ -1040,9 +1444,6 @@
       "playControls": {
         "title": "再生操作"
       },
-      "playtime": {
-        "title": "プレイ時間"
-      },
       "advanced": {
         "title": "詳細設定",
         "errorReporting": "エラーレポート",
@@ -1055,6 +1456,14 @@
         "showFilenamesHelp": "アプリ内の検索結果で、整形された名前ではなくメディアの完全なファイル名を一覧に表示します。ファイル名に多数のカスタムタグを使用している場合に便利です。",
         "appIconBadges": "アプリアイコンのバッジ",
         "appIconBadgesHelp": "未読の受信トレイ件数をアプリアイコンに表示します。バッジは通知設定で管理されるため、iOSから通知の許可を求められる場合があります。",
+        "appPreview": "App preview",
+        "appPreviewHelp": "Render app-only screens in the browser for design work. Nothing behind them is functional: NFC, camera and purchases are simulated.",
+        "appPreviewNfcResult": "Preview NFC result",
+        "appPreviewNfcHold": "Wait for a tag",
+        "appPreviewNfcSuccess": "Success",
+        "appPreviewNfcVerifyFailed": "Verification failed",
+        "appPreviewNfcRetap": "Re-tap required",
+        "appPreviewNfcError": "Error",
         "purchasePreview": "購入状態のプレビュー",
         "purchasePreviewLive": "現在の状態",
         "purchasePreviewFree": "無料アカウント",
@@ -1066,12 +1475,6 @@
         "viewLogs": "ログを表示"
       },
       "core": {
-        "title": "Core設定",
-        "soundEffects": "スキャン時に効果音を再生",
-        "autoDetect": "外部NFCリーダーを自動検出",
-        "debug": "デバッグモード",
-        "nfcDriver": "NFCドライバー接続文字列",
-        "insertModeBlocklist": "保持モードのCoreブロックリスト",
         "playtime": {
           "title": "プレイ時間制限",
           "enabled": "プレイ時間制限を有効にする",
@@ -1110,7 +1513,10 @@
           "lastUsed": "最終使用：{{date}}",
           "neverUsed": "未使用",
           "roleLabel": "役割",
-          "role": { "admin": "管理者", "member": "メンバー" },
+          "role": {
+            "admin": "管理者",
+            "member": "メンバー"
+          },
           "name": "名前",
           "nameRequiredLabel": "名前 *",
           "nameRequired": "プロフィール名を入力してください",
@@ -1132,7 +1538,6 @@
           "limitsOff": "オフ",
           "dailyLimit": "1日の制限",
           "sessionLimit": "セッション制限",
-          "inherit": "引き継ぐ",
           "unlimitedHelp": "無制限にするには両方の欄を0に設定します。",
           "durationInvalid": "時間は0以上、分は0～59にしてください",
           "saved": "プロフィールを保存しました",
@@ -1153,7 +1558,8 @@
           "switch": "プロフィールを切り替える",
           "shared": "共有プロフィール",
           "switched": "プロフィールを切り替えました",
-          "switchFailed": "プロフィールを切り替えられませんでした"
+          "switchFailed": "プロフィールを切り替えられませんでした",
+          "switchOptionActive": "{{name}}（使用中）"
         },
         "launchGuard": {
           "title": "起動ガード",
@@ -1167,8 +1573,6 @@
         }
       },
       "app": {
-        "title": "アプリ設定",
-        "preferRemoteWriter": "書き込みに接続中のリーダーを優先",
         "restorePurchases": "購入を復元",
         "restoreSuccess": "購入を復元しました",
         "restoreNotFound": "購入が見つかりません。ストアで Pro を購入済みと表示される場合は、「Pro を解除」をタップして所有権を確認してください。",
@@ -1177,36 +1581,35 @@
         "copyBillingDiagnostics": "請求診断をコピー",
         "billingDiagnosticsCopied": "請求診断をコピーしました",
         "billingDiagnosticsCopyFailed": "請求診断をコピーできませんでした",
-        "shakeToLaunch": "振って起動",
         "proFeature": "Pro",
         "proActive": "Zaparoo Pro有効",
         "shakeRandomMedia": "ランダムメディア",
         "shakeCustom": "カスタム",
         "shakeSelectSystem": "システムを選択",
-        "shakeZapscript": "起動するZapScript",
         "shakeModeLabel": "シェイクモード"
       },
       "logs": {
         "title": "ログ",
         "refresh": "更新",
-        "filters": "フィルター",
         "download": "ダウンロード",
         "copy": "クリップボードにコピー",
         "upload": "ログをアップロード",
         "uploading": "ログをアップロード中...",
         "uploadSuccess": "ログをアップロードしました",
         "uploadError": "ログのアップロードに失敗しました",
+        "downloadError": "ログのダウンロードに失敗しました",
         "uploadResult": "アップロードしたログのリンク",
         "copyUploadLink": "アップロードしたログのリンクをコピー",
-        "filename": "ファイル名",
-        "fileSize": "ファイルサイズ",
         "searchPlaceholder": "ログを絞り込む...",
-        "levelFilters": "ログレベル",
-        "totalEntries": "合計エントリ数",
-        "filteredEntries": "表示中",
+        "entriesShowing": "{{total}}件中{{shown}}件を表示",
+        "entryCount_one": "{{count}}件のエントリ",
+        "entryCount_other": "{{count}}件のエントリ",
+        "levelDebug": "デバッグ",
+        "levelInfo": "情報",
+        "levelWarn": "警告",
+        "levelError": "エラー",
         "noEntriesFound": "フィルターに一致するログエントリがありません",
         "fetchError": "ログの取得に失敗しました",
-        "notConnected": "ログにアクセスするにはZaparooデバイスに接続してください",
         "showMore": "もっと見る",
         "showLess": "折りたたむ"
       },
@@ -1218,7 +1621,11 @@
         "textSizeSmall": "S",
         "textSizeDefault": "M",
         "textSizeLarge": "L",
-        "textSizeExtraLarge": "XL"
+        "textSizeExtraLarge": "XL",
+        "appearance": "外観",
+        "appearanceSystem": "システム",
+        "appearanceLight": "ライト",
+        "appearanceDark": "ダーク"
       },
       "help": {
         "title": "ヘルプ",
@@ -1226,7 +1633,6 @@
         "taptoWiki": "Zaparoo Docs",
         "documentationLabel": "ドキュメント",
         "gettingStarted": "Zaparooを始める",
-        "softwareSetup": "Zaparooソフトウェアのセットアップ",
         "commandReference": "ZapScriptヘルプ",
         "communityLabel": "コミュニティ",
         "discord": "Discordサーバーに参加",
@@ -1234,14 +1640,18 @@
         "technicalSupport": "技術サポート",
         "reportIssue": "GitHubで問題を報告",
         "emailLabel": "サポートメール:"
-      }
+      },
+      "connectDevice": "{{device}}に接続",
+      "savedDevices": "保存済みデバイス"
     },
     "systemSelector": {
+      "loadError": "システムを読み込めませんでした",
+      "clear": "クリア",
+      "done": "完了",
       "title": "システムを選択",
       "searchPlaceholder": "システムを検索...",
       "searchSystems": "システムを検索",
-      "clearSearch": "検索をクリア",
-      "systemsList": "システムリスト",
+      "otherCategory": "その他",
       "selected": "{{name}}を選択しました",
       "deselected": "{{name}}の選択を解除しました",
       "allSystems": "すべてのシステム",
@@ -1250,25 +1660,32 @@
       "noResults": "システムが見つかりません",
       "noResultsHint": "検索語を短くするか、検索をクリアしてください。",
       "noSystems": "利用可能なシステムがありません",
-      "selectedCount": "{{count}}システムを選択中",
       "multipleSelected": "{{count}}システムを選択中",
-      "clearAll": "すべてクリア",
-      "apply": "適用"
+      "clearAll": "すべてクリア"
+    },
+    "launcherSelector": {
+      "title": "ランチャーを選択",
+      "search": "ランチャーを検索",
+      "loadError": "ランチャーを読み込めませんでした",
+      "noResults": "ランチャーが見つかりません",
+      "noLaunchers": "利用できるランチャーがありません",
+      "unavailable": "このデバイスでは利用できません"
     },
     "tagSelector": {
+      "expandAll": "すべて展開",
+      "collapseAll": "すべて折りたたむ",
+      "unavailable": "タグを利用できません",
       "title": "タグを選択",
       "searchPlaceholder": "タグを絞り込む...",
       "searchTags": "タグを絞り込む",
-      "clearSearch": "検索をクリア",
       "resultsLabel": "一致するタグ",
-      "allTypes": "すべてのタイプ",
       "noResults": "タグが見つかりません",
       "noResultsHint": "検索語を短くするか、検索をクリアしてください。",
       "noTags": "利用可能なタグがありません",
-      "selectedCount": "{{count}}タグを選択中",
       "multipleSelected": "{{count}}タグを選択中",
       "clearAll": "すべてクリア",
       "apply": "適用",
+      "applyCount": "適用（{{count}}）",
       "selected": "{{name}}を選択しました",
       "deselected": "{{name}}の選択を解除しました",
       "type": {
@@ -1278,9 +1695,12 @@
         "arcadeboard": "アーケード基板",
         "art": "アートスタイル",
         "based": "原作",
+        "builddate": "ビルド日",
+        "cabinet": "筐体",
         "category": "カテゴリ",
         "compatibility": "互換性",
         "copyright": "著作権",
+        "credit": "クレジット",
         "developer": "開発者",
         "disc": "ディスク",
         "disctotal": "ディスク総数",
@@ -1288,32 +1708,44 @@
         "dump": "ダンプ状態",
         "edition": "エディション",
         "embedded": "埋め込み",
+        "episode": "エピソード",
         "extension": "拡張子",
+        "gamefamily": "ゲームシリーズ",
         "gamegenre": "ゲームジャンル",
         "genre": "ジャンル",
         "input": "入力",
+        "issue": "号",
         "lang": "言語",
         "mameparent": "MAMEペアレント",
         "media": "メディア",
         "multigame": "マルチゲーム",
+        "patch": "パッチ",
         "perspective": "視点",
         "platform": "プラットフォーム",
         "players": "プレイヤー数",
         "port": "移植",
+        "property": "プロパティ",
+        "protection": "コピー保護",
         "publisher": "発売元",
+        "rating": "評価",
         "reboxed": "再パッケージ",
         "region": "リージョン",
+        "release": "リリース",
         "rerelease": "再リリース",
         "rev": "リビジョン",
         "save": "セーブ",
         "search": "検索",
+        "season": "シーズン",
         "series": "シリーズ",
         "set": "セット",
         "supplement": "補足",
-        "unlicensed": "非公式",
+        "track": "トラック",
         "unfinished": "未完成",
         "unknown": "不明",
+        "unlicensed": "非公式",
+        "user": "ユーザー",
         "video": "ビデオ",
+        "volume": "巻",
         "year": "年"
       }
     },
@@ -1353,7 +1785,10 @@
       "deviceLinking": "Zaparoo Onlineのデバイスリンク",
       "onlineRemoteControl": "Zaparoo Onlineのリモートコントロール",
       "onlineLibrarySync": "Zaparoo Onlineのライブラリ同期",
-      "profiles": "プロフィール"
+      "profiles": "プロフィール",
+      "mediaRecents": "最近プレイした",
+      "mediaHistoryDistinct": "重複のない再生履歴",
+      "launchers": "ランチャー一覧"
     },
     "inbox": {
       "title": "通知",
@@ -1364,6 +1799,8 @@
       "deleteOne": "{{title}}を削除",
       "clearAll": "すべてクリア",
       "confirmClear": "すべての通知をクリアしますか？",
+      "deleteFailed": "通知を削除できませんでした",
+      "clearFailed": "通知をクリアできませんでした",
       "confirmClearYes": "すべてクリア",
       "confirmClearNo": "キャンセル",
       "severity": {
@@ -1414,12 +1851,13 @@
       "description": "デバイスに表示された6桁のPINを入力してください。",
       "noAddress": "ペアリングする前に、設定でデバイスアドレスを指定してください。",
       "pinLabel": "PIN",
-      "pinPlaceholder": "000000",
       "clientNameLabel": "デバイス名",
       "startPairing": "ペアリング",
       "pairing": "ペアリング中...",
       "success": "ペアリングしました",
       "openPairing": "デバイスとペアリング",
+      "defaultClientName": "Zaparoo App {{platform}}",
+      "unknownDeviceName": "不明",
       "connectionError": {
         "encryptionRequired": "このデバイスはペアリングが必要です。",
         "credentialsRevoked": "ペアリングが解除されました。もう一度ペアリングしてください。",
@@ -1450,7 +1888,7 @@
       },
       "deviceAddress": {
         "title": "デバイスを接続",
-        "text": "検索アイコンをタップしてネットワーク上のZaparooデバイスを探すか、必要に応じてデバイスのIPアドレスを手動で入力してください。"
+        "text": "デバイス選択を開いて、保存済みまたは近くのZaparooデバイスを選択するか、アドレスを手動で入力してください。"
       },
       "mediaDatabase": {
         "title": "メディアライブラリを更新",
@@ -1471,6 +1909,315 @@
         "next": "次へ",
         "finish": "完了"
       }
+    },
+    "zapscript": {
+      "builder": {
+        "view": "エディターの表示",
+        "steps": "ステップ",
+        "text": "テキスト",
+        "addStep": "ステップを追加",
+        "empty": "ステップはまだありません",
+        "emptyHint": "ステップを追加して、スキャン時の動作を選びます",
+        "stepLabel": "ステップ{{position}}: {{name}}",
+        "moveUp": "ステップ{{position}}を上へ移動",
+        "moveDown": "ステップ{{position}}を下へ移動",
+        "remove": "ステップ{{position}}を削除",
+        "options": "詳細",
+        "textStep": "ZapScriptテキスト",
+        "textStepDescription": "このステップはテキストでのみ編集できる構文を使用しています",
+        "textStepField": "ステップ{{position}}のZapScript",
+        "textOnly": "このスクリプトはテキストでのみ編集できます",
+        "textOnlyHint": "ステップ表示では分割できない構文を使用しています",
+        "editAsText": "テキストとして編集",
+        "noChoice": "未設定",
+        "searchMediaFor": "{{field}}のメディアを検索",
+        "chooseSystemFor": "{{field}}のシステムを選択",
+        "chooseLauncherFor": "{{field}}のランチャーを選択",
+        "searchCommands": "コマンドを検索",
+        "noCommands": "コマンドが見つかりません"
+      },
+      "groups": {
+        "launch": "起動",
+        "playlist": "プレイリスト",
+        "input": "入力",
+        "ui": "画面表示",
+        "profile": "プロフィール",
+        "mister": "MiSTer",
+        "http": "ウェブリクエスト",
+        "utility": "ユーティリティ"
+      },
+      "commands": {
+        "launch": {
+          "description": "パスまたはタイトルからメディアを起動する"
+        },
+        "launch_system": {
+          "description": "メディアを読み込まずにシステムを開く"
+        },
+        "launch_random": {
+          "description": "システムからランダムにゲームを起動する"
+        },
+        "launch_search": {
+          "description": "検索に一致した最初のメディアを起動する"
+        },
+        "launch_title": {
+          "description": "システムとタイトルを指定してメディアを起動する"
+        },
+        "launch_last": {
+          "description": "最近プレイしたメディアを起動する"
+        },
+        "playlist_play": {
+          "description": "プレイリストを開始するか、一時停止中のものを再開する"
+        },
+        "playlist_stop": {
+          "description": "プレイリストを停止して閉じる"
+        },
+        "playlist_next": {
+          "description": "プレイリストの次の項目に進む"
+        },
+        "playlist_previous": {
+          "description": "プレイリストの前の項目に戻る"
+        },
+        "playlist_goto": {
+          "description": "プレイリストの指定した番号の項目に移動する"
+        },
+        "playlist_pause": {
+          "description": "プレイリストを一時停止する"
+        },
+        "playlist_load": {
+          "description": "プレイリストを開始せずに読み込む"
+        },
+        "playlist_open": {
+          "description": "プレイリストを画面に表示して項目を選ぶ"
+        },
+        "execute": {
+          "description": "デバイスでコマンドを実行する"
+        },
+        "delay": {
+          "description": "次のステップを実行する前に待つ"
+        },
+        "evaluate": {
+          "description": "別のZapScriptを実行する"
+        },
+        "write": {
+          "description": "次にスキャンしたタグにテキストを書き込む"
+        },
+        "stop": {
+          "description": "再生中のメディアを停止する"
+        },
+        "echo": {
+          "description": "Zaparooのログにメッセージを書き込む"
+        },
+        "control": {
+          "description": "一時停止やセーブなど、再生中のメディアを操作する"
+        },
+        "screenshot": {
+          "description": "スクリーンショットを撮る"
+        },
+        "mister_ini": {
+          "description": "別のMiSTer INIファイルに切り替える"
+        },
+        "mister_core": {
+          "description": "MiSTerコアを起動する"
+        },
+        "mister_script": {
+          "description": "MiSTerのScriptsフォルダーにあるスクリプトを実行する"
+        },
+        "mister_mgl": {
+          "description": "MiSTerのMGL内容を使って起動する"
+        },
+        "mister_wallpaper": {
+          "description": "MiSTerメニューの壁紙を設定または解除する"
+        },
+        "http_get": {
+          "description": "バックグラウンドでウェブアドレスにアクセスする"
+        },
+        "http_post": {
+          "description": "ウェブアドレスにデータを送信する"
+        },
+        "input_keyboard": {
+          "description": "キーボードのキーを押す"
+        },
+        "input_gamepad": {
+          "description": "ゲームパッドのボタンを押す"
+        },
+        "input_text": {
+          "description": "キーボードでテキストを入力する"
+        },
+        "input_coinp1": {
+          "description": "プレイヤー1のコインを入れる"
+        },
+        "input_coinp2": {
+          "description": "プレイヤー2のコインを入れる"
+        },
+        "input_coinp3": {
+          "description": "プレイヤー3のコインを入れる"
+        },
+        "input_coinp4": {
+          "description": "プレイヤー4のコインを入れる"
+        },
+        "ui_notice": {
+          "description": "画面にお知らせを表示する"
+        },
+        "ui_picker": {
+          "description": "画面に選択肢の一覧を表示する"
+        },
+        "traits": {
+          "description": "このスクリプトに追加情報を付ける"
+        },
+        "profile": {
+          "description": "プロフィールに切り替える"
+        },
+        "profile_clear": {
+          "description": "有効なプロフィールを解除する"
+        },
+        "playtime_extend": {
+          "description": "プレイ時間を延長する"
+        }
+      },
+      "args": {
+        "system": "システム",
+        "media": "メディア",
+        "search": "検索テキスト",
+        "title": "タイトル",
+        "historyOffset": "いくつ前か",
+        "playlist": "プレイリスト",
+        "position": "項目番号",
+        "command": "コマンド",
+        "duration": "待ち時間",
+        "text": "テキスト",
+        "controlAction": "アクション",
+        "iniNumber": "INI番号",
+        "corePath": "コアのパス",
+        "script": "スクリプト",
+        "mgl": "MGLの内容",
+        "wallpaper": "壁紙ファイル",
+        "url": "ウェブアドレス",
+        "contentType": "コンテンツタイプ",
+        "body": "送信するデータ",
+        "keys": "キー",
+        "buttons": "ボタン",
+        "coins": "コイン数",
+        "profileId": "プロフィール切り替えID",
+        "extraTime": "追加時間",
+        "keyCode": "キーコード"
+      },
+      "advArgs": {
+        "when": "実行する条件",
+        "launcher": "ランチャー",
+        "system": "システム",
+        "action": "アクション",
+        "name": "名前",
+        "pre_notice": "起動前のお知らせ",
+        "slot": "メディアスロット",
+        "tags": "タグ",
+        "set_name": "セット名",
+        "set_name_same_dir": "セット名でもゲームフォルダーを維持",
+        "mode": "再生順",
+        "repeat": "リピート",
+        "speed": "入力の間隔",
+        "hidden": "非表示で実行",
+        "profile": "承認するプロフィール"
+      }
+    },
+    "zapLayout": {
+      "customise": "カスタマイズ",
+      "title": "Zapページをカスタマイズ",
+      "resetDefault": "初期設定に戻す",
+      "cancel": "キャンセル",
+      "done": "完了",
+      "reorder": "{{name}}を並べ替え",
+      "reorderRole": "移動できるウィジェット",
+      "dragInstructions": "スペースキーでウィジェットを持ち上げ、矢印キーで移動し、もう一度スペースキーで置きます。Escapeでキャンセルします。",
+      "dragStart": "{{name}}を持ち上げました。",
+      "dragOver": "{{name}}は{{place}}の上にあります。",
+      "dragEnd": "{{name}}を{{place}}に置きました。",
+      "dragCancel": "{{name}}の移動を中止しました。",
+      "moveUp": "{{name}}を上へ",
+      "moveDown": "{{name}}を下へ",
+      "hideWidget": "{{name}}を非表示",
+      "showWidget": "{{name}}を表示",
+      "show": "表示",
+      "dropHere": "ここにウィジェットを置く",
+      "hiddenEmpty": "非表示のウィジェットはここに表示されます。",
+      "stackNote": "幅の狭い画面では、列はこの順に縦に並びます。",
+      "unavailable": "現在このデバイスでは利用できません。",
+      "emptyNow": "表示する内容があるときに表示されます。",
+      "widgets": {
+        "nowPlaying": "再生中",
+        "scan": "タグまたはコードをスキャン",
+        "controls": "コントロール",
+        "readers": "リーダー",
+        "favourites": "お気に入り",
+        "recents": "最近プレイ"
+      },
+      "places": {
+        "main": "メイン列",
+        "side": "サイド列",
+        "bottom": "全幅",
+        "hidden": "非表示"
+      },
+      "addButton": "追加",
+      "addButtonTitle": "ボタンを追加",
+      "editButtonTitle": "ボタンを編集",
+      "buttonUnnamed": "ボタン",
+      "buttonLabel": "ラベル",
+      "buttonIcon": "アイコン",
+      "iconNone": "なし",
+      "buttonStyle": "スタイル",
+      "buttonScript": "ZapScript",
+      "askFirst": "実行前に確認する",
+      "deleteButton": "ボタンを削除",
+      "moveEarlier": "{{name}}を前へ",
+      "moveLater": "{{name}}を後ろへ",
+      "editButton": "{{name}}を編集",
+      "confirmRunTitle": "{{name}}を実行しますか？",
+      "confirmRun": "実行",
+      "copyFrom": "別のデバイスからコピー",
+      "icons": {
+        "play": "再生",
+        "pause": "一時停止",
+        "stop": "停止",
+        "next": "次へ",
+        "volume": "音量",
+        "mute": "ミュート",
+        "gamepad": "ゲームパッド",
+        "tv": "テレビ",
+        "save": "保存",
+        "folder": "フォルダ",
+        "power": "電源",
+        "refresh": "更新",
+        "home": "ホーム",
+        "star": "スター",
+        "music": "音楽",
+        "zap": "稲妻"
+      },
+      "styles": {
+        "primary": "青",
+        "secondary": "標準",
+        "destructive": "赤"
+      },
+      "buttonSize": "サイズ",
+      "moreOptions": "その他のオプション",
+      "sizes": {
+        "small": "小",
+        "medium": "中",
+        "large": "大"
+      },
+      "addChooserTitle": "Zapページに追加",
+      "addKindButton": "ボタン",
+      "addKindButtonHint": "押すとZapScriptを実行します。",
+      "addKindCollection": "コレクション",
+      "addKindCollectionHint": "コレクションまたはデッキのカバーを並べた行です。",
+      "addCollectionTitle": "コレクションを追加",
+      "editCollectionTitle": "コレクションを編集",
+      "collectionSource": "表示する内容",
+      "collectionGroup": "コレクション",
+      "deckGroup": "デッキ",
+      "deckMissing": "デッキが見つかりません",
+      "collectionTitle": "タイトル",
+      "deleteCollection": "コレクションを削除",
+      "editCollection": "{{name}}を編集",
+      "moved": "{{name}}を{{place}}の{{count}}件中{{position}}番目に移動しました。"
     }
   }
 }

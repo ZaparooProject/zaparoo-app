@@ -1,39 +1,78 @@
-import { useEffect, useState, useRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useState,
+  useRef,
+  type ReactNode,
+} from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { GamepadDirectionalIcon, PencilIcon } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
+import { Nfc } from "@capawesome-team/capacitor-nfc";
 import { logger } from "@/lib/logger";
-import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import {
-  isWriteModalOpen,
+  isReaderActivityOpen,
   useNfcWriter,
   WriteMethod,
 } from "@/lib/writeNfcHook.tsx";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
-import { WriteModal } from "@/components/WriteModal.tsx";
+import { ReaderActivityControl } from "@/components/ReaderActivityControl";
 import { useAnnouncer } from "@/components/A11yAnnouncer";
-import { cancelSession } from "@/lib/nfc";
 import { CoreAPI } from "@/lib/coreApi";
-import { useCoreFeature } from "@/hooks/useCoreFeature";
+import { entrySystemId } from "@/lib/libraryMedia";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
-import type { MediaSlot, PlayingResponse } from "@/lib/models";
-import { HistoryIcon, ZapLogo } from "@/lib/images";
+import { useCoreFeature } from "@/hooks/useCoreFeature";
+import type { PlayingResponse } from "@/lib/models";
+import { HistoryIcon, NfcIcon, ZapLogo } from "@/lib/images";
 import { useStatusStore } from "@/lib/store";
-import { ToggleChip } from "@/components/wui/ToggleChip";
+import { Button } from "@/components/wui/Button";
+import { HeaderButton } from "@/components/wui/HeaderButton";
+import { GatedFeature } from "@/components/GatedFeature";
 import { PageFrame } from "@/components/PageFrame";
-import { ConnectionStatus } from "@/components/home/ConnectionStatus";
-import { ScanControls } from "@/components/home/ScanControls";
-import { NowPlayingInfo } from "@/components/home/NowPlayingInfo";
+import { DeviceSheet } from "@/components/home/DeviceSheet";
+import { useDeviceSheetController } from "@/hooks/useDeviceSheetController";
+import { HomeDevicePill } from "@/components/home/HomeDevicePill";
+import { ScanActions } from "@/components/home/ScanActions";
+import { MediaCoverRow } from "@/components/home/MediaCoverRow";
+import { NowPlayingCard } from "@/components/home/NowPlayingCard";
+import { ReaderStrip } from "@/components/home/ReaderStrip";
+import { ZapLayoutEditor } from "@/components/home/ZapLayoutEditor";
 import { HistoryModal } from "@/components/home/HistoryModal";
+import { LibraryMediaDetailsModal } from "@/components/library/LibraryMediaDetailsModal";
+import { useReturnableMediaDetails } from "@/hooks/useReturnableMediaDetails";
 import { StopConfirmModal } from "@/components/home/StopConfirmModal";
 import { RemoteKeyboardModal } from "@/components/RemoteKeyboardModal";
 import { useScanOperations } from "@/hooks/useScanOperations";
+import { useHomeScanLayout } from "@/hooks/useHomeScanLayout";
+import { useNfcEnabled } from "@/hooks/useNfcEnabled";
+import { useFavourites, useRecentlyPlayed } from "@/hooks/useHomeCoverRows";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useConnection } from "@/hooks/useConnection";
 import { useKeepAwake } from "@/hooks/useKeepAwake";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useNowPlayingControls } from "@/hooks/useNowPlayingControls";
+import { useNavigationMode } from "@/hooks/useNavigationMode";
+import {
+  cloneZapLayout,
+  DEFAULT_ZAP_LAYOUT,
+  defaultZapLayout,
+  isDefaultZapLayout,
+  newZapButtonId,
+  zapButtonOf,
+  zapButtonSpan,
+  zapCollectionOf,
+  type ZapBuiltinWidgetId,
+  type ZapLayout,
+  type ZapWidgetId,
+} from "@/lib/zapLayout";
+import { ZapButtonWidget } from "@/components/home/ZapButtonWidget";
+import { ZapCollectionWidget } from "@/components/home/ZapCollectionWidget";
+import { useDeviceRegistry } from "@/lib/devices/deviceRegistry";
 
-type PlaylistCommand = "previous" | "pause" | "play" | "next";
+const WIDE_QUERY = "(min-width: 760px)";
 
 function canPausePlaylist(media: PlayingResponse) {
   return (
@@ -43,32 +82,43 @@ function canPausePlaylist(media: PlayingResponse) {
   );
 }
 
-export function Index() {
+interface IndexProps {
+  /** Opens the layout editor on arrival, e.g. from the Settings link. */
+  customiseOnArrival?: boolean;
+  /** Called once the editor has opened so the request is not repeated. */
+  onCustomiseHandled?: () => void;
+}
+
+export function Index({
+  customiseOnArrival = false,
+  onCustomiseHandled,
+}: IndexProps = {}) {
   const { t } = useTranslation();
   const headingRef = usePageHeadingFocus<HTMLHeadingElement>(t("nav.index"));
   const { announce } = useAnnouncer();
   const launcherAccess = usePreferencesStore((state) => state.launcherAccess);
-  const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
-  const cameraAvailable = usePreferencesStore((state) => state.cameraAvailable);
   const preferRemoteWriter = usePreferencesStore(
     (state) => state.preferRemoteWriter,
   );
   const keepScreenAwake = usePreferencesStore((state) => state.keepScreenAwake);
+  const zapLayouts = usePreferencesStore((state) => state.zapLayouts);
+  const setZapLayout = usePreferencesStore((state) => state.setZapLayout);
+  const pruneZapLayouts = usePreferencesStore((state) => state.pruneZapLayouts);
 
   const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
-  // Local modal state: queue-driven writes render their own modal at the app
-  // root; this one belongs exclusively to this page's scan-flow writes. The
-  // modal shows while a write is intended and auto-closes on any completion
-  // (success, cancelled, or error) because status becomes non-null.
+  // Queue-driven writes show their own reader activity at the app root; this
+  // intent belongs to writes started from this page's camera scan. The write
+  // control replaces the scan actions while a write is intended and gives way
+  // on any completion (success, cancelled, or error) once status is non-null.
   const [writeIntent, setWriteIntent] = useState(false);
-  const writeOpen = isWriteModalOpen(writeIntent, nfcWriter);
-  const closeWriteModal = async () => {
+  const writeOpen = isReaderActivityOpen(writeIntent, nfcWriter);
+  const cancelReaderActivity = async () => {
     try {
       await nfcWriter.end();
     } catch (err) {
       logger.error("Failed to end NFC writer session", err, {
         category: "nfc",
-        action: "closeWriteModal",
+        action: "cancelReaderActivity",
         severity: "error",
       });
     } finally {
@@ -79,6 +129,12 @@ export function Index() {
     useProPurchase();
 
   const deviceKey = useActiveDeviceKey();
+  const wide = useMediaQuery(WIDE_QUERY);
+  // The page is an always-on display in full screen; editing it is not offered.
+  const fullScreenActive = useNavigationMode() === "hidden";
+  const remoteDocked = useMediaQuery("(min-width: 1024px)");
+  const remoteFeature = useCoreFeature("remoteInput");
+  const readersFeature = useCoreFeature("readers");
   const connected = useStatusStore((state) => state.connected);
   const playing = useStatusStore((state) => state.playing);
   const backgroundPlaying = useStatusStore((state) => state.backgroundPlaying);
@@ -86,12 +142,17 @@ export function Index() {
   const backgroundPlaylist = useStatusStore(
     (state) => state.playlists.background,
   );
-  const setPlaylist = useStatusStore((state) => state.setPlaylist);
   const setLastToken = useStatusStore((state) => state.setLastToken);
   const { hasData } = useConnection();
 
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [stopTarget, setStopTarget] = useState<MediaSlot | null>(null);
+  const {
+    isOpen: deviceSheetOpen,
+    setOpen: setDeviceSheetOpen,
+    shared: sharedDeviceSheet,
+  } = useDeviceSheetController();
+  const { entry: selectedCoverEntry, select: setSelectedCoverEntry } =
+    useReturnableMediaDetails("home-covers", deviceKey);
   const [remoteKeyboardOpen, setRemoteKeyboardOpen] = useState(false);
   const { available: backgroundMediaAvailable } = useCoreFeature(
     "backgroundMediaSlot",
@@ -119,104 +180,91 @@ export function Index() {
     setWriteOpen: setWriteIntent,
     nfcWriter,
   });
+  const scanLayout = useHomeScanLayout();
+  const recentlyPlayed = useRecentlyPlayed();
+  const lastPlayed = recentlyPlayed[0] ?? null;
+  const favourites = useFavourites();
+  const nfcEnabled = useNfcEnabled();
+  const primary = useNowPlayingControls("primary", {
+    stopMedia: handleStopConfirm,
+    lastPlayed,
+  });
+  const background = useNowPlayingControls("background");
+  const liveControls = primary.available;
+  const stopping = primary.stopPending
+    ? primary
+    : background.stopPending
+      ? background
+      : null;
 
   const history = useQuery({
-    queryKey: ["history"],
+    queryKey: ["history", deviceKey],
     queryFn: () => CoreAPI.history(),
-    enabled: historyOpen,
+    enabled: historyOpen && connected && Boolean(deviceKey),
+    // Reopening the enabled query refreshes scans without an effect refetch loop.
+    staleTime: 0,
   });
 
   // The Zap page doubles as an always-ready reader, but only while a Core is
   // connected to receive scans; otherwise let the phone sleep normally.
   useKeepAwake(connected && keepScreenAwake);
 
-  const confirmStop = () => {
-    const target = stopTarget;
-    setStopTarget(null);
-    if (!target) return;
-
-    const playlist = useStatusStore.getState().playlists[target];
-    if (playlist) {
-      void CoreAPI.run({
-        text: `**playlist.stop?slot=${target}`,
-      }).catch((error) => {
-        logger.error("Failed to stop playlist", error, {
-          category: "api",
-          action: "runPlaylistControl",
-          severity: "error",
-        });
-        showRateLimitedErrorToast(t("scan.playlistControlError"));
+  const toggleHistory = useCallback(() => {
+    const nextOpen = !historyOpen;
+    if (historyToggleTimerRef.current !== null) {
+      clearTimeout(historyToggleTimerRef.current);
+      historyToggleTimerRef.current = null;
+    }
+    if (nextOpen && proPurchaseModalOpen) {
+      setProPurchaseModalOpen(false);
+      historyToggleTimerRef.current = setTimeout(() => {
+        historyToggleTimerRef.current = null;
+        setHistoryOpen(nextOpen);
+      }, 150);
+    } else {
+      setHistoryOpen(nextOpen);
+    }
+  }, [historyOpen, proPurchaseModalOpen, setProPurchaseModalOpen]);
+  const openNfcSettings = () => {
+    if (!Capacitor.isNativePlatform()) return;
+    Nfc.openSettings().catch((error) => {
+      logger.error("Failed to open NFC settings", error, {
+        category: "nfc",
+        action: "openSettings",
+        severity: "warning",
       });
-      return;
-    }
-
-    if (target === "primary") {
-      handleStopConfirm();
-      return;
-    }
-    void CoreAPI.mediaControl({ action: "stop", slot: "background" }).catch(
-      (error) => {
-        logger.error("Failed to stop background media", error, {
-          category: "api",
-          action: "mediaControl",
-          severity: "error",
-        });
-        showRateLimitedErrorToast(t("scan.stopBackgroundMediaError"));
-      },
-    );
+    });
   };
 
-  const runPlaylistCommand = (slot: MediaSlot, command: PlaylistCommand) => {
-    const playlist = useStatusStore.getState().playlists[slot];
-    const playlistID = playlist?.id;
-    const playing =
-      command === "play" ? true : command === "pause" ? false : null;
-
-    void CoreAPI.run({
-      text: `**playlist.${command}?slot=${slot}`,
-    })
-      .then(() => {
-        if (playing === null || !playlistID) {
-          return;
-        }
-        const current = useStatusStore.getState().playlists[slot];
-        if (current?.id === playlistID) {
-          setPlaylist(slot, { ...current, playing });
-        }
-      })
-      .catch((error) => {
-        logger.error("Failed to control playlist", error, {
-          category: "api",
-          action: "runPlaylistControl",
-          severity: "error",
-        });
-        showRateLimitedErrorToast(t("scan.playlistControlError"));
-      });
-  };
-
-  // Force a fresh fetch each time the modal is opened so the user always sees
-  // the latest scans, not a cached snapshot from a prior open.
+  // From 760px playback is shown first, so it is also first in the DOM: the
+  // keyed sections below swap places instead of being reordered with CSS, which
+  // keeps focus and reading order in step with what is on screen. React moves
+  // the existing node rather than remounting it, but a moved node drops focus,
+  // so the focused control is noted when the breakpoint flips and restored.
+  const focusBeforeReorderRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
-    if (historyOpen) {
-      history.refetch();
-    }
-  }, [historyOpen, history]);
-
-  useEffect(() => {
-    return () => {
-      void (async () => {
-        try {
-          await cancelSession();
-        } catch (err) {
-          logger.error("Failed to cancel NFC session on unmount", err, {
-            category: "nfc",
-            action: "cancelSession",
-            severity: "warning",
-          });
-        }
-      })();
+    const media = window.matchMedia(WIDE_QUERY);
+    const noteFocus = () => {
+      focusBeforeReorderRef.current =
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
     };
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", noteFocus);
+      return () => media.removeEventListener("change", noteFocus);
+    }
+    media.addListener(noteFocus);
+    return () => media.removeListener(noteFocus);
   }, []);
+  useLayoutEffect(() => {
+    const focused = focusBeforeReorderRef.current;
+    focusBeforeReorderRef.current = null;
+    // Only when the move dropped focus; never take it from a newer owner.
+    if (focused?.isConnected && document.activeElement === document.body) {
+      focused.focus({ preventScroll: true });
+    }
+  }, [wide]);
 
   useEffect(() => {
     return () => {
@@ -233,16 +281,13 @@ export function Index() {
     if (!Capacitor.isNativePlatform()) return;
     if (hasAnnouncedRef.current) return;
 
-    // Determine what to announce based on available features
+    // Name the reader action shown first on the page.
     let message: string;
-    if (nfcAvailable) {
-      // NFC available - announce scan instruction
-      message = t("spinner.pressToScan");
-    } else if (cameraAvailable) {
-      // No NFC but camera available - announce camera option
-      message = t("scan.cameraAvailable");
+    if (scanLayout.leading === "nfc") {
+      message = t("scan.tapTag");
+    } else if (scanLayout.leading === "camera") {
+      message = t("scan.scanCode");
     } else {
-      // Neither available - announce page name
       message = t("nav.index");
     }
 
@@ -254,125 +299,390 @@ export function Index() {
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [announce, t, nfcAvailable, cameraAvailable]);
+  }, [announce, t, scanLayout.leading]);
+
+  // Each device has its own arrangement. A saved one turns the page over to
+  // the user's layout; with none saved the page keeps the built-in order, which
+  // also flips by width.
+  const zapLayout = zapLayouts[deviceKey] ?? null;
+  const customLayout = zapLayout !== null;
+  const layout: ZapLayout = zapLayout ?? DEFAULT_ZAP_LAYOUT;
+  // The arrangement being edited belongs to the device it was opened for. If
+  // the active device changes meanwhile, the edit is dropped rather than saved
+  // over another device's arrangement.
+  const [editing, setEditing] = useState<{
+    deviceKey: string;
+    layout: ZapLayout;
+  } | null>(null);
+  if (editing && editing.deviceKey !== deviceKey) setEditing(null);
+  const draft =
+    editing && editing.deviceKey === deviceKey ? editing.layout : null;
+  const setDraft = (next: ZapLayout | null) =>
+    setEditing(next ? { deviceKey, layout: next } : null);
+  const startCustomising = useCallback(() => {
+    setEditing({
+      deviceKey,
+      layout:
+        usePreferencesStore.getState().zapLayouts[deviceKey] ??
+        defaultZapLayout(),
+    });
+  }, [deviceKey]);
+  // A request to open the editor is taken once, after saved preferences and the
+  // active device are known so the draft starts from the saved arrangement.
+  const preferencesHydrated = usePreferencesStore(
+    (state) => state._hasHydrated,
+  );
+  const [arrivalHandled, setArrivalHandled] = useState(false);
+  if (
+    customiseOnArrival &&
+    preferencesHydrated &&
+    deviceKey !== "" &&
+    !arrivalHandled
+  ) {
+    setArrivalHandled(true);
+    startCustomising();
+  }
+  useEffect(() => {
+    if (arrivalHandled) onCustomiseHandled?.();
+  }, [arrivalHandled, onCustomiseHandled]);
+  const finishCustomising = () => {
+    if (draft) {
+      setZapLayout(deviceKey, isDefaultZapLayout(draft) ? null : draft);
+    }
+    setDraft(null);
+  };
+  // A device the user has forgotten takes its arrangement with it.
+  const registry = useDeviceRegistry((snapshot) => snapshot);
+  useEffect(() => {
+    if (!preferencesHydrated || !registry.hydrated || registry.hydrationError) {
+      return;
+    }
+    pruneZapLayouts(Object.keys(registry.records));
+  }, [preferencesHydrated, registry, pruneZapLayouts]);
+  const copySources = Object.keys(zapLayouts).flatMap((id) => {
+    const record = registry.records[id];
+    if (id === deviceKey || !record) return [];
+    const endpoint = record.endpoints.find(
+      (candidate) => candidate.endpointId === record.preferredEndpointId,
+    );
+    return [{ id, name: record.name || endpoint?.host || id }];
+  });
+
+  const launcherButton = (
+    <Button
+      variant="secondary"
+      className="w-full"
+      icon={<GamepadDirectionalIcon size={20} />}
+      label={t("scan.remoteKeyboard")}
+      disabled={!liveControls || !remoteFeature.available}
+      onClick={() => setRemoteKeyboardOpen(true)}
+    />
+  );
+
+  const readerTools = (
+    <div key="reader-tools" className="zap-reader-tools">
+      <ScanActions
+        layout={scanLayout}
+        compact={wide}
+        scanSession={scanSession}
+        scanStatus={scanStatus}
+        onTapScan={handleScanButton}
+        onCameraScan={handleCameraScan}
+        nfcEnabled={nfcEnabled}
+        onOpenNfcSettings={openNfcSettings}
+        writeActivity={
+          writeOpen ? (
+            <ReaderActivityControl
+              state={
+                nfcWriter.verifyError
+                  ? "error"
+                  : nfcWriter.retapRequired
+                    ? "attention"
+                    : "waiting"
+              }
+              idleLabel={t("create.search.writeLabel")}
+              activeLabel={
+                nfcWriter.retapRequired
+                  ? t("spinner.retapTag")
+                  : t("spinner.holdTagReader")
+              }
+              errorMessage={
+                nfcWriter.verifyError
+                  ? t("spinner.verifyFailedRetry")
+                  : undefined
+              }
+              icon={<NfcIcon size={wide ? 24 : 28} />}
+              readerIconSize={wide ? 24 : 28}
+              size={wide ? "default" : "lg"}
+              layout={wide ? "inline" : "stacked"}
+              className="zap-write-activity"
+              buttonClassName={
+                wide ? "min-h-18 w-full max-w-none" : "min-h-[8.5rem] w-full"
+              }
+              onStart={() => undefined}
+              onCancel={() => void cancelReaderActivity()}
+              onRetry={() => void nfcWriter.retry()}
+            />
+          ) : undefined
+        }
+      />
+
+      {!customLayout && !(remoteDocked && remoteFeature.available) && (
+        <GatedFeature featureId="remoteInput">{launcherButton}</GatedFeature>
+      )}
+    </div>
+  );
+
+  const playback = (
+    <div key="playback" className="zap-playback">
+      <NowPlayingCard
+        media={playing}
+        playlist={primaryPlaylist}
+        connected={primary.available}
+        canPausePlaylist={canPausePlaylist(playing)}
+        lastPlayed={lastPlayed}
+        replayingLast={primary.replayingLast}
+        onReplayLast={primary.replayLast}
+        onStop={primary.requestStop}
+        onPrevious={primary.previous}
+        onToggle={primary.toggle}
+        onNext={primary.next}
+        onPlaylistSelect={primary.selectItem}
+      />
+
+      {backgroundMediaAvailable &&
+        (backgroundPlaying.mediaName !== "" || backgroundPlaylist) && (
+          <NowPlayingCard
+            media={backgroundPlaying}
+            playlist={backgroundPlaylist}
+            connected={background.available}
+            headingLabel={t("scan.backgroundMediaHeading")}
+            stopButtonLabel={t("scan.stopBackgroundMediaButton")}
+            canPausePlaylist={canPausePlaylist(backgroundPlaying)}
+            onStop={background.requestStop}
+            onPrevious={background.previous}
+            onToggle={background.toggle}
+            onNext={background.next}
+            onPlaylistSelect={background.selectItem}
+          />
+        )}
+    </div>
+  );
+
+  // With the Controls widget moved, its launcher goes with it; the default
+  // page keeps the launcher under the scan actions instead.
+  const controls = (
+    <div key="controls" className="zap-remote-slot">
+      <RemoteKeyboardModal
+        isOpen={remoteKeyboardOpen}
+        close={() => setRemoteKeyboardOpen(false)}
+        docked={remoteDocked && remoteFeature.available}
+      />
+      {customLayout && !(remoteDocked && remoteFeature.available) && (
+        <GatedFeature featureId="remoteInput">{launcherButton}</GatedFeature>
+      )}
+    </div>
+  );
+
+  const widgets: Record<ZapBuiltinWidgetId, ReactNode> = {
+    scan: readerTools,
+    nowPlaying: playback,
+    controls,
+    readers: (
+      <div key="readers" className="zap-readers">
+        <ReaderStrip connected={liveControls} />
+      </div>
+    ),
+    favourites: (
+      <MediaCoverRow
+        key="favourites"
+        headingLabel={t("scan.favoritesHeading")}
+        entries={favourites}
+        onSelect={setSelectedCoverEntry}
+      />
+    ),
+    recents: (
+      <MediaCoverRow
+        key="recents"
+        headingLabel={t("scan.recentsHeading")}
+        entries={recentlyPlayed}
+        onSelect={setSelectedCoverEntry}
+      />
+    ),
+  };
+  const renderWidget = (id: ZapWidgetId): ReactNode => {
+    const button = zapButtonOf(layout, id);
+    if (button) return <ZapButtonWidget key={id} button={button} />;
+    const collection = zapCollectionOf(layout, id);
+    if (collection) {
+      return (
+        <ZapCollectionWidget
+          key={id}
+          collection={collection}
+          onSelect={setSelectedCoverEntry}
+        />
+      );
+    }
+    return widgets[id as ZapBuiltinWidgetId];
+  };
+  // In a saved layout every widget sits in a cell that says how much of the
+  // row it takes; the built-in page keeps its widgets unwrapped.
+  const spanOf = (id: ZapWidgetId) => {
+    const button = zapButtonOf(layout, id);
+    return button ? zapButtonSpan(button) : 12;
+  };
+  const place = (ids: ZapWidgetId[]) =>
+    customLayout
+      ? ids.map((id) => (
+          <div key={id} className="zap-cell" data-span={spanOf(id)}>
+            {renderWidget(id)}
+          </div>
+        ))
+      : ids.map(renderWidget);
+  const mainIds: ZapWidgetId[] = customLayout
+    ? layout.places.main
+    : wide
+      ? ["nowPlaying", "scan"]
+      : ["scan", "nowPlaying"];
+
+  // Why a widget would show nothing right now, so an empty frame in the
+  // editor is not mistaken for a broken one.
+  const widgetNotes: Partial<Record<ZapBuiltinWidgetId, string>> = {
+    scan:
+      scanLayout.canScan || scanLayout.showEmptyState || writeOpen
+        ? undefined
+        : t("zapLayout.unavailable"),
+    controls: remoteFeature.available ? undefined : t("zapLayout.unavailable"),
+    readers: readersFeature.available ? undefined : t("zapLayout.unavailable"),
+    favourites: favourites.length > 0 ? undefined : t("zapLayout.emptyNow"),
+    recents: recentlyPlayed.length > 0 ? undefined : t("zapLayout.emptyNow"),
+  };
 
   return (
     <>
-      <PageFrame>
+      <PageFrame
+        layout="workspace"
+        headerMode={sharedDeviceSheet ? "phone" : "always"}
+        headerCenter={<ZapLogo width={144} />}
+        headerRight={
+          <div className="flex items-center">
+            <div className="home-device-trigger">
+              <HomeDevicePill
+                className="max-w-[6.5rem] min-[23rem]:max-w-40"
+                sheetOpen={deviceSheetOpen}
+                onOpen={() => setDeviceSheetOpen(true)}
+              />
+            </div>
+            {(!wide || !sharedDeviceSheet) && (
+              <HeaderButton
+                icon={<HistoryIcon size="24" />}
+                active={historyOpen}
+                onClick={toggleHistory}
+                disabled={!connected}
+                title={t("scan.historyTitle")}
+                aria-label={t("scan.historyTitle")}
+                aria-expanded={historyOpen}
+              />
+            )}
+          </div>
+        }
+      >
         <h1 ref={headingRef} className="sr-only">
           Zaparoo
         </h1>
-        <div className="flex flex-row justify-between">
-          <div>
-            <ZapLogo />
-          </div>
-          <ToggleChip
-            icon={<HistoryIcon size="32" />}
-            state={historyOpen}
-            setState={(s) => {
-              if (historyToggleTimerRef.current !== null) {
-                clearTimeout(historyToggleTimerRef.current);
-                historyToggleTimerRef.current = null;
-              }
-              if (!historyOpen && proPurchaseModalOpen) {
-                setProPurchaseModalOpen(false);
-                historyToggleTimerRef.current = setTimeout(() => {
-                  historyToggleTimerRef.current = null;
-                  setHistoryOpen(s);
-                }, 150);
-              } else {
-                setHistoryOpen(s);
-              }
+        {draft ? (
+          <ZapLayoutEditor
+            layout={draft}
+            onChange={setDraft}
+            onReset={() => setDraft(defaultZapLayout())}
+            onCancel={() => setDraft(null)}
+            onDone={finishCustomising}
+            notes={widgetNotes}
+            copySources={copySources}
+            onCopy={(id) => {
+              const source = zapLayouts[id];
+              if (source) setDraft(cloneZapLayout(source, newZapButtonId));
             }}
-            disabled={!connected}
-            aria-label={t("scan.historyTitle")}
           />
-        </div>
-
-        <ScanControls
-          scanSession={scanSession}
-          scanStatus={scanStatus}
-          onScanButton={handleScanButton}
-          onCameraScan={handleCameraScan}
-          connected={connected}
-          onRemoteKeyboard={() => setRemoteKeyboardOpen(true)}
-        />
-
-        <div>
-          <ConnectionStatus />
-
-          <NowPlayingInfo
-            deviceKey={deviceKey}
-            mediaName={playing.mediaName}
-            mediaPath={playing.mediaPath}
-            systemName={playing.systemName}
-            systemId={playing.systemId}
-            onStop={() => setStopTarget("primary")}
-            connected={connected}
-            playlist={primaryPlaylist}
-            canPausePlaylist={canPausePlaylist(playing)}
-            onPlaylistPrevious={() => runPlaylistCommand("primary", "previous")}
-            onPlaylistToggle={() =>
-              runPlaylistCommand(
-                "primary",
-                primaryPlaylist?.playing ? "pause" : "play",
-              )
-            }
-            onPlaylistNext={() => runPlaylistCommand("primary", "next")}
-          />
-
-          {backgroundMediaAvailable &&
-            (backgroundPlaying.mediaName !== "" || backgroundPlaylist) && (
-              <NowPlayingInfo
-                deviceKey={deviceKey}
-                mediaName={backgroundPlaying.mediaName}
-                mediaPath={backgroundPlaying.mediaPath}
-                systemName={backgroundPlaying.systemName}
-                systemId={backgroundPlaying.systemId}
-                onStop={() => setStopTarget("background")}
-                connected={connected}
-                headingLabel={t("scan.backgroundMediaHeading")}
-                stopButtonLabel={t("scan.stopBackgroundMediaButton")}
-                playlist={backgroundPlaylist}
-                canPausePlaylist={canPausePlaylist(backgroundPlaying)}
-                onPlaylistPrevious={() =>
-                  runPlaylistCommand("background", "previous")
-                }
-                onPlaylistToggle={() =>
-                  runPlaylistCommand(
-                    "background",
-                    backgroundPlaylist?.playing ? "pause" : "play",
-                  )
-                }
-                onPlaylistNext={() => runPlaylistCommand("background", "next")}
-              />
+        ) : (
+          <>
+            <div
+              className="zap-workspace"
+              data-zap-layout={customLayout ? "custom" : undefined}
+              data-remote-available={remoteFeature.available}
+              data-reader-tools={
+                scanLayout.canScan || scanLayout.showEmptyState || writeOpen
+              }
+              data-main-empty={customLayout && mainIds.length === 0}
+              data-side-empty={customLayout && layout.places.side.length === 0}
+            >
+              <div className="zap-session">{place(mainIds)}</div>
+              <div className="zap-supporting">
+                {customLayout ? (
+                  place(layout.places.side)
+                ) : (
+                  <>
+                    {controls}
+                    {widgets.readers}
+                  </>
+                )}
+              </div>
+              <div className="zap-collections">
+                {place(
+                  customLayout
+                    ? layout.places.bottom
+                    : ["favourites", "recents"],
+                )}
+              </div>
+            </div>
+            {!fullScreenActive && deviceKey !== "" && (
+              <div className="zap-customise">
+                <Button
+                  variant="ghost"
+                  icon={<PencilIcon size={20} />}
+                  label={t("zapLayout.customise")}
+                  onClick={startCustomising}
+                />
+              </div>
             )}
-        </div>
+          </>
+        )}
       </PageFrame>
+
+      <LibraryMediaDetailsModal
+        isOpen={selectedCoverEntry !== null}
+        close={() => setSelectedCoverEntry(null)}
+        entry={selectedCoverEntry}
+        systemId={selectedCoverEntry ? entrySystemId(selectedCoverEntry) : ""}
+        deviceKey={deviceKey}
+        returnOwner="home-covers"
+      />
+
+      {!sharedDeviceSheet && (
+        <DeviceSheet
+          isOpen={deviceSheetOpen}
+          close={() => setDeviceSheetOpen(false)}
+        />
+      )}
 
       <HistoryModal
         isOpen={historyOpen}
         onClose={() => setHistoryOpen(false)}
         historyData={history.data}
-      />
-      <WriteModal
-        isOpen={writeOpen}
-        close={closeWriteModal}
-        verifyError={nfcWriter.verifyError !== null}
-        retry={() => void nfcWriter.retry()}
-        retapRequired={nfcWriter.retapRequired}
-      />
-      <RemoteKeyboardModal
-        isOpen={remoteKeyboardOpen}
-        close={() => setRemoteKeyboardOpen(false)}
+        historyError={history.isError}
+        onRetryHistory={history.refetch}
+        onSelectMedia={(entry) => {
+          setHistoryOpen(false);
+          setSelectedCoverEntry(entry);
+        }}
       />
       {purchaseModal}
       <StopConfirmModal
-        isOpen={stopTarget !== null}
-        onClose={() => setStopTarget(null)}
-        onConfirm={confirmStop}
+        isOpen={stopping !== null}
+        onClose={() => stopping?.cancelStop()}
+        onConfirm={() => stopping?.confirmStop()}
         description={
-          stopTarget === "background" ? t("stopBackgroundMedia") : undefined
+          background.stopPending ? t("stopBackgroundMedia") : undefined
         }
       />
     </>

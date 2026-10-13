@@ -1,6 +1,11 @@
-import classNames from "classnames";
-import { Bookmark, Heart, ThumbsDown, ThumbsUp } from "lucide-react";
+import {
+  BookmarkIcon,
+  HeartIcon,
+  ThumbsDownIcon,
+  ThumbsUpIcon,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
+import classNames from "classnames";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { useStatusStore } from "@/lib/store";
 import type { MediaBrowseEntry, TagInfo } from "@/lib/models";
@@ -11,7 +16,7 @@ import { useMediaPreferences } from "@/components/library/useMediaPreferences";
 const actions = [
   {
     id: "favorite",
-    Icon: Heart,
+    Icon: HeartIcon,
     label: "favorite",
     add: "addFavorite",
     remove: "removeFavorite",
@@ -19,7 +24,7 @@ const actions = [
   },
   {
     id: "liked",
-    Icon: ThumbsUp,
+    Icon: ThumbsUpIcon,
     label: "like",
     add: "addLike",
     remove: "removeLike",
@@ -27,7 +32,7 @@ const actions = [
   },
   {
     id: "disliked",
-    Icon: ThumbsDown,
+    Icon: ThumbsDownIcon,
     label: "dislike",
     add: "addDislike",
     remove: "removeDislike",
@@ -35,15 +40,16 @@ const actions = [
   },
   {
     id: "playlater",
-    Icon: Bookmark,
-    label: "playLater",
+    Icon: BookmarkIcon,
+    // The collection title keeps its casing; rail captions are sentence case.
+    label: "playLaterAction",
     add: "addPlayLater",
     remove: "removePlayLater",
     pending: "updatingPreference",
   },
 ] as const satisfies ReadonlyArray<{
   id: MediaPreference;
-  Icon: typeof Heart;
+  Icon: typeof HeartIcon;
   label: string;
   add: string;
   remove: string;
@@ -85,18 +91,15 @@ export function MediaPreferenceActions(props: {
           )}
           aria-pressed={active}
           icon={<Icon size={20} fill={active ? "currentColor" : "none"} />}
-          variant="text"
+          variant={props.context === "nowPlaying" ? "ghost" : "text"}
           layout={props.context === "modal" ? "responsive" : "inline"}
           size={props.context === "nowPlaying" ? "lg" : "default"}
-          className={
-            props.context === "modal"
-              ? classNames(
-                  "w-full whitespace-nowrap",
-                  busy && "disabled:!text-white",
-                )
-              : "shrink-0"
-          }
+          className={classNames(
+            "aria-pressed:text-primary transition-colors duration-150 aria-pressed:bg-transparent",
+            props.context === "modal" ? "w-full whitespace-nowrap" : "shrink-0",
+          )}
           disabled={!connected || !canUpdate || props.ready === false || busy}
+          disabledAppearance={busy ? "busy" : "unavailable"}
           onClick={() => toggle(id)}
         />
       );

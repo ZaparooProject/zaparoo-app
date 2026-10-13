@@ -729,6 +729,30 @@ describe("CoreAPI", () => {
     expect(mockSend).not.toHaveBeenCalled();
   });
 
+  it("should list launchers and drop entries without an ID", async () => {
+    vi.spyOn(logger, "error").mockImplementation(() => {});
+    const promise = CoreAPI.launchers();
+    const request = JSON.parse(mockSend.mock.calls[0][0]);
+    expect(request.method).toBe("launchers");
+
+    await CoreAPI.processReceived({
+      data: JSON.stringify({
+        jsonrpc: "2.0",
+        id: request.id,
+        result: {
+          launchers: [
+            { id: "SNES", systemId: "SNES", available: true },
+            { systemId: "Genesis", available: true },
+          ],
+        },
+      }),
+    } as MessageEvent);
+
+    await expect(promise).resolves.toEqual({
+      launchers: [{ id: "SNES", systemId: "SNES", available: true }],
+    });
+  });
+
   it("should have readers method returning ReadersResponse type", () => {
     // Test that readers method exists and has proper typing
     expect(typeof CoreAPI.readers).toBe("function");

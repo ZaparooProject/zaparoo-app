@@ -1,9 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { Loader2 } from "lucide-react";
+import {
+  canSubscribeToWarp,
+  getPaidWarpSubscription,
+  getWarpTrialView,
+  isPaidWarpActive,
+} from "@/lib/warpSubscription";
 import { Button } from "@/components/wui/Button";
-import { Segmented } from "@/components/wui/Segmented";
+import { Card } from "@/components/wui/Card";
+import { RadioGroup } from "@/components/wui/RadioGroup";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SlideModal } from "@/components/SlideModal";
 import {
@@ -17,17 +24,91 @@ import {
   type PurchasePreviewState,
 } from "@/lib/purchasePreviewStore";
 import { usePreferencesStore } from "@/lib/preferencesStore";
+import { formatAppDate } from "@/lib/formatDate";
 
 interface WarpSubscriptionProps {
   appUserID: string;
 }
 
-function formatSubscriptionDate(value: string | undefined): string | null {
-  if (!value) return null;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? null
-    : date.toLocaleDateString(undefined, { dateStyle: "medium" });
+interface WarpPanelProps {
+  loading: boolean;
+  /** Status copy beneath the heading once loaded. */
+  summary: ReactNode;
+  /** Notices, actions and dialogs once loaded. */
+  children: ReactNode;
+}
+
+/** The Warp settings panel shell shared by the live and preview states. */
+function WarpPanel({ loading, summary, children }: WarpPanelProps) {
+  const { t } = useTranslation();
+
+  return (
+    <Card>
+      <section
+        className="flex w-full flex-col gap-4"
+        aria-labelledby="warp-title"
+      >
+        <div className="flex flex-col gap-1">
+          <h2 id="warp-title" className="text-foreground text-lg font-semibold">
+            {t("online.warp.title")}
+          </h2>
+          {loading ? (
+            <div
+              className="flex flex-col gap-1 py-0.5"
+              role="status"
+              aria-label={t("online.warp.loading")}
+            >
+              <Skeleton className="h-5 w-24" aria-hidden="true" />
+              <Skeleton className="h-4 w-64 max-w-full" aria-hidden="true" />
+            </div>
+          ) : (
+            summary
+          )}
+        </div>
+
+        {loading && (
+          <>
+            <Skeleton className="h-12 w-full rounded-md" aria-hidden="true" />
+            <Button
+              label={t("online.warp.restore")}
+              variant="text"
+              disabled
+              disabledAppearance="busy"
+              className="w-full"
+            />
+          </>
+        )}
+
+        {children}
+      </section>
+    </Card>
+  );
+}
+
+function WarpActiveSummary({
+  title,
+  lines,
+}: {
+  title: string;
+  lines: (string | null | false | undefined)[];
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <p className="text-foreground font-medium">{title}</p>
+      {lines.map(
+        (line) =>
+          line && (
+            <p key={line} className="text-muted-foreground text-sm">
+              {line}
+            </p>
+          ),
+      )}
+    </div>
+  );
+}
+
+function WarpStatusText({ children }: { children: ReactNode }) {
+  return <p className="text-muted-foreground text-sm">{children}</p>;
 }
 
 export function WarpSubscription(props: WarpSubscriptionProps) {
@@ -53,6 +134,7 @@ interface WarpPurchaseModalProps {
   onPurchase: () => void;
   purchaseEnabled: boolean;
   lifetimeProOwned: boolean;
+  trialActive?: boolean;
 }
 
 function WarpPurchaseModal({
@@ -65,6 +147,7 @@ function WarpPurchaseModal({
   onPurchase,
   purchaseEnabled,
   lifetimeProOwned,
+  trialActive = false,
 }: WarpPurchaseModalProps) {
   const { t } = useTranslation();
 
@@ -83,12 +166,13 @@ function WarpPurchaseModal({
           }
           icon={
             action === "purchase" ? (
-              <Loader2 size={20} className="animate-spin" />
+              <LoadingSpinner size={20} decorative />
             ) : undefined
           }
           onClick={onPurchase}
           disabled={action !== null || !purchaseEnabled}
-          intent="primary"
+          disabledAppearance={action !== null ? "busy" : "unavailable"}
+          intent="pro"
           className="w-full"
         />
       }
@@ -97,6 +181,11 @@ function WarpPurchaseModal({
         <p className="text-muted-foreground text-sm">
           {t("online.warp.purchaseDescription")}
         </p>
+        {trialActive && (
+          <p className="text-muted-foreground text-sm">
+            {t("online.warp.trialImmediateBilling")}
+          </p>
+        )}
 
         <ul className="text-muted-foreground list-inside list-disc space-y-1 text-sm">
           <li>{t("online.warp.benefitBackup")}</li>
@@ -108,8 +197,9 @@ function WarpPurchaseModal({
           <li>{t("online.warp.benefitDevelopment")}</li>
         </ul>
 
-        <Segmented
+        <RadioGroup
           label={t("online.warp.choosePlan")}
+          layout="inline"
           options={[
             { value: "annual", label: t("online.warp.annual") },
             { value: "monthly", label: t("online.warp.monthly") },
@@ -121,7 +211,9 @@ function WarpPurchaseModal({
 
         {priceString && (
           <div className="flex flex-col gap-1 text-center">
-            <p className="text-xl font-semibold text-white">{priceString}</p>
+            <p className="text-foreground text-xl font-semibold">
+              {priceString}
+            </p>
             <p className="text-muted-foreground text-sm">
               {selectedPlan === "annual"
                 ? t("online.warp.billedAnnually")
@@ -139,7 +231,7 @@ function WarpPurchaseModal({
             href="https://zaparoo.com/terms"
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-sm underline focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+            className="focus-visible:ring-ring rounded-sm underline focus-visible:ring-2 focus-visible:outline-none"
           >
             {t("online.termsOfService")}
           </a>{" "}
@@ -148,7 +240,7 @@ function WarpPurchaseModal({
             href="https://zaparoo.com/privacy"
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-sm underline focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+            className="focus-visible:ring-ring rounded-sm underline focus-visible:ring-2 focus-visible:outline-none"
           >
             {t("online.privacyPolicy")}
           </a>
@@ -168,69 +260,39 @@ function WarpSubscriptionPreview({
   const [selectedPlan, setSelectedPlan] = useState<WarpPlan>("annual");
   const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(true);
   const previewAction = () => undefined;
-  const previewDate = formatSubscriptionDate("2030-01-01T00:00:00Z");
+  const previewDate = formatAppDate("2030-01-01T00:00:00Z");
 
   return (
-    <section
-      className="flex w-full flex-col gap-3"
-      aria-labelledby="warp-title"
-    >
-      <div className="flex flex-col gap-1">
-        <h2 id="warp-title" className="text-lg font-medium text-white">
-          {t("online.warp.title")}
-        </h2>
-        {state === "loading" ? (
-          <div
-            className="flex flex-col gap-1 py-0.5"
-            role="status"
-            aria-label={t("online.warp.loading")}
-          >
-            <Skeleton className="h-5 w-24" aria-hidden="true" />
-            <Skeleton className="h-4 w-64 max-w-full" aria-hidden="true" />
-          </div>
-        ) : state === "warp" ? (
-          <div className="flex flex-col gap-1">
-            <p className="font-medium text-white">
-              {t("online.warp.planSummary", {
-                plan: t("online.warp.annual"),
-              })}
-            </p>
-            <p className="text-muted-foreground text-sm">
-              {t("online.warp.renewsThrough", {
+    <WarpPanel
+      loading={state === "loading"}
+      summary={
+        state === "warp" ? (
+          <WarpActiveSummary
+            title={t("online.warp.planSummary", {
+              plan: t("online.warp.annual"),
+            })}
+            lines={[
+              t("online.warp.renewsThrough", {
                 date: previewDate,
                 provider: t("online.warp.providerPlayStore"),
-              })}
-            </p>
-            <p className="text-muted-foreground text-sm">
-              {t("online.warp.proIncluded")}
-            </p>
-          </div>
+              }),
+              t("online.warp.proIncluded"),
+            ]}
+          />
         ) : (
-          <p className="text-muted-foreground text-sm">
+          <WarpStatusText>
             {state === "error"
               ? t("online.warp.statusUnavailable")
               : t("online.warp.description")}
-          </p>
-        )}
-      </div>
-
-      {state === "loading" && (
-        <>
-          <Skeleton className="h-10 w-full rounded-[20px]" aria-hidden="true" />
-          <Button
-            label={t("online.warp.restore")}
-            variant="text"
-            disabled
-            className="w-full"
-          />
-        </>
-      )}
-
+          </WarpStatusText>
+        )
+      }
+    >
       {(state === "free" || state === "pro") && (
         <Button
           label={t("online.warp.get")}
           onClick={previewAction}
-          intent="primary"
+          intent="pro"
           className="w-full"
         />
       )}
@@ -273,7 +335,7 @@ function WarpSubscriptionPreview({
         purchaseEnabled
         lifetimeProOwned={false}
       />
-    </section>
+    </WarpPanel>
   );
 }
 
@@ -302,10 +364,14 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
   } = useWarpSubscription(appUserID);
 
   const isPremium = subscription?.is_premium === true;
-  const revenueCatSubscription = subscription?.revenuecat;
-  const subscriptionDate = formatSubscriptionDate(
-    revenueCatSubscription?.expires_at,
-  );
+  const revenueCatSubscription = getPaidWarpSubscription(subscription);
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const trial = getWarpTrialView(subscription, now);
+  const subscriptionDate = formatAppDate(revenueCatSubscription?.expires_at);
   const selectedPackage = packages?.[selectedPlan] ?? null;
   const providerLabel =
     revenueCatSubscription?.store === "APP_STORE"
@@ -343,32 +409,43 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
     loadFailed ||
     packagesUnavailable ||
     purchasesNotAllowed ||
-    isPremium ||
+    !canSubscribeToWarp(subscription) ||
     revenueCatWarpActive ||
     activationPending;
 
   const handlePurchase = async () => {
     const result = await purchase();
-    if (result === "cancelled") {
-      setPurchaseDialogOpen(false);
-      return;
+    switch (result) {
+      case "active":
+        setPurchaseDialogOpen(false);
+        toast.success(t("online.warp.purchaseSuccess"));
+        break;
+      case "pending":
+        setPurchaseDialogOpen(false);
+        toast(t("online.warp.paymentPending"));
+        break;
+      case "activation_pending":
+        setPurchaseDialogOpen(false);
+        toast(t("online.warp.activationPending"));
+        break;
+      case "identity_error":
+        toast.error(t("online.warp.accountMismatch"));
+        break;
+      case "failed":
+        toast.error(t("online.warp.purchaseFailed"));
+        break;
+      case "busy":
+        // The account can no longer start checkout, so the offer on screen is
+        // stale: leave it and show the current subscription state instead.
+        setPurchaseDialogOpen(false);
+        void retry();
+        break;
+      // For requirements, the modal has taken over and completing it reloads.
+      case "cancelled":
+      case "requirements":
+        setPurchaseDialogOpen(false);
+        break;
     }
-    if (result === "active") {
-      setPurchaseDialogOpen(false);
-      toast.success(t("online.warp.purchaseSuccess"));
-    }
-    if (result === "pending") {
-      setPurchaseDialogOpen(false);
-      toast(t("online.warp.paymentPending"));
-    }
-    if (result === "activation_pending") {
-      setPurchaseDialogOpen(false);
-      toast(t("online.warp.activationPending"));
-    }
-    if (result === "identity_error") {
-      toast.error(t("online.warp.accountMismatch"));
-    }
-    if (result === "failed") toast.error(t("online.warp.purchaseFailed"));
   };
 
   const handleRestore = async () => {
@@ -392,67 +469,63 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
     if (result === "failed") toast.error(t("online.warp.manageFailed"));
   };
 
+  const showRetry = (loadFailed || packagesUnavailable) && !isPremium;
+  // Both actions reload the account, so only one of them is offered.
+  const showRefresh =
+    !showRetry && (activationPending || (!isPremium && revenueCatWarpActive));
+
   return (
-    <section
-      className="flex w-full flex-col gap-3"
-      aria-labelledby="warp-title"
-    >
-      <div className="flex flex-col gap-1">
-        <h2 id="warp-title" className="text-lg font-medium text-white">
-          {t("online.warp.title")}
-        </h2>
-        {isLoading ? (
-          <div
-            className="flex flex-col gap-1 py-0.5"
-            role="status"
-            aria-label={t("online.warp.loading")}
-          >
-            <Skeleton className="h-5 w-24" aria-hidden="true" />
-            <Skeleton className="h-4 w-64 max-w-full" aria-hidden="true" />
-          </div>
-        ) : isPremium ? (
-          <div className="flex flex-col gap-1">
-            <p className="font-medium text-white">
-              {planLabel
-                ? t("online.warp.planSummary", { plan: planLabel })
-                : t("online.warp.active")}
-            </p>
-            {renewalSummary && (
-              <p className="text-muted-foreground text-sm">{renewalSummary}</p>
-            )}
-            {lifetimeProAccess !== null && (
-              <p className="text-muted-foreground text-sm">
-                {t(
+    <WarpPanel
+      loading={isLoading}
+      summary={
+        isPremium ? (
+          <WarpActiveSummary
+            title={
+              trial?.status === "active"
+                ? t("online.warp.trialActive")
+                : planLabel
+                  ? t("online.warp.planSummary", { plan: planLabel })
+                  : t("online.warp.active")
+            }
+            lines={[
+              trial?.status === "active" &&
+                trial.expiresAt &&
+                t("online.warp.trialEnds", {
+                  date: formatAppDate(trial.expiresAt),
+                }),
+              renewalSummary,
+              lifetimeProAccess !== null &&
+                t(
                   lifetimeProAccess
                     ? "online.warp.proOwned"
                     : "online.warp.proIncluded",
-                )}
-              </p>
-            )}
-          </div>
-        ) : (
-          <p className="text-muted-foreground text-sm">
-            {activationPending || revenueCatWarpActive
-              ? t("online.warp.activationPending")
-              : loadFailed
-                ? t("online.warp.statusUnavailable")
-                : t("online.warp.description")}
-          </p>
-        )}
-      </div>
-
-      {isLoading && (
-        <>
-          <Skeleton className="h-10 w-full rounded-[20px]" aria-hidden="true" />
-          <Button
-            label={t("online.warp.restore")}
-            variant="text"
-            disabled
-            className="w-full"
+                ),
+            ]}
           />
-        </>
+        ) : (
+          <WarpStatusText>
+            {trial?.status === "pending"
+              ? t("online.warp.trialPending")
+              : trial?.status === "expired"
+                ? t("online.warp.trialExpired")
+                : activationPending || revenueCatWarpActive
+                  ? t("online.warp.activationPending")
+                  : loadFailed
+                    ? t("online.warp.statusUnavailable")
+                    : t("online.warp.description")}
+          </WarpStatusText>
+        )
+      }
+    >
+      {trial?.notice && (
+        <p className="text-muted-foreground text-sm">
+          {t(
+            trial.notice === "last-day"
+              ? "online.warp.trialLastDay"
+              : "online.warp.trialEnding",
+          )}
+        </p>
       )}
-
       {!checkoutSuppressed && packages && (
         <Button
           label={t("online.warp.get")}
@@ -460,12 +533,13 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
             if (action === null) setPurchaseDialogOpen(true);
           }}
           disabled={action !== null}
-          intent="primary"
+          disabledAppearance="busy"
+          intent="pro"
           className="w-full"
         />
       )}
 
-      {(loadFailed || packagesUnavailable) && !isPremium && (
+      {showRetry && (
         <div className="flex flex-col gap-2">
           {packagesUnavailable && (
             <p className="text-muted-foreground text-sm" role="status">
@@ -481,6 +555,7 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
             variant="outline"
             onClick={retry}
             disabled={action !== null}
+            disabledAppearance="busy"
             className="w-full"
           />
         </div>
@@ -492,7 +567,7 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
         </p>
       )}
 
-      {(activationPending || (!isPremium && revenueCatWarpActive)) && (
+      {showRefresh && (
         <Button
           label={
             action === "refresh"
@@ -502,11 +577,12 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
           variant="outline"
           onClick={retry}
           disabled={action !== null}
+          disabledAppearance="busy"
           className="w-full"
         />
       )}
 
-      {isPremium && revenueCatSubscription?.active && (
+      {isPaidWarpActive(subscription) && (
         <Button
           label={
             action === "manage"
@@ -516,6 +592,7 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
           variant="outline"
           onClick={handleManage}
           disabled={action !== null}
+          disabledAppearance="busy"
           className="w-full"
         />
       )}
@@ -530,6 +607,7 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
           variant="text"
           onClick={handleRestore}
           disabled={action !== null}
+          disabledAppearance="busy"
           className="w-full"
         />
       )}
@@ -546,7 +624,8 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
         onPurchase={handlePurchase}
         purchaseEnabled={Boolean(selectedPackage)}
         lifetimeProOwned={lifetimeProAccess === true}
+        trialActive={trial?.status === "active"}
       />
-    </section>
+    </WarpPanel>
   );
 }

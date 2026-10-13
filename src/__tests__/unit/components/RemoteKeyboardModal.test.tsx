@@ -1,7 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { findA11yViolations, render, screen, waitFor } from "@/test-utils";
+import {
+  act,
+  findA11yViolations,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@/test-utils";
 import userEvent from "@testing-library/user-event";
-import { useStatusStore } from "@/lib/store";
+import { ConnectionState, useStatusStore } from "@/lib/store";
+import { seedActiveDevice } from "@/test-utils/deviceRegistry";
 import { RemoteKeyboardModal } from "@/components/RemoteKeyboardModal";
 import { CoreAPI, CoreApiError } from "@/lib/coreApi";
 import { logger } from "@/lib/logger";
@@ -10,50 +18,6 @@ import { Directory, Filesystem } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
 import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import toast from "react-hot-toast";
-
-interface KeyboardMockProps {
-  layout: Record<string, string[]>;
-  layoutName: string;
-  display: Record<string, string>;
-  onKeyPress: (button: string) => void;
-  useButtonTag?: boolean;
-}
-
-vi.mock("react-simple-keyboard/build/index.modern.esm.js", () => ({
-  default: ({
-    layout,
-    layoutName,
-    display,
-    onKeyPress,
-    useButtonTag,
-  }: KeyboardMockProps) => (
-    <div data-use-button-tag={useButtonTag ? "true" : "false"}>
-      {layout[layoutName]?.flatMap((row) =>
-        row.split(" ").map((button) => {
-          const label = display[button] ?? button;
-          return useButtonTag ? (
-            <button
-              key={`${layoutName}-${button}`}
-              type="button"
-              onClick={() => onKeyPress(button)}
-            >
-              {label}
-            </button>
-          ) : (
-            <div
-              key={`${layoutName}-${button}`}
-              role="button"
-              tabIndex={0}
-              onClick={() => onKeyPress(button)}
-            >
-              {label}
-            </div>
-          );
-        }),
-      )}
-    </div>
-  ),
-}));
 
 vi.mock("react-hot-toast", () => ({
   default: {
@@ -65,6 +29,7 @@ vi.mock("@/lib/coreApi", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/coreApi")>()),
   CoreAPI: {
     reset: vi.fn(),
+    isConnected: vi.fn(() => true),
     inputKeyboard: vi.fn().mockResolvedValue(undefined),
     screenshot: vi.fn().mockResolvedValue({
       path: "/media/fat/screenshots/MiSTer.png",
@@ -75,11 +40,19 @@ vi.mock("@/lib/coreApi", async (importOriginal) => ({
 }));
 
 describe("RemoteKeyboardModal", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
     CoreAPI.reset();
-    useStatusStore.setState({ connected: true, corePlatform: null });
+    vi.mocked(CoreAPI.isConnected).mockReturnValue(true);
+    useStatusStore.setState({
+      connected: true,
+      connectionState: ConnectionState.CONNECTED,
+      coreVersion: "2.23.0",
+      coreVersionPending: false,
+      corePlatform: null,
+    });
+    await seedActiveDevice();
   });
 
   it("should render virtual keys as semantic buttons", async () => {
@@ -87,8 +60,14 @@ describe("RemoteKeyboardModal", () => {
     const { baseElement } = render(
       <RemoteKeyboardModal isOpen close={vi.fn()} />,
     );
-    await user.click(
-      screen.getByRole("radio", { name: "remoteKeyboard.keyboardMode" }),
+    const keyboardTab = screen.getByRole("tab", {
+      name: "remoteKeyboard.keyboardMode",
+    });
+    await user.click(keyboardTab);
+    expect(keyboardTab).toHaveAttribute("aria-selected", "true");
+    expect(keyboardTab).toHaveAttribute(
+      "aria-controls",
+      screen.getByRole("tabpanel", { name: "remoteKeyboard.keyboardMode" }).id,
     );
 
     expect(screen.getByRole("button", { name: "q" })).toBeInTheDocument();
@@ -148,7 +127,10 @@ describe("RemoteKeyboardModal", () => {
 
     render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
 
-    await user.click(screen.getByRole("button", { name: "remoteKeyboard.up" }));
+    await user.pointer({
+      keys: "[TouchA]",
+      target: screen.getByRole("button", { name: "remoteKeyboard.up" }),
+    });
 
     expect(Haptics.impact).toHaveBeenCalledWith({ style: ImpactStyle.Light });
   });
@@ -485,16 +467,18 @@ describe("RemoteKeyboardModal", () => {
 
     render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
 
-    await user.click(
-      screen.getByRole("button", {
+    await user.pointer({
+      keys: "[TouchA]",
+      target: screen.getByRole("button", {
         name: "remoteKeyboard.screenshotAction",
       }),
-    );
-    await user.click(
-      await screen.findByRole("button", {
+    });
+    await user.pointer({
+      keys: "[TouchA]",
+      target: await screen.findByRole("button", {
         name: "remoteKeyboard.screenshotClear",
       }),
-    );
+    });
 
     expect(Haptics.impact).toHaveBeenCalledTimes(2);
     expect(Haptics.impact).toHaveBeenNthCalledWith(1, {
@@ -511,7 +495,7 @@ describe("RemoteKeyboardModal", () => {
     render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
 
     await user.click(
-      screen.getByRole("radio", { name: "remoteKeyboard.keyboardMode" }),
+      screen.getByRole("tab", { name: "remoteKeyboard.keyboardMode" }),
     );
     await user.click(screen.getByRole("button", { name: "q" }));
 
@@ -527,7 +511,7 @@ describe("RemoteKeyboardModal", () => {
     render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
 
     await user.click(
-      screen.getByRole("radio", { name: "remoteKeyboard.keyboardMode" }),
+      screen.getByRole("tab", { name: "remoteKeyboard.keyboardMode" }),
     );
     await user.click(screen.getByRole("button", { name: "q" }));
 
@@ -540,13 +524,32 @@ describe("RemoteKeyboardModal", () => {
     });
   });
 
+  it("preserves key case across Shift and ABC layouts", async () => {
+    const user = userEvent.setup();
+    render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+    await user.click(
+      screen.getByRole("tab", { name: "remoteKeyboard.keyboardMode" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Shift" }));
+    expect(screen.queryByRole("button", { name: "q" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Q" }));
+    await waitFor(() =>
+      expect(CoreAPI.inputKeyboard).toHaveBeenCalledWith({ keys: "Q" }),
+    );
+    await user.click(screen.getByRole("button", { name: "ABC" }));
+    await user.click(screen.getByRole("button", { name: "q" }));
+    await waitFor(() =>
+      expect(CoreAPI.inputKeyboard).toHaveBeenCalledWith({ keys: "q" }),
+    );
+  });
+
   it("should send special key macros from keyboard mode", async () => {
     const user = userEvent.setup();
 
     render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
 
     await user.click(
-      screen.getByRole("radio", { name: "remoteKeyboard.keyboardMode" }),
+      screen.getByRole("tab", { name: "remoteKeyboard.keyboardMode" }),
     );
     await user.click(screen.getByRole("button", { name: "Enter" }));
 
@@ -561,7 +564,7 @@ describe("RemoteKeyboardModal", () => {
     render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
 
     await user.click(
-      screen.getByRole("radio", { name: "remoteKeyboard.keyboardMode" }),
+      screen.getByRole("tab", { name: "remoteKeyboard.keyboardMode" }),
     );
     await user.click(screen.getByRole("button", { name: "Fn" }));
     await user.click(screen.getByRole("button", { name: "F12" }));
@@ -577,7 +580,7 @@ describe("RemoteKeyboardModal", () => {
     render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
 
     await user.click(
-      screen.getByRole("radio", { name: "remoteKeyboard.keyboardMode" }),
+      screen.getByRole("tab", { name: "remoteKeyboard.keyboardMode" }),
     );
     await user.click(screen.getByRole("button", { name: "#+=" }));
     await user.click(screen.getByRole("button", { name: "{" }));
@@ -585,6 +588,252 @@ describe("RemoteKeyboardModal", () => {
     await waitFor(() => {
       expect(CoreAPI.inputKeyboard).toHaveBeenCalledWith({ keys: "\\{" });
     });
+  });
+
+  it("disables sending and capture after disconnect, then restores them on reconnect", async () => {
+    const user = userEvent.setup();
+    render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+    act(() => useStatusStore.setState({ connected: false }));
+    for (const key of [
+      "up",
+      "left",
+      "ok",
+      "right",
+      "down",
+      "menu",
+      "screenshotAction",
+    ]) {
+      const button = screen.getByRole("button", {
+        name: `remoteKeyboard.${key}`,
+      });
+      expect(button).toBeDisabled();
+      await user.click(button);
+    }
+    expect(CoreAPI.inputKeyboard).not.toHaveBeenCalled();
+    expect(CoreAPI.screenshot).not.toHaveBeenCalled();
+    expect(toast.error).not.toHaveBeenCalled();
+    await user.click(
+      screen.getByRole("tab", { name: "remoteKeyboard.keyboardMode" }),
+    );
+    const keyboard = screen.getByRole("tabpanel", {
+      name: "remoteKeyboard.keyboardMode",
+    });
+    for (const button of within(keyboard).getAllByRole("button")) {
+      expect(button).toBeDisabled();
+    }
+    await user.click(screen.getByRole("button", { name: "q" }));
+    expect(CoreAPI.inputKeyboard).not.toHaveBeenCalled();
+    act(() => useStatusStore.setState({ connected: true }));
+    expect(screen.getByRole("button", { name: "q" })).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: "q" }));
+    await waitFor(() =>
+      expect(CoreAPI.inputKeyboard).toHaveBeenCalledWith({ keys: "q" }),
+    );
+    await user.click(
+      screen.getByRole("tab", { name: "remoteKeyboard.remoteMode" }),
+    );
+    expect(
+      screen.getByRole("button", { name: "remoteKeyboard.up" }),
+    ).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "remoteKeyboard.screenshotAction" }),
+    ).toBeEnabled();
+  });
+
+  it("keeps captured screenshot export and clear available after disconnect", async () => {
+    const user = userEvent.setup();
+    render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+    await user.click(
+      screen.getByRole("button", { name: "remoteKeyboard.screenshotAction" }),
+    );
+    await screen.findByAltText("remoteKeyboard.screenshotAlt");
+    act(() => useStatusStore.setState({ connected: false }));
+    expect(
+      screen.getByRole("link", { name: "remoteKeyboard.screenshotDownload" }),
+    ).toHaveAttribute("download", "MiSTer.png");
+    const clear = screen.getByRole("button", {
+      name: "remoteKeyboard.screenshotClear",
+    });
+    expect(clear).toBeEnabled();
+    await user.click(clear);
+    expect(
+      screen.queryByAltText("remoteKeyboard.screenshotAlt"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("should preserve keyboard case, focus and one surface through pane/modal transitions", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+    await user.click(
+      screen.getByRole("tab", { name: "remoteKeyboard.keyboardMode" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Shift" }));
+    const key = screen.getByRole("button", { name: "Q" });
+    key.focus();
+    rerender(<RemoteKeyboardModal isOpen docked close={vi.fn()} />);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "remoteKeyboard.title" }),
+    ).not.toHaveAttribute("aria-modal");
+    expect(screen.getByRole("button", { name: "Q" })).toBe(key);
+    expect(key).toHaveFocus();
+    rerender(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Q" })).toBe(key);
+    expect(key).toHaveFocus();
+    await user.click(key);
+    await waitFor(() =>
+      expect(CoreAPI.inputKeyboard).toHaveBeenCalledWith({ keys: "Q" }),
+    );
+  });
+
+  it("should preserve an in-flight capture through presentation changes", async () => {
+    const user = userEvent.setup();
+    let finish!: (
+      value: Awaited<ReturnType<typeof CoreAPI.screenshot>>,
+    ) => void;
+    vi.mocked(CoreAPI.screenshot).mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const { rerender } = render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+    await user.click(
+      screen.getByRole("button", { name: "remoteKeyboard.screenshotAction" }),
+    );
+    rerender(<RemoteKeyboardModal isOpen docked close={vi.fn()} />);
+    expect(
+      screen.getByRole("button", { name: "remoteKeyboard.screenshotAction" }),
+    ).toHaveAttribute("aria-busy", "true");
+    await act(async () => {
+      finish({ path: "capture.png", data: "iVBORw0KGgo=", size: 12 });
+    });
+    rerender(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+    expect(
+      screen.getByRole("link", { name: "remoteKeyboard.screenshotDownload" }),
+    ).toHaveAttribute("download", "capture.png");
+    expect(CoreAPI.screenshot).toHaveBeenCalledTimes(1);
+  });
+
+  it("should disable controls while cached connected data is reconnecting", async () => {
+    const user = userEvent.setup();
+    render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+    act(() => {
+      useStatusStore.setState({
+        connectionState: ConnectionState.RECONNECTING,
+      });
+    });
+    expect(
+      screen.getByRole("button", { name: "remoteKeyboard.up" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "remoteKeyboard.screenshotAction" }),
+    ).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "remoteKeyboard.up" }));
+    expect(CoreAPI.inputKeyboard).not.toHaveBeenCalled();
+  });
+
+  it.each(["reconnect", "device"])(
+    "should discard queued input on %s and allow fresh input without waiting for old Core",
+    async (change) => {
+      const user = userEvent.setup();
+      let finish!: () => void;
+      vi.mocked(CoreAPI.inputKeyboard).mockReturnValueOnce(
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+      );
+      render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+      await user.click(
+        screen.getByRole("button", { name: "remoteKeyboard.up" }),
+      );
+      await user.click(
+        screen.getByRole("button", { name: "remoteKeyboard.down" }),
+      );
+      expect(CoreAPI.inputKeyboard).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        if (change === "device")
+          await seedActiveDevice({ address: "192.168.1.101" });
+        else {
+          useStatusStore.setState({
+            connectionState: ConnectionState.RECONNECTING,
+          });
+          useStatusStore.setState({
+            connectionState: ConnectionState.CONNECTED,
+          });
+        }
+      });
+      await user.click(
+        screen.getByRole("button", { name: "remoteKeyboard.left" }),
+      );
+      await waitFor(() =>
+        expect(CoreAPI.inputKeyboard).toHaveBeenCalledTimes(2),
+      );
+      await act(async () => {
+        finish();
+      });
+      expect(CoreAPI.inputKeyboard).toHaveBeenNthCalledWith(2, {
+        keys: "{left}",
+      });
+      expect(CoreAPI.inputKeyboard).not.toHaveBeenCalledWith({
+        keys: "{down}",
+      });
+    },
+  );
+
+  it("should ignore late capture results from a previous Core session", async () => {
+    const user = userEvent.setup();
+    let finish!: (
+      value: Awaited<ReturnType<typeof CoreAPI.screenshot>>,
+    ) => void;
+    vi.mocked(CoreAPI.screenshot).mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+    await user.click(
+      screen.getByRole("button", { name: "remoteKeyboard.screenshotAction" }),
+    );
+    await act(async () => {
+      await seedActiveDevice({ address: "192.168.1.101" });
+    });
+    await act(async () => {
+      finish({ path: "stale.png", data: "iVBORw0KGgo=", size: 12 });
+    });
+    expect(
+      screen.queryByAltText("remoteKeyboard.screenshotAlt"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "remoteKeyboard.screenshotAction" }),
+    ).toBeEnabled();
+  });
+
+  it("should disable send/capture when transport is unavailable despite connected status", () => {
+    vi.mocked(CoreAPI.isConnected).mockReturnValue(false);
+    render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+    expect(
+      screen.getByRole("button", { name: "remoteKeyboard.up" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "remoteKeyboard.screenshotAction" }),
+    ).toBeDisabled();
+  });
+
+  it("should preserve remote feature gating for unsupported Core versions", async () => {
+    const user = userEvent.setup();
+    useStatusStore.setState({
+      coreVersion: "2.9.0",
+      coreVersionPending: false,
+    });
+    render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+    const up = screen.getByRole("button", { name: "remoteKeyboard.up" });
+    expect(up).toBeDisabled();
+    await user.click(up);
+    expect(CoreAPI.inputKeyboard).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("button", { name: "remoteKeyboard.screenshotAction" }),
+    ).toBeDisabled();
   });
 
   it("should not send remote actions when disconnected", async () => {

@@ -2,43 +2,66 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Bookmark, Heart, PlusIcon, ThumbsDown, ThumbsUp } from "lucide-react";
+import {
+  BookmarkIcon,
+  HeartIcon,
+  PlusIcon,
+  ThumbsDownIcon,
+  ThumbsUpIcon,
+  TrophyIcon,
+} from "lucide-react";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { CoreAPI } from "@/lib/coreApi";
 import { LIBRARY_QUERY_KEYS } from "@/lib/libraryMedia";
 import { useStatusStore } from "@/lib/store";
 import { Button } from "@/components/wui/Button";
-import { Button as LinkButton } from "@/components/ui/button";
+import { InlineLoading } from "@/components/InlineLoading";
+import { DelayedLoading } from "@/components/DelayedLoading";
 import { useTabSessionStore } from "@/lib/tabSessionStore";
-import { NextIcon } from "@/lib/images";
+import { HistoryIcon, NextIcon } from "@/lib/images";
+import { LibraryLinkButton } from "@/components/library/LibraryLinkButton";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { TextInput } from "@/components/wui/TextInput";
 
+// Lists the user builds come first, then the ones play history fills in.
+// The sidebar lists them in the same order (`src/lib/appSections.ts`).
 const collections = [
   {
     to: "/library/favorites",
     label: "library.favorites",
-    Icon: Heart,
+    Icon: HeartIcon,
     scope: "favorites",
-  },
-  {
-    to: "/library/liked",
-    label: "library.liked",
-    Icon: ThumbsUp,
-    scope: "liked",
   },
   {
     to: "/library/play-later",
     label: "library.playLater",
-    Icon: Bookmark,
+    Icon: BookmarkIcon,
     scope: "play-later",
+  },
+  {
+    to: "/library/liked",
+    label: "library.liked",
+    Icon: ThumbsUpIcon,
+    scope: "liked",
   },
   {
     to: "/library/disliked",
     label: "library.disliked",
-    Icon: ThumbsDown,
+    Icon: ThumbsDownIcon,
     scope: "disliked",
+  },
+  {
+    to: "/library/recent",
+    label: "library.recentlyPlayedShort",
+    Icon: HistoryIcon,
+    scope: "recent",
+  },
+  {
+    to: "/library/top",
+    label: "library.topPlayed",
+    Icon: TrophyIcon,
+    scope: "top",
   },
 ] as const;
 
@@ -59,58 +82,60 @@ export function LibraryCollectionList({
     enabled: connected && Boolean(deviceKey) && decksFeature.available,
     refetchOnMount: "always",
   });
-  const visible = collections.filter(
-    ({ scope }) => scope === "favorites" || preferencesAvailable,
-  );
+  const historyFeature = useCoreFeature("mediaRecents", {
+    requireKnownSupport: true,
+  });
+  const visible = collections.filter(({ scope }) => {
+    if (scope === "recent" || scope === "top") return historyFeature.available;
+    return scope === "favorites" || preferencesAvailable;
+  });
   const visibleDecks = (decksQuery.data?.decks ?? []).filter((deck) =>
     deck.name.toLowerCase().includes(query.trim().toLowerCase()),
   );
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="library-collections">
       {visible.length > 0 && (
         <nav
           aria-label={t("library.collections")}
-          className="grid grid-cols-2 gap-2"
+          className="library-collection-links"
         >
           {visible.map(({ to, label, Icon, scope }) => (
-            <LinkButton
+            <LibraryLinkButton
               key={scope}
-              asChild
-              variant="wui-outline"
-              className="h-auto min-h-10 px-3 text-base whitespace-normal"
-            >
-              <Link
-                to={to}
-                onClick={() => forgetScroll(`library:${scope}:list`)}
-              >
-                <Icon size={20} aria-hidden="true" />
-                {t(label)}
-              </Link>
-            </LinkButton>
+              to={to}
+              variant="outline"
+              label={t(label)}
+              icon={<Icon size={20} />}
+              className="px-3 text-sm whitespace-normal"
+              onClick={() => forgetScroll(`library:${scope}:list`)}
+            />
           ))}
         </nav>
       )}
       {decksFeature.available && (
-        <section aria-label={t("decks.title")} className="flex flex-col gap-2">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold">{t("decks.title")}</h2>
-            <Link
+        <section
+          aria-label={t("decks.title")}
+          className="library-decks flex flex-col gap-2"
+        >
+          <h2 className="text-lg font-semibold">{t("decks.title")}</h2>
+          <div className="library-decks-toolbar">
+            <TextInput
+              type="search"
+              aria-label={t("decks.search")}
+              placeholder={t("decks.search")}
+              value={query}
+              setValue={setQuery}
+              clearable
+            />
+            <LibraryLinkButton
               to="/library/decks/new"
-              aria-label={t("decks.new")}
-              className="flex h-12 w-12 items-center justify-end rounded-full focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
-            >
-              <PlusIcon size={24} aria-hidden="true" />
-            </Link>
+              variant="fill"
+              icon={<PlusIcon size={20} />}
+              label={t("decks.new")}
+              className="w-full max-w-none"
+            />
           </div>
-          <TextInput
-            type="search"
-            aria-label={t("decks.search")}
-            placeholder={t("decks.search")}
-            value={query}
-            setValue={setQuery}
-            clearable
-          />
           {decksQuery.isError ? (
             <EmptyState
               size="compact"
@@ -124,9 +149,9 @@ export function LibraryCollectionList({
               }
             />
           ) : decksQuery.isLoading ? (
-            <p role="status" className="text-muted-foreground text-sm">
-              {t("decks.loading")}
-            </p>
+            <DelayedLoading>
+              <InlineLoading label={t("decks.loading")} />
+            </DelayedLoading>
           ) : visibleDecks.length > 0 ? (
             <nav aria-label={t("decks.title")}>
               {visibleDecks.map((deck) => (
@@ -134,7 +159,7 @@ export function LibraryCollectionList({
                   key={deck.deckId}
                   to="/library/decks/$deckId"
                   params={{ deckId: deck.deckId }}
-                  className="flex min-h-14 items-center justify-between gap-3 border-b border-white/25 px-1 py-3 last:border-b-0 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+                  className="border-border focus-visible:ring-ring flex min-h-14 items-center justify-between gap-3 border-b px-1 py-3 last:border-b-0 focus-visible:ring-2 focus-visible:outline-none"
                 >
                   <span className="flex min-w-0 flex-col">
                     <span className="font-medium">{deck.name}</span>
@@ -142,7 +167,10 @@ export function LibraryCollectionList({
                       {t("library.itemCount", { count: deck.itemCount })}
                     </span>
                   </span>
-                  <span aria-hidden="true">
+                  <span
+                    aria-hidden="true"
+                    className="text-muted-foreground shrink-0"
+                  >
                     <NextIcon size="20" />
                   </span>
                 </Link>

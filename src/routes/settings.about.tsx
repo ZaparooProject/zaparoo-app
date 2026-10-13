@@ -3,8 +3,9 @@ import { useTranslation } from "react-i18next";
 import { Browser } from "@capacitor/browser";
 import { PageFrame } from "@/components/PageFrame";
 import { HeaderButton } from "@/components/wui/HeaderButton";
+import { Card } from "@/components/wui/Card";
 import { Button } from "@/components/wui/Button.tsx";
-import { BackIcon, NextIcon } from "@/lib/images";
+import { BackIcon, ExternalIcon, NextIcon } from "@/lib/images";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 import { getReleaseDisplayVersion } from "@/lib/whatsNew";
@@ -28,6 +29,8 @@ export function About() {
 
   return (
     <PageFrame
+      headerMode="content-wide"
+      breadcrumbs={[{ to: "/settings", label: t("settings.title") }]}
       onSwipeBack={goBack}
       headerLeft={
         <HeaderButton
@@ -55,11 +58,11 @@ export function About() {
         <div className="flex flex-col gap-2">
           <div className="flex flex-row justify-between">
             <span>Callan Barrett</span>
-            <span>Developer</span>
+            <span>{t("settings.about.roleDeveloper")}</span>
           </div>
           <div className="flex flex-row justify-between">
             <span>Tim Wilsie</span>
-            <span>UX Designer</span>
+            <span>{t("settings.about.roleDesigner")}</span>
           </div>
         </div>
 
@@ -109,13 +112,12 @@ export function About() {
             <span>Lu&apos;s Retro Source</span>, <span>Tony Shadwick</span>,{" "}
             <span>Clinton Cronin</span>, <span>Tuxosaurus</span>,{" "}
             <span>Retrosoft Studios</span>, <span>Casey McGinty</span>,{" "}
-            <span style={{ color: "#F1C40D" }}>Biddle</span>,{" "}
-            <span>Shijuro</span>,{" "}
-            <span style={{ color: "#F1C40D" }}>TheJesusFish</span>,{" "}
+            <span className="text-warning">Biddle</span>, <span>Shijuro</span>,{" "}
+            <span className="text-warning">TheJesusFish</span>,{" "}
             <span>disctoad</span>, <span>Mark Dodsworth</span>,{" "}
             <span>ayoub</span>, <span>Michael Quinn</span>,{" "}
             <span>Lina Blue</span>,{" "}
-            <span style={{ color: "#F1C40D" }}>Filip Kindt</span>,{" "}
+            <span className="text-warning">Filip Kindt</span>,{" "}
             <span>Not Work</span>, <span>angel rooney</span>,{" "}
             <span>Danny Garfield</span>, <span>pxa</span>,{" "}
             <span>Antony Boudreau</span>
@@ -123,7 +125,9 @@ export function About() {
 
           <Button
             label={t("settings.about.joinPatreon")}
-            variant="outline"
+            icon={<ExternalIcon size="20" />}
+            className="mx-auto w-full"
+            intent="pro"
             onClick={() =>
               Browser.open({
                 url: "https://patreon.com/wizzo",
@@ -132,15 +136,14 @@ export function About() {
           />
         </div>
 
-        <Link
-          to="/settings/licenses"
-          className="flex min-h-[48px] flex-row items-center justify-between"
-        >
-          <span>{t("settings.licenses.title")}</span>
-          <span aria-hidden="true">
-            <NextIcon size="20" />
-          </span>
-        </Link>
+        <Card>
+          <Link to="/settings/licenses" className="settings-nav-row">
+            <span>{t("settings.licenses.title")}</span>
+            <span aria-hidden="true" className="shrink-0">
+              <NextIcon size="20" />
+            </span>
+          </Link>
+        </Card>
       </div>
     </PageFrame>
   );

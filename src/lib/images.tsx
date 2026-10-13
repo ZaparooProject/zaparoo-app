@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { useTheme } from "@/components/theme-provider";
 import {
   drawPreloadedZapLogo,
   preloadZapLogo,
@@ -7,9 +8,15 @@ import {
   ZAP_LOGO_WIDTH,
 } from "@/lib/zapLogo";
 
-export function ZapLogo() {
+interface ZapLogoProps {
+  width?: number;
+}
+
+export function ZapLogo({ width = ZAP_LOGO_WIDTH }: ZapLogoProps = {}) {
   const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { resolvedTheme } = useTheme();
+  const height = (width / ZAP_LOGO_WIDTH) * ZAP_LOGO_HEIGHT;
 
   useLayoutEffect(() => {
     const canvas = canvasRef.current;
@@ -27,7 +34,20 @@ export function ZapLogo() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [resolvedTheme]);
+
+  if (resolvedTheme === "light") {
+    return (
+      <img
+        src={`${__APP_BASE_PATH__}lockup-light.webp`}
+        alt={t("accessibility.logo")}
+        width={ZAP_LOGO_WIDTH}
+        height={ZAP_LOGO_HEIGHT}
+        className="object-contain"
+        style={{ width, height }}
+      />
+    );
+  }
 
   return (
     <canvas
@@ -36,157 +56,17 @@ export function ZapLogo() {
       aria-label={t("accessibility.logo")}
       width={ZAP_LOGO_WIDTH}
       height={ZAP_LOGO_HEIGHT}
-      style={{ width: ZAP_LOGO_WIDTH, height: ZAP_LOGO_HEIGHT }}
+      style={{ width, height }}
     />
   );
 }
 
-export const Logo = (props: { width: string }) => (
-  <svg
-    width={props.width}
-    viewBox="0 0 582 108"
-    version="1.1"
-    xmlns="http://www.w3.org/2000/svg"
-    xmlnsXlink="http://www.w3.org/1999/xlink"
-    xmlSpace="preserve"
-    style={{
-      fillRule: "evenodd",
-      clipRule: "evenodd",
-      strokeLinejoin: "round",
-      strokeMiterlimit: 2,
-    }}
-  >
-    <g
-      id="Word-Mark"
-      transform="matrix(0.178608,0,0,0.178608,-5364.84,-1446.47)"
-    >
-      <g>
-        <g transform="matrix(1,0,0,-1,16494.4,13549.3)">
-          <path
-            d="M14989.1,4901.7L15150.4,5353.59L15082.5,5386.73L15408,5386.73L15411,4850.44L15269.5,4850.44L15273.9,4967.38L15149.6,4967.38L15113.1,4850.44L14884.1,4850.44L14989.1,4901.7ZM15238.9,5256.38L15180.1,5067.19L15277.7,5067.19L15285.9,5256.38L15238.9,5256.38Z"
-            style={{
-              fill: "white",
-            }}
-          />
-        </g>
-        <g transform="matrix(1.5432,0,0,1.5432,29166.8,6788.18)">
-          <path
-            d="M1026.72,849.132L770.138,1176.38L879.32,1182.11L1012.24,1019.76L948.317,1238.14L563.855,1234.32L836.988,912.8L653.626,919.166L624.339,1072.61L567.038,861.229L1026.72,849.132Z"
-            style={{
-              fill: "white",
-              fillRule: "nonzero",
-            }}
-          />
-        </g>
-        <g transform="matrix(1.22987,0,0,1.22987,14054,2229.96)">
-          <path
-            d="M15060.1,4850.45C15060.8,4850.44 15061.4,4850.44 15062.1,4850.44C15150.8,4850.44 15195.2,4886.72 15195.2,4959.28C15195.2,4971.43 15193.9,4984.51 15191.3,4998.51L15172,5109C15163.2,5160.19 15144,5198.13 15114.5,5222.81C15085.1,5247.48 15043.6,5259.82 14990.2,5259.82C14936.8,5259.82 14899.6,5247.48 14878.6,5222.81C14864.3,5205.87 14857.1,5182.48 14857.1,5152.64C14857.1,5139.39 14858.6,5124.84 14861.5,5109L14880.8,4998.51C14890.2,4944.85 14912.4,4905.78 14947.3,4881.29L14884.1,4850.44L15060.1,4850.44C15060.1,4850.44 15060.1,4850.45 15060.1,4850.45ZM15005.1,5174.19C15023.6,5174.19 15038.3,5169.4 15049.3,5159.83C15060.4,5150.25 15068.1,5132.57 15072.5,5106.79L15091.3,5000.72C15092.4,4993.35 15093,4986.72 15093,4980.83C15093,4950.99 15077.9,4936.07 15047.7,4936.07C15009.8,4936.81 14987.1,4958.36 14979.7,5000.72L14960.9,5106.79C14959.5,5116 14958.7,5125.57 14958.7,5135.52C14958.7,5161.3 14974.2,5174.19 15005.1,5174.19Z"
-            style={{
-              fill: "white",
-            }}
-          />
-        </g>
-        <g transform="matrix(1.22987,0,0,1.22987,14464,2229.96)">
-          <path
-            d="M15060.1,4850.45C15060.8,4850.44 15061.4,4850.44 15062.1,4850.44C15150.8,4850.44 15195.2,4886.72 15195.2,4959.28C15195.2,4971.43 15193.9,4984.51 15191.3,4998.51L15172,5109C15163.2,5160.19 15144,5198.13 15114.5,5222.81C15085.1,5247.48 15043.6,5259.82 14990.2,5259.82C14936.8,5259.82 14899.6,5247.48 14878.6,5222.81C14864.3,5205.87 14857.1,5182.48 14857.1,5152.64C14857.1,5139.39 14858.6,5124.84 14861.5,5109L14880.8,4998.51C14890.2,4944.85 14912.4,4905.78 14947.3,4881.29L14884.1,4850.44L15060.1,4850.44C15060.1,4850.44 15060.1,4850.45 15060.1,4850.45ZM15005.1,5174.19C15023.6,5174.19 15038.3,5169.4 15049.3,5159.83C15060.4,5150.25 15068.1,5132.57 15072.5,5106.79L15091.3,5000.72C15092.4,4993.35 15093,4986.72 15093,4980.83C15093,4950.99 15077.9,4936.07 15047.7,4936.07C15009.8,4936.81 14987.1,4958.36 14979.7,5000.72L14960.9,5106.79C14959.5,5116 14958.7,5125.57 14958.7,5135.52C14958.7,5161.3 14974.2,5174.19 15005.1,5174.19Z"
-            style={{
-              fill: "white",
-            }}
-          />
-        </g>
-        <g transform="matrix(0.996378,0,0,0.996378,29736.1,7428.77)">
-          <path
-            d="M1204.88,1248.33L1208.79,1145.97L1099.91,1145.97L1067.97,1225.76L943.446,1248.33L1122.46,778.92L1326.14,767.637L1328.75,1225.76L1204.88,1248.33ZM1189.62,893.012L1126.64,1058.61L1212.05,1058.61L1219.22,893.012L1189.62,893.012Z"
-            style={{
-              fill: "white",
-              fillRule: "nonzero",
-            }}
-          />
-        </g>
-        <g transform="matrix(1.14247,0,0,1.14247,29494.6,7272.7)">
-          <path
-            d="M1598.99,778.92L1672.33,778.92C1721.44,778.92 1756.43,790.22 1777.3,812.821C1792.51,830.207 1800.11,852.373 1800.11,879.321C1800.11,888.448 1799.25,898.01 1797.51,908.007L1784.47,981.678C1777.95,1017.75 1758.82,1047.42 1727.1,1070.67C1695.37,1093.92 1656.68,1105.55 1611.05,1105.55L1533.46,1105.55L1508.04,1248.33L1390.69,1248.33L1468.31,808.275L1409.17,778.882L1599.09,778.882C1599.06,778.895 1599.02,778.907 1598.99,778.92ZM1631.26,880.625L1572.58,880.625L1551.07,1003.84L1609.09,1003.84C1644.73,1003.84 1665.38,987.98 1671.03,956.251L1675.59,929.521C1676.46,925.609 1676.89,920.394 1676.89,913.874C1676.89,907.355 1673.63,900.183 1667.12,892.36C1660.6,884.536 1648.64,880.625 1631.26,880.625Z"
-            style={{
-              fill: "white",
-            }}
-          />
-        </g>
-        <g transform="matrix(0.996378,0,0,0.996378,29723.8,7428.77)">
-          <path
-            d="M2487.27,778.92C2536.82,778.92 2572.03,789.786 2592.89,811.517C2608.54,828.034 2616.36,848.896 2616.36,874.105C2616.36,882.798 2615.49,891.925 2613.75,901.487L2604.63,952.34C2599.41,980.591 2590.39,1003.41 2577.57,1020.8C2564.75,1038.18 2550.51,1050.57 2534.87,1057.96L2594.2,1225.76L2462.5,1248.33L2407.74,1072.95L2367.31,1072.95L2340.58,1225.76L2215.41,1248.33L2298.21,778.92L2487.27,778.92ZM2446.2,880.625L2397.3,880.625L2380.35,994.065L2425.99,994.065C2449.03,994.065 2465.54,988.523 2475.54,977.44C2485.53,966.357 2490.53,951.688 2490.53,933.433C2490.53,898.227 2475.76,880.625 2446.2,880.625Z"
-            style={{
-              fill: "white",
-              fillRule: "nonzero",
-            }}
-          />
-        </g>
-      </g>
-      <g transform="matrix(1.14247,0,0,1.14247,16712.5,2353.98)">
-        <path
-          d="M14465.6,5113.4L14480.1,5154.09L14494.7,5113.4L14510.9,5113.4L14510.9,5170.24L14500.5,5170.24L14500.5,5124.38L14484.7,5170.24L14475.6,5170.24L14459.8,5124.38L14459.8,5170.24L14449.3,5170.24L14449.3,5113.4L14465.6,5113.4ZM14391.2,5122.89L14391.2,5113.4L14439.7,5113.4L14439.7,5122.89L14421.1,5122.89L14421.1,5170.24L14409.8,5170.24L14409.8,5122.89L14391.2,5122.89Z"
-          style={{
-            fill: "white",
-            fillRule: "nonzero",
-          }}
-        />
-      </g>
-    </g>
-  </svg>
-);
+/** Custom glyphs draw in a square box; numeric sizes are CSS pixels. */
+interface IconProps {
+  size: string | number;
+}
 
-export const ScanIcon = (props: { size: string }) => (
-  <svg
-    width={props.size}
-    height={props.size}
-    viewBox="0 0 24 26"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <g>
-      <path
-        d="M0 17.7364V14.5274C5.49837 14.5274 9.97152 19.0002 9.97152 24.4981H6.76222C6.76222 20.7698 3.72858 17.7364 0 17.7364ZM13.7765 24.5H16.9858C16.9858 15.1344 9.36632 7.51368 0 7.51368V10.7227C7.59653 10.7227 13.7765 16.9022 13.7765 24.5ZM20.7907 24.5H24C24 11.2668 13.2324 0.5 0 0.5V3.71094C11.4626 3.71094 20.7907 13.0364 20.7907 24.5Z"
-        fill="currentColor"
-        fillOpacity="0.85"
-      />
-    </g>
-    <defs>
-      <filter
-        x="0"
-        y="0.5"
-        width="24"
-        height="25"
-        filterUnits="userSpaceOnUse"
-        colorInterpolationFilters="sRGB"
-      >
-        <feFlood floodOpacity="0" result="BackgroundImageFix" />
-        <feColorMatrix
-          in="SourceAlpha"
-          type="matrix"
-          values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"
-          result="hardAlpha"
-        />
-        <feOffset dy="1" />
-        <feComposite in2="hardAlpha" operator="out" />
-        <feColorMatrix
-          type="matrix"
-          values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0"
-        />
-        <feBlend
-          mode="normal"
-          in2="BackgroundImageFix"
-          result="effect1_dropShadow_34_589"
-        />
-        <feBlend
-          mode="normal"
-          in="SourceGraphic"
-          in2="effect1_dropShadow_34_589"
-          result="shape"
-        />
-      </filter>
-    </defs>
-  </svg>
-);
-
-export const CreateIcon = (props: { size: string }) => (
+export const CreateIcon = (props: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={props.size}
@@ -202,7 +82,7 @@ export const CreateIcon = (props: { size: string }) => (
   </svg>
 );
 
-export const SettingsIcon = (props: { size: string }) => (
+export const SettingsIcon = (props: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={props.size}
@@ -214,7 +94,7 @@ export const SettingsIcon = (props: { size: string }) => (
   </svg>
 );
 
-export const HistoryIcon = (props: { size: string }) => (
+export const HistoryIcon = (props: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={props.size}
@@ -228,23 +108,7 @@ export const HistoryIcon = (props: { size: string }) => (
   </svg>
 );
 
-export const RepeatIcon = (props: { size: string }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width={props.size}
-    height={props.size}
-    fill="currentColor"
-    viewBox="0 0 16 16"
-  >
-    <path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41m-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9" />
-    <path
-      fillRule="evenodd"
-      d="M8 3c-1.552 0-2.94.707-3.857 1.818a.5.5 0 1 1-.771-.636A6.002 6.002 0 0 1 13.917 7H12.9A5 5 0 0 0 8 3M3.1 9a5.002 5.002 0 0 0 8.757 2.182.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9z"
-    />
-  </svg>
-);
-
-export const SearchIcon = (props: { size: string }) => (
+export const SearchIcon = (props: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={props.size}
@@ -256,7 +120,7 @@ export const SearchIcon = (props: { size: string }) => (
   </svg>
 );
 
-export const TextIcon = (props: { size: string }) => (
+export const TextIcon = (props: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={props.size}
@@ -268,7 +132,7 @@ export const TextIcon = (props: { size: string }) => (
   </svg>
 );
 
-export const PlayIcon = (props: { size: string }) => (
+export const PlayIcon = (props: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={props.size}
@@ -280,7 +144,7 @@ export const PlayIcon = (props: { size: string }) => (
   </svg>
 );
 
-export const BackIcon = (props: { size: string }) => (
+export const BackIcon = (props: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={props.size}
@@ -295,7 +159,7 @@ export const BackIcon = (props: { size: string }) => (
   </svg>
 );
 
-export const NextIcon = (props: { size: string }) => (
+export const NextIcon = (props: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={props.size}
@@ -310,7 +174,20 @@ export const NextIcon = (props: { size: string }) => (
   </svg>
 );
 
-export const ClearIcon = (props: { size: string }) => (
+/** Solid counterpart of NextIcon, marking the selected row. */
+export const NextFilledIcon = (props: IconProps) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={props.size}
+    height={props.size}
+    fill="currentColor"
+    viewBox="0 0 16 16"
+  >
+    <path d="m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z" />
+  </svg>
+);
+
+export const ClearIcon = (props: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={props.size}
@@ -323,7 +200,7 @@ export const ClearIcon = (props: { size: string }) => (
   </svg>
 );
 
-export const CameraIcon = (props: { size: string }) => (
+export const CameraIcon = (props: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={props.size}
@@ -336,7 +213,7 @@ export const CameraIcon = (props: { size: string }) => (
   </svg>
 );
 
-export const ExternalIcon = (props: { size: string }) => (
+export const ExternalIcon = (props: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={props.size}
@@ -355,20 +232,7 @@ export const ExternalIcon = (props: { size: string }) => (
   </svg>
 );
 
-export const StopIcon = (props: { size: string }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width={props.size}
-    height={props.size}
-    fill="currentColor"
-    viewBox="0 0 16 16"
-  >
-    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16" />
-    <path d="M5 6.5A1.5 1.5 0 0 1 6.5 5h3A1.5 1.5 0 0 1 11 6.5v3A1.5 1.5 0 0 1 9.5 11h-3A1.5 1.5 0 0 1 5 9.5z" />{" "}
-  </svg>
-);
-
-export const DeviceIcon = (props: { size: string; className?: string }) => (
+export const DeviceIcon = (props: IconProps & { className?: string }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={props.size}
@@ -381,7 +245,7 @@ export const DeviceIcon = (props: { size: string; className?: string }) => (
   </svg>
 );
 
-export const CheckIcon = (props: { size: string }) => (
+export const CheckIcon = (props: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={props.size}
@@ -393,22 +257,7 @@ export const CheckIcon = (props: { size: string }) => (
   </svg>
 );
 
-export const DownIcon = (props: { size: string }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width={props.size}
-    height={props.size}
-    fill="currentColor"
-    viewBox="0 0 16 16"
-  >
-    <path
-      fillRule="evenodd"
-      d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"
-    />
-  </svg>
-);
-
-export const SaveIcon = (props: { size: string }) => (
+export const SaveIcon = (props: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={props.size}
@@ -421,7 +270,7 @@ export const SaveIcon = (props: { size: string }) => (
   </svg>
 );
 
-export const WarningIcon = (props: { size: string }) => (
+export const WarningIcon = (props: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={props.size}
@@ -433,7 +282,7 @@ export const WarningIcon = (props: { size: string }) => (
   </svg>
 );
 
-export const DatabaseIcon = (props: { size: string }) => (
+export const DatabaseIcon = (props: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={props.size}
@@ -448,7 +297,7 @@ export const DatabaseIcon = (props: { size: string }) => (
   </svg>
 );
 
-export const LockIcon = (props: { size: string }) => (
+export const LockIcon = (props: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={props.size}
@@ -460,7 +309,7 @@ export const LockIcon = (props: { size: string }) => (
   </svg>
 );
 
-export const NfcIcon = (props: { size: string }) => (
+export const NfcIcon = (props: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 -960 960 960"
@@ -472,7 +321,7 @@ export const NfcIcon = (props: { size: string }) => (
   </svg>
 );
 
-export const GoogleIcon = (props: { size: string }) => (
+export const GoogleIcon = (props: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={props.size}
@@ -498,7 +347,7 @@ export const GoogleIcon = (props: { size: string }) => (
   </svg>
 );
 
-export const AppleIcon = (props: { size: string }) => (
+export const AppleIcon = (props: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={props.size}

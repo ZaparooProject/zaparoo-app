@@ -1,35 +1,20 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  CheckCircle2,
-  AlertCircle,
-  AlertTriangle,
-  WifiOff,
-  Loader2,
-  Lock,
-  LockOpen,
+  CheckCircle2Icon,
+  AlertCircleIcon,
+  AlertTriangleIcon,
+  WifiOffIcon,
+  Loader2Icon,
+  LockIcon,
+  LockOpenIcon,
 } from "lucide-react";
-import { useConnection } from "@/hooks/useConnection";
-import { useConnectionPresentation } from "@/hooks/useConnectionPresentation";
-import { useStatusStore } from "@/lib/store";
 import {
-  activeAddressOf,
-  useDeviceRegistry,
-  type DeviceRegistrySnapshot,
-} from "@/lib/devices/deviceRegistry";
-
-const selectRegistryHydrated = (snapshot: DeviceRegistrySnapshot) =>
-  snapshot.hydrated;
-
-type ConnectionUIState =
-  | "connecting"
-  | "reconnecting"
-  | "connected"
-  | "unavailable"
-  | "networkUnavailable"
-  | "error"
-  | "disconnected"
-  | "pairingRequired";
+  useConnectionUiState,
+  type ConnectionUIState,
+  connectionStateLabelKey,
+} from "@/hooks/useDevicePresentation";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface ConnectionStatusConfig {
   icon: ReactNode;
@@ -73,114 +58,69 @@ export function ConnectionStatusDisplay({
   className,
 }: ConnectionStatusDisplayProps) {
   const { t } = useTranslation();
-  const { isConnected, showConnecting, showReconnecting } = useConnection();
-  const connectionPresentation = useConnectionPresentation({
-    immediate: true,
-  });
-  const encryptionState = useStatusStore((s) => s.encryptionState);
-  const pairingRequired = useStatusStore((s) => s.pairingRequired);
-  const savedAddress = useDeviceRegistry(activeAddressOf);
-  const registryHydrated = useDeviceRegistry(selectRegistryHydrated);
-
-  // Derive UI state from connection context
-  const deriveUIState = (): ConnectionUIState => {
-    // Devices are read from storage asynchronously, so on a cold start there is
-    // a moment where a user who has a saved device looks like one who has none.
-    // Hold the spinner rather than flashing the "enter an address" placeholder
-    // and snatching it back.
-    if (!registryHydrated) return "connecting";
-    if (!savedAddress) return "disconnected";
-    // Pairing-required outranks reconnecting/error so the user sees the real
-    // blocker instead of a generic "Reconnecting..." spinner that won't resolve
-    // without their action.
-    if (pairingRequired) return "pairingRequired";
-    // Confirmed network and prolonged Core outages outrank optimistic transport
-    // state, including the open-but-unverified handshake window.
-    if (connectionPresentation.kind === "networkUnavailable") {
-      return "networkUnavailable";
-    }
-    if (connectionPresentation.kind === "unavailable") return "unavailable";
-    // Initial transport failures remain actionable even if the socket briefly
-    // opened. Routine reconnect errors stay behind reconnecting presentation.
-    if (connectionError && !showReconnecting) return "error";
-    // The transport flips to "connected" when the WebSocket opens, before the
-    // server has confirmed the encryption mode. Hold the UI in connecting/
-    // reconnecting until the consumer learns the mode (encryptionState is set
-    // by onPlaintextMode after the first non-error reply, or by
-    // onEncryptedHandshakeOk after first decrypt). Prevents a green flash
-    // before -32002 surfaces on encryption-required cores.
-    if (isConnected && encryptionState === "unknown") {
-      return showReconnecting ? "reconnecting" : "connecting";
-    }
-    if (isConnected) return "connected";
-    // Show reconnecting state (previously connected, now retrying)
-    if (showReconnecting) return "reconnecting";
-    if (showConnecting) return "connecting";
-    return "disconnected";
-  };
-
-  const uiState = deriveUIState();
+  const { uiState, savedAddress, encryptionState } =
+    useConnectionUiState(connectionError);
   const addressOrPlaceholder = savedAddress || t("settings.enterDeviceAddress");
 
   // State configuration - maps UI states to display values
   const stateConfig: Record<ConnectionUIState, ConnectionStatusConfig> = {
     connecting: {
       icon: (
-        <Loader2 className="h-6 w-6 animate-spin motion-reduce:animate-none" />
+        <Loader2Icon className="h-6 w-6 animate-spin motion-reduce:animate-none" />
       ),
       iconColorClass: "text-primary",
-      title: t("connection.connectingToCore"),
+      title: t(connectionStateLabelKey("connecting")),
       subtitle: addressOrPlaceholder,
       subtitleColorClass: "text-muted-foreground",
     },
     reconnecting: {
       icon: (
-        <Loader2 className="h-6 w-6 animate-spin motion-reduce:animate-none" />
+        <Loader2Icon className="h-6 w-6 animate-spin motion-reduce:animate-none" />
       ),
       iconColorClass: "text-primary",
-      title: t("connection.reconnectingToCore"),
+      title: t(connectionStateLabelKey("reconnecting")),
       subtitle: addressOrPlaceholder,
       subtitleColorClass: "text-muted-foreground",
     },
     connected: {
-      icon: <CheckCircle2 className="h-6 w-6" />,
+      icon: <CheckCircle2Icon className="h-6 w-6" />,
       iconColorClass: "text-success",
-      title: t("scan.connectedHeading"),
+      title: t(connectionStateLabelKey("connected")),
       subtitle: connectedSubtitle || addressOrPlaceholder,
       subtitleColorClass: "text-muted-foreground",
     },
     unavailable: {
-      icon: <AlertTriangle className="h-6 w-6" />,
+      icon: <AlertTriangleIcon className="h-6 w-6" />,
       iconColorClass: "text-warning",
-      title: t("connection.coreUnavailable"),
+      title: t(connectionStateLabelKey("unavailable")),
       subtitle: addressOrPlaceholder,
       subtitleColorClass: "text-muted-foreground",
     },
     networkUnavailable: {
-      icon: <WifiOff className="h-6 w-6" />,
+      icon: <WifiOffIcon className="h-6 w-6" />,
       iconColorClass: "text-warning",
-      title: t("connection.networkUnavailable"),
+      title: t(connectionStateLabelKey("networkUnavailable")),
       subtitle: addressOrPlaceholder,
       subtitleColorClass: "text-muted-foreground",
     },
     error: {
-      icon: <AlertCircle className="h-6 w-6" />,
+      icon: <AlertCircleIcon className="h-6 w-6" />,
       iconColorClass: "text-error",
-      title: t("scan.connectionError"),
+      title: t(connectionStateLabelKey("error")),
       subtitle: connectionError || t("settings.connectionFailed"),
       subtitleColorClass: "text-error",
     },
     disconnected: {
-      icon: <WifiOff className="h-6 w-6" />,
+      icon: <WifiOffIcon className="h-6 w-6" />,
       iconColorClass: "text-error",
-      title: t("settings.notConnected"),
+      title: t(connectionStateLabelKey("disconnected")),
       subtitle: addressOrPlaceholder,
       subtitleColorClass: "text-muted-foreground",
     },
     pairingRequired: {
-      icon: <AlertTriangle className="h-6 w-6" />,
+      icon: <AlertTriangleIcon className="h-6 w-6" />,
       iconColorClass: "text-warning",
-      title: t("connection.pairingRequired"),
+      title: t(connectionStateLabelKey("pairingRequired")),
       subtitle: addressOrPlaceholder,
       subtitleColorClass: "text-muted-foreground",
     },
@@ -196,7 +136,7 @@ export function ConnectionStatusDisplay({
   const showUnlock = uiState === "connected" && encryptionState === "plaintext";
 
   return (
-    <div className={`flex items-center gap-3 ${className || ""}`}>
+    <div className={`flex flex-wrap items-center gap-3 ${className || ""}`}>
       {/* Icon */}
       <div
         className={`shrink-0 px-1.5 ${config.iconColorClass}`}
@@ -206,20 +146,20 @@ export function ConnectionStatusDisplay({
       </div>
 
       {/* Text content */}
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-[1_1_8rem] wrap-anywhere">
         <h2
           id={headingId}
           className="flex flex-wrap items-center gap-x-1.5 font-medium"
         >
           {config.title}
           {showLock && (
-            <Lock
+            <LockIcon
               className="text-success h-4 w-4 shrink-0"
               aria-label={t("connection.encrypted")}
             />
           )}
           {showUnlock && (
-            <LockOpen
+            <LockOpenIcon
               className="text-muted-foreground h-4 w-4 shrink-0"
               aria-label={t("connection.unencrypted")}
             />
@@ -231,16 +171,16 @@ export function ConnectionStatusDisplay({
           )}
         </h2>
         {showSkeleton ? (
-          <div className="bg-muted mt-1 h-4 w-32 animate-pulse rounded" />
+          <Skeleton className="mt-1 h-4 w-32" />
         ) : (
           config.subtitle && (
-            <p className={`truncate text-sm ${config.subtitleColorClass}`}>
+            <p className={`text-sm break-words ${config.subtitleColorClass}`}>
               {config.subtitle}
             </p>
           )
         )}
         {uiState === "connected" && connectedName && (
-          <p className={`truncate text-sm ${config.subtitleColorClass}`}>
+          <p className={`text-sm break-words ${config.subtitleColorClass}`}>
             {connectedName}
           </p>
         )}

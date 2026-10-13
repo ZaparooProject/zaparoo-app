@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { SlideModal } from "../SlideModal";
 import { Button } from "../wui/Button";
+import { ModalActionBar } from "../wui/ModalActionBar";
 
 interface StopConfirmModalProps {
   isOpen: boolean;
@@ -23,15 +24,21 @@ export function StopConfirmModal({
       close={onClose}
       title={t("create.nfc.confirm")}
       footer={
-        <div className="flex flex-row justify-center gap-4">
-          <Button label={t("nav.cancel")} variant="outline" onClick={onClose} />
-          <Button label={t("yes")} intent="primary" onClick={onConfirm} />
-        </div>
+        <ModalActionBar
+          secondaryAction={
+            <Button
+              label={t("nav.cancel")}
+              variant="secondary"
+              onClick={onClose}
+            />
+          }
+          primaryAction={
+            <Button label={t("yes")} intent="primary" onClick={onConfirm} />
+          }
+        />
       }
     >
-      <div className="p-4">
-        <p className="text-center">{description ?? t("stopPlaying")}</p>
-      </div>
+      <p className="py-4 text-center">{description ?? t("stopPlaying")}</p>
     </SlideModal>
   );
 }

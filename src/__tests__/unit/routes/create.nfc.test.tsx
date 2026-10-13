@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, render, screen, waitFor } from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
+import { Capacitor } from "@capacitor/core";
 import { CoreAPI } from "@/lib/coreApi";
 import { useStatusStore } from "@/lib/store";
 
@@ -15,7 +16,7 @@ const { componentRef, mockGoBack, mockNfcWriter, mockImpact } = vi.hoisted(
       status: null as null | string,
       write: vi.fn().mockResolvedValue(undefined),
       retry: vi.fn().mockResolvedValue(undefined),
-      end: vi.fn(),
+      end: vi.fn().mockResolvedValue(undefined),
       writing: false,
       result: null as any,
       verifyError: null as Error | null,
@@ -29,6 +30,9 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = (await importOriginal()) as any;
   return {
     ...actual,
+    Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
+      <a href={to}>{children}</a>
+    ),
     createFileRoute: () => (options: any) => {
       componentRef.current = options.component;
       return { options };
@@ -65,69 +69,14 @@ vi.mock("@/lib/logger", () => ({
   logger: { log: vi.fn(), error: vi.fn() },
 }));
 
-// Mock WriteModal to simplify testing
-vi.mock("@/components/WriteModal", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("@/components/WriteModal")>();
-  return {
-    ...actual,
-    WriteModal: ({
-      isOpen,
-      verifyError,
-      retry,
-    }: {
-      isOpen: boolean;
-      verifyError: boolean;
-      retry: () => void;
-    }) =>
-      isOpen ? (
-        <div data-testid="write-modal">
-          Write Modal
-          <span data-testid="verify-error">{String(verifyError)}</span>
-          <button onClick={retry}>Retry write</button>
-        </div>
-      ) : null,
-  };
-});
-
-// Mock ReadTab with functional scan button
+// Mock ReadTab so the page's result handling can be observed directly
 vi.mock("@/components/nfc/ReadTab", () => ({
-  ReadTab: ({ result, onScan }: { result: any; onScan: () => void }) => (
+  ReadTab: ({ result, scanControl }: { result: any; scanControl: any }) => (
     <div data-testid="read-tab">
-      <button data-testid="scan-button" onClick={onScan}>
-        Scan NFC
-      </button>
+      {scanControl}
       {result && (
-        <div data-testid="scan-result">Result: {result.info?.tag}</div>
+        <div data-testid="scan-result">Result: {result.info?.tag?.text}</div>
       )}
-    </div>
-  ),
-}));
-
-// Mock ToolsTab with functional action buttons
-vi.mock("@/components/nfc/ToolsTab", () => ({
-  ToolsTab: ({
-    onToolAction,
-    isProcessing,
-  }: {
-    onToolAction: (action: string) => void;
-    isProcessing: boolean;
-  }) => (
-    <div data-testid="tools-tab">
-      <button
-        data-testid="format-button"
-        onClick={() => onToolAction("format")}
-        disabled={isProcessing}
-      >
-        Format
-      </button>
-      <button
-        data-testid="erase-button"
-        onClick={() => onToolAction("erase")}
-        disabled={isProcessing}
-      >
-        Erase
-      </button>
     </div>
   ),
 }));
@@ -139,17 +88,29 @@ import "@/routes/create.nfc";
 const getNfcUtils = () => componentRef.current;
 
 describe("Create NFC Route", () => {
+  let settleWrite: () => void = () => {};
+
   beforeEach(() => {
     useStatusStore.setState({ ...initialStatusState });
     CoreAPI.reset();
     vi.clearAllMocks();
+    vi.mocked(Capacitor.getPlatform).mockReturnValue("android");
     mockNfcWriter.status = null;
     mockNfcWriter.writing = false;
     mockNfcWriter.result = null;
     mockNfcWriter.verifyError = null;
-    mockNfcWriter.write.mockClear();
-    mockNfcWriter.retry.mockClear();
-    mockNfcWriter.end.mockClear();
+    // A reader operation stays pending until the test settles it.
+    mockNfcWriter.write.mockReset();
+    mockNfcWriter.write.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          settleWrite = resolve;
+        }),
+    );
+    mockNfcWriter.retry.mockReset();
+    mockNfcWriter.retry.mockResolvedValue(undefined);
+    mockNfcWriter.end.mockReset();
+    mockNfcWriter.end.mockResolvedValue(undefined);
     mockImpact.mockClear();
   });
 
@@ -188,44 +149,60 @@ describe("Create NFC Route", () => {
     it("should show Read tab content by default", () => {
       renderComponent();
       // Read tab content includes the scan button
-      expect(screen.getByTestId("scan-button")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "create.nfc.readTab.scanTag" }),
+      ).toBeInTheDocument();
     });
   });
 
   describe("scan functionality", () => {
-    it("should call nfcWriter.write with Read action when scan button clicked", async () => {
+    it("should start a read when the scan control is pressed", async () => {
       const user = userEvent.setup();
       renderComponent();
 
-      await user.click(screen.getByTestId("scan-button"));
+      await user.click(
+        screen.getByRole("button", { name: "create.nfc.readTab.scanTag" }),
+      );
 
-      expect(mockNfcWriter.write).toHaveBeenCalledWith("read");
+      await waitFor(() =>
+        expect(mockNfcWriter.write).toHaveBeenCalledWith("read", undefined),
+      );
     });
 
-    it("should show write modal when scan is initiated", async () => {
+    it("should latch the scan control until the read is cancelled", async () => {
       const user = userEvent.setup();
-      mockNfcWriter.status = null;
       renderComponent();
 
-      await user.click(screen.getByTestId("scan-button"));
+      await user.click(
+        screen.getByRole("button", { name: "create.nfc.readTab.scanTag" }),
+      );
+      const control = screen.getByRole("button", {
+        name: "reader.cancelAction",
+      });
+      expect(control).toHaveAttribute("data-reader-state", "waiting");
 
-      expect(screen.getByTestId("write-modal")).toBeInTheDocument();
+      await user.click(control);
+
+      expect(mockNfcWriter.end).toHaveBeenCalledOnce();
+      expect(
+        await screen.findByRole("button", {
+          name: "create.nfc.readTab.scanTag",
+        }),
+      ).toBeInTheDocument();
     });
 
-    it("should keep the modal open and retry after verification fails", async () => {
+    it("should not start a read while a queued write owns the reader", async () => {
       const user = userEvent.setup();
-      mockNfcWriter.status = "error";
-      mockNfcWriter.verifyError = new Error("verification failed");
+      useStatusStore.setState({ writeOpen: true });
       renderComponent();
 
-      await user.click(screen.getByTestId("scan-button"));
+      const control = screen.getByRole("button", {
+        name: "create.nfc.readTab.scanTag",
+      });
+      expect(control).toBeDisabled();
+      await user.click(control);
 
-      expect(screen.getByTestId("write-modal")).toBeInTheDocument();
-      expect(screen.getByTestId("verify-error")).toHaveTextContent("true");
-
-      await user.click(screen.getByRole("button", { name: "Retry write" }));
-
-      expect(mockNfcWriter.retry).toHaveBeenCalledOnce();
+      expect(mockNfcWriter.write).not.toHaveBeenCalled();
     });
   });
 
@@ -254,7 +231,9 @@ describe("Create NFC Route", () => {
 
       // Tools tab content should be visible
       await waitFor(() => {
-        expect(screen.getByTestId("tools-tab")).toBeInTheDocument();
+        expect(
+          screen.getByRole("heading", { name: "create.nfc.format" }),
+        ).toBeInTheDocument();
       });
     });
 
@@ -277,7 +256,9 @@ describe("Create NFC Route", () => {
       const toolsTab = screen.getByRole("tab", { name: /tools/i });
       await user.click(toolsTab);
       await waitFor(() => {
-        expect(screen.getByTestId("tools-tab")).toBeInTheDocument();
+        expect(
+          screen.getByRole("heading", { name: "create.nfc.format" }),
+        ).toBeInTheDocument();
       });
 
       // Switch back to Read
@@ -289,129 +270,153 @@ describe("Create NFC Route", () => {
     });
   });
 
-  describe("tool actions", () => {
-    it("should call nfcWriter.write with format action when format button clicked", async () => {
+  describe("tab lock during a tag wait", () => {
+    it("should lock the tabs while a read is waiting and release them on cancel", async () => {
       const user = userEvent.setup();
       renderComponent();
 
-      // Switch to Tools tab first
-      const toolsTab = screen.getByRole("tab", { name: /tools/i });
-      await user.click(toolsTab);
+      await user.click(
+        screen.getByRole("button", { name: "create.nfc.readTab.scanTag" }),
+      );
 
-      await waitFor(() => {
-        expect(screen.getByTestId("format-button")).toBeInTheDocument();
+      const readTab = screen.getByRole("tab", { name: "create.nfc.tabs.read" });
+      const toolsTab = screen.getByRole("tab", {
+        name: "create.nfc.tabs.tools",
       });
+      expect(readTab).toBeDisabled();
+      expect(toolsTab).toBeDisabled();
+      await user.click(toolsTab);
+      expect(readTab).toHaveAttribute("aria-selected", "true");
 
-      // Click format button
-      await user.click(screen.getByTestId("format-button"));
+      await user.click(
+        screen.getByRole("button", { name: "reader.cancelAction" }),
+      );
 
-      expect(mockNfcWriter.write).toHaveBeenCalledWith("format");
+      await waitFor(() => expect(toolsTab).toBeEnabled());
     });
 
-    it("should call nfcWriter.write with erase action when erase button clicked", async () => {
+    it("should not latch the scan control for a tool's wait", async () => {
       const user = userEvent.setup();
       renderComponent();
-
-      // Switch to Tools tab first
-      const toolsTab = screen.getByRole("tab", { name: /tools/i });
-      await user.click(toolsTab);
-
-      await waitFor(() => {
-        expect(screen.getByTestId("erase-button")).toBeInTheDocument();
-      });
-
-      // Click erase button
-      await user.click(screen.getByTestId("erase-button"));
-
-      expect(mockNfcWriter.write).toHaveBeenCalledWith("erase");
-    });
-
-    it("should show write modal when tool action is triggered", async () => {
-      const user = userEvent.setup();
-      mockNfcWriter.status = null;
-      renderComponent();
-
-      // Switch to Tools tab
-      const toolsTab = screen.getByRole("tab", { name: /tools/i });
-      await user.click(toolsTab);
-
-      await waitFor(() => {
-        expect(screen.getByTestId("format-button")).toBeInTheDocument();
-      });
-
-      // Click format button
-      await user.click(screen.getByTestId("format-button"));
-
-      expect(screen.getByTestId("write-modal")).toBeInTheDocument();
-    });
-
-    it("should disable tool buttons while processing", async () => {
-      const user = userEvent.setup();
-      mockNfcWriter.writing = true;
-      renderComponent();
-
-      // Switch to Tools tab
-      const toolsTab = screen.getByRole("tab", { name: /tools/i });
-      await user.click(toolsTab);
-
-      await waitFor(() => {
-        expect(screen.getByTestId("format-button")).toBeInTheDocument();
-      });
-
-      expect(screen.getByTestId("format-button")).toBeDisabled();
-      expect(screen.getByTestId("erase-button")).toBeDisabled();
-    });
-  });
-
-  describe("operation completion", () => {
-    it("should announce results, select Read, and move focus after completion", async () => {
-      const user = userEvent.setup();
-      const NfcUtils = getNfcUtils();
-      const { rerender } = render(<NfcUtils />);
       await user.click(
         screen.getByRole("tab", { name: "create.nfc.tabs.tools" }),
       );
 
-      act(() => {
-        mockNfcWriter.status = "success";
-        mockNfcWriter.result = { info: { tag: "abc123" } };
+      await user.click(
+        screen.getByRole("button", { name: "create.nfc.erase" }),
+      );
+
+      // Only the tool that started the wait offers its cancellation.
+      expect(
+        screen.getAllByRole("button", { name: "reader.cancelAction" }),
+      ).toHaveLength(1);
+      expect(
+        screen.getByRole("tab", { name: "create.nfc.tabs.read" }),
+      ).toBeDisabled();
+    });
+  });
+
+  describe("tool actions", () => {
+    it.each([
+      ["format", "create.nfc.format", "create.nfc.tools.formatWarning"],
+      ["erase", "create.nfc.erase", "create.nfc.tools.eraseWarning"],
+      [
+        "makeReadOnly",
+        "create.nfc.makeReadOnly",
+        "create.nfc.tools.makeReadOnlyWarning",
+      ],
+    ])(
+      "keeps %s control and warning mounted until cancellation",
+      async (action, label, warning) => {
+        const user = userEvent.setup();
+        renderComponent();
+        await user.click(
+          screen.getByRole("tab", { name: "create.nfc.tabs.tools" }),
+        );
+        const control = screen.getByRole("button", { name: label });
+        control.focus();
+        await user.click(control);
+        await waitFor(() =>
+          expect(mockNfcWriter.write).toHaveBeenCalledWith(action, undefined),
+        );
+        expect(screen.getByRole("heading", { name: label })).toBeVisible();
+        expect(screen.getByText(warning)).toBeVisible();
+        expect(
+          screen.getByRole("button", { name: "reader.cancelAction" }),
+        ).toBe(control);
+        expect(control).toHaveFocus();
+        for (const other of [
+          "create.nfc.format",
+          "create.nfc.erase",
+          "create.nfc.makeReadOnly",
+        ].filter((value) => value !== label)) {
+          expect(screen.getByRole("button", { name: other })).toBeDisabled();
+        }
+        await user.click(control);
+        expect(mockNfcWriter.end).toHaveBeenCalledOnce();
+        expect(await screen.findByRole("button", { name: label })).toBe(
+          control,
+        );
+        expect(control).toHaveFocus();
+      },
+    );
+  });
+
+  describe("operation completion", () => {
+    const tagResult = {
+      status: 0,
+      info: { tag: { uid: "04a1", text: "abc123" }, rawTag: null },
+    };
+
+    it("should show and announce what a read found", async () => {
+      const user = userEvent.setup();
+      const NfcUtils = getNfcUtils();
+      const { rerender } = render(<NfcUtils />);
+      await user.click(
+        screen.getByRole("button", { name: "create.nfc.readTab.scanTag" }),
+      );
+      await waitFor(() => expect(mockNfcWriter.write).toHaveBeenCalled());
+
+      mockNfcWriter.result = tagResult;
+      await act(async () => {
+        settleWrite();
       });
       rerender(<NfcUtils />);
 
-      const readTab = screen.getByRole("tab", {
-        name: "create.nfc.tabs.read",
-      });
-      await waitFor(() =>
-        expect(readTab).toHaveAttribute("aria-selected", "true"),
-      );
-      await waitFor(() => expect(readTab).toHaveFocus());
+      expect(screen.getByTestId("scan-result")).toHaveTextContent("abc123");
       expect(
         await screen.findByText("create.nfc.resultReady"),
       ).toBeInTheDocument();
+      expect(
+        screen.getByRole("tab", { name: "create.nfc.tabs.read" }),
+      ).toBeEnabled();
     });
 
-    it("should initially show read tab by default", () => {
-      mockNfcWriter.status = null;
-      mockNfcWriter.result = null;
-      renderComponent();
+    it("should not present the tag a tool acted on as its current contents", async () => {
+      const user = userEvent.setup();
+      const NfcUtils = getNfcUtils();
+      const { rerender } = render(<NfcUtils />);
+      const toolsTab = screen.getByRole("tab", {
+        name: "create.nfc.tabs.tools",
+      });
+      await user.click(toolsTab);
+      await user.click(
+        screen.getByRole("button", { name: "create.nfc.erase" }),
+      );
+      await waitFor(() => expect(mockNfcWriter.write).toHaveBeenCalled());
 
-      // Read tab should be visible by default
-      expect(screen.getByTestId("read-tab")).toBeInTheDocument();
-    });
+      // Erase reports the tag as discovered, before it was erased.
+      mockNfcWriter.result = tagResult;
+      await act(async () => {
+        settleWrite();
+      });
+      rerender(<NfcUtils />);
 
-    it("should pass result to ReadTab component when available", () => {
-      // Set up a result before rendering
-      mockNfcWriter.status = "success";
-      mockNfcWriter.result = {
-        info: {
-          tag: "abc123",
-        },
-      };
-
-      renderComponent();
-
-      // The ReadTab mock should display the result
-      expect(screen.getByTestId("scan-result")).toHaveTextContent("abc123");
+      expect(screen.queryByTestId("scan-result")).not.toBeInTheDocument();
+      expect(toolsTab).toHaveAttribute("aria-selected", "true");
+      expect(
+        screen.queryByText("create.nfc.resultReady"),
+      ).not.toBeInTheDocument();
     });
   });
 });

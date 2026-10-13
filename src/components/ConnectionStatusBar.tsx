@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { CheckCircle2, Loader2, TriangleAlert, WifiOff } from "lucide-react";
+import {
+  CheckCircle2Icon,
+  Loader2Icon,
+  TriangleAlertIcon,
+  WifiOffIcon,
+} from "lucide-react";
 import classNames from "classnames";
 import {
   CONNECTION_RESTORED_MS,
@@ -9,23 +14,12 @@ import {
   type ConnectionPresentationKind,
 } from "@/hooks/useConnectionPresentation";
 import { useConnection } from "@/hooks/useConnection";
+import { connectionStateLabelKey } from "@/hooks/useDevicePresentation";
 import { ConnectionState, useStatusStore } from "@/lib/store";
 import { ResponsiveContainer } from "./ResponsiveContainer";
 
 function statusKey(kind: ConnectionPresentationKind): string {
-  switch (kind) {
-    case "connecting":
-      return "connection.connectingToCore";
-    case "reconnecting":
-      return "connection.reconnectingToCore";
-    case "unavailable":
-      return "connection.coreUnavailable";
-    case "networkUnavailable":
-      return "connection.networkUnavailable";
-    case "hidden":
-    default:
-      return "";
-  }
+  return kind === "hidden" ? "" : connectionStateLabelKey(kind);
 }
 
 export function ConnectionStatusBar() {
@@ -33,7 +27,6 @@ export function ConnectionStatusBar() {
   const { pathname } = useLocation();
   const { isConnected } = useConnection();
   const presentation = useConnectionPresentation();
-  const safeInsets = useStatusStore((state) => state.safeInsets);
   const connectionIssueStartedAt = useStatusStore(
     (state) => state.connectionIssueStartedAt,
   );
@@ -89,8 +82,11 @@ export function ConnectionStatusBar() {
     presentation.visible,
   ]);
 
+  // Settings shows the device card, which carries the connection state inline.
+  // Home no longer does - its device pill carries identity, not the sentence -
+  // so the bar has to report problems there.
   const hasContextualStatus =
-    pathname === "/" || pathname === "/settings" || pathname === "/settings/";
+    pathname === "/settings" || pathname === "/settings/";
   const showConfirmedRestored = showRestored && confirmedConnected;
   const showVisual =
     !hasContextualStatus && (presentation.visible || showConfirmedRestored);
@@ -116,44 +112,48 @@ export function ConnectionStatusBar() {
       </div>
       {showVisual && (
         <div
-          className={classNames("shrink-0 border-t border-white/10", {
-            "bg-muted/90 text-muted-foreground":
-              presentation.visible && !isUnavailable,
-            "bg-amber-950/95 text-amber-100": isUnavailable,
-            "text-success bg-[#111928]":
-              showConfirmedRestored && !presentation.visible,
-          })}
+          className={classNames(
+            "border-border bg-surface-raised text-muted-foreground shrink-0 border-t",
+            {
+              "text-muted-foreground": presentation.visible && !isUnavailable,
+              "border-warning/40 [&_svg]:text-warning": isUnavailable,
+              "[&_svg]:text-success":
+                showConfirmedRestored && !presentation.visible,
+            },
+          )}
         >
           <ResponsiveContainer maxWidth="nav">
-            <div
-              className="flex min-h-9 items-center justify-center gap-2 py-1.5 text-sm font-medium"
-              style={{
-                paddingRight: `calc(0.75rem + ${safeInsets.right})`,
-                paddingLeft: `calc(0.75rem + ${safeInsets.left})`,
-              }}
-            >
+            {/* Insets come from the shell; the desktop sidebar already covers
+                the left one, so the page-content variable zeroes it there. */}
+            <div className="flex min-h-9 flex-wrap items-center justify-center gap-x-2 gap-y-1 py-1.5 pr-[calc(0.75rem+var(--app-safe-right,0px))] pl-[calc(0.75rem+var(--page-content-safe-left,var(--app-safe-left,0px)))] text-sm font-medium">
               {showConfirmedRestored && !presentation.visible ? (
-                <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <CheckCircle2Icon
+                  className="h-4 w-4 shrink-0"
+                  aria-hidden="true"
+                />
               ) : presentation.kind === "networkUnavailable" ? (
-                <WifiOff className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <WifiOffIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
               ) : isUnavailable ? (
-                <TriangleAlert
+                <TriangleAlertIcon
                   className="h-4 w-4 shrink-0"
                   aria-hidden="true"
                 />
               ) : (
-                <Loader2
+                <Loader2Icon
                   className="h-4 w-4 shrink-0 animate-spin motion-reduce:animate-none"
                   aria-hidden="true"
                 />
               )}
-              <span className="min-w-0 text-center" aria-hidden="true">
+              <span
+                className="min-w-[12ch] flex-1 text-center"
+                aria-hidden="true"
+              >
                 {message}
               </span>
               {isUnavailable && (
                 <Link
                   to="/settings"
-                  className="shrink-0 rounded px-1.5 py-1 underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+                  className="focus-visible:ring-ring shrink-0 rounded px-1.5 py-1 underline underline-offset-2 focus-visible:ring-2 focus-visible:outline-none"
                 >
                   {t("nav.settings")}
                 </Link>

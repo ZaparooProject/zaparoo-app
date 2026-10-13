@@ -132,7 +132,7 @@ describe("OnlineDeviceSetup", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     await user.click(
       screen.getByRole("button", {
-        name: "Help for online.deviceLink.title",
+        name: "settingHelp.label",
       }),
     );
     expect(screen.getByRole("dialog")).toBeInTheDocument();
@@ -187,9 +187,6 @@ describe("OnlineDeviceSetup", () => {
   it("should offer linking without an inline description", () => {
     render(<OnlineDeviceSetup connected warpActive={false} />);
 
-    expect(
-      screen.queryByText("online.deviceLink.description"),
-    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "online.deviceLink.link" }),
     ).toBeInTheDocument();
@@ -268,7 +265,6 @@ describe("OnlineDeviceSetup", () => {
         name: "online.features.playHistory",
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText("online.features.free")).toBeInTheDocument();
     expect(
       screen.getByText("online.features.requiresWarp"),
     ).toBeInTheDocument();
@@ -621,9 +617,6 @@ describe("OnlineDeviceSetup", () => {
   });
 
   it("should show the last successful cloud backup date", async () => {
-    const formatDate = vi
-      .spyOn(Date.prototype, "toLocaleDateString")
-      .mockReturnValue("Jan 1, 2030");
     mockUseDeviceLinking.mockReturnValue({
       state: "linked",
       linkDevice: vi.fn(),
@@ -640,8 +633,6 @@ describe("OnlineDeviceSetup", () => {
     expect(
       await screen.findByText("online.features.lastBackup"),
     ).toBeInTheDocument();
-    expect(formatDate).toHaveBeenCalledWith("en", { dateStyle: "medium" });
-    formatDate.mockRestore();
   });
 
   describe("on Core 2.18", () => {
@@ -694,8 +685,7 @@ describe("OnlineDeviceSetup", () => {
       const all = await screen.findByRole("checkbox", {
         name: "online.features.allFeatures",
       });
-      expect(all).not.toBeChecked();
-      expect(screen.getByText("online.features.someOn")).toBeInTheDocument();
+      expect(all).toBePartiallyChecked();
       await user.click(all);
 
       await waitFor(() =>
@@ -705,6 +695,40 @@ describe("OnlineDeviceSetup", () => {
           librarySyncEnabled: true,
         }),
       );
+    });
+
+    it("should remain checked without Warp and allow turning everything off", async () => {
+      const user = userEvent.setup();
+      const settings = {
+        playtimeSyncEnabled: false,
+        librarySyncEnabled: false,
+        remoteControlEnabled: false,
+        backupRemoteEnabled: false,
+        backupRemoteSchedule: "daily",
+      };
+      mockSettings.mockImplementation(async () => ({ ...settings }));
+      mockSettingsUpdate.mockImplementation(async (params) => {
+        Object.assign(settings, params);
+      });
+      mockBackupStatus.mockResolvedValue(
+        backupStatus({ availability: "unavailable" }),
+      );
+      render(<OnlineDeviceSetup connected warpActive={false} />);
+      const master = await screen.findByRole("checkbox", {
+        name: "online.features.allFeatures",
+      });
+      expect(master).not.toBeChecked();
+      await user.click(master);
+      await waitFor(() => expect(master).toBeChecked());
+      expect(settings.backupRemoteEnabled).toBe(false);
+      await user.click(master);
+      await waitFor(() => expect(master).not.toBeChecked());
+      expect(mockSettingsUpdate).toHaveBeenLastCalledWith({
+        playtimeSyncEnabled: false,
+        librarySyncEnabled: false,
+        remoteControlEnabled: false,
+        backupRemoteEnabled: false,
+      });
     });
 
     it("should include cloud backup when turning every feature on with Warp", async () => {

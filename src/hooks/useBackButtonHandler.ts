@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { App } from "@capacitor/app";
 import { logger } from "@/lib/logger";
 
@@ -81,12 +81,19 @@ export function useBackButtonHandler(
   priority: number = 50,
   enabled: boolean = true,
 ) {
+  // Callers pass inline closures; reading the latest one through a ref keeps
+  // registration (and same-priority ordering) stable across renders.
+  const handlerRef = useRef(handler);
+  useLayoutEffect(() => {
+    handlerRef.current = handler;
+  }, [handler]);
+
   useEffect(() => {
     if (!enabled) return;
 
     const handlerObj: BackButtonHandler = {
       id,
-      handler,
+      handler: () => handlerRef.current(),
       priority,
     };
 
@@ -95,5 +102,5 @@ export function useBackButtonHandler(
     return () => {
       backButtonManager.removeHandler(handlerObj);
     };
-  }, [id, handler, priority, enabled]);
+  }, [id, priority, enabled]);
 }

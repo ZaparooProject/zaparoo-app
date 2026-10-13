@@ -15,6 +15,9 @@ import {
   Status,
   isFormatRelatedError,
 } from "./nfc";
+import { nfcErrorMessageKey } from "./nfcErrorMessages";
+import { isAppPreviewEnabled } from "./appPreviewStore";
+import { simulateNfcOperation } from "./nfcPreview";
 import { CoreAPI, isExpectedReaderWriteError } from "./coreApi.ts";
 import { logger } from "./logger";
 import {
@@ -43,8 +46,8 @@ export interface WriteNfcHook {
   getVerifyError: () => NfcVerificationError | null;
 }
 
-/** The write modal stays open until a write settles, or while a verify failed. */
-export function isWriteModalOpen(
+/** The reader activity stays open until a write settles, or while a verify failed. */
+export function isReaderActivityOpen(
   writeIntent: boolean,
   writer: Pick<WriteNfcHook, "status" | "verifyError">,
 ): boolean {
@@ -76,30 +79,26 @@ function coreWrite(text: string, signal?: AbortSignal): Promise<Result> {
     });
   }
 
-  return CoreAPI.write({ text }, signal)
-    .then((result) => {
-      // Check if the result indicates cancellation
-      if (result && typeof result === "object" && "cancelled" in result) {
-        return {
-          status: Status.Cancelled,
-          info: {
-            rawTag: null,
-            tag: null,
-          },
-        };
-      } else {
-        return {
-          status: Status.Success,
-          info: {
-            rawTag: null,
-            tag: null,
-          },
-        };
-      }
-    })
-    .catch((e) => {
-      throw e;
-    });
+  return CoreAPI.write({ text }, signal).then((result) => {
+    // Check if the result indicates cancellation
+    if (result && typeof result === "object" && "cancelled" in result) {
+      return {
+        status: Status.Cancelled,
+        info: {
+          rawTag: null,
+          tag: null,
+        },
+      };
+    } else {
+      return {
+        status: Status.Success,
+        info: {
+          rawTag: null,
+          tag: null,
+        },
+      };
+    }
+  });
 }
 
 async function determineWriteMethod(
@@ -183,8 +182,8 @@ export function useNfcWriter(
     action: WriteAction;
     text?: string;
   } | null>(null);
-  // Verification-failure toast content stashed until the write modal closes,
-  // so the toast is not fired while the scan UI still covers it.
+  // Verification-failure toast content stashed until the reader activity ends,
+  // so it does not compete with the in-context Retry/Cancel recovery.
   const deferredErrorToastRef = useRef<{
     title: string;
     message: string;
@@ -220,6 +219,7 @@ export function useNfcWriter(
   const write = useCallback(
     async (action: WriteAction, text?: string) => {
       const writeOpId = ++writeOpIdRef.current;
+      const preview = isAppPreviewEnabled();
 
       // Clear any previous state before starting a new write operation
       setStatus(null);
@@ -230,6 +230,7 @@ export function useNfcWriter(
       verifyErrorRef.current = null;
       deferredErrorToastRef.current = null;
       lastWriteArgsRef.current = { action, text };
+      currentWriteMethodRef.current = null;
 
       // Clean up any existing AbortController before creating new one
       if (
@@ -261,11 +262,11 @@ export function useNfcWriter(
 
           let selectedWriteMethod: WriteMethod;
           try {
-            selectedWriteMethod = await determineWriteMethod(
-              writeMethod,
-              preferRemoteWriter,
-            );
+            selectedWriteMethod = preview
+              ? WriteMethod.LocalNFC
+              : await determineWriteMethod(writeMethod, preferRemoteWriter);
           } catch (error) {
+            if (controller.signal.aborted) return;
             logger.error("Failed to determine write method:", error, {
               category: "nfc",
               action: "determineWriteMethod",
@@ -273,6 +274,8 @@ export function useNfcWriter(
             setStatus(Status.Error);
             throw error;
           }
+          // Dismissal can cancel while native/remote capability lookup is pending.
+          if (controller.signal.aborted) return;
           currentWriteMethodRef.current = selectedWriteMethod;
 
           if (selectedWriteMethod === WriteMethod.LocalNFC) {
@@ -305,7 +308,7 @@ export function useNfcWriter(
           toastFailed = t("spinner.readFailed");
           break;
         case WriteAction.Format:
-          if (Capacitor.getPlatform() !== "android") {
+          if (!preview && Capacitor.getPlatform() !== "android") {
             logger.error("Format is only supported on Android", {
               category: "nfc",
               action: "formatPlatformCheck",
@@ -332,6 +335,22 @@ export function useNfcWriter(
           toastSuccess = t("spinner.makeReadOnlySuccess");
           toastFailed = t("spinner.makeReadOnlyFailed");
           break;
+      }
+
+      if (preview) {
+        // Preview stands in for the tag: no plugin session, no Core request.
+        currentWriteMethodRef.current = WriteMethod.LocalNFC;
+        usesLocalSession = false;
+        actionFunc = () =>
+          simulateNfcOperation({
+            read: action === WriteAction.Read,
+            signal: controller.signal,
+            onRetapRequired: () => {
+              if (writeOpIdRef.current === writeOpId) {
+                setRetapRequired(true);
+              }
+            },
+          });
       }
 
       setWriting(true);
@@ -389,8 +408,8 @@ export function useNfcWriter(
             });
           }
           if (e instanceof NfcVerificationError) {
-            // The write modal surfaces this failure with a retry action; the
-            // toast is deferred until the modal closes so it stays visible.
+            // The reader activity surfaces this failure with a retry action; the
+            // toast is deferred until that activity ends.
             verifyErrorRef.current = e;
             setVerifyError(e);
             deferredErrorToastRef.current = {
@@ -405,8 +424,10 @@ export function useNfcWriter(
             showMs += 4000;
           }
           // Use user-friendly message for format-related errors on Android
-          const userMessage =
-            Capacitor.getPlatform() === "android" && isFormatRelatedError(e)
+          const messageKey = nfcErrorMessageKey(e);
+          const userMessage = messageKey
+            ? t(messageKey)
+            : Capacitor.getPlatform() === "android" && isFormatRelatedError(e)
               ? t("spinner.formatErrorRetry")
               : e.message;
           toast.error(
@@ -463,6 +484,8 @@ export function useNfcWriter(
 
   const end = useCallback(async () => {
     const method = currentWriteMethodRef.current;
+    // Stop pending method selection before async session teardown can yield.
+    if (method === null) abortControllerRef.current?.abort();
 
     // Cancel pending write requests FIRST while pendingWriteId is still valid
     if (method === WriteMethod.RemoteReader) {
@@ -501,8 +524,8 @@ export function useNfcWriter(
     setWriting(false);
     setRetapRequired(false);
 
-    // The scan UI is gone now, so a stashed verification-failure toast can
-    // fire without being obscured.
+    // The reader activity has ended, so a stashed verification-failure toast
+    // can fire now.
     const deferredToast = deferredErrorToastRef.current;
     if (deferredToast) {
       deferredErrorToastRef.current = null;

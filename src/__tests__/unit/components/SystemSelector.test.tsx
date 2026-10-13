@@ -2,9 +2,9 @@
  * Unit Tests: SystemSelector Component
  *
  * Tests the system selection modal including:
- * - Rendering category tabs
+ * - Rendering category choices
  * - Filtering systems by search query (debounced)
- * - Filtering systems by selected category tab
+ * - Filtering systems by selected category
  * - Single-select mode (closes on selection)
  * - Multi-select mode (stays open, shows count)
  * - "All Systems" option when includeAllOption is true
@@ -235,7 +235,7 @@ describe("SystemSelector", () => {
       ).toBeInTheDocument();
     });
 
-    it("should render loading state", () => {
+    it("should render loading state", async () => {
       // Arrange
       mockIsLoading = true;
 
@@ -243,7 +243,29 @@ describe("SystemSelector", () => {
       render(<SystemSelector {...defaultProps} />);
 
       // Assert
-      expect(screen.getByText("loading")).toBeInTheDocument();
+      expect(await screen.findByText("loading")).toBeInTheDocument();
+    });
+
+    it("should render an error state with a retry action", async () => {
+      // Arrange
+      const user = userEvent.setup();
+      const refetch = vi.fn();
+      vi.mocked(useQuery).mockReturnValueOnce({
+        data: undefined,
+        isLoading: false,
+        isError: true,
+        refetch,
+      } as unknown as ReturnType<typeof useQuery>);
+
+      // Act
+      render(<SystemSelector {...defaultProps} />);
+      await user.click(
+        screen.getByRole("button", { name: "library.tryAgain" }),
+      );
+
+      // Assert
+      expect(screen.getByText("systemSelector.loadError")).toBeInTheDocument();
+      expect(refetch).toHaveBeenCalledTimes(1);
     });
 
     it("should not render when closed", () => {
@@ -255,22 +277,28 @@ describe("SystemSelector", () => {
     });
   });
 
-  describe("category tabs", () => {
-    it("should render category tabs", () => {
+  describe("category filter", () => {
+    it("should render category choices", () => {
       // Act
       render(<SystemSelector {...defaultProps} />);
 
       // Assert
       expect(
-        screen.getByRole("tab", { name: "systemSelector.allCategories" }),
+        screen.getByRole("tab", {
+          name: "systemSelector.allCategories",
+        }),
       ).toBeInTheDocument();
       expect(screen.getByRole("tab", { name: "Nintendo" })).toBeInTheDocument();
       expect(screen.getByRole("tab", { name: "Sega" })).toBeInTheDocument();
       expect(screen.getByRole("tab", { name: "Sony" })).toBeInTheDocument();
       expect(screen.getByRole("tab", { name: "Atari" })).toBeInTheDocument();
+      // Systems without a Core category get a translated fallback label.
+      expect(
+        screen.getByRole("tab", { name: "systemSelector.otherCategory" }),
+      ).toBeInTheDocument();
     });
 
-    it("should filter systems by selected category tab", async () => {
+    it("should filter systems by selected category", async () => {
       // Arrange
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
 
@@ -284,7 +312,7 @@ describe("SystemSelector", () => {
         screen.getByRole("radio", { name: "Sega Genesis" }),
       ).toBeInTheDocument();
 
-      // Act - click Nintendo tab
+      // Act - select Nintendo
       await user.click(screen.getByRole("tab", { name: "Nintendo" }));
 
       // Assert - only Nintendo systems shown
@@ -318,10 +346,10 @@ describe("SystemSelector", () => {
       render(<SystemSelector {...defaultProps} />);
 
       // Assert - "Arcade" and "PC" (non-priority) should appear in alphabetical order
-      const tabs = screen.getAllByRole("tab");
-      const tabNames = tabs.map((tab) => tab.textContent ?? "");
-      const arcadeIndex = tabNames.findIndex((n) => n.includes("Arcade"));
-      const pcIndex = tabNames.findIndex((n) => n.includes("PC"));
+      const categoryTabs = screen.getAllByRole("tab");
+      const optionNames = categoryTabs.map((tab) => tab.textContent ?? "");
+      const arcadeIndex = optionNames.findIndex((n) => n.includes("Arcade"));
+      const pcIndex = optionNames.findIndex((n) => n.includes("PC"));
 
       expect(arcadeIndex).toBeGreaterThan(0);
       expect(pcIndex).toBeGreaterThan(0);
@@ -332,16 +360,16 @@ describe("SystemSelector", () => {
       // Act
       render(<SystemSelector {...defaultProps} />);
 
-      // Assert - check tab order
-      const tabs = screen.getAllByRole("tab");
-      const tabNames = tabs.map((tab) => tab.textContent);
+      // Assert - check category order
+      const categoryTabs = screen.getAllByRole("tab");
+      const optionNames = categoryTabs.map((tab) => tab.textContent);
 
-      // First tab should be "all", then priority categories
-      expect(tabNames[0]).toBe("systemSelector.allCategories");
-      expect(tabNames[1]).toBe("Nintendo");
-      expect(tabNames[2]).toBe("Sony");
-      expect(tabNames[3]).toBe("Sega");
-      expect(tabNames[4]).toBe("Atari");
+      // All categories precedes priority categories
+      expect(optionNames[0]).toBe("systemSelector.allCategories");
+      expect(optionNames[1]).toBe("Nintendo");
+      expect(optionNames[2]).toBe("Sony");
+      expect(optionNames[3]).toBe("Sega");
+      expect(optionNames[4]).toBe("Atari");
     });
   });
 
@@ -440,7 +468,7 @@ describe("SystemSelector", () => {
 
       // Act - click clear button
       const clearButton = screen.getByRole("button", {
-        name: "systemSelector.clearSearch",
+        name: "clearSearch",
       });
       await user.click(clearButton);
 
@@ -562,7 +590,71 @@ describe("SystemSelector", () => {
       ).toBeInTheDocument();
     });
 
-    it("should show selected count in footer", () => {
+    it("allows Done without a footer summary when an empty selection means all", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const onClose = vi.fn();
+      const onSelect = vi.fn();
+      render(
+        <SystemSelector
+          {...defaultProps}
+          mode="multi"
+          includeAllOption
+          onClose={onClose}
+          onSelect={onSelect}
+        />,
+      );
+
+      expect(
+        screen.queryByText("systemSelector.allSystems"),
+      ).not.toBeInTheDocument();
+      await user.click(
+        screen.getByRole("button", { name: "systemSelector.done" }),
+      );
+      expect(onClose).toHaveBeenCalledOnce();
+      expect(onSelect).not.toHaveBeenCalled();
+    });
+
+    it("keeps Done available with nothing selected, so Clear can be confirmed", () => {
+      render(<SystemSelector {...defaultProps} mode="multi" />);
+      expect(
+        screen.queryByText("systemSelector.allSystems"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "systemSelector.done" }),
+      ).toBeEnabled();
+    });
+
+    it("preserves selections hidden by category and search filters", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const onSelect = vi.fn();
+      render(
+        <SystemSelector
+          {...defaultProps}
+          mode="multi"
+          selectedSystems={["genesis"]}
+          onSelect={onSelect}
+        />,
+      );
+
+      await user.click(screen.getByRole("tab", { name: "Nintendo" }));
+      await user.type(
+        screen.getByRole("searchbox", { name: "systemSelector.searchSystems" }),
+        "Super",
+      );
+      await act(async () => {
+        vi.advanceTimersByTime(350);
+      });
+      expect(
+        screen.queryByRole("checkbox", { name: "Sega Genesis" }),
+      ).not.toBeInTheDocument();
+      expect(onSelect).not.toHaveBeenCalled();
+      await user.click(
+        screen.getByRole("checkbox", { name: "Super Nintendo" }),
+      );
+      expect(onSelect).toHaveBeenCalledWith(["genesis", "snes"]);
+    });
+
+    it("keeps selected-system feedback on the rows rather than in a footer summary", () => {
       // Act
       render(
         <SystemSelector
@@ -572,10 +664,18 @@ describe("SystemSelector", () => {
         />,
       );
 
-      // Assert - footer shows selected count
       expect(
-        screen.getByText("systemSelector.selectedCount"),
-      ).toBeInTheDocument();
+        screen.getByRole("checkbox", { name: "Nintendo Entertainment System" }),
+      ).toBeChecked();
+      expect(
+        screen.getByRole("checkbox", { name: "Super Nintendo" }),
+      ).toBeChecked();
+      expect(
+        screen.getByRole("button", { name: "systemSelector.clearAll" }),
+      ).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: "systemSelector.done" }),
+      ).toBeEnabled();
     });
 
     it("should toggle selection on click", async () => {
@@ -655,10 +755,10 @@ describe("SystemSelector", () => {
         name: "systemSelector.clearAll",
       });
       expect(clearButton).toBeDisabled();
-      expect(clearButton).toHaveTextContent("systemSelector.clearAll");
+      expect(clearButton).toHaveTextContent("systemSelector.clear");
     });
 
-    it("should close modal when apply clicked", async () => {
+    it("should close modal when Done clicked", async () => {
       // Arrange
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       const onClose = vi.fn();
@@ -674,7 +774,7 @@ describe("SystemSelector", () => {
 
       // Act
       await user.click(
-        screen.getByRole("button", { name: "systemSelector.apply" }),
+        screen.getByRole("button", { name: "systemSelector.done" }),
       );
 
       // Assert
@@ -790,7 +890,7 @@ describe("SystemSelector", () => {
         screen.getByRole("radio", { name: "systemSelector.allSystems" }),
       ).toBeInTheDocument();
 
-      // Act - click Nintendo tab
+      // Act - select Nintendo
       await user.click(screen.getByRole("tab", { name: "Nintendo" }));
 
       // Assert - All Systems option hidden when category selected

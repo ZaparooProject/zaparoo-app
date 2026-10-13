@@ -1,4 +1,5 @@
 import { createRef, type ComponentProps } from "react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
@@ -163,17 +164,45 @@ describe("LibraryBrowseList", () => {
     ).toBeInTheDocument();
   });
 
-  it("should keep ordinary rows at 88px for default text size", () => {
-    renderList();
+  it("names a row by its title and describes it with its tags", () => {
+    renderList({
+      entries: [
+        {
+          ...entries[0]!,
+          tags: [{ type: "region", tag: "eu" }],
+          disambiguatingTags: [{ type: "region", tag: "eu" }],
+        },
+      ],
+    });
 
-    expect(screen.getByRole("listitem")).toHaveStyle({ height: "88px" });
+    const row = screen.getByRole("button", { name: "Game One" });
+    expect(row).toHaveAccessibleDescription(/eu/);
+  });
+
+  it("keeps the selected row usable when text size changes", async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    renderList({ onSelect });
+    const row = screen.getByRole("button", { name: "Game One" });
+    await user.click(row);
+
+    await act(async () => {
+      usePreferencesStore.setState({ textZoomLevel: 2 });
+    });
+
+    expect(screen.getByRole("button", { name: "Game One" })).toBe(row);
+    await user.click(row);
+    expect(onSelect).toHaveBeenCalledTimes(2);
+    expect(onSelect).toHaveBeenLastCalledWith(entries[0]);
   });
 
   it("should permit measured row growth when text zoom is increased", () => {
     usePreferencesStore.setState({ textZoomLevel: 1.3 });
+    mockVirtualRows([0, 1]);
     renderList();
 
-    const item = screen.getByRole("listitem");
+    // The first row gives up its leading inset, so check a regular row.
+    const item = screen.getAllByRole("listitem")[1]!;
     expect(item).toHaveStyle({ minHeight: "115px" });
     expect(item).not.toHaveStyle({ height: "88px" });
     expect(mockMeasure).toHaveBeenCalled();

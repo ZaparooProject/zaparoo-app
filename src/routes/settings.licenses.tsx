@@ -139,6 +139,8 @@ export function ThirdPartyLicenses() {
   return (
     <>
       <PageFrame
+        headerMode="content-wide"
+        breadcrumbs={[{ to: "/settings", label: t("settings.title") }]}
         onSwipeBack={goBack}
         scrollRef={scrollContainerRef}
         headerLeft={
@@ -198,7 +200,7 @@ export function ThirdPartyLicenses() {
                   <AccordionItem
                     key={`${packageInfo.name}@${packageInfo.version}`}
                     value={`${packageInfo.name}@${packageInfo.version}`}
-                    className="border-bd-outline last:border-b-0"
+                    className="border-border last:border-b-0"
                   >
                     <AccordionTrigger className="gap-3 no-underline hover:no-underline">
                       <span className="flex min-w-0 flex-col">
@@ -216,7 +218,7 @@ export function ThirdPartyLicenses() {
                           label={t("settings.licenses.projectWebsite")}
                           variant="outline"
                           size="sm"
-                          icon={<ExternalIcon size="16" />}
+                          icon={<ExternalIcon size="20" />}
                           className="self-start"
                           onClick={() =>
                             Browser.open({ url: packageInfo.repository })
@@ -262,11 +264,7 @@ export function ThirdPartyLicenses() {
           )}
         </div>
       </PageFrame>
-      <BackToTop
-        scrollContainerRef={scrollContainerRef}
-        threshold={200}
-        bottomOffset="calc(var(--bottom-nav-base-height) + 1rem)"
-      />
+      <BackToTop scrollContainerRef={scrollContainerRef} threshold={200} />
     </>
   );
 }

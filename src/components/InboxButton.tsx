@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Bell } from "lucide-react";
+import { BellIcon } from "lucide-react";
 import { useStatusStore } from "@/lib/store";
 import { useHaptics } from "@/hooks/useHaptics";
 import { HeaderButton } from "@/components/wui/HeaderButton";
@@ -9,6 +9,7 @@ export function InboxButton() {
   const { t } = useTranslation();
   const { impact } = useHaptics();
   const setInboxModalOpen = useStatusStore((state) => state.setInboxModalOpen);
+  const inboxModalOpen = useStatusStore((state) => state.inboxModalOpen);
   const inboxCount = useStatusStore((state) => state.inboxMessages.length);
 
   const hasNotifications = inboxCount > 0;
@@ -24,12 +25,14 @@ export function InboxButton() {
       }}
       icon={
         <span className="relative">
-          <Bell size={24} aria-hidden="true" />
+          <BellIcon size={24} aria-hidden="true" />
           <NotificationBadge count={inboxCount} className="-top-2 -right-2" />
         </span>
       }
       title={label}
       aria-label={label}
+      aria-expanded={inboxModalOpen}
+      active={inboxModalOpen}
     />
   );
 }

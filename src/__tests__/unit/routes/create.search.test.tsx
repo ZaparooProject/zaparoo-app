@@ -15,12 +15,6 @@ vi.mock("@tanstack/react-router", () => ({
     useLoaderData: () => ({
       systemQuery: "all",
       tagQuery: [],
-      systems: {
-        systems: [
-          { id: "snes", name: "Super Nintendo" },
-          { id: "genesis", name: "Sega Genesis" },
-        ],
-      },
     }),
   }),
   useRouter: () => ({ navigate: mockNavigate }),
@@ -100,6 +94,11 @@ vi.mock("@/lib/writeNfcHook", () => ({
   useNfcWriter: () => ({
     write: mockNfcWrite,
     end: mockNfcEnd,
+    retry: vi.fn(),
+    getVerifyError: () => null,
+    verifyError: null,
+    retapRequired: false,
+    result: null,
     status: null,
   }),
   WriteMethod: {
@@ -119,20 +118,16 @@ vi.mock("@/components/VirtualSearchResults", async () => {
   return {
     VirtualSearchResults: ({
       hasSearched,
-      isSearching,
-      onSearchComplete,
+      onLoadingChange,
       tags,
     }: {
       hasSearched: boolean;
-      isSearching: boolean;
-      onSearchComplete?: () => void;
+      onLoadingChange?: (loading: boolean) => void;
       tags: string[];
     }) => {
       useEffect(() => {
-        if (isSearching) {
-          onSearchComplete?.();
-        }
-      }, [isSearching, onSearchComplete]);
+        onLoadingChange?.(false);
+      }, [onLoadingChange]);
 
       return (
         <div data-testid="virtual-search-results" data-tags={tags.join(",")}>
@@ -244,16 +239,6 @@ vi.mock("@/components/RecentSearchesModal", () => ({
     ) : null,
 }));
 
-// Mock WriteModal
-vi.mock("@/components/WriteModal", () => ({
-  WriteModal: ({ isOpen, close }: { isOpen: boolean; close: () => void }) =>
-    isOpen ? (
-      <div data-testid="write-modal">
-        <button onClick={close}>Cancel</button>
-      </div>
-    ) : null,
-}));
-
 // Mock SlideModal
 vi.mock("@/components/SlideModal", () => ({
   SlideModal: ({
@@ -283,7 +268,12 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
     ...actual,
     useQuery: () => ({
       isError: false,
-      data: [],
+      data: {
+        systems: [
+          { id: "snes", name: "Super Nintendo" },
+          { id: "genesis", name: "Sega Genesis" },
+        ],
+      },
     }),
   };
 });
@@ -459,6 +449,37 @@ describe("Search Component", () => {
         "data-tags",
         "",
       );
+    });
+
+    it("should fall back to all systems when the saved system is not on this device", () => {
+      useTabSessionStore.getState().setCreateSearch({
+        query: "",
+        system: "n64",
+        tags: [],
+      });
+
+      render(<Search />);
+
+      expect(screen.getByTestId("system-selector-trigger")).toHaveTextContent(
+        "All Systems",
+      );
+    });
+
+    it("should trim the submitted query", () => {
+      render(<Search />);
+
+      fireEvent.change(screen.getByLabelText("create.search.gameInput"), {
+        target: { value: "  mario " },
+      });
+      fireEvent.click(
+        screen.getByRole("button", { name: "create.search.searchButton" }),
+      );
+
+      expect(mockAddRecentSearch).toHaveBeenCalledWith({
+        query: "mario",
+        system: "all",
+        tags: [],
+      });
     });
 
     it("should update search input value", () => {

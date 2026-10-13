@@ -1,19 +1,34 @@
 import classNames from "classnames";
-import { ReactElement, useState, memo, useRef, forwardRef } from "react";
-import { useHapticPress } from "@/hooks/useHapticPress";
+import { ReactElement, memo, forwardRef } from "react";
+import { useTactilePress } from "@/hooks/useTactilePress";
 
 export type ButtonLayout = "inline" | "stacked" | "responsive";
+export type ButtonDisabledAppearance = "unavailable" | "busy";
+export type ButtonReaderState = "waiting" | "attention" | "error";
 
-interface ButtonProps {
+export interface ButtonProps {
   onClick?: () => void;
   label?: string;
-  variant?: "fill" | "outline" | "text";
+  /** Reserve caption width for other states without exposing hidden labels. */
+  labelAlternatives?: string[];
+  variant?: "fill" | "secondary" | "outline" | "ghost" | "text";
+  /** Square icon controls align with fields; standalone controls stay round. */
+  shape?: "round" | "square";
   size?: "default" | "sm" | "lg";
   layout?: ButtonLayout;
-  /** Semantic intent for haptic feedback: default (light), primary (medium), destructive (heavy) */
-  intent?: "default" | "primary" | "destructive";
+  /** Semantic intent controls haptics and visible destructive/pro treatment. */
+  intent?: "default" | "primary" | "destructive" | "pro";
   icon?: ReactElement;
   disabled?: boolean;
+  /**
+   * unavailable: recessed control whose prerequisite is absent.
+   * busy: temporarily locked control that retains its normal material, faded.
+   */
+  disabledAppearance?: ButtonDisabledAppearance;
+  /** Illuminated latched state for an active physical reader interaction. */
+  readerState?: ButtonReaderState;
+  /** Visual reader status; the reader control owns accessible announcements. */
+  readerStatus?: string;
   className?: string;
   /** Accessible label for screen readers (required for icon-only buttons) */
   "aria-label"?: string;
@@ -23,6 +38,8 @@ interface ButtonProps {
   "aria-pressed"?: boolean;
   /** Indicates whether the controlled element is expanded */
   "aria-expanded"?: boolean;
+  /** Indicates that the action is waiting on an asynchronous interaction. */
+  "aria-busy"?: boolean;
   /** ID of the element controlled by this button */
   "aria-controls"?: string;
 }
@@ -32,157 +49,115 @@ export const Button = memo(
     const variant = props.variant || "fill";
     const size = props.size || "default";
     const layout = props.layout || "inline";
-    const [isPressed, setIsPressed] = useState(false);
-    const touchStartPos = useRef<{ x: number; y: number } | null>(null);
-    const hasMoved = useRef(false);
-    const hapticStyle =
-      props.intent === "destructive"
-        ? "heavy"
-        : props.intent === "primary"
-          ? "medium"
-          : "light";
-    const handleHapticPress = useHapticPress(
-      hapticStyle,
-      !props.disabled && !props.decorative && props.onClick !== undefined,
+    const { pressed, shouldFireClick, handlers } = useTactilePress({
+      intent: props.intent,
+      disabled: props.disabled,
+      decorative: props.decorative,
+      hasOnClick: props.onClick !== undefined,
+    });
+
+    const content = (
+      <>
+        {props.icon && (
+          <span
+            className="wui-button-icon flex shrink-0 items-center"
+            aria-hidden="true"
+          >
+            {props.icon}
+          </span>
+        )}
+        {props.labelAlternatives ? (
+          <span className="inline-grid">
+            <span className="col-start-1 row-start-1">{props.label}</span>
+            {props.labelAlternatives
+              .filter((label) => label !== props.label)
+              .map((label) => (
+                <span
+                  key={label}
+                  aria-hidden="true"
+                  className="invisible col-start-1 row-start-1"
+                >
+                  {label}
+                </span>
+              ))}
+          </span>
+        ) : (
+          props.label
+        )}
+      </>
     );
 
     return (
       <button
         ref={ref}
+        data-variant={variant}
+        data-intent={props.intent ?? "default"}
+        data-size={size}
+        data-icon-only={!props.label && !!props.icon}
+        data-shape={props.shape ?? "round"}
+        data-disabled-appearance={props.disabledAppearance ?? "unavailable"}
+        data-reader-state={props.readerState}
+        data-pressed={pressed}
         aria-label={
           props.decorative ? undefined : props["aria-label"] || props.label
         }
         aria-hidden={props.decorative || undefined}
         aria-pressed={props["aria-pressed"]}
         aria-expanded={props["aria-expanded"]}
+        aria-busy={props["aria-busy"]}
         aria-controls={props["aria-controls"]}
         tabIndex={props.decorative ? -1 : undefined}
         className={classNames(
-          "flex",
-          "items-center",
-          "justify-center",
-          "font-medium",
-          "tracking-[0.1px]",
+          "wui-button flex min-h-12 min-w-12 shrink-0 touch-manipulation items-center justify-center",
           {
-            "flex-row gap-2": layout === "inline",
-            "flex-col gap-1": layout === "stacked",
-            "flex-col gap-1 sm:flex-row sm:gap-2": layout === "responsive",
-          },
-          "cursor-pointer",
-          "transition-all",
-          "duration-100",
-          "active:scale-95",
-          "touch-manipulation",
-          "focus-visible:outline-none",
-          "focus-visible:ring-2",
-          "focus-visible:ring-white/50",
-          "focus-visible:ring-offset-2",
-          "focus-visible:ring-offset-background",
-          // Size variants
-          {
-            // Small size
-            "py-1": size === "sm",
-            "text-sm": size === "sm",
-            // Default size
-            "py-1.5": size === "default",
-            // Large size
-            "py-2": size === "lg",
-            "text-lg": size === "lg",
-          },
-          // Icon-only button sizes
-          {
-            "h-8 w-8 min-w-8 px-1.5":
-              !props.label && props.icon && size === "sm",
-            "h-10 w-10 min-w-10 px-1.5":
-              !props.label && props.icon && size === "default",
-            "h-12 w-12 min-w-12 px-2":
-              !props.label && props.icon && size === "lg",
-          },
-          // Label padding
-          {
-            "px-4": props.label && size === "sm" && layout === "inline",
-            "px-6": props.label && size === "default" && layout === "inline",
-            "px-8": props.label && size === "lg" && layout === "inline",
-            "px-2": props.label && layout !== "inline",
-          },
-          // Rounded corners
-          {
-            "rounded-full": !props.label && props.icon,
-            "rounded-[16px]": props.label && size === "sm",
-            "rounded-[20px]": props.label && size === "default",
-            "rounded-[24px]": props.label && size === "lg",
-          },
-          // Variants and states
-          {
-            "bg-button-pattern": variant === "fill" && !props.disabled,
-            border: variant === "fill" || variant === "outline",
-            "border-solid": variant === "fill" || variant === "outline",
-            "border-bd-filled": variant === "fill" && !props.disabled,
-            "border-bd-outline": variant === "outline" && !props.disabled,
-            "border-foreground-disabled": props.disabled,
-            "text-foreground-disabled": props.disabled,
-            "text-primary-foreground": variant === "fill" && !props.disabled,
-            "text-white": variant !== "fill" && !props.disabled,
-            "opacity-80": isPressed && !props.disabled,
+            "flex-row gap-2": !props.readerStatus && layout === "inline",
+            "flex-col gap-1": !!props.readerStatus || layout === "stacked",
+            "wui-button-responsive":
+              !props.readerStatus && layout === "responsive",
+            "cursor-pointer": !props.disabled && !props.decorative,
+            "px-4 py-2": props.label && size === "sm" && layout === "inline",
+            "px-5 py-3":
+              props.label && size === "default" && layout === "inline",
+            "px-7 py-3.5 text-base":
+              props.label && size === "lg" && layout === "inline",
+            "px-2 py-2": props.label && layout !== "inline",
+            "size-12 p-2": !props.label && size !== "lg",
+            "size-14 p-3": !props.label && size === "lg",
           },
           props.className,
         )}
         disabled={props.disabled}
         onClick={() => {
-          // Only trigger click if this wasn't a scroll gesture
-          if (!hasMoved.current && !props.disabled && props.onClick) {
+          if (shouldFireClick() && props.onClick) {
             props.onClick();
           }
         }}
-        onPointerUp={(event) => {
-          if (!hasMoved.current) {
-            handleHapticPress(event);
-          }
-        }}
-        onTouchStart={(e) => {
-          const touch = e.touches[0];
-          if (!touch) return;
-          touchStartPos.current = { x: touch.clientX, y: touch.clientY };
-          hasMoved.current = false;
-          setIsPressed(true);
-        }}
-        onTouchMove={(e) => {
-          if (touchStartPos.current) {
-            const touch = e.touches[0];
-            if (!touch) return;
-            const deltaX = Math.abs(touch.clientX - touchStartPos.current.x);
-            const deltaY = Math.abs(touch.clientY - touchStartPos.current.y);
-
-            // If moved more than 10px, consider it a scroll gesture
-            if (deltaX > 10 || deltaY > 10) {
-              hasMoved.current = true;
-              setIsPressed(false);
-            }
-          }
-        }}
-        onTouchEnd={() => {
-          setIsPressed(false);
-          // Reset after a short delay to allow click to process
-          setTimeout(() => {
-            hasMoved.current = false;
-            touchStartPos.current = null;
-          }, 100);
-        }}
-        onTouchCancel={() => {
-          setIsPressed(false);
-          hasMoved.current = false;
-          touchStartPos.current = null;
-        }}
-        onMouseDown={() => setIsPressed(true)}
-        onMouseUp={() => setIsPressed(false)}
-        onMouseLeave={() => setIsPressed(false)}
+        {...handlers}
       >
-        {props.icon && (
-          <span className="flex shrink-0 items-center" aria-hidden="true">
-            {props.icon}
-          </span>
+        {props.readerStatus ? (
+          <>
+            <span
+              className={classNames(
+                "flex max-w-full min-w-0 items-center justify-center",
+                {
+                  "flex-row gap-2": layout === "inline",
+                  "flex-col gap-1": layout === "stacked",
+                  "wui-button-responsive": layout === "responsive",
+                },
+              )}
+            >
+              {content}
+            </span>
+            <span
+              className="max-w-full text-xs leading-5 font-normal tracking-normal normal-case"
+              aria-hidden="true"
+            >
+              {props.readerStatus}
+            </span>
+          </>
+        ) : (
+          content
         )}
-        {props.label}
       </button>
     );
   }),

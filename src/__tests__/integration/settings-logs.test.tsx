@@ -13,14 +13,34 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { render, screen, waitFor } from "../../test-utils";
 import userEvent from "@testing-library/user-event";
+import toast from "react-hot-toast";
 import { useStatusStore, ConnectionState } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
+
+// The list is virtualised, and jsdom has no layout to window it by.
+vi.mock("@tanstack/react-virtual", () => ({
+  useVirtualizer: ({ count }: { count: number }) => ({
+    getVirtualItems: () =>
+      Array.from({ length: count }, (_, index) => ({
+        key: index,
+        index,
+        size: 120,
+        start: index * 120,
+      })),
+    getTotalSize: () => count * 120,
+    measureElement: vi.fn(),
+    measure: vi.fn(),
+  }),
+}));
 
 // Mock the router
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
+    Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
+      <a href={to}>{children}</a>
+    ),
     useRouter: vi.fn(() => ({ navigate: vi.fn() })),
   };
 });
@@ -56,6 +76,10 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
     })),
   };
 });
+
+vi.mock("react-hot-toast", () => ({
+  default: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }),
+}));
 
 // Mock useSmartSwipe
 vi.mock("@/hooks/useSmartSwipe", () => ({
@@ -295,10 +319,11 @@ describe("Settings Logs Integration", () => {
 
       render(<Logs />);
 
-      expect(screen.getByText(/3 entries/)).toBeInTheDocument();
+      expect(screen.getByText("settings.logs.entryCount")).toBeInTheDocument();
     });
 
-    it("should show copy button when data is available", () => {
+    it("should show copy action in the header overflow when data is available", async () => {
+      const user = userEvent.setup();
       mockState.queryData = {
         filename: "test.log",
         content: createMockLogContent([
@@ -308,13 +333,17 @@ describe("Settings Logs Integration", () => {
       };
 
       render(<Logs />);
+      await user.click(
+        screen.getByRole("button", { name: /nav.moreActions/i }),
+      );
 
       expect(
         screen.getByRole("button", { name: /settings.logs.copy/i }),
       ).toBeInTheDocument();
     });
 
-    it("should show download button on web platform", () => {
+    it("should show download action in the header overflow on web", async () => {
+      const user = userEvent.setup();
       mockState.queryData = {
         filename: "test.log",
         content: createMockLogContent([
@@ -324,6 +353,9 @@ describe("Settings Logs Integration", () => {
       };
 
       render(<Logs />);
+      await user.click(
+        screen.getByRole("button", { name: /nav.moreActions/i }),
+      );
 
       expect(
         screen.getByRole("button", { name: /settings.logs.download/i }),
@@ -411,7 +443,9 @@ describe("Settings Logs Integration", () => {
       await user.type(searchInput, "Message");
 
       await waitFor(() => {
-        expect(screen.getByText(/Showing 2 of 3 entries/i)).toBeInTheDocument();
+        expect(
+          screen.getByText("settings.logs.entriesShowing"),
+        ).toBeInTheDocument();
       });
     });
   });
@@ -510,7 +544,7 @@ describe("Settings Logs Integration", () => {
       render(<Logs />);
 
       // Initially shows 4 entries
-      expect(screen.getByText(/4 entries/)).toBeInTheDocument();
+      expect(screen.getByText("settings.logs.entryCount")).toBeInTheDocument();
 
       // Toggle off debug
       const debugButton = screen.getByRole("button", { name: /debug/i });
@@ -518,13 +552,16 @@ describe("Settings Logs Integration", () => {
 
       // Should show filtered count
       await waitFor(() => {
-        expect(screen.getByText(/Showing 2 of 4 entries/i)).toBeInTheDocument();
+        expect(
+          screen.getByText("settings.logs.entriesShowing"),
+        ).toBeInTheDocument();
       });
     });
   });
 
   describe("Copy Functionality", () => {
-    it("should render copy button when data is available", () => {
+    it("should render copy action when data is available", async () => {
+      const user = userEvent.setup();
       const logContent = [
         {
           level: "info",
@@ -539,8 +576,10 @@ describe("Settings Logs Integration", () => {
       };
 
       render(<Logs />);
+      await user.click(
+        screen.getByRole("button", { name: /nav.moreActions/i }),
+      );
 
-      // Verify copy button is present and clickable
       const copyButton = screen.getByRole("button", {
         name: /settings.logs.copy/i,
       });
@@ -680,6 +719,18 @@ describe("Settings Logs Integration", () => {
       expect(screen.getByText(/settings.logs.fetchError/i)).toBeInTheDocument();
     });
 
+    it("should offer a retry that refetches the logs", async () => {
+      const user = userEvent.setup();
+      mockState.isError = true;
+      mockState.queryData = null;
+
+      render(<Logs />);
+
+      await user.click(screen.getByRole("button", { name: "scan.retry" }));
+
+      expect(mockState.refetch).toHaveBeenCalled();
+    });
+
     it("should handle malformed log data gracefully", () => {
       mockState.queryData = {
         filename: "bad.log",
@@ -747,7 +798,8 @@ describe("Settings Logs Integration", () => {
       ).toBeInTheDocument();
     });
 
-    it("should use upload instead of native sharing", () => {
+    it("should use upload instead of native sharing", async () => {
+      const user = userEvent.setup();
       mockCapacitorState.isNative = true;
       mockState.queryData = {
         filename: "test.log",
@@ -762,6 +814,9 @@ describe("Settings Logs Integration", () => {
       expect(
         screen.getByRole("button", { name: /settings.logs.upload/i }),
       ).toBeInTheDocument();
+      await user.click(
+        screen.getByRole("button", { name: /nav.moreActions/i }),
+      );
       expect(
         screen.queryByRole("button", { name: /settings.logs.download/i }),
       ).not.toBeInTheDocument();
@@ -784,7 +839,9 @@ describe("Settings Logs Integration", () => {
       };
 
       render(<Logs />);
-
+      await user.click(
+        screen.getByRole("button", { name: /nav.moreActions/i }),
+      );
       await user.click(
         screen.getByRole("button", { name: /settings.logs.download/i }),
       );
@@ -826,6 +883,9 @@ describe("Settings Logs Integration", () => {
       );
 
       render(<Logs />);
+      await user.click(
+        screen.getByRole("button", { name: /nav.moreActions/i }),
+      );
 
       const downloadButton = screen.getByRole("button", {
         name: /settings.logs.download/i,
@@ -858,6 +918,9 @@ describe("Settings Logs Integration", () => {
       };
 
       render(<Logs />);
+      await user.click(
+        screen.getByRole("button", { name: /nav.moreActions/i }),
+      );
 
       const copyButton = screen.getByRole("button", {
         name: /settings.logs.copy/i,
@@ -867,10 +930,51 @@ describe("Settings Logs Integration", () => {
       await waitFor(() => {
         expect(mockWriteText).toHaveBeenCalled();
       });
+      await waitFor(() => {
+        expect(toast.success).toHaveBeenCalledWith("copied");
+      });
+    });
+
+    it("should say so when the logs cannot be copied", async () => {
+      const user = userEvent.setup();
+      Object.defineProperty(navigator, "clipboard", {
+        value: { writeText: vi.fn().mockRejectedValue(new Error("denied")) },
+        writable: true,
+        configurable: true,
+      });
+
+      mockState.queryData = {
+        filename: "test.log",
+        content: createMockLogContent([
+          { level: "info", time: "2025-01-15T10:30:00Z", message: "Copy test" },
+        ]),
+        size: 100,
+      };
+
+      render(<Logs />);
+      await user.click(
+        screen.getByRole("button", { name: /nav.moreActions/i }),
+      );
+      await user.click(
+        screen.getByRole("button", { name: /settings.logs.copy/i }),
+      );
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith("copyFailed");
+      });
+      expect(toast.success).not.toHaveBeenCalledWith("copied");
     });
   });
 
   describe("Loading State", () => {
+    it("should show a visible loading state while logs are fetched", () => {
+      mockState.isLoading = true;
+
+      render(<Logs />);
+
+      expect(screen.getByText("loading")).toBeInTheDocument();
+    });
+
     it("should show loading state in refresh button title", () => {
       mockState.isLoading = true;
 

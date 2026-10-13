@@ -1,88 +1,136 @@
+import { useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { SlideModal } from "@/components/SlideModal.tsx";
-import { Button } from "@/components/wui/Button.tsx";
+import { ZAP_COMMANDS } from "@/lib/zapscript/catalog";
+import type { ZapCommandGroup, ZapCommandSpec } from "@/lib/zapscript/types";
+import { SlideModal } from "@/components/SlideModal";
+import { BackToTop } from "@/components/BackToTop";
+import { EmptyState } from "@/components/wui/EmptyState";
+import { TextInput } from "@/components/wui/TextInput";
+import { selectorOptionClassName } from "@/components/selectorOptionClassName";
+import { useHapticPress } from "@/hooks/useHapticPress";
+import { useStatusStore } from "@/lib/store";
 
+const GROUP_ORDER: readonly ZapCommandGroup[] = [
+  "launch",
+  "playlist",
+  "input",
+  "ui",
+  "profile",
+  "utility",
+  "http",
+  "mister",
+];
+
+/**
+ * The catalogue of ZapScript commands, grouped and searchable, each with its
+ * plain-language description. Selecting one reports the command's name.
+ */
 export function CommandsModal(props: {
   isOpen: boolean;
   close: () => void;
-  onSelect: (command: string) => void;
+  onSelect: (name: string) => void;
 }) {
   const { t } = useTranslation();
+  const connected = useStatusStore((state) => state.connected);
+  const corePlatform = useStatusStore((state) => state.corePlatform);
+  const handleHapticPress = useHapticPress();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [query, setQuery] = useState("");
+  // Two catalogues can be mounted at once (steps and text), so ids are local.
+  const id = useId();
+  // Each opening starts from the whole catalogue.
+  const close = () => {
+    setQuery("");
+    props.close();
+  };
 
-  const commands = [
-    { label: "launch.system", command: "**launch.system:" },
-    { label: "launch.random", command: "**launch.random:" },
-    { label: "launch.search", command: "**launch.search:" },
-    { label: "input.keyboard", command: "**input.keyboard:" },
-    { label: "input.gamepad", command: "**input.gamepad:" },
-    { label: "input.coinp1", command: "**input.coinp1:1" },
-    { label: "input.coinp2", command: "**input.coinp2:1" },
-    { label: "playlist.load", command: "**playlist.load:" },
-    { label: "playlist.play", command: "**playlist.play:" },
-    { label: "playlist.stop", command: "**playlist.stop" },
-    { label: "playlist.next", command: "**playlist.next" },
-    { label: "playlist.previous", command: "**playlist.previous" },
-    { label: "playlist.pause", command: "**playlist.pause" },
-    { label: "playlist.goto", command: "**playlist.goto:" },
-    { label: "playlist.open", command: "**playlist.open:" },
-    { label: "mister.ini", command: "**mister.ini:" },
-    { label: "mister.core", command: "**mister.core:" },
-    { label: "mister.script", command: "**mister.script:" },
-    { label: "http.get", command: "**http.get:" },
-    { label: "http.post", command: "**http.post:" },
-    { label: "stop", command: "**stop" },
-    { label: "execute", command: "**execute:" },
-    { label: "delay", command: "**delay:" },
-  ];
+  const groups = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    // Deprecated names still run, but are not offered for new scripts.
+    const visible = ZAP_COMMANDS.filter(
+      (command) =>
+        !command.replacedBy &&
+        !command.notOffered &&
+        // A command for one platform is only offered on that platform.
+        (!command.platform ||
+          (connected &&
+            corePlatform?.trim().toLowerCase() === command.platform)) &&
+        (needle === "" ||
+          command.name.includes(needle) ||
+          t(command.description).toLowerCase().includes(needle)),
+    );
+    return GROUP_ORDER.map((group) => ({
+      group,
+      commands: visible.filter((command) => command.group === group),
+    })).filter(({ commands }) => commands.length > 0);
+  }, [query, t, connected, corePlatform]);
 
-  const categories = {
-    Launch: ["launch.system", "launch.random", "launch.search"],
-    Input: ["input.keyboard", "input.gamepad", "input.coinp1", "input.coinp2"],
-    Playlist: [
-      "playlist.load",
-      "playlist.play",
-      "playlist.stop",
-      "playlist.next",
-      "playlist.previous",
-      "playlist.pause",
-      "playlist.goto",
-      "playlist.open",
-    ],
-    MiSTer: ["mister.ini", "mister.core", "mister.script"],
-    HTTP: ["http.get", "http.post"],
-    Other: ["stop", "execute", "delay"],
+  const select = (command: ZapCommandSpec) => {
+    props.onSelect(command.name);
+    close();
   };
 
   return (
     <SlideModal
       isOpen={props.isOpen}
-      close={props.close}
-      title={t("create.custom.commands")}
+      close={close}
+      title={t("create.custom.commandsTitle")}
+      scrollRef={scrollContainerRef}
+      layout="workspace"
+      fixedHeight="90vh"
     >
-      <div className="flex flex-col gap-4">
-        {Object.entries(categories).map(([category, commandLabels]) => (
-          <div key={category} className="flex flex-col gap-2">
-            <h3 className="text-lg font-semibold capitalize">{category}</h3>
-            <div className="flex flex-col gap-2">
-              {commands
-                .filter((cmd) => commandLabels.includes(cmd.label))
-                .map((cmd) => (
-                  <Button
-                    key={cmd.label}
-                    label={cmd.label}
-                    variant="outline"
-                    intent="primary"
-                    onClick={() => {
-                      props.onSelect(cmd.command);
-                      props.close();
-                    }}
-                    className="touch-manipulation"
-                  />
+      <TextInput
+        type="search"
+        inputMode="search"
+        className="mb-3"
+        aria-label={t("zapscript.builder.searchCommands")}
+        placeholder={t("zapscript.builder.searchCommands")}
+        value={query}
+        setValue={setQuery}
+        clearable
+      />
+      {groups.length === 0 ? (
+        <EmptyState size="compact" title={t("zapscript.builder.noCommands")} />
+      ) : (
+        <div className="commands-workspace pb-16">
+          {groups.map(({ group, commands }) => (
+            <section
+              key={group}
+              aria-labelledby={`${id}-${group}`}
+              className="flex flex-col gap-1"
+            >
+              <h3 id={`${id}-${group}`} className="text-lg font-semibold">
+                {t(`zapscript.groups.${group}`)}
+              </h3>
+              <ul className="flex flex-col">
+                {commands.map((command) => (
+                  <li key={command.name}>
+                    <button
+                      type="button"
+                      className={selectorOptionClassName(false, {
+                        twoLine: true,
+                      })}
+                      onPointerUp={handleHapticPress}
+                      onClick={() => select(command)}
+                    >
+                      <span className="flex min-w-0 flex-col">
+                        {/* Plain language first; the name is for those who know it. */}
+                        <span className="font-semibold">
+                          {t(command.description)}
+                        </span>
+                        <span className="text-muted-foreground font-mono text-sm break-words">
+                          {command.name}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
                 ))}
-            </div>
-          </div>
-        ))}
-      </div>
+              </ul>
+            </section>
+          ))}
+        </div>
+      )}
+      <BackToTop scrollContainerRef={scrollContainerRef} threshold={200} />
     </SlideModal>
   );
 }

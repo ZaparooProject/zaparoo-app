@@ -4,8 +4,8 @@ import {
   type SwipeCallback,
   type SwipeEventData,
 } from "react-swipeable";
-import { useMediaQuery } from "@uidotdev/usehooks";
 import { useHaptics } from "./useHaptics";
+import { useMediaQuery } from "./useMediaQuery";
 
 interface SmartSwipeOptions {
   onSwipeLeft?: () => void;
@@ -21,7 +21,7 @@ interface SmartSwipeOptions {
   velocityThreshold?: number;
   /**
    * Force enable mouse-based swipe gestures even on desktop.
-   * By default, mouse tracking is only enabled on mobile-sized screens (< 640px).
+   * By default, mouse tracking is only enabled in the phone layout (< 760px).
    * Touch events always work regardless of this setting.
    */
   forceEnable?: boolean;
@@ -30,8 +30,8 @@ interface SmartSwipeOptions {
 export function useSmartSwipe(
   options: SmartSwipeOptions = {},
 ): SwipeableHandlers {
-  // Tailwind 'sm' breakpoint is 640px - only enable mouse tracking on smaller screens
-  const isMobile = useMediaQuery("(max-width: 639px)");
+  // Mouse tracking follows the phone layout, which ends at the 760px shell threshold.
+  const isMobile = useMediaQuery("(max-width: 759px)");
   const { impact } = useHaptics();
   const {
     onSwipeLeft,
@@ -48,7 +48,7 @@ export function useSmartSwipe(
     forceEnable = false,
   } = options;
 
-  // Enable mouse tracking only on mobile-sized screens, unless forced
+  // Enable mouse tracking only in the phone layout, unless forced
   const enableMouseTracking = forceEnable || isMobile;
   const meetsThreshold = (distance: number, eventData: SwipeEventData) =>
     Math.abs(distance) >= swipeThreshold &&

@@ -630,6 +630,8 @@ describe("useProPurchase", () => {
   });
 
   it("should report a shared offerings failure once across Pro and Warp", async () => {
+    const { useStatusStore } = await import("@/lib/store");
+    useStatusStore.setState({ loggedInUser: { uid: "user-123" } as never });
     const { Purchases } = await import("@revenuecat/purchases-capacitor");
     const { App } = await import("@capacitor/app");
     const { logger } = await import("@/lib/logger");

@@ -28,6 +28,7 @@ const {
   mockMappingsData,
   mockMappingsQueryFn,
   mockIsLoading,
+  mockIsError,
   mockCoreVersion,
   mockCoreVersionPending,
 } = vi.hoisted(() => ({
@@ -47,6 +48,7 @@ const {
     current: undefined as (() => Promise<unknown>) | undefined,
   },
   mockIsLoading: { current: false },
+  mockIsError: { current: false },
   mockCoreVersion: { current: "2.15.0" as string | null },
   mockCoreVersionPending: { current: false },
 }));
@@ -114,7 +116,7 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
           return {
             data: mockMappingsData.current,
             isLoading: mockIsLoading.current,
-            isError: false,
+            isError: mockIsError.current,
             refetch: mockRefetch,
           };
         }
@@ -164,6 +166,7 @@ describe("Create Mappings List Route", () => {
     mockMappingsData.current = { mappings: [] };
     mockMappingsQueryFn.current = undefined;
     mockIsLoading.current = false;
+    mockIsError.current = false;
     mockCoreVersion.current = "2.15.0";
     mockCoreVersionPending.current = false;
     mockMappings.mockResolvedValue({ mappings: [] });
@@ -212,7 +215,7 @@ describe("Create Mappings List Route", () => {
       ).toBeInTheDocument();
     });
 
-    it("should render blank content while mappings are initially loading", () => {
+    it("should delay loading feedback to avoid a flash", () => {
       mockMappingsData.current = undefined;
       mockIsLoading.current = true;
 
@@ -242,6 +245,22 @@ describe("Create Mappings List Route", () => {
       expect(
         screen.getByText("create.mappings.list.emptyDescription"),
       ).toBeInTheDocument();
+    });
+
+    it("should show a retry action when mappings fail to load", async () => {
+      const user = userEvent.setup();
+      mockMappingsData.current = undefined;
+      mockIsError.current = true;
+
+      renderList();
+
+      expect(
+        screen.getByText("create.mappings.list.loadFailed"),
+      ).toBeInTheDocument();
+      await user.click(
+        screen.getByRole("button", { name: "create.mappings.list.retry" }),
+      );
+      expect(mockRefetch).toHaveBeenCalledTimes(1);
     });
 
     it("should render mapping rows from query data", () => {

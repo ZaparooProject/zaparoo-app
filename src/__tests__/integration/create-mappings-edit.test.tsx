@@ -13,7 +13,7 @@
 
 import React from "react";
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { render, screen, waitFor } from "../../test-utils";
+import { act, render, screen, waitFor } from "../../test-utils";
 import userEvent from "@testing-library/user-event";
 
 const {
@@ -27,8 +27,10 @@ const {
   mockMappingsData,
   mockNfcWriter,
   mockBarcodeScan,
+  mockAppUi,
   MockBarcodePermissionDeniedError,
 } = vi.hoisted(() => ({
+  mockAppUi: { nfc: true, camera: true },
   mockNavigate: vi.fn(),
   mockToastSuccess: vi.fn(),
   mockToastError: vi.fn(),
@@ -42,7 +44,7 @@ const {
     result: null as any,
     write: vi.fn(),
     retry: vi.fn(),
-    end: vi.fn(),
+    end: vi.fn().mockResolvedValue(undefined),
     writing: false,
     verifyError: null,
     getVerifyError: vi.fn(() => null),
@@ -83,20 +85,46 @@ vi.mock("@/lib/coreApi", () => ({
 let mockConnected = true;
 vi.mock("@/lib/store", async (importOriginal) => {
   const actual = (await importOriginal()) as any;
+  const state = () => ({
+    connected: mockConnected,
+    safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
+    gamesIndex: {
+      indexing: false,
+      currentSystem: "",
+      totalSystems: 0,
+      totalSteps: 0,
+      currentStep: 0,
+    },
+    writeOpen: false,
+    writeQueue: "",
+  });
   return {
     ...actual,
-    useStatusStore: (selector: any) =>
-      selector({
-        connected: mockConnected,
-        safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
-        gamesIndex: {
-          indexing: false,
-          currentSystem: "",
-          totalSystems: 0,
-          totalSteps: 0,
-          currentStep: 0,
-        },
-      }),
+    useStatusStore: Object.assign((selector: any) => selector(state()), {
+      getState: state,
+    }),
+  };
+});
+
+// Capture needs the phone's own NFC and camera; tests choose what it has.
+vi.mock("@/hooks/useAppUi", () => ({
+  useAppUi: () => ({
+    enabled: true,
+    preview: false,
+    accelerometer: false,
+    ...mockAppUi,
+  }),
+}));
+
+vi.mock("@capacitor/core", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@capacitor/core")>();
+  return {
+    ...actual,
+    Capacitor: {
+      ...actual.Capacitor,
+      isNativePlatform: () => true,
+      getPlatform: () => "android",
+    },
   };
 });
 
@@ -183,6 +211,8 @@ const buildMapping = (overrides: Partial<any> = {}) => ({
 });
 
 describe("Create Mappings Edit Route", () => {
+  let settleRead: () => void = () => {};
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockConnected = true;
@@ -193,8 +223,18 @@ describe("Create Mappings Edit Route", () => {
     mockInvalidate.mockResolvedValue(undefined);
     mockNfcWriter.status = null;
     mockNfcWriter.result = null;
-    mockNfcWriter.write.mockClear();
-    mockNfcWriter.end.mockClear();
+    // A tag read stays pending until the test settles it.
+    mockNfcWriter.write.mockReset();
+    mockNfcWriter.write.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          settleRead = resolve;
+        }),
+    );
+    mockNfcWriter.end.mockReset();
+    mockNfcWriter.end.mockResolvedValue(undefined);
+    mockAppUi.nfc = true;
+    mockAppUi.camera = true;
     mockBarcodeScan.mockReset();
   });
 
@@ -349,14 +389,77 @@ describe("Create Mappings Edit Route", () => {
       ).toBeEnabled();
     });
 
+    it("should only offer the capture methods this device has", () => {
+      mockAppUi.nfc = false;
+      renderEditor();
+
+      expect(
+        screen.queryByRole("button", { name: /scan\.nfcMode/i }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /scan\.cameraMode/i }),
+      ).toBeInTheDocument();
+    });
+
+    it("should offer no capture on a device without NFC or a camera", () => {
+      mockAppUi.nfc = false;
+      mockAppUi.camera = false;
+      renderEditor();
+
+      expect(
+        screen.queryByRole("button", { name: /scan\.nfcMode/i }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /scan\.cameraMode/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should latch the same NFC control and keep Camera mounted while waiting", async () => {
+      const user = userEvent.setup();
+      renderEditor();
+      const nfcControl = screen.getByRole("button", { name: /scan\.nfcMode/i });
+
+      await user.click(nfcControl);
+
+      expect(screen.getByRole("button", { name: "reader.cancelAction" })).toBe(
+        nfcControl,
+      );
+      expect(nfcControl).toHaveFocus();
+      expect(
+        screen.getByRole("button", { name: /scan\.cameraMode/i }),
+      ).toBeDisabled();
+      await waitFor(() =>
+        expect(mockNfcWriter.write).toHaveBeenCalledWith("read", undefined),
+      );
+    });
+
+    it("should cancel a waiting tag read when the type leaves ID", async () => {
+      const user = userEvent.setup();
+      renderEditor();
+      await user.click(screen.getByRole("button", { name: /scan\.nfcMode/i }));
+      await waitFor(() => expect(mockNfcWriter.write).toHaveBeenCalled());
+
+      await user.click(
+        screen.getByRole("radio", {
+          name: "create.mappings.editor.typeValue",
+        }),
+      );
+
+      await waitFor(() => expect(mockNfcWriter.end).toHaveBeenCalledOnce());
+    });
+
     it("should populate pattern when NFC scan completes", async () => {
       const user = userEvent.setup();
       const { rerender } = renderEditor();
 
       await user.click(screen.getByRole("button", { name: /scan\.nfcMode/i }));
+      await waitFor(() => expect(mockNfcWriter.write).toHaveBeenCalled());
 
       mockNfcWriter.status = "success";
       mockNfcWriter.result = { info: { tag: { uid: "FROMNFC" } } };
+      await act(async () => {
+        settleRead();
+      });
 
       rerender(<MappingEditor />);
 

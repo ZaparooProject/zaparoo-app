@@ -69,6 +69,45 @@ describe("ProfileManager", () => {
     ).toBeGreaterThan(0);
   });
 
+  it("keeps profile requirement help separate from its setting", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <ProfileManager
+        connected
+        canManage
+        canWriteSettings
+        requireForLaunch={false}
+        settingsLoading={false}
+        onRequireForLaunchChange={onChange}
+        available
+      />,
+    );
+    const checkbox = await screen.findByRole("checkbox", {
+      name: "settings.core.profiles.requireForLaunch",
+    });
+    await user.click(
+      screen.getByRole("button", {
+        name: "settingHelp.label",
+      }),
+    );
+    const dialog = screen.getByRole("dialog", {
+      name: "settings.core.profiles.requireForLaunch",
+    });
+    await user.click(
+      within(dialog).getAllByRole("button", { name: "nav.close" })[0]!,
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", {
+          name: "settings.core.profiles.requireForLaunch",
+        }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(checkbox).not.toBeChecked();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it("should create first profile as admin with PIN", async () => {
     const user = userEvent.setup();
     vi.mocked(CoreAPI.profiles).mockResolvedValue({ profiles: [] });
@@ -281,7 +320,7 @@ describe("ProfileManager", () => {
 
     renderManager();
 
-    await user.click(await screen.findByRole("button", { name: "retry" }));
+    await user.click(await screen.findByRole("button", { name: "scan.retry" }));
 
     expect(
       await screen.findByRole("button", {
@@ -423,7 +462,7 @@ describe("ProfileManager", () => {
     ).toBeInTheDocument();
   });
 
-  it("should switch to the shared profile without a PIN", async () => {
+  it("should open the switch sheet on the active profile and switch to shared", async () => {
     const user = userEvent.setup();
     renderManager(false);
 
@@ -436,16 +475,26 @@ describe("ProfileManager", () => {
       name: "settings.core.profiles.switch",
     });
     expect(
-      within(switchDialog).getByRole("button", {
-        name: "settings.core.profiles.shared",
-        pressed: true,
+      within(switchDialog).getByRole("radio", {
+        name: "settings.core.profiles.switchOptionActive",
+        checked: true,
       }),
     ).toBeInTheDocument();
+    const confirm = within(switchDialog).getByRole("button", {
+      name: "settings.core.profiles.switch",
+    });
+    // The active profile is not a switch target and asks for no PIN.
+    expect(confirm).toBeDisabled();
+    expect(
+      screen.queryByLabelText("settings.core.profiles.pin"),
+    ).not.toBeInTheDocument();
+
     await user.click(
-      within(switchDialog).getByRole("button", {
-        name: "settings.core.profiles.switch",
+      within(switchDialog).getByRole("radio", {
+        name: "settings.core.profiles.shared",
       }),
     );
+    await user.click(confirm);
 
     await waitFor(() => {
       expect(CoreAPI.switchProfile).toHaveBeenCalledWith();
@@ -453,6 +502,7 @@ describe("ProfileManager", () => {
   });
 
   it("should require PIN when switching to protected profile", async () => {
+    vi.mocked(CoreAPI.activeProfile).mockResolvedValue(null);
     const user = userEvent.setup();
     renderManager(false);
 
@@ -461,29 +511,22 @@ describe("ProfileManager", () => {
         name: "settings.core.profiles.openProfile",
       }),
     );
-    await user.click(
-      screen.getByRole("button", {
-        name: "Kid A settings.core.profiles.active",
-      }),
-    );
+    const switchDialog = screen.getByRole("dialog", {
+      name: "settings.core.profiles.switch",
+    });
     expect(
-      screen.getByRole("button", {
-        name: "Kid A settings.core.profiles.active",
-        pressed: true,
-      }),
+      within(switchDialog).getByRole("radio", { name: "Kid A", checked: true }),
     ).toBeInTheDocument();
+    const confirm = within(switchDialog).getByRole("button", {
+      name: "settings.core.profiles.switch",
+    });
+    expect(confirm).toBeDisabled();
+
     await user.type(
       screen.getByLabelText("settings.core.profiles.pin"),
       "1234",
     );
-    const switchDialog = screen.getByRole("dialog", {
-      name: "settings.core.profiles.switch",
-    });
-    await user.click(
-      within(switchDialog).getByRole("button", {
-        name: "settings.core.profiles.switch",
-      }),
-    );
+    await user.click(confirm);
 
     await waitFor(() => {
       expect(CoreAPI.switchProfile).toHaveBeenCalledWith({
@@ -491,5 +534,58 @@ describe("ProfileManager", () => {
         pin: "1234",
       });
     });
+  });
+
+  it("should show the not-connected state instead of loading while disconnected", async () => {
+    render(
+      <ProfileManager
+        connected={false}
+        canManage
+        canWriteSettings
+        requireForLaunch={false}
+        settingsLoading={false}
+        onRequireForLaunchChange={vi.fn()}
+        available
+      />,
+    );
+
+    expect(screen.getByText("settings.notConnected")).toBeInTheDocument();
+    expect(
+      screen.getByRole("checkbox", {
+        name: "settings.core.profiles.requireForLaunch",
+      }),
+    ).toBeInTheDocument();
+    expect(CoreAPI.profiles).not.toHaveBeenCalled();
+  });
+
+  it("should explain what blocks saving beside the field that fixes it", async () => {
+    const user = userEvent.setup();
+    vi.mocked(CoreAPI.profiles).mockResolvedValue({ profiles: [] });
+    renderManager();
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "settings.core.profiles.add",
+      }),
+    );
+    const save = screen.getByRole("button", { name: "save" });
+    // A new form does not open full of errors.
+    expect(save).toBeDisabled();
+    expect(
+      screen.queryByText("settings.core.profiles.nameRequired"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("settings.core.profiles.adminPinRequired"),
+    ).not.toBeInTheDocument();
+
+    await user.type(
+      screen.getByLabelText("settings.core.profiles.nameRequiredLabel"),
+      "Parent",
+    );
+
+    expect(save).toBeDisabled();
+    expect(
+      screen.getByText("settings.core.profiles.adminPinRequired"),
+    ).toBeInTheDocument();
   });
 });

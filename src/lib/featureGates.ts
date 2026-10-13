@@ -92,6 +92,22 @@ export const FEATURE_GATES: Record<string, FeatureGate> = {
     marquee: true,
     labelKey: "features.remoteInput",
   },
+  launchers: {
+    since: "2.12.0",
+    marquee: false,
+    labelKey: "features.launchers",
+  },
+  mediaRecents: {
+    since: "2.12.0",
+    marquee: false,
+    labelKey: "features.mediaRecents",
+  },
+  // Core collapses repeat sessions (`distinctMedia`) itself from this version.
+  mediaHistoryDistinct: {
+    since: "2.17.0",
+    marquee: false,
+    labelKey: "features.mediaHistoryDistinct",
+  },
   deviceLinking: {
     since: "2.16.0",
     marquee: false,

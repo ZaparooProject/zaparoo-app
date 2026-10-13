@@ -27,6 +27,7 @@ import {
 } from "@/lib/librarySessionStore";
 import { useTabSessionStore } from "@/lib/tabSessionStore";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
+import { useFullSidebar } from "@/hooks/useNavigationMode";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useSystemsWithDisplayNames } from "@/hooks/useSystemName";
 import { PageFrame } from "@/components/PageFrame";
@@ -40,6 +41,7 @@ import { getTabBarPanelId, getTabBarTabId } from "@/components/wui/tabBarIds";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { Button } from "@/components/wui/Button";
 import { TabBar } from "@/components/wui/TabBar";
+import { LibraryLinkButton } from "@/components/library/LibraryLinkButton";
 import { LibraryCollectionList } from "@/components/library/LibraryCollectionList";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NextIcon } from "@/lib/images";
@@ -152,6 +154,10 @@ export function Library() {
     "library-view-tab",
   );
   const selectedView = favoritesFeature.available ? view : "systems";
+  // The persistent sidebar lists Systems and Collections as destinations, so
+  // the page shows the chosen view under its own heading instead of tabs.
+  const sidebarViews = useFullSidebar();
+  const viewTabs = favoritesFeature.available && !sidebarViews;
 
   const openOptions = () => {
     setDraftManufacturer(manufacturerFilter);
@@ -173,7 +179,7 @@ export function Library() {
 
   const withLibrarySections = (systemsContent: ReactNode) => (
     <div className="flex flex-col gap-4">
-      {favoritesFeature.available && (
+      {viewTabs && (
         <TabBar
           label={t("library.browseBy")}
           role="tab"
@@ -197,26 +203,16 @@ export function Library() {
         />
       )}
       <section
-        id={
-          favoritesFeature.available
-            ? getTabBarPanelId(systemsViewTabId)
-            : undefined
-        }
-        role={favoritesFeature.available ? "tabpanel" : undefined}
+        id={viewTabs ? getTabBarPanelId(systemsViewTabId) : undefined}
+        role={viewTabs ? "tabpanel" : undefined}
         aria-labelledby={
-          favoritesFeature.available
-            ? systemsViewTabId
-            : "library-systems-heading"
+          viewTabs ? systemsViewTabId : "library-systems-heading"
         }
         hidden={selectedView !== "systems"}
       >
         <h2
           id="library-systems-heading"
-          className={
-            favoritesFeature.available
-              ? "sr-only"
-              : "text-muted-foreground text-sm font-semibold"
-          }
+          className={viewTabs ? "sr-only" : "text-lg font-semibold"}
         >
           {t("library.systems")}
         </h2>
@@ -224,11 +220,22 @@ export function Library() {
       </section>
       {favoritesFeature.available && (
         <section
-          id={getTabBarPanelId(collectionsViewTabId)}
-          role="tabpanel"
-          aria-labelledby={collectionsViewTabId}
+          id={viewTabs ? getTabBarPanelId(collectionsViewTabId) : undefined}
+          role={viewTabs ? "tabpanel" : undefined}
+          aria-labelledby={
+            viewTabs ? collectionsViewTabId : "library-collections-heading"
+          }
           hidden={selectedView !== "collections"}
+          className={viewTabs ? undefined : "flex flex-col gap-2"}
         >
+          {!viewTabs && (
+            <h2
+              id="library-collections-heading"
+              className="text-lg font-semibold"
+            >
+              {t("library.collections")}
+            </h2>
+          )}
           <LibraryCollectionList
             preferencesAvailable={preferencesFeature.available}
           />
@@ -254,13 +261,11 @@ export function Library() {
       <EmptyState
         title={t("library.databaseRequired")}
         action={
-          <Link
+          <LibraryLinkButton
             to="/settings"
             search={{ focus: "database" }}
-            className="border-bd-outline focus-visible:ring-offset-background flex items-center justify-center rounded-[20px] border border-solid px-6 py-1.5 font-medium text-white focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:outline-none"
-          >
-            {t("library.openMediaSettings")}
-          </Link>
+            label={t("library.openMediaSettings")}
+          />
         }
       />,
     );
@@ -273,7 +278,7 @@ export function Library() {
             <div
               key={titleWidth}
               data-testid="library-system-skeleton"
-              className="flex min-h-[56px] items-center justify-between gap-3 border-b border-white/25 px-1 py-3 last:border-b-0"
+              className="border-border flex min-h-[56px] items-center justify-between gap-3 border-b px-1 py-3 last:border-b-0"
             >
               <div className="flex flex-1 flex-col gap-2">
                 <Skeleton className={`h-5 ${titleWidth}`} />
@@ -335,14 +340,9 @@ export function Library() {
             <nav aria-label={t("library.systemsLabel")}>
               {systems.map((system, index) => {
                 const subtitle = systemSubtitle(system);
-                const rowClassName =
-                  "flex min-h-[56px] items-center justify-between gap-3 px-1 py-3 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none";
-                const rowStyle = {
-                  borderBottom:
-                    index === systems.length - 1
-                      ? undefined
-                      : "1px solid rgba(255,255,255,0.35)",
-                };
+                const rowClassName = `flex min-h-[56px] items-center justify-between gap-3 px-1 py-3 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none${
+                  index === systems.length - 1 ? "" : " border-border border-b"
+                }`;
                 const rowContent = (
                   <>
                     <span className="flex min-w-0 flex-col">
@@ -353,7 +353,10 @@ export function Library() {
                         </span>
                       )}
                     </span>
-                    <span aria-hidden="true">
+                    <span
+                      aria-hidden="true"
+                      className="text-muted-foreground shrink-0"
+                    >
                       <NextIcon size="20" />
                     </span>
                   </>
@@ -371,7 +374,6 @@ export function Library() {
                       }}
                       onPointerUp={handleHapticPress}
                       className={`${rowClassName} w-full text-left`}
-                      style={rowStyle}
                     >
                       {rowContent}
                     </button>
@@ -385,7 +387,6 @@ export function Library() {
                     onClick={() => beginSystemNavigation(system.id)}
                     onPointerUp={handleHapticPress}
                     className={rowClassName}
-                    style={rowStyle}
                   >
                     {rowContent}
                   </Link>
@@ -401,6 +402,8 @@ export function Library() {
   return (
     <>
       <PageFrame
+        headerMode="content-wide"
+        layout="workspace"
         scrollRef={scrollRef}
         headerCenter={
           <h1 ref={headingRef} className="text-foreground text-xl">
@@ -429,11 +432,7 @@ export function Library() {
         }
       >
         {content}
-        <BackToTop
-          scrollContainerRef={scrollRef}
-          threshold={200}
-          bottomOffset="calc(var(--bottom-nav-base-height) + 1rem)"
-        />
+        <BackToTop scrollContainerRef={scrollRef} threshold={200} />
       </PageFrame>
       <LibraryLaunchableModal
         isOpen={launchableOpen}

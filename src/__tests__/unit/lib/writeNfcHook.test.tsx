@@ -181,6 +181,43 @@ describe("useNfcWriter", () => {
     });
   });
 
+  it.each(["resolve", "reject"] as const)(
+    "should not start or report a cancelled write after pending method selection %ss",
+    async (outcome) => {
+      let settle!: () => void;
+      mockHasWriteCapableReader.mockImplementationOnce(
+        () =>
+          new Promise<boolean>((resolve, reject) => {
+            settle = () =>
+              outcome === "resolve"
+                ? resolve(false)
+                : reject(new Error("late capability failure"));
+          }),
+      );
+      const { result } = renderHook(() => useNfcWriter());
+      let writing!: Promise<void>;
+      act(() => {
+        writing = result.current.write(WriteAction.Write, "game");
+      });
+      await waitFor(() =>
+        expect(mockHasWriteCapableReader).toHaveBeenCalledOnce(),
+      );
+      await act(async () => {
+        await result.current.end();
+      });
+      await act(async () => {
+        settle();
+        await writing;
+      });
+
+      expect(mockWriteTag).not.toHaveBeenCalled();
+      expect(mockWrite).not.toHaveBeenCalled();
+      expect(mockToast.error).not.toHaveBeenCalled();
+      expect(result.current.writing).toBe(false);
+      expect(result.current.status).toBeNull();
+    },
+  );
+
   describe("write method selection", () => {
     it("should use LocalNFC when native platform has NFC", async () => {
       mockIsNativePlatform.mockReturnValue(true);

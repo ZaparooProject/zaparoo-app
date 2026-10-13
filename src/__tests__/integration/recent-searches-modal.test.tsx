@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "../../test-utils";
+import { render, screen, within } from "../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { RecentSearchesModal } from "@/components/RecentSearchesModal";
 import { RecentSearch } from "@/hooks/useRecentSearches";
@@ -14,6 +14,13 @@ describe("RecentSearchesModal", () => {
     }
     return "Unknown search";
   };
+
+  // Each row's action is named by a translated "Search for …" label, so rows
+  // are told apart by the search text they show.
+  const searchAction = (displayText: string) =>
+    within(screen.getByText(displayText).closest("li")!).getByRole("button", {
+      name: "create.search.searchAgain",
+    });
 
   const defaultProps = {
     isOpen: true,
@@ -117,7 +124,7 @@ describe("RecentSearchesModal", () => {
       // Assert - Timestamps are formatted by toLocaleString
       // The exact format depends on locale, but the dates should be present
       const searchCards = screen.getAllByRole("button", {
-        name: /Search: (mario|zelda)/,
+        name: "create.search.searchAgain",
       });
       expect(searchCards).toHaveLength(2);
     });
@@ -160,8 +167,8 @@ describe("RecentSearchesModal", () => {
         />,
       );
 
-      // Act - Click on the search card
-      await user.click(screen.getByText("Search: sonic"));
+      // Act
+      await user.click(searchAction("Search: sonic"));
 
       // Assert
       expect(onSearchSelect).toHaveBeenCalledWith(recentSearches[0]);
@@ -180,7 +187,7 @@ describe("RecentSearchesModal", () => {
       );
 
       // Act
-      await user.click(screen.getByText("Search: sonic"));
+      await user.click(searchAction("Search: sonic"));
 
       // Assert
       expect(onClose).toHaveBeenCalled();
@@ -213,7 +220,7 @@ describe("RecentSearchesModal", () => {
       expect(onClearHistory).toHaveBeenCalled();
     });
 
-    it("should close modal after clearing history", async () => {
+    it("should keep the modal open after clearing history", async () => {
       // Arrange
       const user = userEvent.setup();
       const onClose = vi.fn();
@@ -231,7 +238,7 @@ describe("RecentSearchesModal", () => {
       );
 
       // Assert
-      expect(onClose).toHaveBeenCalled();
+      expect(onClose).not.toHaveBeenCalled();
     });
   });
 
@@ -291,12 +298,7 @@ describe("RecentSearchesModal", () => {
       );
 
       // Assert
-      expect(
-        screen.getByRole("button", { name: /Search: mario/ }),
-      ).toBeInTheDocument();
-      expect(
-        screen.queryByRole("button", { name: "create.search.searchResult" }),
-      ).not.toBeInTheDocument();
+      expect(searchAction("Search: mario")).toBeInTheDocument();
     });
   });
 });

@@ -1,6 +1,7 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { CoreAPI } from "@/lib/coreApi";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { SearchResultGame, SearchParams } from "@/lib/models";
 
 interface UseVirtualInfiniteSearchOptions {
@@ -18,8 +19,17 @@ export function useVirtualInfiniteSearch({
   maxResults = 100,
   enabled = true,
 }: UseVirtualInfiniteSearchOptions) {
+  // Results belong to one device; another Core must never be served them.
+  const deviceKey = useActiveDeviceKey();
   const searchQuery = useInfiniteQuery({
-    queryKey: ["infiniteMediaSearch", query, systems, tags, maxResults],
+    queryKey: [
+      "infiniteMediaSearch",
+      deviceKey,
+      query,
+      systems,
+      tags,
+      maxResults,
+    ],
     queryFn: async ({ pageParam, signal }) => {
       const searchParams: SearchParams = {
         query,

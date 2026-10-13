@@ -16,6 +16,29 @@ if (Capacitor.isNativePlatform()) {
 const platform = Capacitor.getPlatform(); // 'ios' | 'android' | 'web'
 ```
 
+### App preview (development only)
+
+`useAppUi()` gates UI that only exists in the native apps, so those screens can
+be reviewed in a desktop browser. Settings → Advanced → App preview turns it on
+in dev builds (and web builds started with `VITE_APP_PREVIEW=true`); the toggle
+does not exist in a normal production build.
+
+```typescript
+const appUi = useAppUi(); // { enabled, preview, nfc, camera, accelerometer }
+
+{appUi.nfc && <ReaderActivityControl ... />}
+```
+
+Preview reports every capability as present and simulates NFC operations
+(`src/lib/nfcPreview.ts`, outcome chosen next to the toggle), which is enough to
+walk through contextual reader controls' waiting, re-tap,
+verification-failure and error states. Local read sessions are simulated inside `readTag`/`readRaw`, so the
+home scan button holds, cancels through `cancelSession()` and times out like a
+reader-mode session. Nothing behind the UI works: plugin calls still need
+`Capacitor.isNativePlatform()`, and preview must never gate one.
+
+The preview state persists through Capacitor Preferences, so it survives the reloads that dev work causes; turn it off from the same toggle.
+
 ---
 
 ## Capacitor Plugins
@@ -300,7 +323,7 @@ const safeInsets = useStatusStore((state) => state.safeInsets);
 
 Safe area insets are populated on app initialization: from `capacitor-plugin-safe-area` on iOS, from CSS `env(safe-area-inset-*)` on web, and from `var(--safe-area-inset-*, env(safe-area-inset-*, 0px))` on Android. Capacitor's `SystemBars` plugin keeps these values accurate when the keyboard opens or the device rotates. The `capacitor-plugin-safe-area` raw window insets ignore the keyboard, which left a gap above it. Android WebView before 140 reports wrong `env()` values, so `SystemBars` injects the `--safe-area-inset-*` variables on Android 15 and newer. When a variable is unset, the `env()` value applies.
 
-System bar icons stay light on the dark app background. Both `StatusBar` and Capacitor's core `SystemBars` plugin are set to `DARK` in `capacitor.config.ts` and again in `App.tsx`. `SystemBars` re-applies its own style on every Android configuration change (rotation, fold, theme), so setting only `StatusBar` is not enough. On Android the theme in `styles.xml` disables the system bar contrast scrim and sets a `#111928` window background, so the bottom nav background shows behind the navigation buttons.
+System bar icons follow the resolved app appearance. `App.tsx` reads `resolvedTheme` from the theme provider and sets both `StatusBar` and Capacitor's core `SystemBars` plugin to `Dark` (light icons) for the dark theme and `Light` (dark icons) for the light theme, again whenever the appearance changes. `capacitor.config.ts` still starts `SystemBars` as `DARK` until the app has resolved its theme. `SystemBars` re-applies its own style on every Android configuration change (rotation, fold, theme), so setting only `StatusBar` is not enough. On Android the theme in `styles.xml` disables the system bar contrast scrim and sets the window background that shows behind the navigation buttons; that native value is not theme-aware and does not change with the app appearance.
 
 ---
 
