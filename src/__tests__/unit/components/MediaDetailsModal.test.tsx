@@ -246,6 +246,20 @@ describe("MediaDetailsModal", () => {
     expect(dialog).toBeVisible();
   });
 
+  it("should offer only its action when it is just picking a value", () => {
+    renderModal({ showFavorite: false });
+
+    expect(
+      screen.queryByRole("button", { name: "library.addFavorite" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("group", { name: "create.search.mediaActions" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "create.search.writeLabel" }),
+    ).toBeEnabled();
+  });
+
   it("should add a favorite from indexed-media details", async () => {
     const updateSpy = vi.spyOn(CoreAPI, "mediaTagsUpdate").mockResolvedValue({
       tags: [{ type: "user", tag: "favorite" }],

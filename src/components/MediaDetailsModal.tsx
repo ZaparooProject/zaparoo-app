@@ -11,6 +11,7 @@ import { usePreferencesStore } from "@/lib/preferencesStore";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { SlideModal } from "@/components/SlideModal";
 import { Button } from "@/components/wui/Button";
+import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { ModalActionRail } from "@/components/wui/ModalActionRail";
 import { FavoriteButton } from "@/components/library/FavoriteButton";
 import { MediaWriteTargetSelector } from "@/components/MediaWriteTargetSelector";
@@ -31,6 +32,8 @@ export interface MediaDetailsModalProps {
   previewDisabled?: boolean;
   primaryActionLabel?: string;
   primaryActionIcon?: ReactElement;
+  /** Offer Favorite. Off where the sheet only picks a value to use, such as inserting into a ZapScript. */
+  showFavorite?: boolean;
   readerActivity?: {
     state: ReaderActivityState;
     activeLabel: string;
@@ -50,6 +53,7 @@ export function MediaDetailsModal({
   previewDisabled = false,
   primaryActionLabel,
   primaryActionIcon,
+  showFavorite = true,
   readerActivity,
 }: MediaDetailsModalProps) {
   const { t } = useTranslation();
@@ -88,48 +92,57 @@ export function MediaDetailsModal({
       />
     )
   ) : undefined;
-  // Favorite is always offered, so the footer is always an action rail.
+  // Secondary actions sit in a rail beside the primary action; a sheet with
+  // none is just its primary action.
+  const hasSecondaryActions =
+    showFavorite || Boolean(onCopy) || Boolean(onPreview);
   const footer =
-    media && favoriteEntry && primaryAction ? (
-      <ModalActionRail
-        aria-label={t("create.search.mediaActions")}
-        actions={
-          <>
-            <FavoriteButton
-              entry={favoriteEntry}
-              fallbackSystemId={media.system.id}
-              deviceKey={deviceKey}
-              displayLabel={t("library.favorite")}
-              layout="responsive"
-              variant="text"
-              className="w-full whitespace-nowrap"
-            />
-            {onCopy && (
-              <Button
-                label={t("create.search.copyLabel")}
-                icon={<CopyIcon size="20" />}
-                layout="responsive"
-                variant="text"
-                className="w-full whitespace-nowrap"
-                onClick={() => void onCopy(writeTarget.selectedValue)}
-              />
-            )}
-            {onPreview && (
-              <Button
-                label={t("create.search.playLabel")}
-                icon={<PlayIcon size="20" />}
-                layout="responsive"
-                variant="text"
-                className="w-full whitespace-nowrap"
-                disabled={previewDisabled}
-                disabledAppearance="unavailable"
-                onClick={() => void onPreview(writeTarget.selectedValue)}
-              />
-            )}
-          </>
-        }
-        primaryAction={primaryAction}
-      />
+    media && primaryAction ? (
+      hasSecondaryActions && favoriteEntry ? (
+        <ModalActionRail
+          aria-label={t("create.search.mediaActions")}
+          actions={
+            <>
+              {showFavorite && (
+                <FavoriteButton
+                  entry={favoriteEntry}
+                  fallbackSystemId={media.system.id}
+                  deviceKey={deviceKey}
+                  displayLabel={t("library.favorite")}
+                  layout="responsive"
+                  variant="text"
+                  className="w-full whitespace-nowrap"
+                />
+              )}
+              {onCopy && (
+                <Button
+                  label={t("create.search.copyLabel")}
+                  icon={<CopyIcon size="20" />}
+                  layout="responsive"
+                  variant="text"
+                  className="w-full whitespace-nowrap"
+                  onClick={() => void onCopy(writeTarget.selectedValue)}
+                />
+              )}
+              {onPreview && (
+                <Button
+                  label={t("create.search.playLabel")}
+                  icon={<PlayIcon size="20" />}
+                  layout="responsive"
+                  variant="text"
+                  className="w-full whitespace-nowrap"
+                  disabled={previewDisabled}
+                  disabledAppearance="unavailable"
+                  onClick={() => void onPreview(writeTarget.selectedValue)}
+                />
+              )}
+            </>
+          }
+          primaryAction={primaryAction}
+        />
+      ) : (
+        <ModalActionBar primaryAction={primaryAction} />
+      )
     ) : undefined;
 
   return (

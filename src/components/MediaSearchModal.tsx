@@ -52,7 +52,6 @@ export function MediaSearchModal(props: MediaSearchModalProps) {
         title={t("create.search.title")}
         scrollRef={scrollContainerRef}
         fixedHeight="90vh"
-        layout="workspace"
         footer={
           props.onAddCustom ? (
             <Button
@@ -100,6 +99,7 @@ export function MediaSearchModal(props: MediaSearchModalProps) {
           }}
           primaryActionLabel={t("create.custom.insert")}
           primaryActionIcon={<PlusIcon size="20" />}
+          showFavorite={false}
         />
       )}
     </>

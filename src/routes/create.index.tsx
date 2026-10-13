@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BookMarkedIcon, ListPlusIcon } from "lucide-react";
 import { useAppUi } from "@/hooks/useAppUi";
@@ -20,23 +20,13 @@ import { logger } from "@/lib/logger";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import type { PlayingResponse, SearchResultGame } from "@/lib/models";
 import { MediaDetailsModal } from "@/components/MediaDetailsModal";
+import { CreateActionIcon } from "@/components/CreateActionIcon";
 import { Card } from "@/components/wui/Card";
 import { PageFrame } from "@/components/PageFrame";
 
 export const Route = createFileRoute("/create/")({
   component: Create,
 });
-
-function CreateActionIcon(props: { icon: ReactNode }) {
-  return (
-    <span
-      aria-hidden="true"
-      className="border-border bg-surface-inset text-muted-foreground inset-shadow-material flex size-11 shrink-0 items-center justify-center rounded-lg border"
-    >
-      {props.icon}
-    </span>
-  );
-}
 
 function toMediaDetails(
   playing: PlayingResponse,

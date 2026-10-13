@@ -436,6 +436,34 @@ describe("Index Route Integration", () => {
     vi.restoreAllMocks();
   });
 
+  describe("Customising on arrival", () => {
+    it("should open the layout editor once when asked to", async () => {
+      const handled = vi.fn();
+      render(
+        <TestWrapper>
+          <Index customiseOnArrival onCustomiseHandled={handled} />
+        </TestWrapper>,
+      );
+
+      expect(
+        await screen.findByRole("region", { name: "zapLayout.title" }),
+      ).toBeInTheDocument();
+      await waitFor(() => expect(handled).toHaveBeenCalledTimes(1));
+    });
+
+    it("should show the normal page when not asked to", () => {
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      expect(
+        screen.queryByRole("region", { name: "zapLayout.title" }),
+      ).not.toBeInTheDocument();
+    });
+  });
+
   describe("Page Structure", () => {
     it("should render the home page with Zaparoo heading", () => {
       render(

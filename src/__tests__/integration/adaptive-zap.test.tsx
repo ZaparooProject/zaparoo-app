@@ -16,12 +16,27 @@ import { ScanHistory, PlayHistory } from "@/routes/-pages/ZapHistory";
 import { CoreAPI } from "@/lib/coreApi";
 import { ConnectionState, emptyPlaying, useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
-import { seedActiveDevice } from "@/test-utils/deviceRegistry";
+import { deviceRegistry } from "@/lib/devices/deviceRegistry";
+import {
+  mockDeviceRecord,
+  seedActiveDevice,
+  seedDeviceRegistry,
+} from "@/test-utils/deviceRegistry";
 import * as nfc from "@/lib/nfc";
 import * as libraryImages from "@/lib/libraryImages";
 import * as toastUtils from "@/lib/toastUtils";
 import type { HistoryResponse, PlaylistState } from "@/lib/models";
 import { responsiveWindow } from "@/test-utils/responsiveWindow";
+import {
+  defaultZapLayout,
+  hideZapWidget,
+  moveZapWidget,
+  newZapButton,
+  newZapCollection,
+  saveZapButton,
+  saveZapCollection,
+  type ZapButton,
+} from "@/lib/zapLayout";
 
 async function renderZap(initialPath = "/", basepath?: string) {
   const root = createRootRoute({ component: RootLayout });
@@ -635,6 +650,615 @@ describe("Adaptive Zap", () => {
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(controls).toHaveFocus();
+  });
+
+  describe("customised layout", () => {
+    const activeKey = () =>
+      deviceRegistry.getSnapshot().activeRecordId as string;
+    const frameOf = (widget: string) =>
+      screen
+        .getByText(`zapLayout.widgets.${widget}`)
+        .closest("li") as HTMLElement;
+
+    it("should keep the built-in page until the user saves a layout", async () => {
+      responsiveWindow(390);
+      await renderZap();
+      expect(
+        usePreferencesStore.getState().zapLayouts[activeKey()] ?? null,
+      ).toBeNull();
+      expect(
+        screen.getByRole("button", { name: "zapLayout.customise" }),
+      ).toBeInTheDocument();
+    });
+
+    it("should not offer customising while full screen is active", async () => {
+      responsiveWindow(1440);
+      usePreferencesStore.setState({ fullScreen: true });
+      await renderZap();
+
+      expect(
+        screen.queryByRole("button", { name: "zapLayout.customise" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should hide a widget and save the layout when done", async () => {
+      responsiveWindow(1440);
+      const user = userEvent.setup();
+      await renderZap();
+      expect(
+        screen.getByRole("region", { name: "scan.nowPlayingHeading" }),
+      ).toBeInTheDocument();
+
+      await user.click(
+        screen.getByRole("button", { name: "zapLayout.customise" }),
+      );
+      await user.click(
+        within(frameOf("nowPlaying")).getByRole("button", {
+          name: "zapLayout.hideWidget",
+        }),
+      );
+      await user.click(screen.getByRole("button", { name: "zapLayout.done" }));
+
+      expect(
+        screen.queryByRole("region", { name: "scan.nowPlayingHeading" }),
+      ).not.toBeInTheDocument();
+      expect(
+        usePreferencesStore.getState().zapLayouts[activeKey()]?.places.hidden,
+      ).toEqual(["nowPlaying"]);
+    });
+
+    it("should discard edits on cancel", async () => {
+      responsiveWindow(1440);
+      const user = userEvent.setup();
+      await renderZap();
+      await user.click(
+        screen.getByRole("button", { name: "zapLayout.customise" }),
+      );
+      await user.click(
+        within(frameOf("nowPlaying")).getByRole("button", {
+          name: "zapLayout.hideWidget",
+        }),
+      );
+      await user.click(
+        screen.getByRole("button", { name: "zapLayout.cancel" }),
+      );
+
+      expect(
+        usePreferencesStore.getState().zapLayouts[activeKey()] ?? null,
+      ).toBeNull();
+      expect(
+        screen.getByRole("region", { name: "scan.nowPlayingHeading" }),
+      ).toBeInTheDocument();
+    });
+
+    it("should go back to the built-in page when reset and saved", async () => {
+      responsiveWindow(1440);
+      const user = userEvent.setup();
+      usePreferencesStore.setState({
+        zapLayouts: {
+          [activeKey()]: hideZapWidget(defaultZapLayout(), "nowPlaying"),
+        },
+      });
+      await renderZap();
+      expect(
+        screen.queryByRole("region", { name: "scan.nowPlayingHeading" }),
+      ).not.toBeInTheDocument();
+
+      await user.click(
+        screen.getByRole("button", { name: "zapLayout.customise" }),
+      );
+      await user.click(
+        screen.getByRole("button", { name: "zapLayout.resetDefault" }),
+      );
+      await user.click(screen.getByRole("button", { name: "zapLayout.done" }));
+
+      expect(
+        usePreferencesStore.getState().zapLayouts[activeKey()] ?? null,
+      ).toBeNull();
+      expect(
+        screen.getByRole("region", { name: "scan.nowPlayingHeading" }),
+      ).toBeInTheDocument();
+    });
+
+    it("should move a widget with its arrows, across places at the ends", async () => {
+      responsiveWindow(390);
+      const user = userEvent.setup();
+      await renderZap();
+      await user.click(
+        screen.getByRole("button", { name: "zapLayout.customise" }),
+      );
+
+      for (let step = 0; step < 2; step += 1) {
+        await user.click(
+          within(frameOf("nowPlaying")).getByRole("button", {
+            name: "zapLayout.moveDown",
+          }),
+        );
+      }
+      await user.click(screen.getByRole("button", { name: "zapLayout.done" }));
+
+      expect(
+        usePreferencesStore.getState().zapLayouts[activeKey()]?.places,
+      ).toMatchObject({
+        main: ["scan"],
+        side: ["nowPlaying", "controls", "readers"],
+      });
+    });
+
+    const withButton = (
+      overrides: Partial<ZapButton> = {},
+      place: "main" | "side" | "bottom" = "main",
+    ) =>
+      saveZapButton(
+        defaultZapLayout(),
+        {
+          ...newZapButton("btn"),
+          label: "Pause music",
+          script: "**stop",
+          ...overrides,
+        },
+        place,
+      );
+
+    it("should run a button's ZapScript when it is pressed", async () => {
+      responsiveWindow(1440);
+      const user = userEvent.setup();
+      usePreferencesStore.setState({
+        zapLayouts: { [activeKey()]: withButton() },
+      });
+      await renderZap();
+
+      await user.click(screen.getByRole("button", { name: "Pause music" }));
+
+      expect(CoreAPI.run).toHaveBeenCalledWith({ uid: "", text: "**stop" });
+    });
+
+    it("should hold a button and show it is working until its script has finished", async () => {
+      responsiveWindow(1440);
+      const user = userEvent.setup();
+      let finish: () => void = () => undefined;
+      vi.mocked(CoreAPI.run).mockImplementation(
+        () => new Promise<void>((resolve) => (finish = resolve)),
+      );
+      usePreferencesStore.setState({
+        zapLayouts: { [activeKey()]: withButton() },
+      });
+      await renderZap();
+
+      await user.click(screen.getByRole("button", { name: "Pause music" }));
+
+      const running = await screen.findByRole("button", {
+        name: "Pause music",
+      });
+      expect(running).toBeDisabled();
+      expect(running).toHaveAttribute("aria-busy", "true");
+      await user.click(running);
+      expect(CoreAPI.run).toHaveBeenCalledTimes(1);
+
+      await act(async () => finish());
+
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: "Pause music" }),
+        ).toBeEnabled(),
+      );
+      expect(
+        screen.getByRole("button", { name: "Pause music" }),
+      ).not.toHaveAttribute("aria-busy");
+    });
+
+    it("should release a button when its script fails", async () => {
+      responsiveWindow(1440);
+      const user = userEvent.setup();
+      vi.mocked(CoreAPI.run).mockRejectedValue(new Error("boom"));
+      usePreferencesStore.setState({
+        zapLayouts: { [activeKey()]: withButton() },
+      });
+      await renderZap();
+
+      await user.click(screen.getByRole("button", { name: "Pause music" }));
+
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: "Pause music" }),
+        ).toBeEnabled(),
+      );
+    });
+
+    it("should ask first when the button is set to, and run only once confirmed", async () => {
+      responsiveWindow(1440);
+      const user = userEvent.setup();
+      usePreferencesStore.setState({
+        zapLayouts: { [activeKey()]: withButton({ confirm: true }) },
+      });
+      await renderZap();
+
+      await user.click(screen.getByRole("button", { name: "Pause music" }));
+      expect(CoreAPI.run).not.toHaveBeenCalled();
+      await user.click(
+        await screen.findByRole("button", { name: "zapLayout.confirmRun" }),
+      );
+
+      expect(CoreAPI.run).toHaveBeenCalledWith({ uid: "", text: "**stop" });
+    });
+
+    it("should not run buttons while no device is connected", async () => {
+      responsiveWindow(1440);
+      useStatusStore.setState({ connected: false });
+      usePreferencesStore.setState({
+        zapLayouts: { [activeKey()]: withButton() },
+      });
+      await renderZap();
+
+      expect(
+        screen.getByRole("button", { name: "Pause music" }),
+      ).toBeDisabled();
+    });
+
+    it("should change a button from the editor and keep it where it was", async () => {
+      responsiveWindow(1440);
+      const user = userEvent.setup();
+      usePreferencesStore.setState({
+        zapLayouts: { [activeKey()]: withButton() },
+      });
+      await renderZap();
+      await user.click(
+        screen.getByRole("button", { name: "zapLayout.customise" }),
+      );
+
+      await user.click(
+        screen.getByRole("button", { name: "zapLayout.editButton" }),
+      );
+      const label = await screen.findByLabelText("zapLayout.buttonLabel");
+      await user.clear(label);
+      await user.type(label, "Stop music");
+      await user.click(screen.getByRole("button", { name: "save" }));
+      await user.click(screen.getByRole("button", { name: "zapLayout.done" }));
+
+      const saved = usePreferencesStore.getState().zapLayouts[activeKey()];
+      expect(saved?.buttons.btn).toMatchObject({
+        label: "Stop music",
+        script: "**stop",
+      });
+      expect(saved?.places.main).toContain("button:btn");
+      expect(
+        screen.getByRole("button", { name: "Stop music" }),
+      ).toBeInTheDocument();
+    });
+
+    it("should add a button from the editor with its ZapScript", async () => {
+      responsiveWindow(1440);
+      const user = userEvent.setup();
+      await renderZap();
+      await user.click(
+        screen.getByRole("button", { name: "zapLayout.customise" }),
+      );
+
+      await user.click(
+        screen.getByRole("button", { name: "zapLayout.addButtonTitle" }),
+      );
+      await user.click(
+        await screen.findByRole("button", {
+          name: /^zapLayout\.addKindButton /,
+        }),
+      );
+      await user.type(
+        await screen.findByLabelText("zapLayout.buttonLabel"),
+        "Stop",
+      );
+      expect(screen.getByRole("button", { name: "save" })).toBeDisabled();
+      await user.click(
+        screen.getByRole("tab", { name: "zapscript.builder.text" }),
+      );
+      await user.type(
+        screen.getByRole("textbox", { name: "zapLayout.buttonScript" }),
+        "**stop",
+      );
+      await user.click(screen.getByRole("button", { name: "save" }));
+      await user.click(screen.getByRole("button", { name: "zapLayout.done" }));
+
+      const saved = usePreferencesStore.getState().zapLayouts[activeKey()];
+      const [button] = Object.values(saved?.buttons ?? {});
+      expect(button).toMatchObject({ label: "Stop", script: "**stop" });
+      expect(saved?.places.main).toContain(`button:${button?.id}`);
+    });
+
+    it("should keep what was entered when ZapScript's pickers open over a button", async () => {
+      responsiveWindow(1440);
+      const user = userEvent.setup();
+      await renderZap();
+      await user.click(
+        screen.getByRole("button", { name: "zapLayout.customise" }),
+      );
+      await user.click(
+        screen.getByRole("button", { name: "zapLayout.addButtonTitle" }),
+      );
+      await user.click(
+        await screen.findByRole("button", {
+          name: /^zapLayout\.addKindButton /,
+        }),
+      );
+      await user.type(
+        await screen.findByLabelText("zapLayout.buttonLabel"),
+        "Stop",
+      );
+
+      await user.click(
+        screen.getByRole("button", { name: "zapscript.builder.addStep" }),
+      );
+
+      expect(await screen.findByRole("dialog")).toBeInTheDocument();
+      expect(screen.getByLabelText("zapLayout.buttonLabel")).toHaveValue(
+        "Stop",
+      );
+    });
+
+    it("should show a collection row of the user's choosing", async () => {
+      responsiveWindow(1440);
+      vi.spyOn(CoreAPI, "mediaSearch").mockResolvedValue({
+        results: [
+          {
+            system: { id: "nes", name: "NES" },
+            name: "Tetris",
+            path: "/games/tetris.nes",
+            zapScript: "@nes/Tetris",
+            tags: [],
+          },
+        ],
+        total: 1,
+      } as unknown as Awaited<ReturnType<typeof CoreAPI.mediaSearch>>);
+      usePreferencesStore.setState({
+        zapLayouts: {
+          [activeKey()]: saveZapCollection(defaultZapLayout(), {
+            ...newZapCollection("liked-row"),
+            source: { kind: "collection", collection: "liked" },
+          }),
+        },
+      });
+      await renderZap();
+
+      const row = (
+        await screen.findByRole("heading", { name: "library.liked" })
+      ).closest("section") as HTMLElement;
+      expect(
+        within(row).getByRole("button", { name: "scan.coverRowDetails" }),
+      ).toBeInTheDocument();
+    });
+
+    it("should title a collection row as the user asks", async () => {
+      responsiveWindow(1440);
+      vi.spyOn(CoreAPI, "mediaSearch").mockResolvedValue({
+        results: [
+          {
+            system: { id: "nes", name: "NES" },
+            name: "Tetris",
+            path: "/games/tetris.nes",
+            zapScript: "@nes/Tetris",
+            tags: [],
+          },
+        ],
+        total: 1,
+      } as unknown as Awaited<ReturnType<typeof CoreAPI.mediaSearch>>);
+      usePreferencesStore.setState({
+        zapLayouts: {
+          [activeKey()]: saveZapCollection(defaultZapLayout(), {
+            ...newZapCollection("liked-row"),
+            source: { kind: "collection", collection: "playLater" },
+            title: "Tonight",
+          }),
+        },
+      });
+      await renderZap();
+
+      expect(
+        await screen.findByRole("heading", { name: "Tonight" }),
+      ).toBeInTheDocument();
+    });
+
+    it("should add a collection row from the editor", async () => {
+      responsiveWindow(1440);
+      const user = userEvent.setup();
+      await renderZap();
+      await user.click(
+        screen.getByRole("button", { name: "zapLayout.customise" }),
+      );
+
+      await user.click(
+        screen.getByRole("button", { name: "zapLayout.addButtonTitle" }),
+      );
+      await user.click(
+        await screen.findByRole("button", {
+          name: /^zapLayout\.addKindCollection /,
+        }),
+      );
+      await user.selectOptions(
+        await screen.findByLabelText("zapLayout.collectionSource"),
+        "library.liked",
+      );
+      await user.type(
+        screen.getByLabelText("zapLayout.collectionTitle"),
+        "Faves",
+      );
+      await user.click(screen.getByRole("button", { name: "save" }));
+      await user.click(screen.getByRole("button", { name: "zapLayout.done" }));
+
+      const saved = usePreferencesStore.getState().zapLayouts[activeKey()];
+      const [row] = Object.values(saved?.collections ?? {});
+      expect(row).toMatchObject({
+        source: { kind: "collection", collection: "liked" },
+        title: "Faves",
+      });
+      expect(saved?.places.bottom).toContain(`collection:${row?.id}`);
+    });
+
+    it("should change and delete a collection row from the editor", async () => {
+      responsiveWindow(1440);
+      const user = userEvent.setup();
+      usePreferencesStore.setState({
+        zapLayouts: {
+          [activeKey()]: saveZapCollection(defaultZapLayout(), {
+            ...newZapCollection("row"),
+            title: "Mine",
+          }),
+        },
+      });
+      await renderZap();
+      await user.click(
+        screen.getByRole("button", { name: "zapLayout.customise" }),
+      );
+
+      await user.click(
+        screen.getByRole("button", { name: "zapLayout.editCollection" }),
+      );
+      await user.click(
+        await screen.findByRole("button", {
+          name: "zapLayout.deleteCollection",
+        }),
+      );
+      await user.click(screen.getByRole("button", { name: "zapLayout.done" }));
+
+      expect(
+        usePreferencesStore.getState().zapLayouts[activeKey()] ?? null,
+      ).toBeNull();
+    });
+
+    it("should delete a button and everything of it", async () => {
+      responsiveWindow(1440);
+      const user = userEvent.setup();
+      usePreferencesStore.setState({
+        zapLayouts: { [activeKey()]: withButton() },
+      });
+      await renderZap();
+      await user.click(
+        screen.getByRole("button", { name: "zapLayout.customise" }),
+      );
+      await user.click(
+        screen.getByRole("button", { name: "zapLayout.editButton" }),
+      );
+      await user.click(
+        await screen.findByRole("button", { name: "zapLayout.deleteButton" }),
+      );
+      await user.click(screen.getByRole("button", { name: "zapLayout.done" }));
+
+      expect(
+        usePreferencesStore.getState().zapLayouts[activeKey()] ?? null,
+      ).toBeNull();
+      expect(
+        screen.queryByRole("button", { name: "Pause music" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should keep a separate arrangement for each device", async () => {
+      responsiveWindow(1440);
+      const first = mockDeviceRecord({ address: "192.168.1.10" });
+      const second = mockDeviceRecord({ address: "192.168.1.11" });
+      await seedDeviceRegistry([first, second], first.recordId);
+      usePreferencesStore.setState({
+        zapLayouts: {
+          [first.recordId]: hideZapWidget(defaultZapLayout(), "nowPlaying"),
+        },
+      });
+      await renderZap();
+      expect(
+        screen.queryByRole("region", { name: "scan.nowPlayingHeading" }),
+      ).not.toBeInTheDocument();
+
+      await act(() => deviceRegistry.setActiveRecord(second.recordId));
+
+      expect(
+        await screen.findByRole("region", { name: "scan.nowPlayingHeading" }),
+      ).toBeInTheDocument();
+    });
+
+    it("should copy another device's arrangement, buttons included, into the editor", async () => {
+      responsiveWindow(1440);
+      const user = userEvent.setup();
+      const first = mockDeviceRecord({
+        address: "192.168.1.10",
+        name: "Living room",
+      });
+      const second = mockDeviceRecord({ address: "192.168.1.11" });
+      await seedDeviceRegistry([first, second], second.recordId);
+      const source = withButton();
+      usePreferencesStore.setState({
+        zapLayouts: { [first.recordId]: source },
+      });
+      await renderZap();
+      await user.click(
+        screen.getByRole("button", { name: "zapLayout.customise" }),
+      );
+
+      await user.selectOptions(
+        screen.getByRole("combobox", { name: "zapLayout.copyFrom" }),
+        "Living room",
+      );
+      await user.click(screen.getByRole("button", { name: "zapLayout.done" }));
+
+      const copy = usePreferencesStore.getState().zapLayouts[second.recordId];
+      const [button] = Object.values(copy?.buttons ?? {});
+      expect(button).toMatchObject({ label: "Pause music", script: "**stop" });
+      expect(button?.id).not.toBe("btn");
+      expect(usePreferencesStore.getState().zapLayouts[first.recordId]).toEqual(
+        source,
+      );
+    });
+
+    it("should not offer copying when no other device has an arrangement", async () => {
+      responsiveWindow(1440);
+      const user = userEvent.setup();
+      await renderZap();
+      await user.click(
+        screen.getByRole("button", { name: "zapLayout.customise" }),
+      );
+
+      expect(
+        screen.queryByRole("combobox", { name: "zapLayout.copyFrom" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should forget the arrangement of a device that has been removed", async () => {
+      responsiveWindow(1440);
+      usePreferencesStore.setState({
+        zapLayouts: {
+          [activeKey()]: withButton(),
+          "forgotten-device": withButton(),
+        },
+      });
+      await renderZap();
+
+      await waitFor(() =>
+        expect(Object.keys(usePreferencesStore.getState().zapLayouts)).toEqual([
+          activeKey(),
+        ]),
+      );
+    });
+
+    it("should stack a saved layout in its own order on a phone", async () => {
+      responsiveWindow(390);
+      // The built-in phone page puts the Controls button above playback.
+      usePreferencesStore.setState({
+        zapLayouts: {
+          [activeKey()]: moveZapWidget(
+            defaultZapLayout(),
+            "controls",
+            "bottom",
+            0,
+          ),
+        },
+      });
+      await renderZap();
+      const playback = screen.getByRole("region", {
+        name: "scan.nowPlayingHeading",
+      });
+      const controls = screen.getByRole("button", {
+        name: "scan.remoteKeyboard",
+      });
+
+      expect(
+        playback.compareDocumentPosition(controls) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
   });
 
   it("should invalidate stop confirmation on Core switch", async () => {

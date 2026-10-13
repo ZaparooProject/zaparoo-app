@@ -4,10 +4,11 @@ import {
   useLayoutEffect,
   useState,
   useRef,
+  type ReactNode,
 } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { GamepadDirectionalIcon } from "lucide-react";
+import { GamepadDirectionalIcon, PencilIcon } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { Nfc } from "@capawesome-team/capacitor-nfc";
 import { logger } from "@/lib/logger";
@@ -37,6 +38,7 @@ import { ScanActions } from "@/components/home/ScanActions";
 import { MediaCoverRow } from "@/components/home/MediaCoverRow";
 import { NowPlayingCard } from "@/components/home/NowPlayingCard";
 import { ReaderStrip } from "@/components/home/ReaderStrip";
+import { ZapLayoutEditor } from "@/components/home/ZapLayoutEditor";
 import { HistoryModal } from "@/components/home/HistoryModal";
 import { LibraryMediaDetailsModal } from "@/components/library/LibraryMediaDetailsModal";
 import { useReturnableMediaDetails } from "@/hooks/useReturnableMediaDetails";
@@ -52,6 +54,23 @@ import { useConnection } from "@/hooks/useConnection";
 import { useKeepAwake } from "@/hooks/useKeepAwake";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useNowPlayingControls } from "@/hooks/useNowPlayingControls";
+import { useNavigationMode } from "@/hooks/useNavigationMode";
+import {
+  cloneZapLayout,
+  DEFAULT_ZAP_LAYOUT,
+  defaultZapLayout,
+  isDefaultZapLayout,
+  newZapButtonId,
+  zapButtonOf,
+  zapButtonSpan,
+  zapCollectionOf,
+  type ZapBuiltinWidgetId,
+  type ZapLayout,
+  type ZapWidgetId,
+} from "@/lib/zapLayout";
+import { ZapButtonWidget } from "@/components/home/ZapButtonWidget";
+import { ZapCollectionWidget } from "@/components/home/ZapCollectionWidget";
+import { useDeviceRegistry } from "@/lib/devices/deviceRegistry";
 
 const WIDE_QUERY = "(min-width: 760px)";
 
@@ -63,7 +82,17 @@ function canPausePlaylist(media: PlayingResponse) {
   );
 }
 
-export function Index() {
+interface IndexProps {
+  /** Opens the layout editor on arrival, e.g. from the Settings link. */
+  customiseOnArrival?: boolean;
+  /** Called once the editor has opened so the request is not repeated. */
+  onCustomiseHandled?: () => void;
+}
+
+export function Index({
+  customiseOnArrival = false,
+  onCustomiseHandled,
+}: IndexProps = {}) {
   const { t } = useTranslation();
   const headingRef = usePageHeadingFocus<HTMLHeadingElement>(t("nav.index"));
   const { announce } = useAnnouncer();
@@ -72,6 +101,9 @@ export function Index() {
     (state) => state.preferRemoteWriter,
   );
   const keepScreenAwake = usePreferencesStore((state) => state.keepScreenAwake);
+  const zapLayouts = usePreferencesStore((state) => state.zapLayouts);
+  const setZapLayout = usePreferencesStore((state) => state.setZapLayout);
+  const pruneZapLayouts = usePreferencesStore((state) => state.pruneZapLayouts);
 
   const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
   // Queue-driven writes show their own reader activity at the app root; this
@@ -98,8 +130,11 @@ export function Index() {
 
   const deviceKey = useActiveDeviceKey();
   const wide = useMediaQuery(WIDE_QUERY);
+  // The page is an always-on display in full screen; editing it is not offered.
+  const fullScreenActive = useNavigationMode() === "hidden";
   const remoteDocked = useMediaQuery("(min-width: 1024px)");
   const remoteFeature = useCoreFeature("remoteInput");
+  const readersFeature = useCoreFeature("readers");
   const connected = useStatusStore((state) => state.connected);
   const playing = useStatusStore((state) => state.playing);
   const backgroundPlaying = useStatusStore((state) => state.backgroundPlaying);
@@ -266,6 +301,71 @@ export function Index() {
     return () => clearTimeout(timer);
   }, [announce, t, scanLayout.leading]);
 
+  // Each device has its own arrangement. A saved one turns the page over to
+  // the user's layout; with none saved the page keeps the built-in order, which
+  // also flips by width.
+  const zapLayout = zapLayouts[deviceKey] ?? null;
+  const customLayout = zapLayout !== null;
+  const layout: ZapLayout = zapLayout ?? DEFAULT_ZAP_LAYOUT;
+  const [draft, setDraft] = useState<ZapLayout | null>(null);
+  const startCustomising = useCallback(() => {
+    setDraft(
+      usePreferencesStore.getState().zapLayouts[deviceKey] ??
+        defaultZapLayout(),
+    );
+  }, [deviceKey]);
+  // A request to open the editor is taken once, after saved preferences and the
+  // active device are known so the draft starts from the saved arrangement.
+  const preferencesHydrated = usePreferencesStore(
+    (state) => state._hasHydrated,
+  );
+  const [arrivalHandled, setArrivalHandled] = useState(false);
+  if (
+    customiseOnArrival &&
+    preferencesHydrated &&
+    deviceKey !== "" &&
+    !arrivalHandled
+  ) {
+    setArrivalHandled(true);
+    startCustomising();
+  }
+  useEffect(() => {
+    if (arrivalHandled) onCustomiseHandled?.();
+  }, [arrivalHandled, onCustomiseHandled]);
+  const finishCustomising = () => {
+    if (draft) {
+      setZapLayout(deviceKey, isDefaultZapLayout(draft) ? null : draft);
+    }
+    setDraft(null);
+  };
+  // A device the user has forgotten takes its arrangement with it.
+  const registry = useDeviceRegistry((snapshot) => snapshot);
+  useEffect(() => {
+    if (!preferencesHydrated || !registry.hydrated || registry.hydrationError) {
+      return;
+    }
+    pruneZapLayouts(Object.keys(registry.records));
+  }, [preferencesHydrated, registry, pruneZapLayouts]);
+  const copySources = Object.keys(zapLayouts).flatMap((id) => {
+    const record = registry.records[id];
+    if (id === deviceKey || !record) return [];
+    const endpoint = record.endpoints.find(
+      (candidate) => candidate.endpointId === record.preferredEndpointId,
+    );
+    return [{ id, name: record.name || endpoint?.host || id }];
+  });
+
+  const launcherButton = (
+    <Button
+      variant="secondary"
+      className="w-full"
+      icon={<GamepadDirectionalIcon size={20} />}
+      label={t("scan.remoteKeyboard")}
+      disabled={!liveControls || !remoteFeature.available}
+      onClick={() => setRemoteKeyboardOpen(true)}
+    />
+  );
+
   const readerTools = (
     <div key="reader-tools" className="zap-reader-tools">
       <ScanActions
@@ -314,17 +414,8 @@ export function Index() {
         }
       />
 
-      {!(remoteDocked && remoteFeature.available) && (
-        <GatedFeature featureId="remoteInput">
-          <Button
-            variant="secondary"
-            className="w-full"
-            icon={<GamepadDirectionalIcon size={20} />}
-            label={t("scan.remoteKeyboard")}
-            disabled={!liveControls || !remoteFeature.available}
-            onClick={() => setRemoteKeyboardOpen(true)}
-          />
-        </GatedFeature>
+      {!customLayout && !(remoteDocked && remoteFeature.available) && (
+        <GatedFeature featureId="remoteInput">{launcherButton}</GatedFeature>
       )}
     </div>
   );
@@ -365,6 +456,95 @@ export function Index() {
     </div>
   );
 
+  // With the Controls widget moved, its launcher goes with it; the default
+  // page keeps the launcher under the scan actions instead.
+  const controls = (
+    <div key="controls" className="zap-remote-slot">
+      <RemoteKeyboardModal
+        isOpen={remoteKeyboardOpen}
+        close={() => setRemoteKeyboardOpen(false)}
+        docked={remoteDocked && remoteFeature.available}
+      />
+      {customLayout && !(remoteDocked && remoteFeature.available) && (
+        <GatedFeature featureId="remoteInput">{launcherButton}</GatedFeature>
+      )}
+    </div>
+  );
+
+  const widgets: Record<ZapBuiltinWidgetId, ReactNode> = {
+    scan: readerTools,
+    nowPlaying: playback,
+    controls,
+    readers: (
+      <div key="readers" className="zap-readers">
+        <ReaderStrip connected={liveControls} />
+      </div>
+    ),
+    favourites: (
+      <MediaCoverRow
+        key="favourites"
+        headingLabel={t("scan.favoritesHeading")}
+        entries={favourites}
+        onSelect={setSelectedCoverEntry}
+      />
+    ),
+    recents: (
+      <MediaCoverRow
+        key="recents"
+        headingLabel={t("scan.recentsHeading")}
+        entries={recentlyPlayed}
+        onSelect={setSelectedCoverEntry}
+      />
+    ),
+  };
+  const renderWidget = (id: ZapWidgetId): ReactNode => {
+    const button = zapButtonOf(layout, id);
+    if (button) return <ZapButtonWidget key={id} button={button} />;
+    const collection = zapCollectionOf(layout, id);
+    if (collection) {
+      return (
+        <ZapCollectionWidget
+          key={id}
+          collection={collection}
+          onSelect={setSelectedCoverEntry}
+        />
+      );
+    }
+    return widgets[id as ZapBuiltinWidgetId];
+  };
+  // In a saved layout every widget sits in a cell that says how much of the
+  // row it takes; the built-in page keeps its widgets unwrapped.
+  const spanOf = (id: ZapWidgetId) => {
+    const button = zapButtonOf(layout, id);
+    return button ? zapButtonSpan(button) : 12;
+  };
+  const place = (ids: ZapWidgetId[]) =>
+    customLayout
+      ? ids.map((id) => (
+          <div key={id} className="zap-cell" data-span={spanOf(id)}>
+            {renderWidget(id)}
+          </div>
+        ))
+      : ids.map(renderWidget);
+  const mainIds: ZapWidgetId[] = customLayout
+    ? layout.places.main
+    : wide
+      ? ["nowPlaying", "scan"]
+      : ["scan", "nowPlaying"];
+
+  // Why a widget would show nothing right now, so an empty frame in the
+  // editor is not mistaken for a broken one.
+  const widgetNotes: Partial<Record<ZapBuiltinWidgetId, string>> = {
+    scan:
+      scanLayout.canScan || scanLayout.showEmptyState || writeOpen
+        ? undefined
+        : t("zapLayout.unavailable"),
+    controls: remoteFeature.available ? undefined : t("zapLayout.unavailable"),
+    readers: readersFeature.available ? undefined : t("zapLayout.unavailable"),
+    favourites: favourites.length > 0 ? undefined : t("zapLayout.emptyNow"),
+    recents: recentlyPlayed.length > 0 ? undefined : t("zapLayout.emptyNow"),
+  };
+
   return (
     <>
       <PageFrame
@@ -397,42 +577,63 @@ export function Index() {
         <h1 ref={headingRef} className="sr-only">
           Zaparoo
         </h1>
-        <div
-          className="zap-workspace"
-          data-remote-available={remoteFeature.available}
-          data-reader-tools={
-            scanLayout.canScan || scanLayout.showEmptyState || writeOpen
-          }
-        >
-          <div className="zap-session">
-            {wide ? [playback, readerTools] : [readerTools, playback]}
-          </div>
-          <div className="zap-supporting">
-            <div className="zap-remote-slot">
-              <RemoteKeyboardModal
-                isOpen={remoteKeyboardOpen}
-                close={() => setRemoteKeyboardOpen(false)}
-                docked={remoteDocked && remoteFeature.available}
-              />
+        {draft ? (
+          <ZapLayoutEditor
+            layout={draft}
+            onChange={setDraft}
+            onReset={() => setDraft(defaultZapLayout())}
+            onCancel={() => setDraft(null)}
+            onDone={finishCustomising}
+            notes={widgetNotes}
+            copySources={copySources}
+            onCopy={(id) => {
+              const source = zapLayouts[id];
+              if (source) setDraft(cloneZapLayout(source, newZapButtonId));
+            }}
+          />
+        ) : (
+          <>
+            <div
+              className="zap-workspace"
+              data-zap-layout={customLayout ? "custom" : undefined}
+              data-remote-available={remoteFeature.available}
+              data-reader-tools={
+                scanLayout.canScan || scanLayout.showEmptyState || writeOpen
+              }
+              data-main-empty={customLayout && mainIds.length === 0}
+              data-side-empty={customLayout && layout.places.side.length === 0}
+            >
+              <div className="zap-session">{place(mainIds)}</div>
+              <div className="zap-supporting">
+                {customLayout ? (
+                  place(layout.places.side)
+                ) : (
+                  <>
+                    {controls}
+                    {widgets.readers}
+                  </>
+                )}
+              </div>
+              <div className="zap-collections">
+                {place(
+                  customLayout
+                    ? layout.places.bottom
+                    : ["favourites", "recents"],
+                )}
+              </div>
             </div>
-            <div className="zap-readers">
-              <ReaderStrip connected={liveControls} />
-            </div>
-          </div>
-          <div className="zap-collections">
-            <MediaCoverRow
-              headingLabel={t("scan.favoritesHeading")}
-              entries={favourites}
-              onSelect={setSelectedCoverEntry}
-            />
-
-            <MediaCoverRow
-              headingLabel={t("scan.recentsHeading")}
-              entries={recentlyPlayed}
-              onSelect={setSelectedCoverEntry}
-            />
-          </div>
-        </div>
+            {!fullScreenActive && deviceKey !== "" && (
+              <div className="zap-customise">
+                <Button
+                  variant="ghost"
+                  icon={<PencilIcon size={20} />}
+                  label={t("zapLayout.customise")}
+                  onClick={startCustomising}
+                />
+              </div>
+            )}
+          </>
+        )}
       </PageFrame>
 
       <LibraryMediaDetailsModal

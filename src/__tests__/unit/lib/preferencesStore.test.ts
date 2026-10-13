@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
 import { DEFAULT_APP_REVIEW_CADENCE } from "@/lib/appReview";
+import { defaultZapLayout } from "@/lib/zapLayout";
 import {
   __resetPreferenceHydrationForTests,
   retryDegradedPreferenceHydration,
@@ -84,6 +85,69 @@ describe("usePreferencesStore", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();
+  });
+
+  describe("Zap layouts", () => {
+    const stored = (zapLayouts: unknown) =>
+      vi.mocked(Preferences.get).mockResolvedValue({
+        value: JSON.stringify({ state: { zapLayouts }, version: 0 }),
+      });
+
+    it("should keep the built-in page when none is stored", async () => {
+      await usePreferencesStore.persist.rehydrate();
+
+      expect(usePreferencesStore.getState().zapLayouts).toEqual({});
+    });
+
+    it("should restore each device's layout, placing widgets it predates", async () => {
+      stored({
+        "device-a": { places: { main: ["scan"], hidden: ["readers"] } },
+      });
+
+      await usePreferencesStore.persist.rehydrate();
+
+      expect(
+        usePreferencesStore.getState().zapLayouts["device-a"]?.places,
+      ).toEqual({
+        main: ["scan", "nowPlaying"],
+        side: ["controls"],
+        bottom: ["favourites", "recents"],
+        hidden: ["readers"],
+      });
+    });
+
+    it("should drop layouts that are not valid and keep the rest", async () => {
+      stored({
+        "device-a": "not a layout",
+        "device-b": { places: { main: ["scan"] } },
+      });
+
+      await usePreferencesStore.persist.rehydrate();
+
+      expect(Object.keys(usePreferencesStore.getState().zapLayouts)).toEqual([
+        "device-b",
+      ]);
+    });
+
+    it("should forget layouts of devices that no longer exist", () => {
+      const layout = defaultZapLayout();
+      usePreferencesStore.getState().setZapLayout("a", layout);
+      usePreferencesStore.getState().setZapLayout("b", layout);
+
+      usePreferencesStore.getState().pruneZapLayouts(["b"]);
+
+      expect(Object.keys(usePreferencesStore.getState().zapLayouts)).toEqual([
+        "b",
+      ]);
+    });
+
+    it("should return a device to the built-in page when saved as null", () => {
+      usePreferencesStore.getState().setZapLayout("a", defaultZapLayout());
+
+      usePreferencesStore.getState().setZapLayout("a", null);
+
+      expect(usePreferencesStore.getState().zapLayouts).toEqual({});
+    });
   });
 
   describe("Capacitor Preferences bridge guards", () => {

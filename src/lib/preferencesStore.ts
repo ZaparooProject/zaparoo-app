@@ -11,6 +11,7 @@ import {
 } from "@/lib/appReview";
 import type { SystemNameRegionPreference } from "@/lib/systemNames";
 import type { ScanMode } from "@/lib/scanMode";
+import { normaliseZapLayouts, type ZapLayout } from "@/lib/zapLayout";
 import { logger } from "./logger";
 import {
   isAppearance,
@@ -276,6 +277,11 @@ export interface PreferencesState {
   sidebarCollapsed: boolean;
   /** Navigation is hidden so a page can be an always-on display. */
   fullScreen: boolean;
+  /**
+   * Zap page arrangements by device record ID. A device with no entry shows
+   * the built-in page.
+   */
+  zapLayouts: Record<string, ZapLayout>;
 
   // Hydration tracking (internal, not persisted)
   _hasHydrated: boolean;
@@ -351,6 +357,10 @@ export interface PreferencesActions {
   setAccessibleLists: (value: boolean) => void;
   setSidebarCollapsed: (value: boolean) => void;
   setFullScreen: (value: boolean) => void;
+  /** Saves a device's arrangement; null returns it to the built-in page. */
+  setZapLayout: (deviceKey: string, value: ZapLayout | null) => void;
+  /** Forgets arrangements of devices that no longer exist. */
+  pruneZapLayouts: (deviceKeys: readonly string[]) => void;
 }
 
 export type PreferencesStore = PreferencesState & PreferencesActions;
@@ -412,6 +422,7 @@ const DEFAULT_PREFERENCES: Omit<
   accessibleLists: false,
   sidebarCollapsed: false,
   fullScreen: false,
+  zapLayouts: {},
 };
 
 function persistedPreferences(state: PreferencesStore) {
@@ -446,6 +457,7 @@ function persistedPreferences(state: PreferencesStore) {
     accessibleLists: state.accessibleLists,
     sidebarCollapsed: state.sidebarCollapsed,
     fullScreen: state.fullScreen,
+    zapLayouts: state.zapLayouts,
   };
 }
 
@@ -611,6 +623,24 @@ export const usePreferencesStore = create<PreferencesStore>()(
       setAccessibleLists: (value) => set({ accessibleLists: value }),
       setSidebarCollapsed: (value) => set({ sidebarCollapsed: value }),
       setFullScreen: (value) => set({ fullScreen: value }),
+      setZapLayout: (deviceKey, value) =>
+        set((state) => {
+          const zapLayouts = { ...state.zapLayouts };
+          if (value) zapLayouts[deviceKey] = value;
+          else delete zapLayouts[deviceKey];
+          return { zapLayouts };
+        }),
+      pruneZapLayouts: (deviceKeys) =>
+        set((state) => {
+          const keep = new Set(deviceKeys);
+          const stale = Object.keys(state.zapLayouts).filter(
+            (key) => !keep.has(key),
+          );
+          if (stale.length === 0) return state;
+          const zapLayouts = { ...state.zapLayouts };
+          for (const key of stale) delete zapLayouts[key];
+          return { zapLayouts };
+        }),
     }),
     {
       name: PREFERENCES_STORAGE_KEY,
@@ -745,6 +775,7 @@ export const usePreferencesStore = create<PreferencesStore>()(
             ...currentState.appReviewCadence,
             ...persisted.appReviewCadence,
           },
+          zapLayouts: normaliseZapLayouts(persisted.zapLayouts),
         };
 
         // Stored values win over defaults, except for settings changed while

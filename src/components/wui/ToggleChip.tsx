@@ -9,6 +9,8 @@ interface ToggleChipProps {
   setState: (state: boolean) => void;
   disabled?: boolean;
   compact?: boolean;
+  /** Icon-only chips are round unless a square control is wanted. */
+  shape?: "round" | "square";
   /** Accessible label for screen readers (required for icon-only toggles) */
   "aria-label"?: string;
 }
@@ -46,8 +48,9 @@ export function ToggleChip(props: ToggleChipProps) {
           "px-1.5": !props.label && props.icon,
           "px-4": props.compact && (props.label || !props.icon),
           "px-6": !props.compact && (props.label || !props.icon),
-          "rounded-full": !props.label && props.icon,
-          "rounded-md": props.label || !props.icon,
+          "rounded-full":
+            !props.label && props.icon && props.shape !== "square",
+          "rounded-md": props.label || !props.icon || props.shape === "square",
         },
         {
           "bg-primary-wash inset-shadow-material":

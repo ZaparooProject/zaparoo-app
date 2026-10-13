@@ -903,6 +903,243 @@
     min-width: 0;
     order: 3;
   }
+  /* A saved layout drops the built-in phone order: each place becomes a grid
+     of twelfths, and the places stack main, side, bottom. A widget takes the
+     twelfths its cell asks for, packed in order, so narrow buttons sit side by
+     side and every other widget takes the full row. */
+  .zap-workspace[data-zap-layout="custom"]
+    :is(.zap-session, .zap-supporting, .zap-collections) {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: 0.75rem;
+    row-gap: 1.25rem;
+    container: zapcol / inline-size;
+    order: 0;
+  }
+  .zap-cell,
+  .zap-widget-frame {
+    min-width: 0;
+    grid-column: 1 / -1;
+  }
+  .zap-cell {
+    display: flex;
+    flex-direction: column;
+  }
+  .zap-cell > .zap-button-face {
+    flex: 1 1 auto;
+  }
+  :is(.zap-cell, .zap-widget-frame)[data-span="3"] {
+    grid-column: span 3;
+  }
+  :is(.zap-cell, .zap-widget-frame)[data-span="6"] {
+    grid-column: span 6;
+  }
+  /* A column too narrow for a button's share gives it a bigger one, so a
+     button keeps room for its label. */
+  @container zapcol (max-width: 32rem) {
+    :is(.zap-cell, .zap-widget-frame)[data-span="3"] {
+      grid-column: span 6;
+    }
+  }
+  @container zapcol (max-width: 18rem) {
+    :is(.zap-cell, .zap-widget-frame)[data-span="6"] {
+      grid-column: 1 / -1;
+    }
+  }
+  .zap-workspace[data-zap-layout="custom"]
+    :is(.zap-reader-tools, .zap-playback, .zap-readers) {
+    order: 0;
+  }
+  .zap-workspace[data-zap-layout="custom"] .zap-remote-slot {
+    display: block;
+    min-width: 0;
+  }
+  .zap-workspace[data-zap-layout="custom"]
+    :is(.zap-session, .zap-supporting, .zap-collections):empty {
+    display: none;
+  }
+  .zap-customise {
+    display: flex;
+    justify-content: center;
+    margin-top: 1.5rem;
+  }
+  .zap-editor {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .zap-editor-body {
+    display: flex;
+    width: 100%;
+    max-width: var(--content-bound);
+    margin-inline: auto;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  /* A bar of its own across the page, so editing reads as a mode and not as
+     more content. It stays under the page header on phones. */
+  .zap-editor-bar {
+    --zap-bar-top: var(--page-header-overlay-height, 57px);
+    position: sticky;
+    z-index: 2;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--surface-raised);
+    border-bottom: 1px solid var(--edge-default);
+    box-shadow: 0 2px 8px var(--material-shadow);
+  }
+  .zap-editor-bar-end {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  /* A phone's form is one column in the order it is filled in. From 1024px
+     the basics sit in a narrow column with the ZapScript editor beside them,
+     so no field stretches across a desktop. */
+  .zap-editor-body.zap-button-form {
+    max-width: 40rem;
+    margin-inline: 0;
+    gap: 1.25rem;
+  }
+  .zap-button-form-basics,
+  .zap-button-form-script,
+  .zap-button-form-more {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  .zap-button-form-script {
+    gap: 0.5rem;
+  }
+  .zap-button-form-more {
+    gap: 1rem;
+  }
+  /* A form's actions close it, as in the mapping editor: save, then the
+     others, stacked. */
+  .zap-form-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  /* From 760px Save and Cancel sit in a row, with Delete on a line of its own
+     beneath so it is not the next thing to land on. */
+  @media (min-width: 760px) {
+    .zap-form-actions {
+      flex-flow: row wrap;
+      align-items: center;
+    }
+    .zap-form-actions > [data-intent="destructive"] {
+      flex-basis: 100%;
+    }
+  }
+  .zap-editor-body.zap-collection-form {
+    max-width: 32rem;
+    margin-inline: 0;
+    gap: 1.25rem;
+  }
+  .zap-editor-title {
+    display: -webkit-box;
+    overflow: hidden;
+    font-weight: 700;
+    line-height: 1.25;
+    text-align: center;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .zap-editor-reset {
+    display: flex;
+    justify-content: center;
+    padding-block: 0.5rem;
+  }
+  .zap-editor-places {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  .zap-editor-list {
+    display: grid;
+    min-height: 3rem;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 0.75rem;
+    container: zapcol / inline-size;
+  }
+  .zap-button-frame {
+    display: flex;
+    flex-direction: column;
+  }
+  .zap-button-frame-face {
+    padding: 0.5rem;
+  }
+  .zap-button-frame-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-top: 1px solid var(--edge-subtle);
+  }
+  .zap-button-frame[data-hidden] {
+    flex-direction: row;
+    align-items: center;
+    padding-left: 0.75rem;
+  }
+  .zap-button-frame[data-hidden] .zap-button-frame-tools {
+    border-top: 0;
+  }
+  .zap-editor-empty {
+    grid-column: 1 / -1;
+    padding: 1rem;
+    border: 1px dashed var(--edge-default);
+    border-radius: 4px;
+    text-align: center;
+  }
+  .zap-widget-frame {
+    border: 1px solid var(--edge-default);
+    border-radius: 4px;
+    background: var(--surface-raised);
+  }
+  /* The slot a lifted widget leaves behind; its copy follows the pointer. */
+  .zap-widget-frame[data-dragging] {
+    background: transparent;
+    border-style: dashed;
+  }
+  .zap-widget-frame[data-dragging] > * {
+    visibility: hidden;
+  }
+  .zap-widget-frame-lifted {
+    box-shadow: 0 8px 24px var(--material-shadow);
+    cursor: grabbing;
+  }
+  .zap-widget-frame-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+  }
+  .zap-widget-frame-header > span {
+    min-width: 6rem;
+  }
+  .zap-widget-frame-footer {
+    padding: 0.5rem;
+    border-top: 1px solid var(--edge-subtle);
+  }
+  .zap-widget-frame-body {
+    display: flex;
+    max-height: 16rem;
+    flex-direction: column;
+    gap: 0.5rem;
+    overflow: hidden;
+    padding: 0.75rem;
+    border-top: 1px solid var(--edge-subtle);
+  }
   .now-playing-artwork {
     width: 3.75rem;
     height: 5rem;
@@ -959,6 +1196,9 @@
       padding-top: calc(
         var(--page-content-safe-top, var(--page-scroll-safe-top, 0px)) + 1rem
       );
+    }
+    .zap-editor-bar {
+      --zap-bar-top: 0px;
     }
     .zap-scan-actions {
       display: grid;
@@ -1041,6 +1281,57 @@
     }
     .zap-workspace[data-reader-tools="false"] .zap-reader-tools {
       display: none;
+    }
+    .zap-workspace[data-zap-layout="custom"]
+      :is(.zap-session, .zap-supporting) {
+      row-gap: 1.5rem;
+    }
+    .zap-workspace[data-zap-layout="custom"]:is(
+        [data-side-empty="true"],
+        [data-main-empty="true"]
+      ) {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas: none;
+    }
+    .zap-workspace[data-zap-layout="custom"]:is(
+        [data-side-empty="true"],
+        [data-main-empty="true"]
+      )
+      :is(.zap-session, .zap-supporting, .zap-collections) {
+      grid-area: auto;
+    }
+    .zap-editor-body {
+      max-width: none;
+    }
+    .zap-editor-body.zap-button-form {
+      display: grid;
+      max-width: 72rem;
+      grid-template-columns: minmax(16rem, 24rem) minmax(0, 1fr);
+      grid-template-areas:
+        "basics script"
+        "more script";
+      grid-template-rows: auto 1fr;
+      align-items: start;
+      gap: 1.25rem 2.5rem;
+    }
+    .zap-button-form-basics {
+      grid-area: basics;
+    }
+    .zap-button-form-script {
+      grid-area: script;
+    }
+    .zap-button-form-more {
+      grid-area: more;
+    }
+    .zap-editor-places {
+      display: grid;
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+      align-items: start;
+      gap: 1.5rem;
+    }
+    .zap-editor-place[data-place="bottom"],
+    .zap-editor-place[data-place="hidden"] {
+      grid-column: 1 / -1;
     }
     .zap-playback .now-playing-artwork {
       width: 6rem;
@@ -1476,7 +1767,8 @@
     min-width: 0;
   }
   .library-search-filter-selectors,
-  .create-search-filter-selectors {
+  .create-search-filter-selectors,
+  .media-search-filter-selectors {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
@@ -1499,14 +1791,17 @@
      the title together. */
   @media (min-width: 760px) {
     .library-search-filters,
-    .create-search-filters {
+    .create-search-filters,
+    .media-search-filters {
       max-width: none;
+      margin-inline: 0;
       flex-direction: row;
       flex-wrap: wrap;
       align-items: flex-end;
     }
     .library-search-filters > :first-child,
-    .create-search-filters > :first-child {
+    .create-search-filters > :first-child,
+    .media-search-filters > :first-child {
       min-width: 0;
       flex: 1 1 18rem;
     }
@@ -1515,25 +1810,29 @@
        and wraps inside itself rather than letting one field run under the
        next. */
     .library-search-filter-controls,
-    .create-search-filter-controls {
+    .create-search-filter-controls,
+    .media-search-filter-controls {
       min-width: 0;
       flex: 1 1 39rem;
       flex-flow: row wrap;
       align-items: flex-end;
     }
     .library-search-filter-selectors,
-    .create-search-filter-selectors {
+    .create-search-filter-selectors,
+    .media-search-filter-selectors {
       min-width: 0;
       flex: 1 1 28rem;
       flex-flow: row wrap;
     }
     .library-search-filter-selectors > *,
-    .create-search-filter-selectors > * {
+    .create-search-filter-selectors > *,
+    .media-search-filter-selectors > * {
       min-width: 0;
       flex: 1 1 13.75rem;
     }
     .library-search-filter-controls > .wui-button,
-    .create-search-filter-controls > .wui-button {
+    .create-search-filter-controls > .wui-button,
+    .media-search-filter-controls > .wui-button {
       flex: 0 0 auto;
       margin-inline: 0;
     }
@@ -1602,8 +1901,11 @@
   .media-search-filters {
     width: 100%;
     min-width: 0;
-    max-width: var(--content-bound);
-    margin-inline: auto;
+  }
+  @media (min-width: 760px) {
+    .media-search-workspace {
+      gap: 1rem;
+    }
   }
   .media-search-results {
     min-width: 0;
@@ -1623,21 +1925,6 @@
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
       align-items: start;
-    }
-  }
-  @media (min-width: 1024px) {
-    .media-search-workspace {
-      flex-direction: row;
-      flex-wrap: wrap;
-      align-items: flex-start;
-      gap: 1.5rem;
-    }
-    .media-search-filters {
-      flex: 1 1 20rem;
-      margin-inline: 0;
-    }
-    .media-search-results {
-      flex: 3 1 30rem;
     }
   }
   .create-destinations,

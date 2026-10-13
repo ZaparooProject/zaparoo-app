@@ -96,13 +96,7 @@ export function MediaSearchForm({
 
           {/* Filters and the action stay together when the row wraps. */}
           <div className={`${layout}-search-filter-controls`}>
-            <div
-              className={
-                layout === "media"
-                  ? "flex flex-col gap-3"
-                  : `${layout}-search-filter-selectors`
-              }
-            >
+            <div className={`${layout}-search-filter-selectors`}>
               <div className="flex flex-col">
                 <span
                   id={systemLabelId}
@@ -156,7 +150,7 @@ export function MediaSearchForm({
               onClick={form.submit}
               disabled={!form.canSubmit || form.resultsLoading}
               disabledAppearance={form.resultsLoading ? "busy" : "unavailable"}
-              className={layout === "media" ? "w-full" : "w-full md:w-auto"}
+              className="w-full md:w-auto"
             />
           </div>
         </div>
