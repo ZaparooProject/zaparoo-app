@@ -27,7 +27,7 @@ import { CoreAPI } from "@/lib/coreApi";
 import { sortReaders } from "@/lib/readers";
 import { ClientCapability } from "@/lib/models.ts";
 import {
-  CORE_SETTINGS_QUERY_KEY,
+  useCoreSettingsQueryKey,
   useCoreSettingsUpdate,
 } from "@/hooks/useCoreSettingsUpdate";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
@@ -50,6 +50,7 @@ export function ReadersSettings() {
   );
   const connected = useStatusStore((state) => state.connected);
   const deviceKey = useActiveDeviceKey();
+  const settingsQueryKey = useCoreSettingsQueryKey();
   const connectionState = useStatusStore((state) => state.connectionState);
   const canWriteCoreSettings = useClientCapability(
     ClientCapability.SettingsWrite,
@@ -67,7 +68,7 @@ export function ReadersSettings() {
 
   // Core settings query
   const { data: coreSettings, isPending } = useQuery({
-    queryKey: CORE_SETTINGS_QUERY_KEY,
+    queryKey: settingsQueryKey,
     queryFn: () => CoreAPI.settings(),
   });
 

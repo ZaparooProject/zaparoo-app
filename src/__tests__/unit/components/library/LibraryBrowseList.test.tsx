@@ -164,6 +164,21 @@ describe("LibraryBrowseList", () => {
     ).toBeInTheDocument();
   });
 
+  it("names a row by its title and describes it with its tags", () => {
+    renderList({
+      entries: [
+        {
+          ...entries[0]!,
+          tags: [{ type: "region", tag: "eu" }],
+          disambiguatingTags: [{ type: "region", tag: "eu" }],
+        },
+      ],
+    });
+
+    const row = screen.getByRole("button", { name: "Game One" });
+    expect(row).toHaveAccessibleDescription(/eu/);
+  });
+
   it("keeps the selected row usable when text size changes", async () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();

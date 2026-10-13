@@ -134,7 +134,9 @@ export function ZapCollectionEditor({
             label={t("zapLayout.cancel")}
             onClick={onClose}
           />
-          {!isNew && (
+        </div>
+        {!isNew && (
+          <div className="zap-form-delete">
             <Button
               variant="outline"
               intent="destructive"
@@ -142,8 +144,8 @@ export function ZapCollectionEditor({
               label={t("zapLayout.deleteCollection")}
               onClick={() => onDelete(collection.id)}
             />
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

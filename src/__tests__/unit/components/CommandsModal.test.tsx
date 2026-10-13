@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { render, screen, within } from "../../../test-utils";
 import { CommandsModal } from "@/components/CommandsModal";
+import { useStatusStore } from "@/lib/store";
 
 const renderCatalogue = () => {
   const close = vi.fn();
@@ -43,20 +44,32 @@ describe("CommandsModal", () => {
     expect(modal).toHaveAttribute("aria-hidden", "true");
   });
 
-  it.each([
-    "launch",
-    "playlist",
-    "input",
-    "profile",
-    "utility",
-    "http",
-    "mister",
-  ])("should render the %s group", (group) => {
-    renderCatalogue();
+  it.each(["launch", "playlist", "input", "profile", "utility", "http"])(
+    "should render the %s group",
+    (group) => {
+      renderCatalogue();
 
+      expect(
+        screen.getByRole("heading", { name: `zapscript.groups.${group}` }),
+      ).toBeInTheDocument();
+    },
+  );
+
+  it("should offer the MiSTer commands only on a MiSTer", () => {
+    useStatusStore.setState({ connected: true, corePlatform: "MiSTer" });
+    const { unmount } = render(
+      <CommandsModal isOpen={true} close={vi.fn()} onSelect={vi.fn()} />,
+    );
     expect(
-      screen.getByRole("heading", { name: `zapscript.groups.${group}` }),
+      screen.getByRole("heading", { name: "zapscript.groups.mister" }),
     ).toBeInTheDocument();
+    unmount();
+
+    useStatusStore.setState({ connected: true, corePlatform: "linux" });
+    render(<CommandsModal isOpen={true} close={vi.fn()} onSelect={vi.fn()} />);
+    expect(
+      screen.queryByRole("heading", { name: "zapscript.groups.mister" }),
+    ).not.toBeInTheDocument();
   });
 
   it.each([

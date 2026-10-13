@@ -47,7 +47,7 @@ export function ReadTab({ result, scanControl }: ReadTabProps) {
   const { tag, rawTag } = result?.info || { tag: null, rawTag: null };
 
   return (
-    <div className="nfc-read-grid px-2 pt-6">
+    <div className="nfc-read-grid pt-4">
       {/* Scan Button */}
       <div className="nfc-read-action">{scanControl}</div>
       {/* Basic Information Card */}

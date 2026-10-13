@@ -369,6 +369,15 @@ describe("CoreAPI API Contract", () => {
       expect(sentData.params).toBeUndefined();
     });
 
+    it("mediaTags should not report a cancelled request as an error", async () => {
+      const errorSpy = vi.spyOn(logger, "error");
+      const promise = CoreAPI.mediaTags();
+      simulateError(mockSend, "Request cancelled: connection reset");
+
+      await expect(promise).rejects.toThrow("connection reset");
+      expect(errorSpy).not.toHaveBeenCalled();
+    });
+
     it("mediaTags should not report unsupported API errors", async () => {
       const errorSpy = vi.spyOn(logger, "error");
       const warnSpy = vi.spyOn(logger, "warn");

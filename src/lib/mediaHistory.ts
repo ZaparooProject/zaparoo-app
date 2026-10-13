@@ -56,6 +56,7 @@ export function historyEntryToBrowseEntry(
     systemName: entry.systemName,
     relativePath: entry.relativePath,
     hasCover: entry.hasCover,
+    zapScript: entry.zapScript,
   };
 }
 

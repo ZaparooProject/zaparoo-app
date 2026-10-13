@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { FolderIcon, HeartIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
@@ -96,6 +96,9 @@ export function LibraryMediaRow(props: {
   onSelect: (entry: MediaBrowseEntry) => void;
 }) {
   const { t } = useTranslation();
+  const rowId = useId();
+  const titleId = `${rowId}-title`;
+  const detailsId = `${rowId}-details`;
   const resolveSystemName = useSystemNameResolver();
   const handleHapticPress = useHapticPress("light", !props.interactionDisabled);
   const rowSystemId = entrySystemId(props.entry, props.systemId);
@@ -135,6 +138,9 @@ export function LibraryMediaRow(props: {
       )}
       style={libraryMediaRowBoxStyle(props.minHeight, props.leadingInset)}
       disabled={props.interactionDisabled}
+      // The name is the title; system, detail and tags describe it.
+      aria-labelledby={titleId}
+      aria-describedby={isFolder ? undefined : detailsId}
       aria-current={props.selected ? "true" : undefined}
       onPointerUp={handleHapticPress}
       onClick={() => props.onSelect(entry)}
@@ -163,14 +169,16 @@ export function LibraryMediaRow(props: {
           "overflow-hidden": !props.textZoomed,
         })}
       >
-        <AdaptiveLibraryTitle
-          allowWrap={props.textZoomed}
-          title={libraryEntryDisplayName(
-            entry,
-            props.showFilenames,
-            props.corePlatform,
-          )}
-        />
+        <span id={titleId} className="flex min-w-0 flex-col">
+          <AdaptiveLibraryTitle
+            allowWrap={props.textZoomed}
+            title={libraryEntryDisplayName(
+              entry,
+              props.showFilenames,
+              props.corePlatform,
+            )}
+          />
+        </span>
         {isFolder ? (
           entry.fileCount !== undefined && (
             <span className="text-muted-foreground text-sm">
@@ -178,7 +186,7 @@ export function LibraryMediaRow(props: {
             </span>
           )
         ) : (
-          <>
+          <span id={detailsId} className="flex min-w-0 flex-col">
             {props.showSystemName && rowSystemId && (
               <span
                 className={classNames("text-muted-foreground text-sm", {
@@ -205,7 +213,7 @@ export function LibraryMediaRow(props: {
               preserveOrder
               formatTag={compactLibraryTag}
             />
-          </>
+          </span>
         )}
       </span>
       <span className="flex shrink-0 items-center gap-2">

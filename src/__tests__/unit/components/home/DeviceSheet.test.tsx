@@ -254,6 +254,28 @@ describe("DeviceSheet", () => {
     },
   );
 
+  it("leaves manual entry on Escape without closing the sheet", async () => {
+    const user = userEvent.setup();
+    const close = vi.fn();
+    renderSheet({ isOpen: true, close });
+    await user.click(
+      screen.getByRole("button", {
+        name: "settings.deviceSetup.addDeviceManually",
+      }),
+    );
+    await user.keyboard("{Escape}");
+
+    expect(
+      screen.queryByRole("textbox", { name: "settings.device" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "settings.deviceSetup.addDeviceManually",
+      }),
+    ).toBeInTheDocument();
+    expect(close).not.toHaveBeenCalled();
+  });
+
   it.each(["{Enter}", " "])(
     "opens manual entry with %s from its device-list row",
     async (key) => {

@@ -1214,7 +1214,14 @@
         "manage": "Gestionar suscripción",
         "openingManagement": "Abriendo ajustes de la suscripción...",
         "manageUnavailable": "La gestión de la suscripción no está disponible aquí",
-        "manageFailed": "No se pudo abrir la gestión de la suscripción"
+        "manageFailed": "No se pudo abrir la gestión de la suscripción",
+        "trialActive": "La prueba de Warp está activa",
+        "trialEnds": "La prueba termina el {{date}}",
+        "trialPending": "Se está confirmando tu prueba de Warp.",
+        "trialExpired": "Tu prueba de Warp ha terminado.",
+        "trialImmediateBilling": "Si te suscribes durante la prueba, el cobro empieza de inmediato.",
+        "trialLastDay": "Tu prueba de Warp termina en menos de 24 horas.",
+        "trialEnding": "Tu prueba de Warp termina en menos de 3 días."
       }
     },
     "requirements": {
@@ -2209,7 +2216,8 @@
       "deckMissing": "Deck no encontrado",
       "collectionTitle": "Título",
       "deleteCollection": "Eliminar colección",
-      "editCollection": "Editar {{name}}"
+      "editCollection": "Editar {{name}}",
+      "moved": "{{name}} movido a {{place}}, posición {{position}} de {{count}}."
     }
   }
 }

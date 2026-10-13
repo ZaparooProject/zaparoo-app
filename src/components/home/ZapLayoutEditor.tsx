@@ -48,9 +48,11 @@ import {
 } from "@/components/home/ZapWidgetFrame";
 import { useAccessibleLists } from "@/hooks/useAccessibleLists";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useAnnouncer } from "@/components/A11yAnnouncer";
 import {
   deleteZapButton,
   deleteZapCollection,
+  findZapPlace,
   hideZapWidget,
   moveZapWidget,
   moveZapWidgetBy,
@@ -209,6 +211,7 @@ function LayoutScreen({
   );
 
   const { decks } = useZapDecks();
+  const { announce: sayMoved } = useAnnouncer();
   const widgetName = (id: ZapWidgetId) => {
     const button = zapButtonOf(layout, id);
     if (button) return button.label || t("zapLayout.buttonUnnamed");
@@ -226,6 +229,18 @@ function LayoutScreen({
     return t(`zapLayout.widgets.${id}`);
   };
   const [choosing, setChoosing] = useState(false);
+  // Dragging announces itself; a move by arrow button says where it landed.
+  const announceMove = (next: ZapLayout, id: ZapWidgetId) => {
+    const { place, index } = findZapPlace(next, id);
+    sayMoved(
+      t("zapLayout.moved", {
+        name: widgetName(id),
+        place: placeNames[place],
+        position: index + 1,
+        count: next.places[place].length,
+      }),
+    );
+  };
   const placeNames: Record<ZapPlace, string> = {
     main: t("zapLayout.places.main"),
     side: t("zapLayout.places.side"),
@@ -323,6 +338,11 @@ function LayoutScreen({
         </div>
       </div>
       <div className="zap-editor-body">
+        {/* The bar has no room for the title on a phone; it heads the page
+            there instead. */}
+        <h2 className="zap-editor-heading text-foreground text-xl">
+          {t("zapLayout.title")}
+        </h2>
         <p className="text-muted-foreground text-sm min-[1024px]:hidden">
           {t("zapLayout.stackNote")}
         </p>
@@ -365,8 +385,11 @@ function LayoutScreen({
                 {layout.places[place].map((id, index) => {
                   const button = zapButtonOf(layout, id);
                   const count = layout.places[place].length;
-                  const onMoveBy = (direction: -1 | 1) =>
-                    onChange(moveZapWidgetBy(layout, id, direction));
+                  const onMoveBy = (direction: -1 | 1) => {
+                    const next = moveZapWidgetBy(layout, id, direction);
+                    onChange(next);
+                    announceMove(next, id);
+                  };
                   if (button) {
                     return (
                       <ZapButtonFrame
@@ -398,9 +421,11 @@ function LayoutScreen({
                       count={count}
                       note={notes[id]}
                       accessibleLists={accessibleLists}
-                      onMoveBy={(widget, direction) =>
-                        onChange(moveZapWidgetBy(layout, widget, direction))
-                      }
+                      onMoveBy={(widget, direction) => {
+                        const next = moveZapWidgetBy(layout, widget, direction);
+                        onChange(next);
+                        announceMove(next, widget);
+                      }}
                       onHide={(widget) =>
                         onChange(hideZapWidget(layout, widget))
                       }

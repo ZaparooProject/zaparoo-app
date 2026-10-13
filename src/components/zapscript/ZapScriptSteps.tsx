@@ -186,19 +186,27 @@ function StepCard({
   const [optionsOpen, setOptionsOpen] = useState(step.advArgs.length > 0);
   const title = spec ? spec.name : t("zapscript.builder.textStep");
   const corePlatform = useStatusStore((state) => state.corePlatform);
+  // Options edited in this card keep their field while it is open, even once
+  // emptied: an empty option is dropped from the script, and the field it was
+  // typed in must not vanish under the user's hands.
+  const [editedOptions, setEditedOptions] = useState<string[]>([]);
+  const setsOption = (name: string) =>
+    step.advArgs.some(([key]) => key === name) || editedOptions.includes(name);
   const onPlatform = (adv: ZapAdvArgSpec) =>
     !adv.platform ||
     (connected && corePlatform?.trim().toLowerCase() === adv.platform) ||
     // Never hide an option the script already sets.
-    step.advArgs.some(([name]) => name === adv.name);
+    setsOption(adv.name);
   // Options the script names but the catalogue does not are still editable.
   const advSpecs: ZapAdvArgSpec[] = spec
     ? [
         ...(spec.advArgs ?? []).filter(onPlatform),
-        ...step.advArgs
-          .filter(([name]) => !spec.advArgs?.some((adv) => adv.name === name))
+        ...[
+          ...new Set([...step.advArgs.map(([name]) => name), ...editedOptions]),
+        ]
+          .filter((name) => !spec.advArgs?.some((adv) => adv.name === name))
           // Its own name is the only label there is.
-          .map(([name]) => ({ name, label: name, kind: "text" as const })),
+          .map((name) => ({ name, label: name, kind: "text" as const })),
       ]
     : [];
   const setArg = (index: number, value: string) => {
@@ -207,6 +215,9 @@ function StepCard({
     onChange(edit(step, { args }));
   };
   const setAdvArg = (name: string, value: string) => {
+    setEditedOptions((current) =>
+      current.includes(name) ? current : [...current, name],
+    );
     // An edited option keeps its place; a new one goes last.
     const known = step.advArgs.some(([key]) => key === name);
     const advArgs: ZapStep["advArgs"] = known

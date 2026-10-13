@@ -413,6 +413,14 @@ function serializeAdvArgs(advArgs: ZapStep["advArgs"]): string {
     .join("&")}`;
 }
 
+/**
+ * A value as it must be written to sit in a command's argument list: quoted
+ * when a comma, `?`, a leading quote or `||` would otherwise end or change it.
+ */
+export function quoteZapArgument(value: string): string {
+  return needsQuoting(value, ",?") ? quote(value) : value;
+}
+
 /** The ZapScript for one step, ignoring any text it was read from. */
 export function writeZapStep(step: ZapStep): string {
   if (step.raw) return step.args[0] ?? "";

@@ -666,7 +666,7 @@ export function OnlinePage() {
                         <Button
                           label={
                             isCancelling
-                              ? t("spinner.cancelling")
+                              ? t("cancelling")
                               : t("online.cancelDeletion")
                           }
                           variant="outline"

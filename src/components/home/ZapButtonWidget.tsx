@@ -5,7 +5,7 @@ import { Button } from "@/components/wui/Button";
 import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { SlideModal } from "@/components/SlideModal";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { CoreAPI, logRunFailure } from "@/lib/coreApi";
+import { CoreAPI, isRequestCancelledError, logRunFailure } from "@/lib/coreApi";
 import { useStatusStore } from "@/lib/store";
 import { ZAP_BUTTON_ICON_COMPONENTS } from "@/components/home/zapButtonIcons";
 import type { ZapButton } from "@/lib/zapLayout";
@@ -90,7 +90,11 @@ export function ZapButtonWidget({ button }: { button: ZapButton }) {
     setRunning(true);
     CoreAPI.run({ uid: "", text: button.script })
       .catch((error) => {
-        toast.error(t("create.custom.failMsg"));
+        // A cancelled request only means Core stopped waiting, so the script
+        // may still have run; it is not reported as a failure.
+        if (!isRequestCancelledError(error)) {
+          toast.error(t("create.custom.failMsg"));
+        }
         logRunFailure("Zap button run failed:", error, {
           action: "runZapButton",
         });

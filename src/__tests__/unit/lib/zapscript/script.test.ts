@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createZapStep,
   parseZapScript,
+  quoteZapArgument,
   serializeZapScript,
   writeZapStep,
   type ZapStep,
@@ -239,4 +240,22 @@ describe("serializeZapScript", () => {
     const raw: ZapStep = { ...createZapStep("", [""]), raw: true };
     expect(serializeZapScript([raw, createZapStep("stop")])).toBe("**stop");
   });
+});
+
+describe("quoteZapArgument", () => {
+  it("leaves a plain path as it is", () => {
+    expect(quoteZapArgument("SNES/Super Mario World.sfc")).toBe(
+      "SNES/Super Mario World.sfc",
+    );
+  });
+
+  it.each(["SNES/Legend of Zelda, The.sfc", "NES/What?.nes", '"quoted'])(
+    "quotes %s so it stays one argument",
+    (path) => {
+      const written = `**launch:${quoteZapArgument(path)}`;
+      const steps = parse(written);
+      expect(steps).toHaveLength(1);
+      expect(steps[0]?.args).toEqual([path]);
+    },
+  );
 });

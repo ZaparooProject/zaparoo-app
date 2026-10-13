@@ -2,6 +2,7 @@ import {
   type ComponentProps,
   type MouseEvent,
   type ReactNode,
+  useEffect,
   useLayoutEffect,
   useRef,
 } from "react";
@@ -42,8 +43,14 @@ function SidebarChildLink({
     children: ReactNode;
   }) {
   const props = useLinkProps(options);
+  const ref = useRef<HTMLAnchorElement>(null);
+  // A tall section list scrolls above the pinned footer; keep the current
+  // page's entry in view.
+  useEffect(() => {
+    if (current) ref.current?.scrollIntoView?.({ block: "nearest" });
+  }, [current]);
   return (
-    <a {...props} aria-current={current}>
+    <a {...props} ref={ref} aria-current={current}>
       {children}
     </a>
   );

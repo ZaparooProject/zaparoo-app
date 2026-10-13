@@ -45,7 +45,7 @@ function PlayedHistoryRow({
       }
       title={<span className="truncate">{entry.mediaName}</span>}
       meta={
-        <p className="truncate">
+        <p>
           {systemName}
           {" · "}
           {formatAppDateTime(entry.startedAt)}

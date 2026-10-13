@@ -1214,7 +1214,14 @@
         "manage": "Abonnement verwalten",
         "openingManagement": "Abonnementeinstellungen werden geöffnet...",
         "manageUnavailable": "Abonnementverwaltung ist hier nicht verfügbar",
-        "manageFailed": "Abonnementverwaltung konnte nicht geöffnet werden"
+        "manageFailed": "Abonnementverwaltung konnte nicht geöffnet werden",
+        "trialActive": "Warp-Testzeitraum ist aktiv",
+        "trialEnds": "Testzeitraum endet am {{date}}",
+        "trialPending": "Dein Warp-Testzeitraum wird bestätigt.",
+        "trialExpired": "Dein Warp-Testzeitraum ist abgelaufen.",
+        "trialImmediateBilling": "Wenn du während des Testzeitraums abonnierst, beginnt die Abrechnung sofort.",
+        "trialLastDay": "Dein Warp-Testzeitraum endet innerhalb von 24 Stunden.",
+        "trialEnding": "Dein Warp-Testzeitraum endet innerhalb von 3 Tagen."
       }
     },
     "requirements": {
@@ -2136,7 +2143,7 @@
       "unavailable": "Derzeit auf diesem Gerät nicht verfügbar.",
       "emptyNow": "Wird angezeigt, sobald es etwas anzuzeigen gibt.",
       "widgets": {
-        "nowPlaying": "Läuft gerade",
+        "nowPlaying": "Wird abgespielt",
         "scan": "Tag oder Code scannen",
         "controls": "Steuerung",
         "readers": "Lesegeräte",
@@ -2209,7 +2216,8 @@
       "deckMissing": "Deck nicht gefunden",
       "collectionTitle": "Titel",
       "deleteCollection": "Sammlung löschen",
-      "editCollection": "{{name}} bearbeiten"
+      "editCollection": "{{name}} bearbeiten",
+      "moved": "{{name}} nach {{place}} verschoben, Position {{position}} von {{count}}."
     }
   }
 }

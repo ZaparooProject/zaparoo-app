@@ -697,6 +697,22 @@ describe("Adaptive application shell", () => {
       expect(usePreferencesStore.getState().fullScreen).toBe(false);
     });
 
+    it("should keep focus on the control that matters when full screen starts and ends", async () => {
+      responsiveWindow(1440);
+      const user = userEvent.setup();
+      await renderShell();
+
+      await user.click(screen.getByRole("button", { name: "nav.fullScreen" }));
+      expect(
+        screen.getByRole("button", { name: "nav.exitFullScreen" }),
+      ).toHaveFocus();
+
+      await user.keyboard("{Escape}");
+      expect(
+        await screen.findByRole("button", { name: "nav.fullScreen" }),
+      ).toHaveFocus();
+    });
+
     it("should switch between light and dark from the sidebar and the rail", async () => {
       const resize = responsiveWindow(1440);
       usePreferencesStore.setState({ appearance: "dark" });

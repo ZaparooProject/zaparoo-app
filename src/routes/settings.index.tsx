@@ -105,6 +105,7 @@ export function Settings() {
           search: { customise: true },
           label: t("zapLayout.title"),
           icon: PencilIcon,
+          full: true,
         },
         {
           to: "/settings/online",
@@ -329,7 +330,7 @@ export function Settings() {
                             : undefined
                         }
                         onPointerUp={handleHapticPress}
-                        className={`site-button site-button-outline flex min-h-14 min-w-0 touch-manipulation items-center gap-2 px-3 py-2 text-left text-sm tracking-normal ${"status" in destination ? "col-span-full flex-wrap" : ""}`}
+                        className={`site-button site-button-outline flex min-h-14 min-w-0 touch-manipulation items-center gap-2 px-3 py-2 text-left text-sm tracking-normal ${"status" in destination ? "col-span-full flex-wrap" : "full" in destination ? "col-span-full" : ""}`}
                       >
                         <destination.icon
                           size={20}

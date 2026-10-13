@@ -23,6 +23,7 @@ import { Button } from "@/components/wui/Button";
 import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { TextInput } from "@/components/wui/TextInput";
 import { SlideModal } from "@/components/SlideModal";
+import { formatAppDateTime } from "@/lib/formatDate";
 import { BackIcon } from "@/lib/images";
 import { Route } from "@/routes/settings.devices_.$recordId";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
@@ -122,7 +123,7 @@ export function DeviceDetail() {
   const lastConnectedLine =
     record.lastConnectedAt !== undefined
       ? t("settings.deviceDetail.lastConnected", {
-          when: new Date(record.lastConnectedAt).toLocaleString(),
+          when: formatAppDateTime(record.lastConnectedAt) ?? "",
         })
       : t("settings.deviceDetail.neverConnected");
 

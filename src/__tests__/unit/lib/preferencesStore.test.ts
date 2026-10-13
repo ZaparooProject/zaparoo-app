@@ -405,6 +405,46 @@ describe("usePreferencesStore", () => {
       );
     });
 
+    it("should keep other devices' Zap layouts when one is saved while degraded", async () => {
+      vi.useFakeTimers();
+      usePreferencesStore.setState({ _hasHydrated: false, zapLayouts: {} });
+      vi.mocked(Preferences.set).mockClear();
+      let resolveRead!: (result: { value: string | null }) => void;
+      vi.mocked(Preferences.get).mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveRead = resolve;
+          }),
+      );
+
+      void usePreferencesStore.persist.rehydrate();
+      await vi.advanceTimersByTimeAsync(5_000);
+      usePreferencesStore
+        .getState()
+        .setZapLayout("device-a", defaultZapLayout());
+
+      resolveRead({
+        value: JSON.stringify({
+          state: {
+            zapLayouts: {
+              "device-b": { places: { main: ["scan"] } },
+              "device-c": { places: { main: ["scan"] } },
+            },
+          },
+          version: 0,
+        }),
+      });
+
+      await vi.waitFor(() => {
+        expect(
+          usePreferencesStore.getState()._preferencesHydrationSucceeded,
+        ).toBe(true);
+      });
+      expect(
+        Object.keys(usePreferencesStore.getState().zapLayouts).sort(),
+      ).toEqual(["device-a", "device-b", "device-c"]);
+    });
+
     it("should use late cached launcher access only while an access check is pending", async () => {
       vi.useFakeTimers();
       const storedAccess = JSON.stringify({

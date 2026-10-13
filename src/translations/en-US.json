@@ -913,7 +913,7 @@
         "runZapScript": "Test ZapScript"
       },
       "nfc": {
-        "title": "NFC Utilities",
+        "title": "NFC utilities",
         "read": "Read tag data",
         "resultReady": "Tag read complete. Read results shown.",
         "format": "Format tag",
@@ -1214,7 +1214,14 @@
         "manage": "Manage subscription",
         "openingManagement": "Opening subscription settings...",
         "manageUnavailable": "Subscription management is unavailable here",
-        "manageFailed": "Could not open subscription management"
+        "manageFailed": "Could not open subscription management",
+        "trialActive": "Warp trial is active",
+        "trialEnds": "Trial ends on {{date}}",
+        "trialPending": "Your Warp trial is being confirmed.",
+        "trialExpired": "Your Warp trial has ended.",
+        "trialImmediateBilling": "Subscribing during your trial starts billing immediately.",
+        "trialLastDay": "Your Warp trial ends within 24 hours.",
+        "trialEnding": "Your Warp trial ends within 3 days."
       }
     },
     "requirements": {
@@ -2209,7 +2216,8 @@
       "deckMissing": "Deck not found",
       "collectionTitle": "Title",
       "deleteCollection": "Delete collection",
-      "editCollection": "Edit {{name}}"
+      "editCollection": "Edit {{name}}",
+      "moved": "{{name}} moved to {{place}}, position {{position}} of {{count}}."
     }
   }
 }

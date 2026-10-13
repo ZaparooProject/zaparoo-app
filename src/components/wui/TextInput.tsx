@@ -34,6 +34,7 @@ export function TextInput(props: {
   max?: number;
   step?: number;
   required?: boolean;
+  onKeyDown?: KeyboardEventHandler<HTMLInputElement>;
   onKeyUp?: KeyboardEventHandler<HTMLInputElement>;
   ref?: React.RefObject<HTMLInputElement | null>;
   /** Error message to display below the input */
@@ -112,6 +113,7 @@ export function TextInput(props: {
                 props.setValue(e.target.value);
               }
             }}
+            onKeyDown={props.onKeyDown}
             onKeyUp={props.onKeyUp}
           />
           {props.clearable &&

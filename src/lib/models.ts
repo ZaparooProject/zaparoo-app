@@ -790,6 +790,8 @@ export interface MediaHistoryEntry {
   /** Absent before Core 2.17.0, where unknown means "try the image anyway". */
   hasCover?: boolean;
   launcherId?: string;
+  /** The launch form `media.search` reports; absent when the path no longer resolves. */
+  zapScript?: string;
   startedAt: string;
   endedAt?: string;
   playTime: number;

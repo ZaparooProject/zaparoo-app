@@ -2,6 +2,7 @@ import { useRouter } from "@tanstack/react-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useState, useMemo, useRef } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   DownloadIcon,
   CopyIcon,
@@ -30,6 +31,9 @@ import { logger } from "@/lib/logger";
 import { uploadLogs } from "@/lib/logsApi";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
+import { useAccessibleLists } from "@/hooks/useAccessibleLists";
+import { useVirtualListScrollMargin } from "@/hooks/useVirtualListScrollMargin";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 import { InlineLoading } from "@/components/InlineLoading";
 import { formatAppDateTime } from "@/lib/formatDate";
@@ -61,15 +65,15 @@ export function Logs() {
   );
   const [expandedFields, setExpandedFields] = useState<Set<string>>(new Set());
 
+  const deviceKey = useActiveDeviceKey();
   const logsQuery = useQuery({
-    queryKey: ["logs"],
+    queryKey: ["logs", deviceKey],
     queryFn: () => CoreAPI.settingsLogsDownload(),
     enabled: connected,
     refetchOnWindowFocus: false,
   });
 
   // Parse JSONL content into structured log entries
-  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- Intentional: optional chain for safety, actual dep is content property
   const logEntries = useMemo(() => {
     if (!logsQuery.data?.content) return [];
 
@@ -243,6 +247,105 @@ export function Logs() {
     });
   };
 
+  const accessibleLists = useAccessibleLists();
+  // Rows are measured as they appear; a screen reader gets every row instead.
+  const virtualise = !accessibleLists;
+  const { listRef, scrollMargin } =
+    useVirtualListScrollMargin(scrollContainerRef);
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const virtualizer = useVirtualizer({
+    count: virtualise ? filteredEntries.length : 0,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => 120,
+    overscan: 8,
+    scrollMargin,
+    getItemKey: (index) => filteredEntries[index]?._index ?? index,
+  });
+  const renderEntry = (
+    entry: (typeof filteredEntries)[number],
+    rowProps: Record<string, unknown> = {},
+  ) => (
+    <div
+      key={entry._index}
+      className="border-border border-b border-solid p-3 font-mono text-xs last:border-b-0"
+      {...rowProps}
+    >
+      <div className="mb-2 flex flex-row items-center gap-2 font-sans">
+        <Badge variant={getLevelVariant(entry.level)}>
+          {entry.level.charAt(0).toUpperCase() + entry.level.slice(1)}
+        </Badge>
+        <span className="text-muted-foreground text-xs">
+          {formatTimestamp(entry.time)}
+        </span>
+      </div>
+      <div className="text-foreground font-mono text-sm break-all whitespace-pre-wrap">
+        {entry.message && entry.message.length > MESSAGE_TRUNCATE_LENGTH ? (
+          <>
+            {expandedEntries.has(entry._index)
+              ? entry.message
+              : `${entry.message.slice(0, MESSAGE_TRUNCATE_LENGTH)}...`}
+            <Button
+              variant="text"
+              size="sm"
+              className="w-fit"
+              onClick={() => toggleExpandEntry(entry._index)}
+              aria-expanded={expandedEntries.has(entry._index)}
+              label={
+                expandedEntries.has(entry._index)
+                  ? t("settings.logs.showLess")
+                  : t("settings.logs.showMore")
+              }
+            />
+          </>
+        ) : (
+          entry.message
+        )}
+      </div>
+      {/* Additional fields */}
+      {Object.entries(entry)
+        .filter(
+          ([key]) =>
+            !["level", "time", "caller", "message", "_index"].includes(key),
+        )
+        .map(([key, value]) => {
+          const fieldId = `${entry._index}_${key}`;
+          const valueStr = JSON.stringify(value);
+          const isExpanded = expandedFields.has(fieldId);
+          const needsTruncation = valueStr.length > MESSAGE_TRUNCATE_LENGTH;
+
+          return (
+            <div
+              key={key}
+              className="text-muted-foreground mt-1 font-sans text-sm break-all"
+            >
+              <span className="font-medium">{key}:</span>{" "}
+              {needsTruncation ? (
+                <>
+                  {isExpanded
+                    ? valueStr
+                    : `${valueStr.slice(0, MESSAGE_TRUNCATE_LENGTH)}...`}
+                  <Button
+                    variant="text"
+                    size="sm"
+                    className="w-fit"
+                    onClick={() => toggleExpandField(entry._index, key)}
+                    aria-expanded={isExpanded}
+                    label={
+                      isExpanded
+                        ? t("settings.logs.showLess")
+                        : t("settings.logs.showMore")
+                    }
+                  />
+                </>
+              ) : (
+                valueStr
+              )}
+            </div>
+          );
+        })}
+    </div>
+  );
+
   return (
     <>
       <PageFrame
@@ -409,97 +512,33 @@ export function Logs() {
           {logsQuery.data && (
             <div className="flex-1 overflow-x-hidden overflow-y-auto">
               <div>
-                {filteredEntries.map((entry) => (
+                {virtualise ? (
                   <div
-                    key={entry._index}
-                    className="border-border border-b border-solid p-3 font-mono text-xs last:border-b-0"
+                    ref={listRef}
+                    style={{
+                      height: virtualizer.getTotalSize(),
+                      position: "relative",
+                    }}
                   >
-                    <div className="mb-2 flex flex-row items-center gap-2 font-sans">
-                      <Badge variant={getLevelVariant(entry.level)}>
-                        {entry.level.charAt(0).toUpperCase() +
-                          entry.level.slice(1)}
-                      </Badge>
-                      <span className="text-muted-foreground text-xs">
-                        {formatTimestamp(entry.time)}
-                      </span>
-                    </div>
-                    <div className="text-foreground font-mono text-sm break-all whitespace-pre-wrap">
-                      {entry.message &&
-                      entry.message.length > MESSAGE_TRUNCATE_LENGTH ? (
-                        <>
-                          {expandedEntries.has(entry._index)
-                            ? entry.message
-                            : `${entry.message.slice(0, MESSAGE_TRUNCATE_LENGTH)}...`}
-                          <Button
-                            variant="text"
-                            size="sm"
-                            className="w-fit"
-                            onClick={() => toggleExpandEntry(entry._index)}
-                            aria-expanded={expandedEntries.has(entry._index)}
-                            label={
-                              expandedEntries.has(entry._index)
-                                ? t("settings.logs.showLess")
-                                : t("settings.logs.showMore")
-                            }
-                          />
-                        </>
-                      ) : (
-                        entry.message
-                      )}
-                    </div>
-                    {/* Additional fields */}
-                    {Object.entries(entry)
-                      .filter(
-                        ([key]) =>
-                          ![
-                            "level",
-                            "time",
-                            "caller",
-                            "message",
-                            "_index",
-                          ].includes(key),
-                      )
-                      .map(([key, value]) => {
-                        const fieldId = `${entry._index}_${key}`;
-                        const valueStr = JSON.stringify(value);
-                        const isExpanded = expandedFields.has(fieldId);
-                        const needsTruncation =
-                          valueStr.length > MESSAGE_TRUNCATE_LENGTH;
-
-                        return (
-                          <div
-                            key={key}
-                            className="text-muted-foreground mt-1 font-sans text-sm break-all"
-                          >
-                            <span className="font-medium">{key}:</span>{" "}
-                            {needsTruncation ? (
-                              <>
-                                {isExpanded
-                                  ? valueStr
-                                  : `${valueStr.slice(0, MESSAGE_TRUNCATE_LENGTH)}...`}
-                                <Button
-                                  variant="text"
-                                  size="sm"
-                                  className="w-fit"
-                                  onClick={() =>
-                                    toggleExpandField(entry._index, key)
-                                  }
-                                  aria-expanded={isExpanded}
-                                  label={
-                                    isExpanded
-                                      ? t("settings.logs.showLess")
-                                      : t("settings.logs.showMore")
-                                  }
-                                />
-                              </>
-                            ) : (
-                              valueStr
-                            )}
-                          </div>
-                        );
-                      })}
+                    {virtualizer.getVirtualItems().map((item) => {
+                      const entry = filteredEntries[item.index];
+                      if (!entry) return null;
+                      return renderEntry(entry, {
+                        ref: virtualizer.measureElement,
+                        "data-index": item.index,
+                        style: {
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "100%",
+                          transform: `translateY(${item.start - scrollMargin}px)`,
+                        },
+                      });
+                    })}
                   </div>
-                ))}
+                ) : (
+                  filteredEntries.map((entry) => renderEntry(entry))
+                )}
               </div>
             </div>
           )}

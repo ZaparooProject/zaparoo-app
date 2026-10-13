@@ -787,6 +787,14 @@ export const usePreferencesStore = create<PreferencesStore>()(
             [key]: currentState[key as keyof PreferencesStore],
           });
         }
+        // Zap layouts are kept per device, so a layout saved while storage was
+        // unavailable must not discard the other devices' stored layouts.
+        if (_preferenceKeysChangedWhileDegraded.has("zapLayouts")) {
+          merged.zapLayouts = {
+            ...normaliseZapLayouts(persisted.zapLayouts),
+            ...currentState.zapLayouts,
+          };
+        }
 
         // Runtime access checks may already have answered (e.g. when storage
         // lands after a fallback). The cached launcher access only fills in

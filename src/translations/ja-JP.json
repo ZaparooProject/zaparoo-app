@@ -1214,7 +1214,14 @@
         "manage": "サブスクリプションを管理",
         "openingManagement": "サブスクリプション設定を開いています...",
         "manageUnavailable": "ここではサブスクリプションを管理できません",
-        "manageFailed": "サブスクリプション管理を開けませんでした"
+        "manageFailed": "サブスクリプション管理を開けませんでした",
+        "trialActive": "Warpの体験期間中です",
+        "trialEnds": "体験期間は{{date}}に終了します",
+        "trialPending": "Warpの体験期間を確認しています。",
+        "trialExpired": "Warpの体験期間は終了しました。",
+        "trialImmediateBilling": "体験期間中に登録すると、すぐに課金が始まります。",
+        "trialLastDay": "Warpの体験期間は24時間以内に終了します。",
+        "trialEnding": "Warpの体験期間は3日以内に終了します。"
       }
     },
     "requirements": {
@@ -2209,7 +2216,8 @@
       "deckMissing": "デッキが見つかりません",
       "collectionTitle": "タイトル",
       "deleteCollection": "コレクションを削除",
-      "editCollection": "{{name}}を編集"
+      "editCollection": "{{name}}を編集",
+      "moved": "{{name}}を{{place}}の{{count}}件中{{position}}番目に移動しました。"
     }
   }
 }

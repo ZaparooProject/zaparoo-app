@@ -115,6 +115,9 @@ export const DEFAULT_ZAP_LAYOUT: ZapLayout = {
   collections: {},
 };
 
+const hasOwn = (record: object, key: string) =>
+  Object.prototype.hasOwnProperty.call(record, key);
+
 const BUTTON_PREFIX = "button:";
 const COLLECTION_PREFIX = "collection:";
 
@@ -146,7 +149,9 @@ export function zapCollectionOf(
   id: ZapWidgetId,
 ): ZapCollection | null {
   return isZapCollectionWidget(id)
-    ? (layout.collections[id.slice(COLLECTION_PREFIX.length)] ?? null)
+    ? hasOwn(layout.collections, id.slice(COLLECTION_PREFIX.length))
+      ? (layout.collections[id.slice(COLLECTION_PREFIX.length)] ?? null)
+      : null
     : null;
 }
 
@@ -155,7 +160,9 @@ export function zapButtonOf(
   id: ZapWidgetId,
 ): ZapButton | null {
   return isZapButtonWidget(id)
-    ? (layout.buttons[id.slice(BUTTON_PREFIX.length)] ?? null)
+    ? hasOwn(layout.buttons, id.slice(BUTTON_PREFIX.length))
+      ? (layout.buttons[id.slice(BUTTON_PREFIX.length)] ?? null)
+      : null
     : null;
 }
 
@@ -254,6 +261,7 @@ export function normaliseZapLayout(value: unknown): ZapLayout | null {
   const buttons: Record<string, ZapButton> = {};
   if (typeof storedButtons === "object" && storedButtons !== null) {
     for (const [id, stored] of Object.entries(storedButtons)) {
+      if (id === "__proto__") continue;
       const button = normaliseButton(id, stored);
       if (button) buttons[id] = button;
     }
@@ -262,6 +270,7 @@ export function normaliseZapLayout(value: unknown): ZapLayout | null {
   const collections: Record<string, ZapCollection> = {};
   if (typeof storedCollections === "object" && storedCollections !== null) {
     for (const [id, stored] of Object.entries(storedCollections)) {
+      if (id === "__proto__") continue;
       const collection = normaliseCollection(id, stored);
       if (collection) collections[id] = collection;
     }
@@ -282,9 +291,9 @@ export function normaliseZapLayout(value: unknown): ZapLayout | null {
       const known =
         isBuiltinId(id) ||
         (id.startsWith(BUTTON_PREFIX) &&
-          id.slice(BUTTON_PREFIX.length) in buttons) ||
+          hasOwn(buttons, id.slice(BUTTON_PREFIX.length))) ||
         (id.startsWith(COLLECTION_PREFIX) &&
-          id.slice(COLLECTION_PREFIX.length) in collections);
+          hasOwn(collections, id.slice(COLLECTION_PREFIX.length)));
       if (!known || seen.has(id as ZapWidgetId)) continue;
       seen.add(id as ZapWidgetId);
       layout.places[place].push(id as ZapWidgetId);
@@ -311,6 +320,7 @@ export function normaliseZapLayouts(value: unknown): Record<string, ZapLayout> {
   }
   const layouts: Record<string, ZapLayout> = {};
   for (const [deviceKey, stored] of Object.entries(value)) {
+    if (deviceKey === "__proto__") continue;
     const layout = normaliseZapLayout(stored);
     if (layout) layouts[deviceKey] = layout;
   }
@@ -415,7 +425,7 @@ export function saveZapButton(
 ): ZapLayout {
   const widget = zapButtonWidgetId(button.id);
   const next = copyLayout(layout);
-  const isNew = !(button.id in layout.buttons);
+  const isNew = !hasOwn(layout.buttons, button.id);
   next.buttons[button.id] = button;
   return isNew
     ? moveZapWidget(next, widget, place, next.places[place].length)
@@ -441,7 +451,7 @@ export function saveZapCollection(
 ): ZapLayout {
   const widget = zapCollectionWidgetId(collection.id);
   const next = copyLayout(layout);
-  const isNew = !(collection.id in layout.collections);
+  const isNew = !hasOwn(layout.collections, collection.id);
   next.collections[collection.id] = collection;
   return isNew
     ? moveZapWidget(next, widget, place, next.places[place].length)

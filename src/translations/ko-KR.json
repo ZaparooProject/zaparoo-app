@@ -1214,7 +1214,14 @@
         "manage": "구독 관리",
         "openingManagement": "구독 설정을 여는 중...",
         "manageUnavailable": "여기에서는 구독을 관리할 수 없습니다",
-        "manageFailed": "구독 관리를 열지 못했습니다"
+        "manageFailed": "구독 관리를 열지 못했습니다",
+        "trialActive": "Warp 체험 기간이 진행 중입니다",
+        "trialEnds": "체험 기간은 {{date}}에 종료됩니다",
+        "trialPending": "Warp 체험 기간을 확인하고 있습니다.",
+        "trialExpired": "Warp 체험 기간이 종료되었습니다.",
+        "trialImmediateBilling": "체험 기간 중에 구독하면 결제가 즉시 시작됩니다.",
+        "trialLastDay": "Warp 체험 기간이 24시간 이내에 종료됩니다.",
+        "trialEnding": "Warp 체험 기간이 3일 이내에 종료됩니다."
       }
     },
     "requirements": {
@@ -2209,7 +2216,8 @@
       "deckMissing": "덱을 찾을 수 없음",
       "collectionTitle": "제목",
       "deleteCollection": "컬렉션 삭제",
-      "editCollection": "{{name}} 편집"
+      "editCollection": "{{name}} 편집",
+      "moved": "{{name}}을(를) {{place}}의 {{count}}개 중 {{position}}번째로 이동했습니다."
     }
   }
 }

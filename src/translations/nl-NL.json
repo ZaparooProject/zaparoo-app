@@ -1214,7 +1214,14 @@
         "manage": "Abonnement beheren",
         "openingManagement": "Abonnementsinstellingen openen...",
         "manageUnavailable": "Abonnementsbeheer is hier niet beschikbaar",
-        "manageFailed": "Abonnementsbeheer kon niet worden geopend"
+        "manageFailed": "Abonnementsbeheer kon niet worden geopend",
+        "trialActive": "Warp-proefperiode is actief",
+        "trialEnds": "Proefperiode eindigt op {{date}}",
+        "trialPending": "Je Warp-proefperiode wordt bevestigd.",
+        "trialExpired": "Je Warp-proefperiode is afgelopen.",
+        "trialImmediateBilling": "Als je tijdens de proefperiode abonneert, begint de betaling direct.",
+        "trialLastDay": "Je Warp-proefperiode eindigt binnen 24 uur.",
+        "trialEnding": "Je Warp-proefperiode eindigt binnen 3 dagen."
       }
     },
     "requirements": {
@@ -2209,7 +2216,8 @@
       "deckMissing": "Deck niet gevonden",
       "collectionTitle": "Titel",
       "deleteCollection": "Collectie verwijderen",
-      "editCollection": "{{name}} bewerken"
+      "editCollection": "{{name}} bewerken",
+      "moved": "{{name}} verplaatst naar {{place}}, positie {{position}} van {{count}}."
     }
   }
 }

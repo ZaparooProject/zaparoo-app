@@ -659,12 +659,34 @@ export function isExpectedMediaDatabaseError(error: unknown): boolean {
   );
 }
 
+/**
+ * Logs a failed API call. A cancelled request (a connection reset, a screen
+ * left behind) is expected churn, not a failure, so it stays out of the error
+ * console and error reporting.
+ */
+function logApiFailure(
+  message: string,
+  error: unknown,
+  ...details: unknown[]
+): void {
+  if (isRequestCancelledError(error)) {
+    logger.debug(message, error, ...details);
+    return;
+  }
+  logger.error(message, error, ...details);
+}
+
 function logMediaApiFailure(
   label: string,
   action: string,
   error: unknown,
   severity: "error" | "warning" = "error",
 ): void {
+  if (isRequestCancelledError(error)) {
+    logger.debug(`${label}:`, error);
+    return;
+  }
+
   if (isMalformedCoreResponseError(error)) {
     logger.warn(`${label}:`, error, {
       category: "api",
@@ -1481,7 +1503,7 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Version API call failed:", error);
+          logApiFailure("Version API call failed:", error);
           reject(error);
         });
     });
@@ -1523,7 +1545,7 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Confirm API call failed:", error);
+          logApiFailure("Confirm API call failed:", error);
           reject(error);
         });
     });
@@ -1536,7 +1558,7 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Input keyboard API call failed:", error, {
+          logApiFailure("Input keyboard API call failed:", error, {
             category: "api",
             action: "inputKeyboard",
             severity: "error",
@@ -1553,7 +1575,7 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Input gamepad API call failed:", error, {
+          logApiFailure("Input gamepad API call failed:", error, {
             category: "api",
             action: "inputGamepad",
             severity: "error",
@@ -1648,7 +1670,7 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("History API call failed:", error);
+          logApiFailure("History API call failed:", error);
           reject(error);
         });
     });
@@ -2212,7 +2234,7 @@ class CoreApi {
           if (isRequestCancelledError(error)) {
             logger.debug("Systems API call cancelled:", error);
           } else {
-            logger.error("Systems API call failed:", error);
+            logApiFailure("Systems API call failed:", error);
           }
           reject(error);
         });
@@ -2237,7 +2259,7 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Settings API call failed:", error);
+          logApiFailure("Settings API call failed:", error);
           reject(error);
         });
     });
@@ -2251,7 +2273,7 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Settings update API call failed:", error);
+          logApiFailure("Settings update API call failed:", error);
           reject(error);
         });
     });
@@ -2265,7 +2287,7 @@ class CoreApi {
       }
       return result as ProfilesResponse;
     } catch (error) {
-      logger.error("Profiles API call failed:", error, {
+      logApiFailure("Profiles API call failed:", error, {
         category: "api",
         action: "profiles",
         severity: "error",
@@ -2282,7 +2304,7 @@ class CoreApi {
       }
       return result as Profile;
     } catch (error) {
-      logger.error("New profile API call failed:", error, {
+      logApiFailure("New profile API call failed:", error, {
         category: "api",
         action: "newProfile",
         severity: "error",
@@ -2299,7 +2321,7 @@ class CoreApi {
       }
       return result as Profile;
     } catch (error) {
-      logger.error("Update profile API call failed:", error, {
+      logApiFailure("Update profile API call failed:", error, {
         category: "api",
         action: "updateProfile",
         severity: "error",
@@ -2317,7 +2339,7 @@ class CoreApi {
         throw new RequestCancelledError("Delete profile request was cancelled");
       }
     } catch (error) {
-      logger.error("Delete profile API call failed:", error, {
+      logApiFailure("Delete profile API call failed:", error, {
         category: "api",
         action: "deleteProfile",
         severity: "error",
@@ -2334,7 +2356,7 @@ class CoreApi {
       }
       return result as ActiveProfile | null;
     } catch (error) {
-      logger.error("Active profile API call failed:", error, {
+      logApiFailure("Active profile API call failed:", error, {
         category: "api",
         action: "activeProfile",
         severity: "error",
@@ -2353,7 +2375,7 @@ class CoreApi {
       }
       return result as ActiveProfile | null;
     } catch (error) {
-      logger.error("Switch profile API call failed:", error, {
+      logApiFailure("Switch profile API call failed:", error, {
         category: "api",
         action: "switchProfile",
         severity: "error",
@@ -2468,7 +2490,7 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Mappings API call failed:", error);
+          logApiFailure("Mappings API call failed:", error);
           reject(error);
         });
     });
@@ -2482,7 +2504,7 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("New mapping API call failed:", error);
+          logApiFailure("New mapping API call failed:", error);
           reject(error);
         });
     });
@@ -2496,7 +2518,7 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Update mapping API call failed:", error);
+          logApiFailure("Update mapping API call failed:", error);
           reject(error);
         });
     });
@@ -2510,7 +2532,7 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Delete mapping API call failed:", error);
+          logApiFailure("Delete mapping API call failed:", error);
           reject(error);
         });
     });
@@ -2523,7 +2545,7 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Mappings reload API call failed:", error);
+          logApiFailure("Mappings reload API call failed:", error);
           reject(error);
         });
     });
@@ -2575,7 +2597,7 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Tokens API call failed:", error);
+          logApiFailure("Tokens API call failed:", error);
           reject(error);
         });
     });
@@ -2588,7 +2610,7 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Stop API call failed:", error);
+          logApiFailure("Stop API call failed:", error);
           reject(error);
         });
     });
@@ -2664,7 +2686,7 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Settings reload API call failed:", error);
+          logApiFailure("Settings reload API call failed:", error);
           reject(error);
         });
     });
@@ -2719,7 +2741,7 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Readers write cancel API call failed:", error);
+          logApiFailure("Readers write cancel API call failed:", error);
           reject(error);
         });
     });
@@ -2754,7 +2776,7 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Launchers API call failed:", error);
+          logApiFailure("Launchers API call failed:", error);
           reject(error);
         });
     });
@@ -2767,7 +2789,7 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Launchers refresh API call failed:", error);
+          logApiFailure("Launchers refresh API call failed:", error);
           reject(error);
         });
     });
@@ -2835,7 +2857,7 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Playtime limits update API call failed:", error);
+          logApiFailure("Playtime limits update API call failed:", error);
           reject(error);
         });
     });
@@ -2880,7 +2902,7 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Inbox delete API call failed:", error, {
+          logApiFailure("Inbox delete API call failed:", error, {
             category: "api",
             action: "inbox.delete",
             severity: "error",
@@ -2897,7 +2919,7 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Inbox clear API call failed:", error, {
+          logApiFailure("Inbox clear API call failed:", error, {
             category: "api",
             action: "inbox.clear",
             severity: "error",

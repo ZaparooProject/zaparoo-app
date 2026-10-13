@@ -106,13 +106,24 @@ export function ZapWidgetFrame({
         )}
         <span className="flex-1 font-semibold break-words">{name}</span>
         {hidden ? (
-          <Button
-            icon={<EyeIcon size={20} />}
-            variant="ghost"
-            label={t("zapLayout.show")}
-            aria-label={t("zapLayout.showWidget", { name })}
-            onClick={() => onShow(id)}
-          />
+          <>
+            {onEdit && (
+              <Button
+                icon={<PencilIcon size={20} />}
+                variant="ghost"
+                shape="square"
+                aria-label={t("zapLayout.editCollection", { name })}
+                onClick={onEdit}
+              />
+            )}
+            <Button
+              icon={<EyeIcon size={20} />}
+              variant="ghost"
+              label={t("zapLayout.show")}
+              aria-label={t("zapLayout.showWidget", { name })}
+              onClick={() => onShow(id)}
+            />
+          </>
         ) : (
           <>
             <Button

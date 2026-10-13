@@ -63,7 +63,7 @@ export function ToolsTab({ renderToolControl }: ToolsTabProps) {
   );
 
   return (
-    <div className="nfc-tools-grid px-2 pt-4">
+    <div className="nfc-tools-grid pt-4">
       {/* Tools */}
       {availableTools.map((tool) => {
         return (

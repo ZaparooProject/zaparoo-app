@@ -114,7 +114,7 @@ export function ZapButtonFrame({
                 {...listeners}
                 aria-label={t("zapLayout.reorder", { name })}
                 aria-roledescription={t("zapLayout.reorderRole")}
-                className="text-muted-foreground focus-visible:ring-ring mr-auto flex h-12 w-10 shrink-0 touch-none items-center justify-center rounded-md focus-visible:ring-2 focus-visible:outline-none"
+                className="zap-tool-grip text-muted-foreground focus-visible:ring-ring mr-auto flex h-12 w-10 shrink-0 touch-none items-center justify-center rounded-md focus-visible:ring-2 focus-visible:outline-none"
               >
                 <GripVerticalIcon size={20} aria-hidden="true" />
               </button>
@@ -124,6 +124,7 @@ export function ZapButtonFrame({
               variant="ghost"
               shape="square"
               ref={earlierRef}
+              className="zap-tool-earlier"
               aria-label={t("zapLayout.moveEarlier", { name })}
               disabled={place === "main" && index === 0}
               onClick={() => {
@@ -136,6 +137,7 @@ export function ZapButtonFrame({
               variant="ghost"
               shape="square"
               ref={laterRef}
+              className="zap-tool-later"
               aria-label={t("zapLayout.moveLater", { name })}
               disabled={place === "bottom" && index === count - 1}
               onClick={() => {
@@ -148,6 +150,7 @@ export function ZapButtonFrame({
         <Button
           icon={<PencilIcon size={20} />}
           variant="ghost"
+          className="zap-tool-edit"
           shape="square"
           aria-label={t("zapLayout.editButton", { name })}
           onClick={onEdit}

@@ -989,9 +989,25 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 1rem;
-    background: var(--surface-raised);
+    /* The page's own colour, so raised buttons keep their depth on it. */
+    background: var(--background);
     border-bottom: 1px solid var(--edge-default);
     box-shadow: 0 2px 8px var(--material-shadow);
+  }
+  .zap-editor-heading {
+    display: none;
+  }
+  @media (max-width: 599px) {
+    .zap-editor-bar {
+      display: flex;
+      justify-content: space-between;
+    }
+    .zap-editor-bar .zap-editor-title {
+      display: none;
+    }
+    .zap-editor-body > .zap-editor-heading {
+      display: block;
+    }
   }
   .zap-editor-bar-end {
     display: flex;
@@ -1021,11 +1037,33 @@
     gap: 1rem;
   }
   /* A form's actions close it, as in the mapping editor: save, then the
-     others, stacked. */
+     others. */
   .zap-form-actions {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+  }
+  /* A phone's Save and Cancel sit side by side and stay in view at the foot
+     of the screen, above the navigation, however far the form is scrolled. */
+  @media (max-width: 759px) {
+    .zap-form-actions-pinned {
+      position: sticky;
+      /* Sticky offsets are measured inside the page's bottom padding, which is
+         the navigation's height plus 1.25rem; pulling it down by that 1.25rem
+         sits it flush on the navigation. */
+      bottom: -1.25rem;
+      z-index: 2;
+      flex-direction: row;
+      margin-inline: -1rem;
+      padding: 0.75rem 1rem;
+      background: var(--background);
+      border-top: 1px solid var(--edge-default);
+      box-shadow: 0 -2px 8px var(--material-shadow);
+    }
+    .zap-form-actions-pinned > * {
+      min-width: 0;
+      flex: 1 1 0;
+    }
   }
   /* From 760px Save and Cancel sit in a row, with Delete on a line of its own
      beneath so it is not the next thing to land on. */
@@ -1033,9 +1071,6 @@
     .zap-form-actions {
       flex-flow: row wrap;
       align-items: center;
-    }
-    .zap-form-actions > [data-intent="destructive"] {
-      flex-basis: 100%;
     }
   }
   .zap-editor-body.zap-collection-form {
@@ -1084,6 +1119,35 @@
     gap: 0.25rem;
     padding: 0.25rem 0.5rem;
     border-top: 1px solid var(--edge-subtle);
+  }
+  .zap-button-frame {
+    container: zapframe / inline-size;
+  }
+  /* A narrow frame sets its controls in two tidy rows rather than letting them
+     wrap: the handle and edit above, the two arrows below. */
+  @container zapframe (max-width: 15rem) {
+    .zap-button-frame-tools {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      justify-items: stretch;
+    }
+    .zap-tool-grip {
+      margin-right: 0;
+      grid-area: 1 / 1;
+      justify-self: start;
+    }
+    .zap-tool-edit {
+      grid-area: 1 / 2;
+      justify-self: end;
+    }
+    .zap-tool-earlier {
+      grid-area: 2 / 1;
+      justify-self: start;
+    }
+    .zap-tool-later {
+      grid-area: 2 / 2;
+      justify-self: end;
+    }
   }
   .zap-button-frame[data-hidden] {
     flex-direction: row;
@@ -1309,8 +1373,10 @@
       grid-template-columns: minmax(16rem, 24rem) minmax(0, 1fr);
       grid-template-areas:
         "basics script"
-        "more script";
-      grid-template-rows: auto 1fr;
+        "more script"
+        "actions script"
+        "delete script";
+      grid-template-rows: auto auto auto 1fr;
       align-items: start;
       gap: 1.25rem 2.5rem;
     }
@@ -1322,6 +1388,12 @@
     }
     .zap-button-form-more {
       grid-area: more;
+    }
+    .zap-editor-body.zap-button-form > .zap-form-actions {
+      grid-area: actions;
+    }
+    .zap-editor-body.zap-button-form > .zap-form-delete {
+      grid-area: delete;
     }
     .zap-editor-places {
       display: grid;
@@ -1365,7 +1437,7 @@
     display: flex;
     flex-direction: column;
     width: min(calc(256px + var(--app-safe-left, 0px)), 100vw);
-    overflow-y: auto;
+    overflow: hidden;
     overscroll-behavior: contain;
     padding: calc(1rem + var(--app-safe-top, 0px)) 0 0 var(--app-safe-left, 0px);
     color: var(--text-primary);
@@ -1477,11 +1549,15 @@
     background: transparent;
     cursor: not-allowed;
   }
-  /* Stays in view when the section list is taller than the screen. */
+  /* The section list scrolls on its own, so nothing sits behind the footer. */
+  .app-sidebar > .sidebar-navigation {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
   .sidebar-footer {
-    position: sticky;
-    bottom: 0;
-    z-index: 1;
+    flex: none;
     display: flex;
     flex-direction: column;
     margin-top: auto;
@@ -1510,6 +1586,23 @@
   .sidebar-action:focus-visible {
     outline: 2px solid var(--interaction);
     outline-offset: -2px;
+  }
+  /* Settings lists a dozen pages; tighten them so most fit above the footer. */
+  @media (max-height: 1000px) {
+    .sidebar-child-link {
+      min-height: 2.5rem;
+      padding-block: 0.5rem;
+    }
+  }
+  /* Too short to share the height: the whole sidebar scrolls instead. */
+  @media (max-height: 640px) {
+    .app-sidebar {
+      overflow-y: auto;
+    }
+    .app-sidebar > .sidebar-navigation {
+      flex: none;
+      overflow: visible;
+    }
   }
   .sidebar-device-status {
     margin-top: 0.5rem;
@@ -1574,10 +1667,13 @@
     background: var(--surface-raised);
     box-shadow: 0 2px 6px var(--material-shadow);
     opacity: 0;
+    /* Faded, it must not catch taps meant for the page beneath it. */
+    pointer-events: none;
     transition: opacity 200ms;
   }
   .app-fullscreen-exit:is([data-shown], :focus-visible) {
     opacity: 1;
+    pointer-events: auto;
   }
   .app-fullscreen-exit:focus-visible {
     outline: 2px solid var(--interaction);

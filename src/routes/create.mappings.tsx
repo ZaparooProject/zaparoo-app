@@ -23,6 +23,7 @@ import { PageFrame } from "@/components/PageFrame";
 import { MappingRow } from "@/components/MappingRow";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 
 export const Route = createFileRoute("/create/mappings")({
@@ -47,8 +48,13 @@ export function Mappings() {
     { requireKnownSupport: true },
   );
 
+  const deviceKey = useActiveDeviceKey();
   const mappings = useQuery({
-    queryKey: ["mappings", { includeReadOnly: readOnlyMappingsAvailable }],
+    queryKey: [
+      "mappings",
+      deviceKey,
+      { includeReadOnly: readOnlyMappingsAvailable },
+    ],
     queryFn: () =>
       readOnlyMappingsAvailable
         ? CoreAPI.mappings({ includeReadOnly: true })

@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/wui/EmptyState";
 import { TextInput } from "@/components/wui/TextInput";
 import { selectorOptionClassName } from "@/components/selectorOptionClassName";
 import { useHapticPress } from "@/hooks/useHapticPress";
+import { useStatusStore } from "@/lib/store";
 
 const GROUP_ORDER: readonly ZapCommandGroup[] = [
   "launch",
@@ -30,6 +31,8 @@ export function CommandsModal(props: {
   onSelect: (name: string) => void;
 }) {
   const { t } = useTranslation();
+  const connected = useStatusStore((state) => state.connected);
+  const corePlatform = useStatusStore((state) => state.corePlatform);
   const handleHapticPress = useHapticPress();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
@@ -48,6 +51,10 @@ export function CommandsModal(props: {
       (command) =>
         !command.replacedBy &&
         !command.notOffered &&
+        // A command for one platform is only offered on that platform.
+        (!command.platform ||
+          (connected &&
+            corePlatform?.trim().toLowerCase() === command.platform)) &&
         (needle === "" ||
           command.name.includes(needle) ||
           t(command.description).toLowerCase().includes(needle)),
@@ -56,7 +63,7 @@ export function CommandsModal(props: {
       group,
       commands: visible.filter((command) => command.group === group),
     })).filter(({ commands }) => commands.length > 0);
-  }, [query, t]);
+  }, [query, t, connected, corePlatform]);
 
   const select = (command: ZapCommandSpec) => {
     props.onSelect(command.name);

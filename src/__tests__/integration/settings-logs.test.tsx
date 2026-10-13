@@ -17,6 +17,22 @@ import toast from "react-hot-toast";
 import { useStatusStore, ConnectionState } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 
+// The list is virtualised, and jsdom has no layout to window it by.
+vi.mock("@tanstack/react-virtual", () => ({
+  useVirtualizer: ({ count }: { count: number }) => ({
+    getVirtualItems: () =>
+      Array.from({ length: count }, (_, index) => ({
+        key: index,
+        index,
+        size: 120,
+        start: index * 120,
+      })),
+    getTotalSize: () => count * 120,
+    measureElement: vi.fn(),
+    measure: vi.fn(),
+  }),
+}));
+
 // Mock the router
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;

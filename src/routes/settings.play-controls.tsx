@@ -25,12 +25,13 @@ import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useClientCapability } from "@/hooks/useClientCapability";
 import { ClientCapability } from "@/lib/models";
 import { ProfileManager } from "@/components/ProfileManager";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { GatedFeature } from "@/components/GatedFeature";
 import { StatRow } from "@/components/StatRow";
 import { SettingsFieldGroup } from "@/components/SettingsFieldGroup";
 import {
-  CORE_SETTINGS_QUERY_KEY,
+  useCoreSettingsQueryKey,
   useCoreSettingsUpdate,
 } from "@/hooks/useCoreSettingsUpdate";
 import { useDebouncedSave } from "@/hooks/useDebouncedSave";
@@ -39,7 +40,6 @@ export const Route = createFileRoute("/settings/play-controls")({
   component: PlayControlsSettings,
 });
 
-const PLAYTIME_LIMITS_QUERY_KEY = ["playtime", "limits"] as const;
 const WHOLE_NUMBER = /^\d+$/;
 
 interface DurationDraft {
@@ -113,9 +113,12 @@ export function PlayControlsSettings() {
     void router.navigate(appBackNavigationOptions("/settings"));
 
   const queryClient = useQueryClient();
+  const deviceKey = useActiveDeviceKey();
+  const settingsQueryKey = useCoreSettingsQueryKey();
+  const limitsQueryKey = ["playtime", deviceKey, "limits"] as const;
 
   const { data: limitsConfig, isPending } = useQuery({
-    queryKey: PLAYTIME_LIMITS_QUERY_KEY,
+    queryKey: limitsQueryKey,
     queryFn: () => CoreAPI.playtimeLimits(),
     enabled: connected && playtimeLimitsAvailable,
     refetchOnMount: "always",
@@ -123,14 +126,14 @@ export function PlayControlsSettings() {
   });
 
   const { data: coreSettings } = useQuery({
-    queryKey: CORE_SETTINGS_QUERY_KEY,
+    queryKey: settingsQueryKey,
     queryFn: () => CoreAPI.settings(),
     enabled: connected,
     refetchOnMount: "always",
   });
 
   const { data: playtimeStatus, isPending: isStatusPending } = useQuery({
-    queryKey: ["playtime", "status"],
+    queryKey: ["playtime", deviceKey, "status"],
     queryFn: () => CoreAPI.playtime(),
     enabled: connected && limitsConfig?.enabled === true,
     refetchOnMount: "always",
@@ -140,7 +143,7 @@ export function PlayControlsSettings() {
   const updateLimits = useMutation({
     mutationFn: CoreAPI.playtimeLimitsUpdate.bind(CoreAPI),
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: PLAYTIME_LIMITS_QUERY_KEY }),
+      queryClient.invalidateQueries({ queryKey: limitsQueryKey }),
     onError: (error) => {
       logger.error("Failed to update playtime limits", error, {
         category: "api",

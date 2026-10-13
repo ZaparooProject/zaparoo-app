@@ -132,7 +132,21 @@ export function AdaptiveNavigation({ children }: { children: ReactNode }) {
   // Full screen leaves one way back; Escape is the other, unless a dialog
   // is open and owns the key.
   const exitRef = useRef<HTMLButtonElement>(null);
+  const fullScreenToggleRef = useRef<HTMLButtonElement>(null);
   const [exitShown, setExitShown] = useState(true);
+  // Focus follows the control that was used: into full screen it lands on the
+  // way out, and out of it, on the control that went in, so keyboard and
+  // screen-reader users are never left on the document body.
+  const fullScreenActive = mode === "hidden";
+  const wasFullScreen = useRef(false);
+  useEffect(() => {
+    if (fullScreenActive) {
+      exitRef.current?.focus({ preventScroll: true });
+    } else if (wasFullScreen.current) {
+      fullScreenToggleRef.current?.focus({ preventScroll: true });
+    }
+    wasFullScreen.current = fullScreenActive;
+  }, [fullScreenActive]);
   useEffect(() => {
     if (mode !== "hidden") return;
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -340,6 +354,7 @@ export function AdaptiveNavigation({ children }: { children: ReactNode }) {
                   )}
                 </button>
                 <button
+                  ref={fullScreenToggleRef}
                   type="button"
                   className="sidebar-action"
                   aria-label={listed ? undefined : t("nav.fullScreen")}

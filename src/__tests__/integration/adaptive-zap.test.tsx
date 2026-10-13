@@ -1122,6 +1122,38 @@ describe("Adaptive Zap", () => {
       ).toBeNull();
     });
 
+    it("should name and draw a new button from what it does when left blank", async () => {
+      responsiveWindow(1440);
+      const user = userEvent.setup();
+      await renderZap();
+      await user.click(
+        screen.getByRole("button", { name: "zapLayout.customise" }),
+      );
+      await user.click(
+        screen.getByRole("button", { name: "zapLayout.addButtonTitle" }),
+      );
+      await user.click(
+        await screen.findByRole("button", {
+          name: /^zapLayout\.addKindButton /,
+        }),
+      );
+
+      await user.click(
+        screen.getByRole("tab", { name: "zapscript.builder.text" }),
+      );
+      await user.type(
+        screen.getByRole("textbox", { name: "zapLayout.buttonScript" }),
+        "**stop",
+      );
+      await user.click(screen.getByRole("button", { name: "save" }));
+      await user.click(screen.getByRole("button", { name: "zapLayout.done" }));
+
+      const saved = usePreferencesStore.getState().zapLayouts[activeKey()];
+      const [button] = Object.values(saved?.buttons ?? {});
+      expect(button?.icon).toBe("stop");
+      expect(button?.label).not.toBe("");
+    });
+
     it("should delete a button and everything of it", async () => {
       responsiveWindow(1440);
       const user = userEvent.setup();
@@ -1167,6 +1199,53 @@ describe("Adaptive Zap", () => {
 
       expect(
         await screen.findByRole("region", { name: "scan.nowPlayingHeading" }),
+      ).toBeInTheDocument();
+    });
+
+    it("should drop an edit in progress when the active device changes", async () => {
+      responsiveWindow(1440);
+      const user = userEvent.setup();
+      const first = mockDeviceRecord({ address: "192.168.1.10" });
+      const second = mockDeviceRecord({ address: "192.168.1.11" });
+      await seedDeviceRegistry([first, second], first.recordId);
+      await renderZap();
+      await user.click(
+        screen.getByRole("button", { name: "zapLayout.customise" }),
+      );
+      await user.click(
+        within(frameOf("nowPlaying")).getByRole("button", {
+          name: "zapLayout.hideWidget",
+        }),
+      );
+
+      await act(() => deviceRegistry.setActiveRecord(second.recordId));
+
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("button", { name: "zapLayout.done" }),
+        ).not.toBeInTheDocument(),
+      );
+      expect(usePreferencesStore.getState().zapLayouts).toEqual({});
+    });
+
+    it("should let a hidden collection row be edited without showing it first", async () => {
+      responsiveWindow(1440);
+      const user = userEvent.setup();
+      usePreferencesStore.setState({
+        zapLayouts: {
+          [activeKey()]: hideZapWidget(
+            saveZapCollection(defaultZapLayout(), newZapCollection("row")),
+            "collection:row",
+          ),
+        },
+      });
+      await renderZap();
+      await user.click(
+        screen.getByRole("button", { name: "zapLayout.customise" }),
+      );
+
+      expect(
+        screen.getByRole("button", { name: "zapLayout.editCollection" }),
       ).toBeInTheDocument();
     });
 

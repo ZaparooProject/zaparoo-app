@@ -12,7 +12,7 @@ import { useStatusStore, ConnectionState } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { PageFrame } from "@/components/PageFrame";
 import {
-  CORE_SETTINGS_QUERY_KEY,
+  useCoreSettingsQueryKey,
   useCoreSettingsUpdate,
 } from "@/hooks/useCoreSettingsUpdate";
 import { BackIcon, NextIcon } from "@/lib/images";
@@ -75,8 +75,9 @@ export function AdvancedSettings() {
     connectionState === ConnectionState.CONNECTING ||
     connectionState === ConnectionState.RECONNECTING;
 
+  const settingsQueryKey = useCoreSettingsQueryKey();
   const { data, isPending } = useQuery({
-    queryKey: CORE_SETTINGS_QUERY_KEY,
+    queryKey: settingsQueryKey,
     queryFn: () => CoreAPI.settings(),
   });
 

@@ -307,12 +307,25 @@ export function Index({
   const zapLayout = zapLayouts[deviceKey] ?? null;
   const customLayout = zapLayout !== null;
   const layout: ZapLayout = zapLayout ?? DEFAULT_ZAP_LAYOUT;
-  const [draft, setDraft] = useState<ZapLayout | null>(null);
+  // The arrangement being edited belongs to the device it was opened for. If
+  // the active device changes meanwhile, the edit is dropped rather than saved
+  // over another device's arrangement.
+  const [editing, setEditing] = useState<{
+    deviceKey: string;
+    layout: ZapLayout;
+  } | null>(null);
+  if (editing && editing.deviceKey !== deviceKey) setEditing(null);
+  const draft =
+    editing && editing.deviceKey === deviceKey ? editing.layout : null;
+  const setDraft = (next: ZapLayout | null) =>
+    setEditing(next ? { deviceKey, layout: next } : null);
   const startCustomising = useCallback(() => {
-    setDraft(
-      usePreferencesStore.getState().zapLayouts[deviceKey] ??
+    setEditing({
+      deviceKey,
+      layout:
+        usePreferencesStore.getState().zapLayouts[deviceKey] ??
         defaultZapLayout(),
-    );
+    });
   }, [deviceKey]);
   // A request to open the editor is taken once, after saved preferences and the
   // active device are known so the draft starts from the saved arrangement.

@@ -1214,7 +1214,14 @@
         "manage": "Gérer l’abonnement",
         "openingManagement": "Ouverture des réglages de l’abonnement...",
         "manageUnavailable": "La gestion de l’abonnement est indisponible ici",
-        "manageFailed": "Impossible d’ouvrir la gestion de l’abonnement"
+        "manageFailed": "Impossible d’ouvrir la gestion de l’abonnement",
+        "trialActive": "L’essai de Warp est actif",
+        "trialEnds": "L’essai se termine le {{date}}",
+        "trialPending": "Votre essai de Warp est en cours de confirmation.",
+        "trialExpired": "Votre essai de Warp est terminé.",
+        "trialImmediateBilling": "Si vous vous abonnez pendant l’essai, la facturation commence immédiatement.",
+        "trialLastDay": "Votre essai de Warp se termine dans moins de 24 heures.",
+        "trialEnding": "Votre essai de Warp se termine dans moins de 3 jours."
       }
     },
     "requirements": {
@@ -2209,7 +2216,8 @@
       "deckMissing": "Deck introuvable",
       "collectionTitle": "Titre",
       "deleteCollection": "Supprimer la collection",
-      "editCollection": "Modifier {{name}}"
+      "editCollection": "Modifier {{name}}",
+      "moved": "{{name}} déplacé vers {{place}}, position {{position}} sur {{count}}."
     }
   }
 }

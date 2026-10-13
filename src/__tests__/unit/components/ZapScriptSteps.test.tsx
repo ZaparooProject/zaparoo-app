@@ -355,6 +355,18 @@ describe("ZapScriptInput steps", () => {
       expect(field(1, "zapscript.advArgs.launcher")).toHaveValue("");
     });
 
+    it("should keep the field of an option the catalogue does not list when it is emptied", async () => {
+      const { user, onChange } = renderEditor("**launch.system:snes?foo=bar");
+
+      const foo = within(step(1)).getByRole("textbox", { name: "foo" });
+      await user.clear(foo);
+
+      expect(onChange).toHaveBeenLastCalledWith("**launch.system:snes");
+      expect(within(step(1)).getByRole("textbox", { name: "foo" })).toHaveValue(
+        "",
+      );
+    });
+
     it("should set an option that was not in the script", async () => {
       const { user, onChange } = renderEditor("**launch.system:snes");
       await user.click(options(1));

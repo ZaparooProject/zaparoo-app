@@ -1214,7 +1214,14 @@
         "manage": "管理订阅",
         "openingManagement": "正在打开订阅设置...",
         "manageUnavailable": "此处无法管理订阅",
-        "manageFailed": "无法打开订阅管理"
+        "manageFailed": "无法打开订阅管理",
+        "trialActive": "Warp 试用已生效",
+        "trialEnds": "试用将于 {{date}} 结束",
+        "trialPending": "正在确认你的 Warp 试用。",
+        "trialExpired": "你的 Warp 试用已结束。",
+        "trialImmediateBilling": "在试用期间订阅会立即开始计费。",
+        "trialLastDay": "你的 Warp 试用将在 24 小时内结束。",
+        "trialEnding": "你的 Warp 试用将在 3 天内结束。"
       }
     },
     "requirements": {
@@ -2209,7 +2216,8 @@
       "deckMissing": "找不到卡组",
       "collectionTitle": "标题",
       "deleteCollection": "删除收藏集",
-      "editCollection": "编辑{{name}}"
+      "editCollection": "编辑{{name}}",
+      "moved": "已将{{name}}移至{{place}}，第 {{position}} 个，共 {{count}} 个。"
     }
   }
 }

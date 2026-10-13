@@ -21,6 +21,7 @@ import {
   BarcodeScanCancelledError,
 } from "@/lib/errors";
 import { ModalActionBar } from "@/components/wui/ModalActionBar";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { InlineLoading } from "@/components/InlineLoading";
@@ -115,8 +116,9 @@ export function MappingEditor({ id }: MappingEditorProps) {
   const queryClient = useQueryClient();
   const appUi = useAppUi();
 
+  const deviceKey = useActiveDeviceKey();
   const mappings = useQuery({
-    queryKey: ["mappings"],
+    queryKey: ["mappings", deviceKey],
     queryFn: () => CoreAPI.mappings(),
   });
 

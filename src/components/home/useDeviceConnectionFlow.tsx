@@ -276,6 +276,14 @@ export function useDeviceConnectionFlow({
             inputMode="url"
             autoComplete="off"
             error={addressError}
+            // Escape leaves the address entry first; a sheet around it stays
+            // open for the next Escape.
+            onKeyDown={(event) => {
+              if (event.key !== "Escape") return;
+              event.stopPropagation();
+              setEnteringAddress(false);
+              setAddressError("");
+            }}
           />
         </form>
       ) : (

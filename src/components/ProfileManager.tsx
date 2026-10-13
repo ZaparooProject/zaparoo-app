@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { PlusIcon } from "lucide-react";
 import toast from "react-hot-toast";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { CoreAPI } from "@/lib/coreApi";
 import { logger } from "@/lib/logger";
 import {
@@ -28,8 +29,6 @@ import { formatAppDate } from "@/lib/formatDate";
 import { SettingsFieldGroup } from "@/components/SettingsFieldGroup";
 import { useHapticPress } from "@/hooks/useHapticPress";
 
-const PROFILE_QUERY_KEY = ["profiles"];
-const ACTIVE_PROFILE_QUERY_KEY = ["profiles", "active"];
 const PIN_PATTERN = /^\d{4,8}$/;
 // Radio value for the shared profile; never a Core profile id.
 const SHARED_PROFILE = "__shared__";
@@ -162,6 +161,9 @@ export function ProfileManager(props: {
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const deviceKey = useActiveDeviceKey();
+  const profileQueryKey = ["profiles", deviceKey];
+  const activeProfileQueryKey = ["profiles", deviceKey, "active"];
   const setWriteQueue = useStatusStore((state) => state.setWriteQueue);
   const [editor, setEditor] = useState<EditorState | null>(null);
   // Radio value of the profile chosen in the switch sheet; null while closed.
@@ -171,14 +173,14 @@ export function ProfileManager(props: {
   const [resetCardTarget, setResetCardTarget] = useState<Profile | null>(null);
 
   const profilesQuery = useQuery({
-    queryKey: PROFILE_QUERY_KEY,
+    queryKey: profileQueryKey,
     queryFn: () => CoreAPI.profiles(),
     enabled: props.connected && props.available,
     refetchOnMount: "always",
     refetchInterval: 30000,
   });
   const activeQuery = useQuery({
-    queryKey: ACTIVE_PROFILE_QUERY_KEY,
+    queryKey: activeProfileQueryKey,
     queryFn: () => CoreAPI.activeProfile(),
     enabled: props.connected && props.available,
     refetchOnMount: "always",
@@ -193,8 +195,8 @@ export function ProfileManager(props: {
 
   const refresh = async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEY }),
-      queryClient.invalidateQueries({ queryKey: ACTIVE_PROFILE_QUERY_KEY }),
+      queryClient.invalidateQueries({ queryKey: profileQueryKey }),
+      queryClient.invalidateQueries({ queryKey: activeProfileQueryKey }),
     ]);
   };
 

@@ -300,4 +300,15 @@ describe("zapLayout", () => {
       expect(Object.keys(source.collections)).toEqual(["row"]);
     });
   });
+
+  it("should not treat names from the object prototype as stored widgets", () => {
+    const layout = normaliseZapLayout({
+      places: { main: ["button:toString", "collection:constructor"] },
+      buttons: { __proto__: { label: "x", script: "y" } },
+    });
+
+    expect(layout?.places.main).not.toContain("button:toString");
+    expect(layout?.places.main).not.toContain("collection:constructor");
+    expect(zapButtonOf(layout as ZapLayout, "button:toString")).toBeNull();
+  });
 });

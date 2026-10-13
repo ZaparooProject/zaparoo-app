@@ -32,7 +32,7 @@ import {
 import { Select } from "@/components/wui/Select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useHaptics } from "@/hooks/useHaptics";
-import { CORE_SETTINGS_QUERY_KEY } from "@/hooks/useCoreSettingsUpdate";
+import { useCoreSettingsQueryKey } from "@/hooks/useCoreSettingsUpdate";
 import { formatAppDate } from "@/lib/formatDate";
 
 interface OnlineDeviceSetupProps {
@@ -143,13 +143,14 @@ export function OnlineDeviceSetup({
     }
   }, [linkState]);
 
+  const settingsQueryKey = useCoreSettingsQueryKey();
   const settingsQuery = useQuery({
-    queryKey: CORE_SETTINGS_QUERY_KEY,
+    queryKey: settingsQueryKey,
     queryFn: () => CoreAPI.settings(),
     enabled: connected && linked && canWriteCoreSettings,
   });
   const backupStatusQuery = useQuery({
-    queryKey: ["settings", "backup", "status"],
+    queryKey: [...settingsQueryKey, "backup", "status"],
     queryFn: () => CoreAPI.settingsBackupStatus(),
     enabled: connected && linked,
     refetchInterval: (query) => {

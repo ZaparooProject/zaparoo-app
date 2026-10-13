@@ -47,10 +47,11 @@ export function useHistoryReplay() {
         "replayScan",
         "scan.historyReplayError",
       ),
-    // History rows are indexed media, so the stored path is the launch text.
+    // Core reports the launch form of an indexed item; the stored path is the
+    // fallback, and is only plain launch text when it needs no quoting.
     launchMedia: (entry: MediaHistoryEntry) =>
       replay(
-        { text: entry.mediaPath },
+        { text: entry.zapScript || entry.mediaPath },
         "replayPlayedMedia",
         "scan.coverRowLaunchError",
       ),

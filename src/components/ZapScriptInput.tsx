@@ -9,6 +9,7 @@ import { CoreAPI, logRunFailure } from "@/lib/coreApi";
 import { zapCommand } from "@/lib/zapscript/catalog";
 import {
   parseZapScript,
+  quoteZapArgument,
   serializeZapScript,
   type ZapParseResult,
   type ZapStep,
@@ -85,6 +86,8 @@ export function ZapScriptInput(props: {
     const text = serializeZapScript(steps);
     setModel({ text, parsed: { ok: true, steps } });
     props.setValue(text);
+    // The text has changed under any caret the textarea last reported.
+    caretRef.current = null;
   };
 
   const rememberCaret = (element: HTMLTextAreaElement) => {
@@ -116,9 +119,12 @@ export function ZapScriptInput(props: {
       separate && after.trim() !== "" && !after.trimStart().startsWith("||")
         ? "||"
         : "";
-    const newText = before + lead + textToInsert + trail + after;
+    // Written as an argument, a path with a comma or `?` in it is quoted so it
+    // stays one argument.
+    const inserted = argument ? quoteZapArgument(textToInsert) : textToInsert;
+    const newText = before + lead + inserted + trail + after;
     // The caret stays inside the inserted command, before any separator.
-    const newPosition = position + lead.length + textToInsert.length;
+    const newPosition = position + lead.length + inserted.length;
 
     props.setValue(newText);
     // Setting the value moves an unfocused textarea's caret to the end, so

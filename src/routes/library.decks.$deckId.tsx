@@ -605,7 +605,7 @@ function DeckDetailsContent({ deviceKey }: { deviceKey: string }) {
                 </p>
               )}
               {editing && editable && (
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 min-[760px]:flex-row min-[760px]:flex-wrap">
                   <Button
                     label={t("save")}
                     intent="primary"
@@ -622,11 +622,11 @@ function DeckDetailsContent({ deviceKey }: { deviceKey: string }) {
                       })
                     }
                   />
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 min-[760px]:contents">
                     <Button
                       label={t("nav.cancel")}
                       variant="secondary"
-                      className="flex-1"
+                      className="flex-1 min-[760px]:flex-none"
                       disabled={busy}
                       disabledAppearance="busy"
                       onClick={cancelEdit}
@@ -635,7 +635,7 @@ function DeckDetailsContent({ deviceKey }: { deviceKey: string }) {
                       label={t("decks.delete")}
                       variant="outline"
                       intent="destructive"
-                      className="flex-1"
+                      className="flex-1 min-[760px]:flex-none"
                       disabled={busy}
                       disabledAppearance="busy"
                       onClick={() => setConfirmDelete(true)}
