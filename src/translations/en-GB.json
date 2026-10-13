@@ -59,7 +59,12 @@
       "currentDevice": "Current device",
       "openMenu": "Open navigation",
       "expandSection": "Expand {{section}}",
-      "collapseSection": "Collapse {{section}}"
+      "collapseSection": "Collapse {{section}}",
+      "collapseSidebar": "Collapse sidebar",
+      "fullScreen": "Full screen",
+      "exitFullScreen": "Exit full screen",
+      "lightMode": "Light mode",
+      "darkMode": "Dark mode"
     },
     "appBadge": {
       "title": "App icon badges",

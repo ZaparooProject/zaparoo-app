@@ -39,7 +39,7 @@ export function ZapLogo({ width = ZAP_LOGO_WIDTH }: ZapLogoProps = {}) {
   if (resolvedTheme === "light") {
     return (
       <img
-        src={`${__APP_BASE_PATH__}wordmark-light.webp`}
+        src={`${__APP_BASE_PATH__}lockup-light.webp`}
         alt={t("accessibility.logo")}
         width={ZAP_LOGO_WIDTH}
         height={ZAP_LOGO_HEIGHT}

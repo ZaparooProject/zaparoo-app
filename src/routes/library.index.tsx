@@ -27,7 +27,7 @@ import {
 } from "@/lib/librarySessionStore";
 import { useTabSessionStore } from "@/lib/tabSessionStore";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
-import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useFullSidebar } from "@/hooks/useNavigationMode";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useSystemsWithDisplayNames } from "@/hooks/useSystemName";
 import { PageFrame } from "@/components/PageFrame";
@@ -156,7 +156,7 @@ export function Library() {
   const selectedView = favoritesFeature.available ? view : "systems";
   // The persistent sidebar lists Systems and Collections as destinations, so
   // the page shows the chosen view under its own heading instead of tabs.
-  const sidebarViews = useMediaQuery("(min-width: 1280px)");
+  const sidebarViews = useFullSidebar();
   const viewTabs = favoritesFeature.available && !sidebarViews;
 
   const openOptions = () => {

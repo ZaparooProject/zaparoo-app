@@ -272,6 +272,10 @@ export interface PreferencesState {
   hapticsEnabled: boolean;
   textZoomLevel: number;
   accessibleLists: boolean;
+  /** The desktop sidebar is collapsed to its icon rail. */
+  sidebarCollapsed: boolean;
+  /** Navigation is hidden so a page can be an always-on display. */
+  fullScreen: boolean;
 
   // Hydration tracking (internal, not persisted)
   _hasHydrated: boolean;
@@ -345,6 +349,8 @@ export interface PreferencesActions {
   setHapticsEnabled: (value: boolean) => void;
   setTextZoomLevel: (value: number) => void;
   setAccessibleLists: (value: boolean) => void;
+  setSidebarCollapsed: (value: boolean) => void;
+  setFullScreen: (value: boolean) => void;
 }
 
 export type PreferencesStore = PreferencesState & PreferencesActions;
@@ -404,6 +410,8 @@ const DEFAULT_PREFERENCES: Omit<
   hapticsEnabled: true,
   textZoomLevel: 1.0,
   accessibleLists: false,
+  sidebarCollapsed: false,
+  fullScreen: false,
 };
 
 function persistedPreferences(state: PreferencesStore) {
@@ -436,6 +444,8 @@ function persistedPreferences(state: PreferencesStore) {
     hapticsEnabled: state.hapticsEnabled,
     textZoomLevel: state.textZoomLevel,
     accessibleLists: state.accessibleLists,
+    sidebarCollapsed: state.sidebarCollapsed,
+    fullScreen: state.fullScreen,
   };
 }
 
@@ -599,6 +609,8 @@ export const usePreferencesStore = create<PreferencesStore>()(
       setHapticsEnabled: (value) => set({ hapticsEnabled: value }),
       setTextZoomLevel: (value) => set({ textZoomLevel: value }),
       setAccessibleLists: (value) => set({ accessibleLists: value }),
+      setSidebarCollapsed: (value) => set({ sidebarCollapsed: value }),
+      setFullScreen: (value) => set({ fullScreen: value }),
     }),
     {
       name: PREFERENCES_STORAGE_KEY,

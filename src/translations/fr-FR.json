@@ -59,7 +59,12 @@
       "currentDevice": "Appareil actuel",
       "openMenu": "Ouvrir la navigation",
       "expandSection": "Développer {{section}}",
-      "collapseSection": "Réduire {{section}}"
+      "collapseSection": "Réduire {{section}}",
+      "collapseSidebar": "Réduire la barre latérale",
+      "fullScreen": "Plein écran",
+      "exitFullScreen": "Quitter le plein écran",
+      "lightMode": "Mode clair",
+      "darkMode": "Mode sombre"
     },
     "appBadge": {
       "title": "Badges de l’icône de l’application",

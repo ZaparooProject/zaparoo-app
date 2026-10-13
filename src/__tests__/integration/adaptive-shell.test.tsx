@@ -1,3 +1,4 @@
+import { ThemeProvider } from "@/components/theme-provider";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { App } from "@capacitor/app";
@@ -72,10 +73,10 @@ async function renderShell(
   await router.load();
   return {
     ...render(
-      <>
+      <ThemeProvider>
         <RouterProvider router={router} />
         {withInbox && <InboxModal />}
-      </>,
+      </ThemeProvider>,
     ),
     router,
   };
@@ -542,8 +543,12 @@ describe("Adaptive application shell", () => {
     );
     expect(currentLink).toHaveFocus();
     expect(screen.getByRole("main")).not.toHaveAttribute("inert");
+    // The rail still shows the focused section link, so focus stays on it.
     await resize(820);
-    expect(screen.getByRole("button", { name: "nav.openMenu" })).toHaveFocus();
+    expect(screen.getByRole("link", { name: "nav.settings" })).toBe(
+      currentLink,
+    );
+    expect(currentLink).toHaveFocus();
     expect(router.state.location.pathname).toBe("/settings");
   });
 
@@ -574,6 +579,154 @@ describe("Adaptive application shell", () => {
     await resize(390);
     expect(precedesMain()).toBe(false);
     expect(footer).toContainElement(navigation);
+  });
+
+  describe("rail, collapsed sidebar and full screen", () => {
+    beforeEach(() => {
+      usePreferencesStore.setState({
+        sidebarCollapsed: false,
+        fullScreen: false,
+      });
+    });
+
+    const navigation = () =>
+      screen.getByRole("navigation", { name: "nav.mainNavigation" });
+    const railLinks = () =>
+      within(navigation())
+        .getAllByRole("link")
+        .map((link) => link.getAttribute("href"));
+
+    it("should show a rail of the four sections at tablet width, with the full list behind its menu button", async () => {
+      responsiveWindow(820);
+      const user = userEvent.setup();
+      await renderShell("/settings");
+
+      expect(railLinks()).toEqual(["/", "/library", "/create", "/settings"]);
+      expect(
+        within(navigation()).queryByRole("button", {
+          name: "nav.expandSection",
+        }),
+      ).not.toBeInTheDocument();
+      // The rail lists nothing deeper, so the page keeps its own way in.
+      expect(
+        screen.getByRole("navigation", { name: "settings.groups.app" }),
+      ).toBeVisible();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "nav.openMenu" }));
+
+      const drawer = screen.getByRole("dialog", { name: "nav.menu" });
+      expect(
+        within(drawer).getByRole("link", {
+          name: "settings.accessibility.title",
+        }),
+      ).toBeVisible();
+    });
+
+    it("should mark the rail's section as the ancestor of a page inside it", async () => {
+      responsiveWindow(820);
+      await renderShell("/settings/accessibility");
+
+      expect(
+        within(navigation()).getByRole("link", { name: "nav.settings" }),
+      ).toHaveAttribute("aria-current", "true");
+      expect(
+        within(navigation()).getByRole("link", { name: "nav.library" }),
+      ).not.toHaveAttribute("aria-current");
+    });
+
+    it("should collapse the desktop sidebar to the rail and expand it again, remembering the choice", async () => {
+      responsiveWindow(1440);
+      const user = userEvent.setup();
+      await renderShell("/settings");
+      expect(
+        screen.queryByRole("navigation", { name: "settings.groups.app" }),
+      ).not.toBeInTheDocument();
+
+      const toggle = screen.getByRole("button", {
+        name: "nav.collapseSidebar",
+      });
+      await user.click(toggle);
+
+      expect(railLinks()).toEqual(["/", "/library", "/create", "/settings"]);
+      expect(usePreferencesStore.getState().sidebarCollapsed).toBe(true);
+      expect(toggle).toHaveFocus();
+      expect(toggle).toHaveAccessibleName("nav.openMenu");
+      // Without the listed destinations the page shows its own again.
+      expect(
+        screen.getByRole("navigation", { name: "settings.groups.app" }),
+      ).toBeVisible();
+
+      await user.click(toggle);
+
+      // There is room beside the page, so it pins open; no dialog.
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(usePreferencesStore.getState().sidebarCollapsed).toBe(false);
+      expect(
+        within(navigation()).getByRole("link", {
+          name: "settings.accessibility.title",
+        }),
+      ).toBeVisible();
+    });
+
+    it("should hide the navigation in full screen and bring it back from the exit button or Escape", async () => {
+      responsiveWindow(1440);
+      const user = userEvent.setup();
+      await renderShell();
+
+      await user.click(screen.getByRole("button", { name: "nav.fullScreen" }));
+
+      expect(
+        screen.queryByRole("navigation", { name: "nav.mainNavigation" }),
+      ).not.toBeInTheDocument();
+      expect(usePreferencesStore.getState().fullScreen).toBe(true);
+
+      await user.click(
+        screen.getByRole("button", { name: "nav.exitFullScreen" }),
+      );
+
+      expect(navigation()).toBeVisible();
+      expect(
+        screen.queryByRole("button", { name: "nav.exitFullScreen" }),
+      ).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "nav.fullScreen" }));
+      await user.keyboard("{Escape}");
+
+      expect(navigation()).toBeVisible();
+      expect(usePreferencesStore.getState().fullScreen).toBe(false);
+    });
+
+    it("should switch between light and dark from the sidebar and the rail", async () => {
+      const resize = responsiveWindow(1440);
+      usePreferencesStore.setState({ appearance: "dark" });
+      const user = userEvent.setup();
+      await renderShell();
+
+      const toggle = screen.getByRole("button", { name: "nav.lightMode" });
+      await user.click(toggle);
+
+      expect(usePreferencesStore.getState().appearance).toBe("light");
+      expect(
+        screen.getByRole("button", { name: "nav.darkMode" }),
+      ).toBeVisible();
+
+      await resize(820);
+      await user.click(screen.getByRole("button", { name: "nav.darkMode" }));
+
+      expect(usePreferencesStore.getState().appearance).toBe("dark");
+    });
+
+    it("should keep the phone dock when full screen was left on", async () => {
+      usePreferencesStore.setState({ fullScreen: true });
+      responsiveWindow(390);
+      await renderShell();
+
+      expect(navigation()).toBeVisible();
+      expect(
+        screen.queryByRole("button", { name: "nav.exitFullScreen" }),
+      ).not.toBeInTheDocument();
+    });
   });
 
   it("should name the tablet menu dialog separately from its navigation landmark", async () => {
@@ -623,8 +776,46 @@ describe("Adaptive application shell", () => {
     ).not.toHaveAttribute("aria-current");
   });
 
-  it("should hide the Settings badge inside Settings on the sidebar as on the dock", async () => {
+  it("should open notifications from the sidebar and the rail, leaving the Settings link plain", async () => {
     const resize = responsiveWindow(1440);
+    useStatusStore.setState({
+      connected: true,
+      connectionState: ConnectionState.CONNECTED,
+      coreVersion: "2.23.0",
+      coreVersionPending: false,
+      inboxMessages: [
+        { id: 1, title: "Notice", body: "", severity: 0, createdAt: "" },
+      ] as never,
+    });
+    const user = userEvent.setup();
+    await renderShell("/library", true);
+    const navigation = within(
+      await screen.findByRole("navigation", { name: "nav.mainNavigation" }),
+    );
+
+    // The count lives on the notifications control, not on Settings.
+    expect(
+      navigation.getByRole("link", { name: "nav.settings" }),
+    ).toBeInTheDocument();
+    const inbox = screen.getByRole("button", {
+      name: "inbox.openLabelWithCount",
+    });
+    expect(inbox).toHaveTextContent("1");
+
+    await resize(820);
+    expect(
+      screen.getByRole("button", { name: "inbox.openLabelWithCount" }),
+    ).toBe(inbox);
+    await user.click(inbox);
+
+    expect(
+      await screen.findByRole("dialog", { name: "inbox.title" }),
+    ).toBeVisible();
+    expect(inbox).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("should keep the Settings badge on the phone dock, hidden inside Settings", async () => {
+    responsiveWindow(390);
     useStatusStore.setState({
       connected: true,
       connectionState: ConnectionState.CONNECTED,
@@ -639,21 +830,14 @@ describe("Adaptive application shell", () => {
     const navigation = within(
       await screen.findByRole("navigation", { name: "nav.mainNavigation" }),
     );
-    const settings = navigation.getByRole("link", {
-      name: "nav.settingsWithNotifications",
-    });
 
-    await user.click(settings);
+    await user.click(
+      navigation.getByRole("link", { name: "nav.settingsWithNotifications" }),
+    );
     await screen.findByRole("heading", { name: "settings.title" });
 
     expect(
       navigation.getByRole("link", { name: "nav.settings" }),
-    ).toBeInTheDocument();
-    await resize(390);
-    expect(
-      within(
-        screen.getByRole("navigation", { name: "nav.mainNavigation" }),
-      ).getByRole("link", { name: "nav.settings" }),
     ).toBeInTheDocument();
   });
 
@@ -906,7 +1090,10 @@ describe("Adaptive application shell", () => {
     const toggle = screen.getByRole("button", { name: "nav.openMenu" });
     await user.click(toggle);
     const drawer = screen.getByRole("dialog", { name: "nav.menu" });
-    expect(drawer).toHaveFocus();
+    // The control that opened the list is inside it and now closes it.
+    expect(toggle).toHaveFocus();
+    expect(drawer).toContainElement(toggle);
+    expect(toggle).toHaveAccessibleName("nav.close");
     expect(screen.getByRole("main")).toHaveAttribute("inert");
     await user.keyboard("{Escape}");
     expect(

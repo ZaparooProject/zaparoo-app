@@ -59,7 +59,12 @@
       "currentDevice": "当前设备",
       "openMenu": "打开导航",
       "expandSection": "展开{{section}}",
-      "collapseSection": "收起{{section}}"
+      "collapseSection": "收起{{section}}",
+      "collapseSidebar": "收起侧边栏",
+      "fullScreen": "全屏",
+      "exitFullScreen": "退出全屏",
+      "lightMode": "浅色模式",
+      "darkMode": "深色模式"
     },
     "appBadge": {
       "title": "应用图标角标",

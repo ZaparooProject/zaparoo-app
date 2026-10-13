@@ -59,7 +59,12 @@
       "currentDevice": "현재 기기",
       "openMenu": "탐색 메뉴 열기",
       "expandSection": "{{section}} 펼치기",
-      "collapseSection": "{{section}} 접기"
+      "collapseSection": "{{section}} 접기",
+      "collapseSidebar": "사이드바 접기",
+      "fullScreen": "전체 화면",
+      "exitFullScreen": "전체 화면 종료",
+      "lightMode": "라이트 모드",
+      "darkMode": "다크 모드"
     },
     "appBadge": {
       "title": "앱 아이콘 배지",

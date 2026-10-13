@@ -59,7 +59,12 @@
       "currentDevice": "Huidig apparaat",
       "openMenu": "Navigatie openen",
       "expandSection": "{{section}} uitklappen",
-      "collapseSection": "{{section}} inklappen"
+      "collapseSection": "{{section}} inklappen",
+      "collapseSidebar": "Zijbalk inklappen",
+      "fullScreen": "Volledig scherm",
+      "exitFullScreen": "Volledig scherm verlaten",
+      "lightMode": "Lichte modus",
+      "darkMode": "Donkere modus"
     },
     "appBadge": {
       "title": "Badges op appicoon",

@@ -29,6 +29,9 @@
   --material-shadow: rgb(25 35 50 / 15%);
   --secondary-cap: var(--surface-elevated);
   --secondary-edge: var(--material-edge);
+  /* The lip under a raised tab: a visible edge on light, the page tone on dark. */
+  --tab-lip: var(--material-edge);
+  --tab-lift: 0 3px 4px -1px var(--material-shadow);
   --status-red-wash: #fbe5e8;
   --status-green-wash: #dcefe5;
   --status-yellow-wash: #fff0c5;
@@ -92,6 +95,8 @@
   --material-shadow: rgb(0 0 0 / 35%);
   --secondary-cap: var(--surface-highlight);
   --secondary-edge: var(--surface-raised);
+  --tab-lip: var(--surface-base);
+  --tab-lift: 0 0 0 transparent;
   --status-red-wash: #351d28;
   --status-green-wash: #12332b;
   --status-yellow-wash: #332b18;

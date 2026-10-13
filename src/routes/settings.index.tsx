@@ -36,7 +36,7 @@ import {
   usePurchasePreviewStore,
 } from "@/lib/purchasePreviewStore";
 import { useHapticPress } from "@/hooks/useHapticPress";
-import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useFullSidebar } from "@/hooks/useNavigationMode";
 import { Card } from "@/components/wui/Card";
 import { LibraryLinkButton } from "@/components/library/LibraryLinkButton";
 import { getReleaseDisplayVersion } from "@/lib/whatsNew";
@@ -77,7 +77,7 @@ export function Settings() {
   const { available: showMediaScraper } = useKnownCoreFeature("mediaScrapers");
   // The sidebar already lists every settings page from this width, so the
   // landing page shows status panels instead of repeating those links.
-  const sidebar = useMediaQuery("(min-width: 1280px)");
+  const sidebar = useFullSidebar();
   const onlineStatus =
     loggedInUser === null && !purchasePreviewEnabled
       ? t("online.settingsStatusSignedOut")

@@ -10,8 +10,20 @@ import {
 import { createPortal } from "react-dom";
 import { useLocation } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { MenuIcon, XIcon } from "lucide-react";
+import {
+  BellIcon,
+  MaximizeIcon,
+  MenuIcon,
+  MinimizeIcon,
+  MoonIcon,
+  PanelLeftCloseIcon,
+  SunIcon,
+  XIcon,
+} from "lucide-react";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useTheme } from "@/components/theme-provider";
+import { useNavigationMode } from "@/hooks/useNavigationMode";
+import { usePreferencesStore } from "@/lib/preferencesStore";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
 import { useSlideModalManager } from "@/hooks/useSlideModalManager";
@@ -20,13 +32,25 @@ import { bottomTabForPath, type BottomTabId } from "@/lib/tabSessionStore";
 import { ZapLogo } from "@/lib/images";
 import { SidebarNavigation } from "@/components/SidebarNavigation";
 import { SidebarDeviceStatus } from "@/components/SidebarDeviceStatus";
+import { NotificationBadge } from "@/components/NotificationBadge";
+import { useCoreFeature } from "@/hooks/useCoreFeature";
+import { useStatusStore } from "@/lib/store";
 
 export function AdaptiveNavigation({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const wide = useMediaQuery("(min-width: 760px)");
   const desktop = useMediaQuery("(min-width: 1280px)");
-  const tablet = wide && !desktop;
+  const mode = useNavigationMode();
+  const setCollapsed = usePreferencesStore(
+    (state) => state.setSidebarCollapsed,
+  );
+  const setFullScreen = usePreferencesStore((state) => state.setFullScreen);
+  const { resolvedTheme, setTheme } = useTheme();
+  const inbox = useCoreFeature("inbox");
+  const inboxCount = useStatusStore((state) => state.inboxMessages.length);
+  const inboxOpen = useStatusStore((state) => state.inboxModalOpen);
+  const setInboxOpen = useStatusStore((state) => state.setInboxModalOpen);
   const { impact } = useHaptics();
   const manager = useSlideModalManager();
   const id = useId();
@@ -74,7 +98,10 @@ export function AdaptiveNavigation({ children }: { children: ReactNode }) {
   }, [host, wide]);
   useEffect(() => () => host?.remove(), [host]);
   const currentPath = pathname.replace(/\/$/, "") || "/";
-  const drawerOpen = tablet && open;
+  // Below 1280px the rail opens the full list over the page; from there it
+  // has room to sit beside it, so the same control pins it open instead.
+  const drawerOpen = mode === "rail" && !desktop && open;
+  const listed = mode === "full" || drawerOpen;
   const close = useCallback(() => setOpen(false), []);
   useLayoutEffect(() => {
     if (!drawerOpen) return;
@@ -100,37 +127,76 @@ export function AdaptiveNavigation({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (drawerOpen && !drawerRef.current?.contains(document.activeElement)) {
       drawerRef.current?.focus();
-    } else if (
-      tablet &&
-      !open &&
-      drawerRef.current?.contains(document.activeElement)
-    ) {
-      toggleRef.current?.focus();
     }
-  }, [drawerOpen, tablet, open]);
+  }, [drawerOpen]);
+  // Full screen leaves one way back; Escape is the other, unless a dialog
+  // is open and owns the key.
+  const exitRef = useRef<HTMLButtonElement>(null);
+  const [exitShown, setExitShown] = useState(true);
+  useEffect(() => {
+    if (mode !== "hidden") return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const reveal = () => {
+      setExitShown(true);
+      clearTimeout(timer);
+      timer = setTimeout(() => setExitShown(false), 1500);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.key === "Escape" &&
+        !event.defaultPrevented &&
+        !manager.hasOpenModalExcept?.(id)
+      ) {
+        setFullScreen(false);
+        return;
+      }
+      reveal();
+    };
+    reveal();
+    window.addEventListener("pointermove", reveal);
+    window.addEventListener("pointerdown", reveal);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("pointermove", reveal);
+      window.removeEventListener("pointerdown", reveal);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [mode, setFullScreen, manager, id]);
+  const toggle = () => {
+    if (drawerOpen) {
+      close();
+    } else if (mode === "full") {
+      impact("light");
+      setCollapsed(true);
+    } else if (desktop) {
+      impact("light");
+      setCollapsed(false);
+    } else {
+      if (!manager.closeAllExcept(id)) return;
+      impact("light");
+      setRestoreOnClose(true);
+      setOpen(true);
+    }
+  };
 
   return (
     <>
-      {tablet && (
-        <div className="app-tablet-bar">
-          <button
-            ref={toggleRef}
-            type="button"
-            className="sidebar-disclosure"
-            aria-label={t("nav.openMenu")}
-            aria-expanded={drawerOpen}
-            aria-controls={id}
-            onClick={() => {
-              if (!manager.closeAllExcept(id)) return;
-              impact("light");
-              setRestoreOnClose(true);
-              setOpen(true);
-            }}
-          >
-            <MenuIcon size={24} aria-hidden="true" />
-          </button>
-          <ZapLogo width={120} />
-        </div>
+      {mode === "hidden" && (
+        <button
+          ref={exitRef}
+          type="button"
+          className="app-fullscreen-exit"
+          data-shown={exitShown || undefined}
+          aria-label={t("nav.exitFullScreen")}
+          onFocus={() => setExitShown(true)}
+          onClick={() => {
+            impact("light");
+            setFullScreen(false);
+          }}
+        >
+          <MinimizeIcon size={24} aria-hidden="true" />
+        </button>
       )}
       {drawerOpen && (
         <div
@@ -146,35 +212,53 @@ export function AdaptiveNavigation({ children }: { children: ReactNode }) {
           <div
             ref={drawerRef}
             id={id}
-            role={tablet ? "dialog" : undefined}
+            role={drawerOpen ? "dialog" : undefined}
             aria-modal={drawerOpen || undefined}
-            aria-label={tablet ? t("nav.menu") : undefined}
-            tabIndex={tablet ? -1 : undefined}
-            hidden={tablet && !open}
+            aria-label={drawerOpen ? t("nav.menu") : undefined}
+            tabIndex={drawerOpen ? -1 : undefined}
+            hidden={mode === "hidden"}
+            data-mode={wide ? (listed ? "full" : "rail") : undefined}
             className={wide ? "app-sidebar" : undefined}
           >
             {wide && (
               <div className="sidebar-brand">
-                <ZapLogo width={144} />
-                {tablet && (
-                  <button
-                    type="button"
-                    className="sidebar-disclosure"
-                    aria-label={t("nav.close")}
-                    onClick={close}
-                  >
+                {/* One control at every size, so focus stays put as the
+                    sidebar opens, closes, collapses and expands. */}
+                <button
+                  ref={toggleRef}
+                  type="button"
+                  className="sidebar-disclosure"
+                  aria-label={t(
+                    drawerOpen
+                      ? "nav.close"
+                      : mode === "full"
+                        ? "nav.collapseSidebar"
+                        : "nav.openMenu",
+                  )}
+                  aria-expanded={listed}
+                  aria-controls={`${id}-list`}
+                  onClick={toggle}
+                >
+                  {drawerOpen ? (
                     <XIcon size={24} aria-hidden="true" />
-                  </button>
-                )}
+                  ) : mode === "full" ? (
+                    <PanelLeftCloseIcon size={24} aria-hidden="true" />
+                  ) : (
+                    <MenuIcon size={24} aria-hidden="true" />
+                  )}
+                </button>
+                {listed && <ZapLogo width={144} />}
               </div>
             )}
             <nav
+              id={`${id}-list`}
               aria-label={t("nav.mainNavigation")}
               className={wide ? "sidebar-navigation" : "bottom-nav-shell"}
             >
               {wide ? (
                 <SidebarNavigation
-                  desktop={desktop}
+                  desktop={mode === "full"}
+                  rail={!listed}
                   expanded={navigation.expanded}
                   onToggle={(group) =>
                     setNavigation((current) => ({
@@ -193,7 +277,84 @@ export function AdaptiveNavigation({ children }: { children: ReactNode }) {
                 children
               )}
             </nav>
-            {wide && <SidebarDeviceStatus />}
+            {wide && (
+              <div className="sidebar-footer">
+                {inbox.available && (
+                  <button
+                    type="button"
+                    className="sidebar-action"
+                    aria-label={
+                      inboxCount > 0
+                        ? t("inbox.openLabelWithCount", { count: inboxCount })
+                        : t("inbox.openLabel")
+                    }
+                    aria-expanded={inboxOpen}
+                    onClick={() => {
+                      impact("light");
+                      close();
+                      setInboxOpen(true);
+                    }}
+                  >
+                    <span className="relative shrink-0" aria-hidden="true">
+                      <BellIcon size={22} />
+                      <NotificationBadge
+                        count={inboxCount}
+                        className="-top-2 -right-2"
+                      />
+                    </span>
+                    {listed && <span>{t("inbox.title")}</span>}
+                  </button>
+                )}
+                {/* One button flips what is showing now; "System" stays under
+                    Settings > Accessibility. It names the mode it switches to. */}
+                <button
+                  type="button"
+                  className="sidebar-action"
+                  aria-label={
+                    listed
+                      ? undefined
+                      : t(
+                          resolvedTheme === "dark"
+                            ? "nav.lightMode"
+                            : "nav.darkMode",
+                        )
+                  }
+                  onClick={() => {
+                    impact("light");
+                    setTheme(resolvedTheme === "dark" ? "light" : "dark");
+                  }}
+                >
+                  {resolvedTheme === "dark" ? (
+                    <SunIcon size={22} aria-hidden="true" />
+                  ) : (
+                    <MoonIcon size={22} aria-hidden="true" />
+                  )}
+                  {listed && (
+                    <span>
+                      {t(
+                        resolvedTheme === "dark"
+                          ? "nav.lightMode"
+                          : "nav.darkMode",
+                      )}
+                    </span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className="sidebar-action"
+                  aria-label={listed ? undefined : t("nav.fullScreen")}
+                  onClick={() => {
+                    impact("light");
+                    close();
+                    setFullScreen(true);
+                  }}
+                >
+                  <MaximizeIcon size={22} aria-hidden="true" />
+                  {listed && <span>{t("nav.fullScreen")}</span>}
+                </button>
+                {listed && <SidebarDeviceStatus />}
+              </div>
+            )}
           </div>,
           host,
         )}

@@ -30,6 +30,9 @@
   .zaparoo-tour-step .shepherd-button {
     --button-edge: var(--cap-primary-edge);
     --button-highlight: rgb(255 255 255 / 30%);
+    /* A cap has a visible rim in its own edge colour, so it is framed like
+       the secondary button beside it rather than looking a pixel smaller. */
+    border-color: var(--button-edge);
     color: var(--cap-ink);
     background: var(--cap-primary);
     /* White labels need a dark halo against the bright cap. */
@@ -924,7 +927,7 @@
     .page-frame-content-wide-header .page-header-surface {
       max-width: none;
       min-height: 3rem;
-      margin: 0 0 1rem;
+      margin: 0 0 0.5rem;
       background: transparent;
       border-radius: 0;
       box-shadow: none;
@@ -1073,8 +1076,7 @@
     width: min(calc(256px + var(--app-safe-left, 0px)), 100vw);
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: calc(1rem + var(--app-safe-top, 0px)) 0
-      calc(1rem + var(--app-safe-bottom, 0px)) var(--app-safe-left, 0px);
+    padding: calc(1rem + var(--app-safe-top, 0px)) 0 0 var(--app-safe-left, 0px);
     color: var(--text-primary);
     background: var(--surface-raised);
     border-right: 1px solid var(--edge-default);
@@ -1086,9 +1088,8 @@
     display: flex;
     min-height: 3rem;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    padding: 0 1rem 1rem;
+    gap: 0.25rem;
+    padding: 0 0.5rem 1rem;
   }
   .sidebar-groups {
     display: flex;
@@ -1132,7 +1133,7 @@
     flex-shrink: 0;
     justify-content: center;
   }
-  .sidebar-disclosure[aria-expanded="true"] > svg {
+  .sidebar-group-heading .sidebar-disclosure[aria-expanded="true"] > svg {
     transform: rotate(180deg);
   }
   .sidebar-children:not([hidden]) {
@@ -1185,11 +1186,111 @@
     background: transparent;
     cursor: not-allowed;
   }
-  .sidebar-device-status {
+  /* Stays in view when the section list is taller than the screen. */
+  .sidebar-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
     margin-top: auto;
+    padding-bottom: calc(1rem + var(--app-safe-bottom, 0px));
+    background: var(--surface-raised);
+  }
+  .sidebar-action {
+    display: flex;
+    min-height: 3rem;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0 0.5rem;
+    padding: 0.75rem;
+    border-radius: 4px;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-align: left;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .sidebar-action:hover {
+      color: var(--text-primary);
+      background: color-mix(in srgb, var(--surface-highlight) 40%, transparent);
+    }
+  }
+  .sidebar-action:focus-visible {
+    outline: 2px solid var(--interaction);
+    outline-offset: -2px;
+  }
+  .sidebar-device-status {
+    margin-top: 0.5rem;
     padding: 1rem 1rem 0;
     border-top: 1px solid var(--edge-subtle);
     overflow-wrap: anywhere;
+  }
+  /* The rail: the same sidebar, narrowed to its four sections. Each is an
+     icon over its name; a name too long for the width wraps. */
+  .app-sidebar[data-mode="rail"] {
+    width: min(calc(80px + var(--app-safe-left, 0px)), 100vw);
+    box-shadow: none;
+  }
+  .app-sidebar[data-mode="rail"] .sidebar-brand {
+    justify-content: center;
+    padding-inline: 0;
+  }
+  .sidebar-groups[data-rail] {
+    padding-inline: 0.25rem;
+  }
+  .sidebar-groups[data-rail] .sidebar-root-link {
+    min-height: 3.5rem;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.25rem;
+    /* No side padding: `RailLabel` measures the link's width as its room. */
+    padding: 0.5rem 0;
+    line-height: 1.2;
+    letter-spacing: 0.25px;
+    text-align: center;
+  }
+  /* `RailLabel` sets the size: 11px, or less for a name that would not fit. */
+  .sidebar-rail-label {
+    display: block;
+    max-width: 100%;
+    font-size: 0.6875rem;
+  }
+  .app-sidebar[data-mode="rail"] .sidebar-action {
+    justify-content: center;
+    margin-inline: 0.25rem;
+  }
+  /* Full screen: the one way back fades until the pointer or keyboard is
+     used, and is always there for focus. */
+  .app-fullscreen-exit {
+    position: fixed;
+    /* Bottom left, where the control that hid the navigation was, and clear
+       of the connection strip when it is showing. */
+    bottom: calc(
+      max(var(--app-footer-overlay-height, 0px), var(--app-safe-bottom, 0px)) +
+        0.5rem
+    );
+    left: calc(0.5rem + var(--app-safe-left, 0px));
+    z-index: 35;
+    display: flex;
+    width: 3rem;
+    height: 3rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--edge-default);
+    border-radius: 6px;
+    color: var(--text-primary);
+    background: var(--surface-raised);
+    box-shadow: 0 2px 6px var(--material-shadow);
+    opacity: 0;
+    transition: opacity 200ms;
+  }
+  .app-fullscreen-exit:is([data-shown], :focus-visible) {
+    opacity: 1;
+  }
+  .app-fullscreen-exit:focus-visible {
+    outline: 2px solid var(--interaction);
+    outline-offset: 2px;
   }
   .app-navigation-backdrop {
     position: fixed;
@@ -1198,27 +1299,7 @@
     background: rgb(0 0 0 / 60%);
     pointer-events: auto;
   }
-  .app-tablet-bar {
-    position: fixed;
-    inset: 0 0 auto;
-    z-index: 30;
-    display: flex;
-    min-height: var(--app-navigation-top);
-    align-items: center;
-    gap: 0.75rem;
-    padding: var(--app-safe-top, 0px) calc(0.5rem + var(--app-safe-right, 0px))
-      0 calc(0.5rem + var(--app-safe-left, 0px));
-    background: var(--surface-raised);
-    border-bottom: 1px solid var(--edge-default);
-    pointer-events: auto;
-  }
   @media (min-width: 760px) {
-    .adaptive-app-shell {
-      --app-navigation-top: calc(var(--app-safe-top, 0px) + max(56px, 3.5rem));
-    }
-    .adaptive-app-main {
-      margin-top: var(--app-navigation-top);
-    }
     .app-global-reader-strip {
       left: var(--app-navigation-width);
     }
@@ -1267,28 +1348,38 @@
         calc(var(--app-footer-overlay-height, 0px) + 1.25rem) 0;
     }
   }
+  /* The page sits beside the navigation, whichever form it takes: the rail,
+     or the full sidebar. `data-app-nav` is set on the document root by the
+     shell (`useNavigationMode`). */
+  :root[data-app-nav="rail"],
+  :root[data-app-nav="rail"] .adaptive-app-shell {
+    --app-navigation-width: calc(80px + var(--app-safe-left, 0px));
+  }
+  :root[data-app-nav="full"],
+  :root[data-app-nav="full"] .adaptive-app-shell {
+    --app-navigation-width: calc(256px + var(--app-safe-left, 0px));
+  }
+  :root:is([data-app-nav="rail"], [data-app-nav="full"])
+    :is(.adaptive-app-main, .app-connection-status) {
+    --page-content-safe-left: 0px;
+  }
+  :root:is([data-app-nav="rail"], [data-app-nav="full"]) .adaptive-app-main {
+    width: calc(100% - var(--app-navigation-width));
+    margin-left: var(--app-navigation-width);
+  }
+  /* Beside the navigation the content needs a little more air than the 16px
+     viewport-edge margin, clearing its shadow. */
+  :root:is([data-app-nav="rail"], [data-app-nav="full"])
+    .adaptive-app-main
+    .page-frame-scroll {
+    padding-left: 1.5rem;
+  }
+  :root:is([data-app-nav="rail"], [data-app-nav="full"])
+    .adaptive-app-main
+    .page-frame-scroll-with-header {
+    --page-header-top-gap: 0.5rem;
+  }
   @media (min-width: 1280px) {
-    :root,
-    .adaptive-app-shell {
-      --app-navigation-width: calc(256px + var(--app-safe-left, 0px));
-      --app-navigation-top: 0px;
-    }
-    .adaptive-app-main,
-    .app-connection-status {
-      --page-content-safe-left: 0px;
-    }
-    .adaptive-app-main {
-      width: calc(100% - var(--app-navigation-width));
-      margin-left: var(--app-navigation-width);
-    }
-    /* Beside the sidebar the content needs a little more air than the 16px
-       viewport-edge margin, clearing the sidebar's shadow. */
-    .adaptive-app-main .page-frame-scroll {
-      padding-left: 1.5rem;
-    }
-    .adaptive-app-main .page-frame-scroll-with-header {
-      --page-header-top-gap: 0.5rem;
-    }
     .page-frame-with-pane {
       --library-detail-width: calc(460px + var(--app-safe-right, 0px));
     }
@@ -1419,23 +1510,27 @@
       min-width: 0;
       flex: 1 1 18rem;
     }
+    /* Each group states the room it needs as its basis (two selectors and
+       Search; two selectors), so the row wraps before anything is squeezed,
+       and wraps inside itself rather than letting one field run under the
+       next. */
     .library-search-filter-controls,
     .create-search-filter-controls {
       min-width: 0;
-      flex: 1 1 auto;
-      flex-direction: row;
+      flex: 1 1 39rem;
+      flex-flow: row wrap;
       align-items: flex-end;
     }
     .library-search-filter-selectors,
     .create-search-filter-selectors {
       min-width: 0;
-      flex: 1 1 auto;
-      flex-direction: row;
+      flex: 1 1 28rem;
+      flex-flow: row wrap;
     }
     .library-search-filter-selectors > *,
     .create-search-filter-selectors > * {
       min-width: 0;
-      flex: 1 0 13.75rem;
+      flex: 1 1 13.75rem;
     }
     .library-search-filter-controls > .wui-button,
     .create-search-filter-controls > .wui-button {

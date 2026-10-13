@@ -59,7 +59,12 @@
       "currentDevice": "Dispositivo actual",
       "openMenu": "Abrir navegación",
       "expandSection": "Expandir {{section}}",
-      "collapseSection": "Contraer {{section}}"
+      "collapseSection": "Contraer {{section}}",
+      "collapseSidebar": "Contraer barra lateral",
+      "fullScreen": "Pantalla completa",
+      "exitFullScreen": "Salir de pantalla completa",
+      "lightMode": "Modo claro",
+      "darkMode": "Modo oscuro"
     },
     "appBadge": {
       "title": "Globos en el icono de la App",

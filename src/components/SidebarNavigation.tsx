@@ -1,4 +1,10 @@
-import { type ComponentProps, type MouseEvent, type ReactNode } from "react";
+import {
+  type ComponentProps,
+  type MouseEvent,
+  type ReactNode,
+  useLayoutEffect,
+  useRef,
+} from "react";
 import {
   Link,
   useLinkProps,
@@ -20,7 +26,6 @@ import {
 import { useLibrarySessionStore } from "@/lib/librarySessionStore";
 import { bottomTabForPath, type BottomTabId } from "@/lib/tabSessionStore";
 import { useStatusStore } from "@/lib/store";
-import { NotificationBadge } from "@/components/NotificationBadge";
 import { PAGE_SCROLL_RESTORATION_SELECTOR } from "@/components/PageFrame";
 
 /**
@@ -44,13 +49,50 @@ function SidebarChildLink({
   );
 }
 
+const RAIL_LABEL_SIZE = 11;
+const RAIL_LABEL_MIN_SIZE = 8;
+
+/**
+ * A section name on the rail. A name too long for the rail's width (some
+ * translations) is set smaller, only as far as it needs, before it wraps.
+ */
+function RailLabel({ children }: { children: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const label = ref.current;
+    const room = label?.parentElement?.clientWidth ?? 0;
+    if (!label || room <= 0) return;
+    label.style.fontSize = `${RAIL_LABEL_SIZE}px`;
+    label.style.whiteSpace = "nowrap";
+    const width = label.scrollWidth;
+    const size =
+      width > room
+        ? Math.max(
+            RAIL_LABEL_MIN_SIZE,
+            Math.floor(((RAIL_LABEL_SIZE * room) / width) * 2) / 2,
+          )
+        : RAIL_LABEL_SIZE;
+    label.style.fontSize = `${size}px`;
+    // Still too long at the smallest size: let it wrap.
+    label.style.whiteSpace = label.scrollWidth > room ? "" : "nowrap";
+  }, [children]);
+  return (
+    <span ref={ref} className="sidebar-rail-label">
+      {children}
+    </span>
+  );
+}
+
 export function SidebarNavigation({
   desktop = false,
+  rail = false,
   expanded,
   onToggle,
   onNavigate,
 }: {
   desktop?: boolean;
+  /** Only the sections, as icons over their names; children are not listed. */
+  rail?: boolean;
   /** The one open section; opening another closes it. */
   expanded: BottomTabId | null;
   onToggle: (group: BottomTabId) => void;
@@ -71,8 +113,6 @@ export function SidebarNavigation({
   const scrapers = useCoreFeature("mediaScrapers", {
     requireKnownSupport: true,
   });
-  const inbox = useCoreFeature("inbox");
-  const inboxCount = useStatusStore((s) => s.inboxMessages.length);
   const libraryView = useLibrarySessionStore((state) => state.view);
   const showLibraryView = useLibrarySessionStore((state) => state.showView);
   const deviceKey = useActiveDeviceKey();
@@ -166,7 +206,7 @@ export function SidebarNavigation({
   );
 
   return (
-    <ul className="sidebar-groups">
+    <ul className="sidebar-groups" data-rail={rail || undefined}>
       {APP_SECTIONS.map((section) => {
         const { id, to, label, Icon } = section;
         const open = expanded === id;
@@ -179,11 +219,6 @@ export function SidebarNavigation({
           else runs.push({ group: child.group, children: [child] });
         }
         const current = normalized === to;
-        // Matches the phone dock: Settings shows its own Inbox entry point.
-        const count =
-          id === "settings" && inbox.available && activeGroup !== "settings"
-            ? inboxCount
-            : 0;
         return (
           <li
             key={id}
@@ -207,11 +242,14 @@ export function SidebarNavigation({
                 // exact destination is.
                 activeOptions={{ exact: true }}
                 className="sidebar-root-link"
-                aria-current={current ? "page" : undefined}
-                aria-label={
-                  count > 0
-                    ? t("nav.settingsWithNotifications", { count })
-                    : undefined
+                aria-current={
+                  current
+                    ? "page"
+                    : // The rail lists nothing deeper, so its section link is
+                      // the listed ancestor of every page inside it.
+                      rail && activeGroup === id
+                      ? "true"
+                      : undefined
                 }
                 onClick={(event) => {
                   // Beside the persistent sidebar the Library root has no
@@ -222,36 +260,38 @@ export function SidebarNavigation({
                   navigateDestination(event, to);
                 }}
               >
-                <span className="relative shrink-0" aria-hidden="true">
+                <span className="shrink-0" aria-hidden="true">
                   <Icon size={22} className="sidebar-root-icon" />
-                  <NotificationBadge
-                    count={count}
-                    className="-top-2 -right-2"
-                  />
                 </span>
-                <span>{t(label)}</span>
-              </Link>
-              <button
-                type="button"
-                className="sidebar-disclosure"
-                aria-expanded={open}
-                aria-controls={`sidebar-${id}`}
-                aria-label={t(
-                  open ? "nav.collapseSection" : "nav.expandSection",
-                  { section: t(label) },
+                {rail ? (
+                  <RailLabel>{t(label)}</RailLabel>
+                ) : (
+                  <span>{t(label)}</span>
                 )}
-                onClick={() => {
-                  impact("light");
-                  onToggle(id);
-                }}
-              >
-                <ChevronDownIcon size={20} aria-hidden="true" />
-              </button>
+              </Link>
+              {!rail && (
+                <button
+                  type="button"
+                  className="sidebar-disclosure"
+                  aria-expanded={open}
+                  aria-controls={`sidebar-${id}`}
+                  aria-label={t(
+                    open ? "nav.collapseSection" : "nav.expandSection",
+                    { section: t(label) },
+                  )}
+                  onClick={() => {
+                    impact("light");
+                    onToggle(id);
+                  }}
+                >
+                  <ChevronDownIcon size={20} aria-hidden="true" />
+                </button>
+              )}
             </div>
             <ul
               id={`sidebar-${id}`}
               className="sidebar-children"
-              hidden={!open}
+              hidden={!open || rail}
             >
               {runs.map(({ group, children }) => {
                 if (!group) {

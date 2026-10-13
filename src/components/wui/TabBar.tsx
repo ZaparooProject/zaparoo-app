@@ -136,7 +136,7 @@ export function TabBar<T extends string>({
               className={classNames(
                 "flex min-h-10 w-full items-center justify-center rounded-md border border-transparent px-2 py-1 transition-colors",
                 {
-                  "border-border bg-surface-raised text-foreground shadow-[0_2px_0_var(--surface-base),inset_0_1px_0_var(--material-highlight)]":
+                  "border-border bg-surface-raised text-foreground shadow-[0_2px_0_var(--tab-lip),var(--tab-lift),inset_0_1px_0_var(--material-highlight)]":
                     active,
                   "text-muted-foreground group-hover:bg-foreground/5": !active,
                 },

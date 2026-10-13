@@ -59,7 +59,12 @@
       "currentDevice": "現在のデバイス",
       "openMenu": "ナビゲーションを開く",
       "expandSection": "{{section}}を展開",
-      "collapseSection": "{{section}}を折りたたむ"
+      "collapseSection": "{{section}}を折りたたむ",
+      "collapseSidebar": "サイドバーを折りたたむ",
+      "fullScreen": "全画面",
+      "exitFullScreen": "全画面を終了",
+      "lightMode": "ライトモード",
+      "darkMode": "ダークモード"
     },
     "appBadge": {
       "title": "アプリアイコンのバッジ",

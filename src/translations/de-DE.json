@@ -59,7 +59,12 @@
       "currentDevice": "Aktuelles Gerät",
       "openMenu": "Navigation öffnen",
       "expandSection": "{{section}} ausklappen",
-      "collapseSection": "{{section}} einklappen"
+      "collapseSection": "{{section}} einklappen",
+      "collapseSidebar": "Seitenleiste einklappen",
+      "fullScreen": "Vollbild",
+      "exitFullScreen": "Vollbild beenden",
+      "lightMode": "Heller Modus",
+      "darkMode": "Dunkler Modus"
     },
     "appBadge": {
       "title": "Kennzeichen auf dem App-Symbol",

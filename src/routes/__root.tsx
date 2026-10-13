@@ -13,6 +13,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { ConnectionStatusBar } from "@/components/ConnectionStatusBar";
 import { DeviceSheetProvider } from "@/components/DeviceSheetProvider";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useNavigationMode } from "@/hooks/useNavigationMode";
 import { TourInitializer } from "@/components/TourInitializer";
 import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
 import { SkipLink } from "@/components/SkipLink";
@@ -79,8 +80,7 @@ export function RootLayout() {
 function AdaptiveRootLayout() {
   const safeInsets = useStatusStore((state) => state.safeInsets);
   const wide = useMediaQuery("(min-width: 760px)");
-  const sidebar = useMediaQuery("(min-width: 1280px)");
-  const tablet = wide && !sidebar;
+  const navigationMode = useNavigationMode();
   const footerRef = useRef<HTMLElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
   // Phone: the whole footer (status strip plus dock, including the bottom
@@ -112,6 +112,15 @@ function AdaptiveRootLayout() {
   // strip) read the measured clearance and insets from the document root.
   // Height and clearance are published separately for existing consumers and
   // always carry the same value.
+  // The shell's layout, and fixed elements outside it, follow the navigation.
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    root.dataset.appNav = navigationMode;
+    return () => {
+      delete root.dataset.appNav;
+    };
+  }, [navigationMode]);
+
   useLayoutEffect(() => {
     const root = document.documentElement;
     root.style.setProperty("--app-footer-overlay-height", `${footerHeight}px`);
@@ -137,7 +146,7 @@ function AdaptiveRootLayout() {
           "--app-footer-overlay-height": `${footerHeight}px`,
           "--app-footer-overlay-clearance": `${footerHeight}px`,
           "--app-safe-top": safeInsets.top,
-          "--page-content-safe-top": tablet ? "0px" : safeInsets.top,
+          "--page-content-safe-top": safeInsets.top,
           "--app-safe-bottom": safeInsets.bottom,
           "--app-safe-left": safeInsets.left,
           "--app-safe-right": safeInsets.right,
