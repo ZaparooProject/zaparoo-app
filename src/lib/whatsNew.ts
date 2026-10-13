@@ -21,6 +21,23 @@ export type WhatsNewAnnouncement = {
 
 export const WHATS_NEW_ANNOUNCEMENTS: WhatsNewAnnouncement[] = [
   {
+    // Live update on the 1.14.1 build 30 binary, displayed as 2.0.0.
+    id: "release-2.0.0",
+    version: "2.0.0",
+    releaseKeys: ["live:1.14.1-ota.3"],
+    title: "What's new in v2.0.0",
+    items: [
+      "The whole App has been redesigned with the Zaparoo Online look, plus a light theme that follows your phone (Settings > Accessibility > Appearance).",
+      "Phones, tablets, and desktop-sized windows each get their own layout. Wide screens get a side menu and open game details next to the list.",
+      "Tap a game's system, year, developer, genre, or region to find more like it. Recently played and Top played are now in the Library.",
+      "Rearrange the Zap page, hide what you don't use, and add your own buttons that run any ZapScript. You can also add rows of games from a collection or a deck. Every device remembers its own layout.",
+      "Full screen on tablets hides the navigation so the Zap page can sit next to your setup as a display.",
+      "ZapScript is now built one step at a time, and Test replaces Run. Writing a tag waits on the button you pressed instead of a dialog.",
+      "Choosing, adding, and managing devices is one sheet now, and History has a Played tab next to Scans.",
+      "Recently played and Top played need Core 2.12 or newer. Liked, Disliked, Play later, and deck rows need Core 2.18 or newer.",
+    ],
+  },
+  {
     // Live update on the 1.14.1 build 30 binary, displayed as 1.15.0.
     id: "release-1.15.0",
     version: "1.15.0",

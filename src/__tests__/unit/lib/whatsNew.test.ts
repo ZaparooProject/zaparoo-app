@@ -127,6 +127,21 @@ describe("whatsNew", () => {
     );
   });
 
+  it("should show the third 1.14.1 live update as 2.0.0", () => {
+    const announcement = getWhatsNewAnnouncement("live:1.14.1-ota.3");
+
+    expect(announcement?.id).toBe("release-2.0.0");
+    expect(getReleaseDisplayVersion("live:1.14.1-ota.3", "1.14.1")).toBe(
+      "2.0.0",
+    );
+    expect(getWhatsNewAnnouncement("live:1.14.1-ota.2")?.id).toBe(
+      "release-1.15.0",
+    );
+    expect(getWhatsNewAnnouncement("native:1.14.1+30")?.id).toBe(
+      "release-1.14.1",
+    );
+  });
+
   it("should preserve the native version without a mapped release key", () => {
     expect(getReleaseDisplayVersion(undefined, "1.14.1")).toBe("1.14.1");
     expect(getReleaseDisplayVersion("live:unknown", "1.14.1")).toBe("1.14.1");
