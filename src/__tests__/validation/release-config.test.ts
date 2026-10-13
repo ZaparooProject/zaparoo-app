@@ -135,10 +135,10 @@ describe("release configuration", () => {
       (announcement) => announcement.releaseKeys,
     );
     const currentLiveUpdate = WHATS_NEW_ANNOUNCEMENTS.find((announcement) =>
-      announcement.releaseKeys.includes("live:1.14.1-ota.2"),
+      announcement.releaseKeys.includes("live:1.14.1-ota.3"),
     );
 
     expect(new Set(releaseKeys).size).toBe(releaseKeys.length);
-    expect(currentLiveUpdate?.version).toBe("1.15.0");
+    expect(currentLiveUpdate?.version).toBe("2.0.0");
   });
 });
