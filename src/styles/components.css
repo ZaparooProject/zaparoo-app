@@ -486,6 +486,11 @@
   .wui-editor > textarea {
     border-radius: 4px 4px 0 0;
   }
+  /* The toolbar below paints over the offset outline unless the field is lifted. */
+  .wui-editor > textarea:focus-visible {
+    position: relative;
+    z-index: 1;
+  }
   .wui-field-label {
     margin-bottom: 0.5rem;
   }
