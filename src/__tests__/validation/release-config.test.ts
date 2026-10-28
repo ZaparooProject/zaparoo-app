@@ -54,7 +54,7 @@ describe("release configuration", () => {
       new Set([packageJson.version]),
     );
     expect(new Set(iosBuildNumbers)).toEqual(new Set([androidVersionCode]));
-    expect(androidVersionCode).toBe(31);
+    expect(androidVersionCode).toBe(32);
   });
 
   it("should use versioned Capawesome live update channels", () => {
@@ -87,6 +87,34 @@ describe("release configuration", () => {
 
     expect(mainActivity).toContain('android:launchMode="singleTop"');
     expect(mainActivity).not.toContain('android:launchMode="singleTask"');
+  });
+
+  it("should target iPhone and iPad with every iPad orientation", () => {
+    const xcodeProject = readProjectFile(
+      "ios/App/App.xcodeproj/project.pbxproj",
+    );
+    const iosInfoPlist = readProjectFile("ios/App/App/Info.plist");
+    const deviceFamilies = [
+      ...xcodeProject.matchAll(/TARGETED_DEVICE_FAMILY = ([^;]+);/g),
+    ].map((match) => match[1]);
+    const ipadOrientations = requireMatch(
+      iosInfoPlist,
+      /<key>UISupportedInterfaceOrientations~ipad<\/key>\s*<array>([\s\S]*?)<\/array>/,
+      "iPad orientations",
+    );
+
+    expect(deviceFamilies.length).toBeGreaterThan(0);
+    expect(new Set(deviceFamilies)).toEqual(new Set(['"1,2"']));
+    for (const orientation of [
+      "Portrait",
+      "PortraitUpsideDown",
+      "LandscapeLeft",
+      "LandscapeRight",
+    ]) {
+      expect(ipadOrientations).toContain(
+        `<string>UIInterfaceOrientation${orientation}</string>`,
+      );
+    }
   });
 
   it("should enable the iOS In-App Purchase capability", () => {

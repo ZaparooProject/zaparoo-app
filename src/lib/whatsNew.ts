@@ -21,10 +21,17 @@ export type WhatsNewAnnouncement = {
 
 export const WHATS_NEW_ANNOUNCEMENTS: WhatsNewAnnouncement[] = [
   {
-    // Live update on the 1.14.1 build 30 binary, then native 2.0.0 build 31.
+    // Live update on the 1.14.1 build 30 binary, then the 2.0.0 build 31 and
+    // 2.0.1 build 32 native releases (2.0.1 only adds iPad support).
     id: "release-2.0.0",
     version: "2.0.0",
-    releaseKeys: ["native:2.0.0+31", "live:2.0.0-ota.1", "live:1.14.1-ota.3"],
+    releaseKeys: [
+      "native:2.0.0+31",
+      "live:2.0.0-ota.1",
+      "native:2.0.1+32",
+      "live:2.0.1-ota.1",
+      "live:1.14.1-ota.3",
+    ],
     title: "What's new in v2.0.0",
     items: [
       "The whole App has been redesigned with the Zaparoo Online look, plus a light theme that follows your phone (Settings > Accessibility > Appearance).",
