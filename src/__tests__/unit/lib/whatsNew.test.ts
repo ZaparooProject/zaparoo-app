@@ -145,6 +145,15 @@ describe("whatsNew", () => {
     );
   });
 
+  it("should map the 2.0.2 store build and its first live update to 2.0.0", () => {
+    expect(getWhatsNewAnnouncement("native:2.0.2+33")?.id).toBe(
+      "release-2.0.0",
+    );
+    expect(getWhatsNewAnnouncement("live:2.0.2-ota.1")?.id).toBe(
+      "release-2.0.0",
+    );
+  });
+
   it("should show the third 1.14.1 live update as 2.0.0", () => {
     const announcement = getWhatsNewAnnouncement("live:1.14.1-ota.3");
 

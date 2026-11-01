@@ -54,7 +54,7 @@ describe("release configuration", () => {
       new Set([packageJson.version]),
     );
     expect(new Set(iosBuildNumbers)).toEqual(new Set([androidVersionCode]));
-    expect(androidVersionCode).toBe(32);
+    expect(androidVersionCode).toBe(33);
   });
 
   it("should use versioned Capawesome live update channels", () => {
@@ -115,6 +115,29 @@ describe("release configuration", () => {
         `<string>UIInterfaceOrientation${orientation}</string>`,
       );
     }
+  });
+
+  it("should name an iOS launch storyboard that exists in the bundle", () => {
+    const iosInfoPlist = readProjectFile("ios/App/App/Info.plist");
+    const xcodeProject = readProjectFile(
+      "ios/App/App.xcodeproj/project.pbxproj",
+    );
+    const launchStoryboard = requireMatch(
+      iosInfoPlist,
+      /<key>UILaunchStoryboardName<\/key>\s*<string>([^<]+)<\/string>/,
+      "UILaunchStoryboardName",
+    );
+
+    // App Store Connect rejects iPad multitasking builds (error 90476) when
+    // this is not the storyboard's name without its extension.
+    expect(launchStoryboard).toBe("LaunchScreen");
+    expect(
+      readProjectFile(`ios/App/App/Base.lproj/${launchStoryboard}.storyboard`),
+    ).toContain('launchScreen="YES"');
+    expect(xcodeProject).toContain(
+      `/* ${launchStoryboard}.storyboard in Resources */`,
+    );
+    expect(iosInfoPlist).not.toContain("UIRequiresFullScreen");
   });
 
   it("should enable the iOS In-App Purchase capability", () => {

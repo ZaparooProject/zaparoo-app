@@ -21,8 +21,9 @@ export type WhatsNewAnnouncement = {
 
 export const WHATS_NEW_ANNOUNCEMENTS: WhatsNewAnnouncement[] = [
   {
-    // Live update on the 1.14.1 build 30 binary, then the 2.0.0 build 31 and
-    // 2.0.1 build 32 native releases (2.0.1 only adds iPad support).
+    // Live update on the 1.14.1 build 30 binary, then the 2.0.0 build 31,
+    // 2.0.1 build 32, and 2.0.2 build 33 native releases (2.0.1 adds iPad
+    // support and 2.0.2 fixes the iPad launch screen that blocked its upload).
     id: "release-2.0.0",
     version: "2.0.0",
     releaseKeys: [
@@ -30,6 +31,8 @@ export const WHATS_NEW_ANNOUNCEMENTS: WhatsNewAnnouncement[] = [
       "live:2.0.0-ota.1",
       "native:2.0.1+32",
       "live:2.0.1-ota.1",
+      "native:2.0.2+33",
+      "live:2.0.2-ota.1",
       "live:1.14.1-ota.3",
     ],
     title: "What's new in v2.0.0",
