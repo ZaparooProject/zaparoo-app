@@ -60,7 +60,7 @@ The About screen derives its visible OTA version from the announcement mapped to
 
 For later OTAs on the same native build, increment the OTA sequence (`ota.2`, `ota.3`, and so on), add the matching announcement mapping, and update the release validation guard. Do not reuse a release key for different bundle contents.
 
-The displayed version can be any bump, not just a patch. 1.15.0 shipped as a live update on the 1.14.1 build 30 binary: channel `production-30`, release key `live:1.14.1-ota.2`. 2.0.0 ships the same way as the third live update on that binary: channel `production-30`, release key `live:1.14.1-ota.3`. `live:1.14.1-ota.1` stays mapped to the 1.14.1 announcement and `live:1.14.1-ota.2` to 1.15.0. The 2.0.0 store release (native `2.0.0+31`, channel `production-31`, release key `live:2.0.0-ota.1`) reuses the 2.0.0 announcement so people who already received 2.0.0 over the air do not see it again. 2.0.1 (native `2.0.1+32`, channel `production-32`, release key `live:2.0.1-ota.1`) adds iPad support to the iOS target and reuses the same announcement. The next store release must use a version above 2.0.1.
+The displayed version can be any bump, not just a patch. 1.15.0 shipped as a live update on the 1.14.1 build 30 binary: channel `production-30`, release key `live:1.14.1-ota.2`. 2.0.0 ships the same way as the third live update on that binary: channel `production-30`, release key `live:1.14.1-ota.3`. `live:1.14.1-ota.1` stays mapped to the 1.14.1 announcement and `live:1.14.1-ota.2` to 1.15.0. The 2.0.0 store release (native `2.0.0+31`, channel `production-31`, release key `live:2.0.0-ota.1`) reuses the 2.0.0 announcement so people who already received 2.0.0 over the air do not see it again. 2.0.1 (native `2.0.1+32`, channel `production-32`, release key `live:2.0.1-ota.1`) adds iPad support to the iOS target and reuses the same announcement. 2.0.2 (native `2.0.2+33`, channel `production-33`, release key `live:2.0.2-ota.1`) fixes the iOS launch storyboard name that blocked the 2.0.1 upload and reuses the same announcement. The next store release must use a version above 2.0.2.
 
 ### Pushing a Live Update
 
@@ -146,6 +146,8 @@ git push origin v1.11.2
 `v1.11.0`, `v1.11.1`, and `v1.12.0` are abandoned failed tags. Do not submit or promote builds from those tags.
 
 `v1.14.0` can never be used again. Pushing it published an immutable GitHub release, and that release was later deleted, so GitHub permanently reserves the tag name. The release shipped as 1.14.1 instead. Once a version tag's release workflow has run, fix problems in a new patch version rather than deleting and recreating the tag.
+
+`v2.0.1` build 32 never reached App Store Connect. The upload was rejected with error 90476 because `UILaunchStoryboardName` was `LaunchScreen.storyboard` instead of `LaunchScreen`, which Apple only checks once an app supports iPad multitasking. The next store builds for both platforms are 2.0.2 build 33.
 
 `v1.13.0` shipped only on Android outside France. iOS and French Android users went from 1.11.2 straight to 1.14.1, so the 1.14.1 What's New announcement repeats the 1.13.0 items.
 
