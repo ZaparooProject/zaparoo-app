@@ -439,8 +439,12 @@ export function quoteZapArgument(value: string): string {
   return needsQuoting(value, ",?") ? quote(value) : value;
 }
 
-const TYPED_OPTIONS =
-  /\?([A-Za-z0-9_]+=[^&?^"'[\]{}|]*(?:&[A-Za-z0-9_]+=[^&?^"'[\]{}|]*)*)$/;
+// An option value is plain text or `[[expressions]]`, which may hold any
+// character but `]`.
+const TYPED_OPTION = String.raw`[A-Za-z0-9_]+=(?:[^&?^"'[\]{}|]|\[\[[^\]]*\]\])*`;
+const TYPED_OPTIONS = new RegExp(
+  String.raw`\?(${TYPED_OPTION}(?:&${TYPED_OPTION})*)$`,
+);
 
 /**
  * Options typed onto the end of a media field, as in `Game.sfc?launcher=x`,
@@ -455,7 +459,8 @@ function withTypedOptions(step: ZapStep): ZapStep {
   const match = value === undefined ? null : TYPED_OPTIONS.exec(value);
   if (!spec || !value || !match) return step;
   const known = new Set(spec.advArgs?.map((adv) => adv.name));
-  const typed = match[1]!.split("&").map((pair): [string, string] => {
+  const pairs = match[1]!.match(new RegExp(TYPED_OPTION, "g")) ?? [];
+  const typed = pairs.map((pair): [string, string] => {
     const at = pair.indexOf("=");
     return [pair.slice(0, at), pair.slice(at + 1).trim()];
   });

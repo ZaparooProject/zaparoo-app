@@ -1923,6 +1923,7 @@
         "moveDown": "Bajar el paso {{position}}",
         "remove": "Eliminar el paso {{position}}",
         "options": "Avanzado",
+        "mustBeAlone": "Debe ser el único paso",
         "textStep": "Texto de ZapScript",
         "textStepDescription": "Este paso usa una sintaxis que solo se puede editar como texto",
         "textStepField": "ZapScript del paso {{position}}",

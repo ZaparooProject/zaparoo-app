@@ -1923,6 +1923,7 @@
         "moveDown": "{{position}}단계를 아래로 이동",
         "remove": "{{position}}단계 삭제",
         "options": "고급",
+        "mustBeAlone": "유일한 단계여야 합니다",
         "textStep": "ZapScript 텍스트",
         "textStepDescription": "이 단계는 텍스트로만 편집할 수 있는 구문을 사용합니다",
         "textStepField": "{{position}}단계의 ZapScript",

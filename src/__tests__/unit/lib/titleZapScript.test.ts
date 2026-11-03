@@ -50,6 +50,12 @@ describe("titleZapScript", () => {
       expect(buildTitleZapScript(parsed!, [])).toBe(
         "@PC/Who Wants to Be a Millionaire??launcher=custom",
       );
+
+      const ending = parseTitleZapScript("@PC/Game?");
+      expect(ending).toEqual({ base: "@PC/Game?", suffix: "", tags: [] });
+      expect(
+        buildTitleZapScript(ending!, [{ type: "year", tag: "2000" }]),
+      ).toBe("@PC/Game? (year:2000)");
     });
 
     it.each([

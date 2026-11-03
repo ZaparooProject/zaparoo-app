@@ -1923,6 +1923,7 @@
         "moveDown": "Move step {{position}} down",
         "remove": "Remove step {{position}}",
         "options": "Advanced",
+        "mustBeAlone": "Must be the only step",
         "textStep": "ZapScript text",
         "textStepDescription": "This step uses syntax that can only be edited as text",
         "textStepField": "ZapScript for step {{position}}",

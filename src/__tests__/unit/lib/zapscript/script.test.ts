@@ -266,6 +266,15 @@ describe("serializeZapScript", () => {
     expect(
       writeZapStep(createZapStep("launch.title", ["SNES/Mario?launcher=x"])),
     ).toBe("**launch.title:SNES/Mario?launcher=x");
+    expect(write("SNES/game.sfc?when=[[a && b?c]]&launcher=x")).toBe(
+      "SNES/game.sfc?when=[[a && b?c]]&launcher=x",
+    );
+    expect(
+      writeZapStep({
+        ...createZapStep("launch", ["SNES/game.sfc?when=[[media_playing]]"]),
+        advArgs: [["launcher", "x"]],
+      }),
+    ).toBe("SNES/game.sfc?when=[[media_playing]]&launcher=x");
     // Not an option the command takes, so it stays part of the path.
     expect(write("https://example.com/video.mp4?token=abc")).toBe(
       '"https://example.com/video.mp4?token=abc"',

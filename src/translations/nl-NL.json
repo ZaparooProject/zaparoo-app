@@ -1923,6 +1923,7 @@
         "moveDown": "Stap {{position}} omlaag verplaatsen",
         "remove": "Stap {{position}} verwijderen",
         "options": "Geavanceerd",
+        "mustBeAlone": "Moet de enige stap zijn",
         "textStep": "ZapScript-tekst",
         "textStepDescription": "Deze stap gebruikt syntaxis die alleen als tekst kan worden bewerkt",
         "textStepField": "ZapScript voor stap {{position}}",

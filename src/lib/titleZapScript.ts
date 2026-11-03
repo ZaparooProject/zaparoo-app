@@ -51,8 +51,8 @@ function findUnescapedCharacter(value: string, character: string): number {
 }
 
 /**
- * Where the options start. Like Core, a `?` only starts them when an option
- * name follows; otherwise it is part of the title, as in "Millionaire?".
+ * Where the options start. A `?` only starts them when an option name
+ * follows; otherwise it is part of the title, as in "Millionaire?".
  */
 function findOptionsStart(value: string): number {
   for (let index = 0; index < value.length; index += 1) {
@@ -62,7 +62,7 @@ function findOptionsStart(value: string): number {
     }
     if (
       value[index] === "?" &&
-      /^[A-Za-z0-9_]*(?:[=&]|$)/.test(value.slice(index + 1))
+      /^[A-Za-z0-9_]+(?:[=&]|$)/.test(value.slice(index + 1))
     ) {
       return index;
     }
