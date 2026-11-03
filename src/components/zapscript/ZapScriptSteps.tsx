@@ -183,7 +183,12 @@ function StepCard({
     (preferred && !preferred.disabled ? preferred : fallback)?.focus();
   }, [position]);
   const spec = formFor(step);
-  const [optionsOpen, setOptionsOpen] = useState(step.advArgs.length > 0);
+  const [optionsOpen, setOptionsOpen] = useState(() =>
+    step.advArgs.some(
+      ([name]) =>
+        !spec?.advArgs?.some((adv) => adv.name === name && adv.required),
+    ),
+  );
   const title = spec ? spec.name : t("zapscript.builder.textStep");
   const corePlatform = useStatusStore((state) => state.corePlatform);
   // Options edited in this card keep their field while it is open, even once
@@ -209,6 +214,12 @@ function StepCard({
           .map((name) => ({ name, label: name, kind: "text" as const })),
       ]
     : [];
+  // An option Core cannot do without sits with the arguments, not behind
+  // the Options toggle.
+  const requiredAdvSpecs = advSpecs.filter((adv) => adv.required);
+  const optionalAdvSpecs = advSpecs.filter((adv) => !adv.required);
+  const advValue = (name: string) =>
+    step.advArgs.find(([key]) => key === name)?.[1] ?? "";
   const setArg = (index: number, value: string) => {
     const args = spec!.args.map((_, i) => step.args[i] ?? "");
     args[index] = value;
@@ -248,6 +259,11 @@ function StepCard({
           >
             {spec ? spec.name : t("zapscript.builder.textStepDescription")}
           </span>
+          {spec?.alone && count > 1 && (
+            <p className="text-error text-sm" role="alert">
+              {t("zapscript.builder.mustBeAlone")}
+            </p>
+          )}
         </div>
         <div className="flex shrink-0 gap-1">
           <Button
@@ -285,7 +301,7 @@ function StepCard({
 
       {spec ? (
         <>
-          {spec.args.length > 0 && (
+          {spec.args.length + requiredAdvSpecs.length > 0 && (
             <div className="zapscript-step-fields">
               {spec.args.map((arg, index) => (
                 <ValueField
@@ -298,9 +314,20 @@ function StepCard({
                   onPick={onPick}
                 />
               ))}
+              {requiredAdvSpecs.map((adv) => (
+                <ValueField
+                  key={adv.name}
+                  spec={adv}
+                  value={advValue(adv.name)}
+                  disabled={disabled}
+                  connected={connected}
+                  onChange={(value) => setAdvArg(adv.name, value)}
+                  onPick={onPick}
+                />
+              ))}
             </div>
           )}
-          {advSpecs.length > 0 && (
+          {optionalAdvSpecs.length > 0 && (
             <>
               <div>
                 <Button
@@ -321,14 +348,11 @@ function StepCard({
               </div>
               {optionsOpen && (
                 <div id={`${id}-options`} className="zapscript-step-fields">
-                  {advSpecs.map((adv) => (
+                  {optionalAdvSpecs.map((adv) => (
                     <ValueField
                       key={adv.name}
                       spec={adv}
-                      value={
-                        step.advArgs.find(([name]) => name === adv.name)?.[1] ??
-                        ""
-                      }
+                      value={advValue(adv.name)}
                       disabled={disabled}
                       connected={connected}
                       onChange={(value) => setAdvArg(adv.name, value)}

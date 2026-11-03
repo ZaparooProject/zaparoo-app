@@ -1923,6 +1923,7 @@
         "moveDown": "下移步骤 {{position}}",
         "remove": "删除步骤 {{position}}",
         "options": "高级",
+        "mustBeAlone": "必须是唯一的步骤",
         "textStep": "ZapScript 文本",
         "textStepDescription": "此步骤使用的语法只能以文本形式编辑",
         "textStepField": "步骤 {{position}} 的 ZapScript",

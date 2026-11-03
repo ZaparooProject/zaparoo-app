@@ -35,7 +35,7 @@ describe("parseZapScript", () => {
     ).toEqual([
       {
         name: "launch.random",
-        args: ["snes", "genesis"],
+        args: ["snes,genesis"],
         advArgs: [
           ["launcher", "retroarch"],
           ["action", "run"],
@@ -224,16 +224,102 @@ describe("serializeZapScript", () => {
     }
   });
 
-  it("keeps a launch as plain media text only while that is safe", () => {
+  it("writes a launch as plain media text", () => {
     const [launch] = parse("SNES/game.sfc");
-    expect(writeZapStep({ ...launch!, args: ["SNES/other, game.sfc"] })).toBe(
-      "SNES/other, game.sfc",
+    const write = (args: string[], advArgs: ZapStep["advArgs"] = []) =>
+      writeZapStep({ ...launch!, args, advArgs });
+    expect(write(["SNES/other, game.sfc"])).toBe("SNES/other, game.sfc");
+    expect(write(["**odd"])).toBe('"**odd"');
+    expect(write(["@SNES/odd"])).toBe('"@SNES/odd"');
+    expect(write(["#odd"])).toBe('"#odd"');
+    expect(write(["a?b"])).toBe('"a?b"');
+    expect(write([""])).toBe("**launch");
+    expect(write([""], [["system", "snes"]])).toBe("**launch?system=snes");
+    expect(
+      writeZapStep({
+        ...createZapStep("launch", ["SNES/Game (USA, Europe).sfc"]),
+        advArgs: [["launcher", "x"]],
+      }),
+    ).toBe("SNES/Game (USA, Europe).sfc?launcher=x");
+  });
+
+  it("moves options typed onto a media path into the step's options", () => {
+    const write = (value: string, advArgs: ZapStep["advArgs"] = []) =>
+      writeZapStep({ ...createZapStep("launch", [value]), advArgs });
+    expect(
+      write("/media/fat/games/GBA/Celeste Classic.gba?launcher=RAGBA"),
+    ).toBe("/media/fat/games/GBA/Celeste Classic.gba?launcher=RAGBA");
+    expect(
+      write(
+        "/media/fat/games/S32X/Mortal Kombat II (Japan, USA) (patched).32x?launcher=RAS32X",
+      ),
+    ).toBe(
+      "/media/fat/games/S32X/Mortal Kombat II (Japan, USA) (patched).32x?launcher=RAS32X",
     );
-    expect(writeZapStep({ ...launch!, args: ["**odd"] })).toBe(
-      "**launch:**odd",
+    expect(write("SNES/game.sfc ?launcher=x&when= y ")).toBe(
+      "SNES/game.sfc?launcher=x&when=y",
     );
-    expect(writeZapStep({ ...launch!, args: ["a?b"] })).toBe('**launch:"a?b"');
-    expect(writeZapStep({ ...launch!, args: [""] })).toBe("**launch");
+    // An option set in its own field wins over the typed one.
+    expect(write("SNES/game.sfc?launcher=x", [["launcher", "y"]])).toBe(
+      "SNES/game.sfc?launcher=y",
+    );
+    expect(
+      writeZapStep(createZapStep("launch.title", ["SNES/Mario?launcher=x"])),
+    ).toBe("**launch.title:SNES/Mario?launcher=x");
+    expect(write("SNES/game.sfc?when=[[a && b?c]]&launcher=x")).toBe(
+      "SNES/game.sfc?when=[[a && b?c]]&launcher=x",
+    );
+    expect(
+      writeZapStep({
+        ...createZapStep("launch", ["SNES/game.sfc?when=[[media_playing]]"]),
+        advArgs: [["launcher", "x"]],
+      }),
+    ).toBe("SNES/game.sfc?when=[[media_playing]]&launcher=x");
+    // Not an option the command takes, so it stays part of the path.
+    expect(write("https://example.com/video.mp4?token=abc")).toBe(
+      '"https://example.com/video.mp4?token=abc"',
+    );
+    expect(write("SNES/game.sfc?launcher=x&token=abc")).toBe(
+      '"SNES/game.sfc?launcher=x&token=abc"',
+    );
+    // Only media fields take typed options.
+    expect(writeZapStep(createZapStep("echo", ["a?launcher=x"]))).toBe(
+      '**echo:"a?launcher=x"',
+    );
+  });
+
+  it("writes several random systems as separate arguments", () => {
+    const write = (name: string, value: string) =>
+      writeZapStep(createZapStep(name, [value]));
+    expect(write("launch.random", "snes,genesis")).toBe(
+      "**launch.random:snes,genesis",
+    );
+    expect(write("launch.random", "snes, genesis")).toBe(
+      "**launch.random:snes,genesis",
+    );
+    expect(write("random", "snes,genesis")).toBe("**random:snes,genesis");
+    // A search or path is one argument, commas included.
+    expect(write("launch.random", "snes/Zelda, The")).toBe(
+      '**launch.random:"snes/Zelda, The"',
+    );
+    expect(write("launch.random", "snes")).toBe("**launch.random:snes");
+
+    const [read] = parse("**launch.random:snes,genesis?launcher=x");
+    expect(read).toMatchObject({
+      args: ["snes,genesis"],
+      advArgs: [["launcher", "x"]],
+    });
+    expect(writeZapStep(edited(read!))).toBe(
+      "**launch.random:snes,genesis?launcher=x",
+    );
+  });
+
+  it("escapes a bracket that ends a value", () => {
+    expect(writeZapStep(createZapStep("echo", ["a["]))).toBe('**echo:"a^["');
+    expect(writeZapStep(createZapStep("launch", ["Game ["]))).toBe('"Game ^["');
+    expect(writeZapStep(createZapStep("echo", ["[a [[x]]"]))).toBe(
+      "**echo:[a [[x]]",
+    );
   });
 
   it("drops steps that write nothing", () => {

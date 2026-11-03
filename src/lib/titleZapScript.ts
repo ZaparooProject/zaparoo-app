@@ -7,7 +7,8 @@ export interface ParsedTitleZapScript {
 }
 
 const TAG_TYPE_PATTERN = /^[A-Za-z][A-Za-z0-9_-]*$/;
-const TAG_VALUE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9:_-]*$/;
+// Developer, publisher and credit names keep letters from any script.
+const TAG_VALUE_PATTERN = /^[\p{L}\p{N}][\p{L}\p{N}\p{M}:_-]*$/u;
 const TRAILING_GROUP_PATTERN = /\s+\(([^()]*)\)/g;
 
 export function titleTagKey(tag: TagInfo): string {
@@ -49,12 +50,32 @@ function findUnescapedCharacter(value: string, character: string): number {
   return -1;
 }
 
+/**
+ * Where the options start. A `?` only starts them when an option name
+ * follows; otherwise it is part of the title, as in "Millionaire?".
+ */
+function findOptionsStart(value: string): number {
+  for (let index = 0; index < value.length; index += 1) {
+    if (value[index] === "^") {
+      index += 1;
+      continue;
+    }
+    if (
+      value[index] === "?" &&
+      /^[A-Za-z0-9_]+(?:[=&]|$)/.test(value.slice(index + 1))
+    ) {
+      return index;
+    }
+  }
+  return -1;
+}
+
 export function parseTitleZapScript(
   zapScript: string,
 ): ParsedTitleZapScript | null {
   if (!zapScript.startsWith("@") || zapScript.includes("||")) return null;
 
-  const queryIndex = findUnescapedCharacter(zapScript, "?");
+  const queryIndex = findOptionsStart(zapScript);
   const command =
     queryIndex === -1 ? zapScript : zapScript.slice(0, queryIndex);
   const suffix = queryIndex === -1 ? "" : zapScript.slice(queryIndex);

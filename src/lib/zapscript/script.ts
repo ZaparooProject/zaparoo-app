@@ -12,6 +12,8 @@
  * all; the caller falls back to plain text editing.
  */
 
+import { zapCommand } from "@/lib/zapscript/catalog";
+
 export interface ZapStep {
   /** Stable key for the UI. */
   id: string;
@@ -27,7 +29,7 @@ export interface ZapStep {
   source?: string;
   /** Shown and edited as text: `args[0]` is the whole command. */
   raw?: boolean;
-  /** A launch written without `**launch:`, as plain media text. */
+  /** Read from plain media text rather than a `**launch:` command. */
   bare?: boolean;
 }
 
@@ -37,6 +39,13 @@ export type ZapParseResult =
 
 const INPUT_MACRO_COMMANDS = new Set(["input.keyboard", "input.gamepad"]);
 const INPUT_RAW_COMMAND = "input.text";
+/**
+ * Commands that take either one path or search, or several system IDs as
+ * separate arguments. The builder shows the IDs as one comma list.
+ */
+const SYSTEM_LIST_COMMANDS = new Set(["launch.random", "random"]);
+const SYSTEM_ID = /^[A-Za-z0-9_]+$/;
+const SYSTEM_LIST = /^[A-Za-z0-9_]+(?:\s*,\s*[A-Za-z0-9_]+)+$/;
 const ESCAPES: Record<string, string> = { n: "\n", r: "\r", t: "\t" };
 
 let nextStepId = 0;
@@ -311,6 +320,13 @@ export function parseZapScript(text: string): ZapParseResult {
               ? scanner.inputRaw()
               : scanner.args("", false);
         }
+        if (
+          SYSTEM_LIST_COMMANDS.has(command) &&
+          parsed.args.length > 1 &&
+          parsed.args.every((arg) => SYSTEM_ID.test(arg))
+        ) {
+          parsed.args = [parsed.args.join(",")];
+        }
         step = { id: stepId(), name: command, ...parsed };
       } else if (ch === "@") {
         // Media title shorthand: read as one argument, shown as text.
@@ -381,7 +397,9 @@ function quote(value: string): string {
       else if (ch === "\r") out += "^r";
       else if (ch === "\t") out += "^t";
       else if (ch === "^") out += "^^";
-      else if (ch === "[" && part.text[i + 1] === "[") out += "^[";
+      // A `[` that ends the text would be read as an expression Core never
+      // finds the end of.
+      else if (ch === "[" && (part.text[i + 1] ?? "[") === "[") out += "^[";
       else out += ch;
     }
   }
@@ -391,7 +409,7 @@ function quote(value: string): string {
 /** Whether a value would be read back differently if written unquoted. */
 function needsQuoting(value: string, separators: string): boolean {
   if (value === "" || value !== value.trim()) return true;
-  if (/^["'{]/.test(value) || value.endsWith("|")) return true;
+  if (/^["'{]/.test(value) || /[|[]$/.test(value)) return true;
   // Core reads an expression whole, so only the text around it matters.
   return splitExpressions(value).some(({ text, expression }) => {
     if (expression) return false;
@@ -421,9 +439,45 @@ export function quoteZapArgument(value: string): string {
   return needsQuoting(value, ",?") ? quote(value) : value;
 }
 
+// An option value is plain text or `[[expressions]]`, which may hold any
+// character but `]`.
+const TYPED_OPTION = String.raw`[A-Za-z0-9_]+=(?:[^&?^"'[\]{}|]|\[\[[^\]]*\]\])*`;
+const TYPED_OPTIONS = new RegExp(
+  String.raw`\?(${TYPED_OPTION}(?:&${TYPED_OPTION})*)$`,
+);
+
+/**
+ * Options typed onto the end of a media field, as in `Game.sfc?launcher=x`,
+ * become the step's options, which is how Core reads that text unquoted.
+ * Only options the command takes are moved, so a URL keeps its query.
+ * Options set in their own fields win over typed ones.
+ */
+function withTypedOptions(step: ZapStep): ZapStep {
+  const spec = zapCommand(step.name);
+  const index = spec?.args.findIndex((arg) => arg.kind === "media") ?? -1;
+  const value = step.args[index];
+  const match = value === undefined ? null : TYPED_OPTIONS.exec(value);
+  if (!spec || !value || !match) return step;
+  const known = new Set(spec.advArgs?.map((adv) => adv.name));
+  const pairs = match[1]!.match(new RegExp(TYPED_OPTION, "g")) ?? [];
+  const typed = pairs.map((pair): [string, string] => {
+    const at = pair.indexOf("=");
+    return [pair.slice(0, at), pair.slice(at + 1).trim()];
+  });
+  if (!typed.every(([name]) => known.has(name))) return step;
+  const args = [...step.args];
+  args[index] = value.slice(0, match.index).trimEnd();
+  const set = step.advArgs.filter(([, current]) => current !== "");
+  const advArgs = typed.filter(
+    ([name]) => !set.some(([current]) => current === name),
+  );
+  return { ...step, args, advArgs: [...advArgs, ...set] };
+}
+
 /** The ZapScript for one step, ignoring any text it was read from. */
-export function writeZapStep(step: ZapStep): string {
-  if (step.raw) return step.args[0] ?? "";
+export function writeZapStep(original: ZapStep): string {
+  if (original.raw) return original.args[0] ?? "";
+  const step = withTypedOptions(original);
   const advArgs = serializeAdvArgs(step.advArgs);
   if (INPUT_MACRO_COMMANDS.has(step.name)) {
     const text = step.args[0] ?? "";
@@ -433,15 +487,25 @@ export function writeZapStep(step: ZapStep): string {
     const text = step.args[0] ?? "";
     return `**${step.name}${text ? `:${text}` : ""}`;
   }
-  if (step.bare) {
-    const media = step.args[0] ?? "";
-    // Plain media text only works when it cannot be read as something else.
-    if (media !== "" && !/^[*@#{]/.test(media) && !needsQuoting(media, "?")) {
-      return `${media}${advArgs}`;
-    }
-  }
   const args = [...step.args];
   while (args.length > 0 && args.at(-1) === "") args.pop();
+  // A launch is written as plain media text, which Core reads as one
+  // argument, commas included. Text that would start a command, title,
+  // trait or JSON script is quoted to keep it media.
+  if (step.name === "launch" && args.length === 1) {
+    const media = args[0]!;
+    return `${/^[*@#{]/.test(media) || needsQuoting(media, "?") ? quote(media) : media}${advArgs}`;
+  }
+  // Several systems are separate arguments to Core; quoted, they would be
+  // one system ID with commas in it.
+  if (
+    SYSTEM_LIST_COMMANDS.has(step.name) &&
+    args.length === 1 &&
+    SYSTEM_LIST.test(args[0]!)
+  ) {
+    const systems = args[0]!.split(",").map((id) => id.trim());
+    return `**${step.name}:${systems.join(",")}${advArgs}`;
+  }
   const written = args.map((arg) =>
     needsQuoting(arg, ",?") ? quote(arg) : arg,
   );

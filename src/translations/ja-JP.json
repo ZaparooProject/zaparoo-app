@@ -1923,6 +1923,7 @@
         "moveDown": "ステップ{{position}}を下へ移動",
         "remove": "ステップ{{position}}を削除",
         "options": "詳細",
+        "mustBeAlone": "唯一のステップである必要があります",
         "textStep": "ZapScriptテキスト",
         "textStepDescription": "このステップはテキストでのみ編集できる構文を使用しています",
         "textStepField": "ステップ{{position}}のZapScript",

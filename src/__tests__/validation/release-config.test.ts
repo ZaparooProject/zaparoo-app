@@ -192,4 +192,27 @@ describe("release configuration", () => {
     expect(new Set(releaseKeys).size).toBe(releaseKeys.length);
     expect(currentLiveUpdate?.version).toBe("2.0.0");
   });
+
+  it("should map the 2.0.3 live update on every 2.0 native build", () => {
+    const versionFor = (releaseKey: string) =>
+      WHATS_NEW_ANNOUNCEMENTS.find((announcement) =>
+        announcement.releaseKeys.includes(releaseKey),
+      )?.version;
+
+    for (const releaseKey of [
+      "live:1.14.1-ota.4",
+      "live:2.0.0-ota.2",
+      "live:2.0.1-ota.2",
+      "live:2.0.2-ota.2",
+    ]) {
+      expect(versionFor(releaseKey)).toBe("2.0.3");
+    }
+    for (const releaseKey of [
+      "native:2.0.0+31",
+      "native:2.0.1+32",
+      "native:2.0.2+33",
+    ]) {
+      expect(versionFor(releaseKey)).toBe("2.0.0");
+    }
+  });
 });

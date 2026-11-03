@@ -37,6 +37,27 @@ describe("titleZapScript", () => {
       });
     });
 
+    it("should keep a question mark that is part of the title", () => {
+      const parsed = parseTitleZapScript(
+        "@PC/Who Wants to Be a Millionaire? (year:2000)?launcher=custom",
+      );
+      expect(parsed).toEqual({
+        base: "@PC/Who Wants to Be a Millionaire?",
+        suffix: "?launcher=custom",
+        tags: [{ type: "year", tag: "2000" }],
+      });
+
+      expect(buildTitleZapScript(parsed!, [])).toBe(
+        "@PC/Who Wants to Be a Millionaire??launcher=custom",
+      );
+
+      const ending = parseTitleZapScript("@PC/Game?");
+      expect(ending).toEqual({ base: "@PC/Game?", suffix: "", tags: [] });
+      expect(
+        buildTitleZapScript(ending!, [{ type: "year", tag: "2000" }]),
+      ).toBe("@PC/Game? (year:2000)");
+    });
+
     it.each([
       "SNES/Super Mario World",
       "**launch:SNES/Super Mario World.sfc",
@@ -87,6 +108,18 @@ describe("titleZapScript", () => {
           { type: "lang", tag: "en) (-region:us" },
         ]),
       ).toBe("@SNES/Game (region:us)");
+    });
+
+    it("should keep company names written in any script", () => {
+      const zapScript =
+        "@PSX/Game (developer:スクウェア) (publisher:café-games)";
+      const parsed = parseTitleZapScript(zapScript);
+      expect(parsed?.tags).toEqual([
+        { type: "developer", tag: "スクウェア" },
+        { type: "publisher", tag: "café-games" },
+      ]);
+
+      expect(buildTitleZapScript(parsed!, parsed!.tags)).toBe(zapScript);
     });
 
     it("should round trip Core grouped output", () => {

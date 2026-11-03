@@ -1923,6 +1923,7 @@
         "moveDown": "Descendre l’étape {{position}}",
         "remove": "Supprimer l’étape {{position}}",
         "options": "Avancé",
+        "mustBeAlone": "Doit être la seule étape",
         "textStep": "Texte ZapScript",
         "textStepDescription": "Cette étape utilise une syntaxe qui ne peut être modifiée que sous forme de texte",
         "textStepField": "ZapScript de l’étape {{position}}",

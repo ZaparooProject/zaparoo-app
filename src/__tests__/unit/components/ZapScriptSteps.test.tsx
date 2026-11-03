@@ -306,6 +306,38 @@ describe("ZapScriptInput steps", () => {
     const options = (position: number) =>
       stepButton(position, "zapscript.builder.options");
 
+    it("should show an option the command needs with its arguments", async () => {
+      const { user, onChange } = renderEditor("**playtime.extend:15m");
+
+      expect(options(1)).toHaveAttribute("aria-expanded", "false");
+      const profile = field(1, "zapscript.advArgs.profile");
+      expect(profile).toBeRequired();
+
+      await user.type(profile, "1234");
+
+      expect(onChange).toHaveBeenLastCalledWith(
+        "**playtime.extend:15m?profile=1234",
+      );
+      expect(options(1)).toHaveAttribute("aria-expanded", "false");
+    });
+
+    it("should flag a step that must be the only one", async () => {
+      const { user } = renderEditor("**playtime.extend:15m?profile=1234");
+
+      expect(within(step(1)).queryByRole("alert")).not.toBeInTheDocument();
+
+      await addStep(user, "stop");
+
+      expect(within(step(1)).getByRole("alert")).toHaveTextContent(
+        "zapscript.builder.mustBeAlone",
+      );
+      expect(within(step(2)).queryByRole("alert")).not.toBeInTheDocument();
+
+      await user.click(stepButton(2, "zapscript.builder.remove"));
+
+      expect(within(step(1)).queryByRole("alert")).not.toBeInTheDocument();
+    });
+
     it("should keep options closed until asked for", async () => {
       const { user } = renderEditor("**launch.system:snes");
 
@@ -364,6 +396,24 @@ describe("ZapScriptInput steps", () => {
       expect(onChange).toHaveBeenLastCalledWith("**launch.system:snes");
       expect(within(step(1)).getByRole("textbox", { name: "foo" })).toHaveValue(
         "",
+      );
+    });
+
+    it("should keep a launcher typed onto a media path out of the path", async () => {
+      const { user, onChange } = renderEditor("SNES/game.sfc");
+
+      const media = field(1, "zapscript.args.media");
+      await user.clear(media);
+      await user.type(
+        media,
+        "/media/fat/games/GBA/Celeste Classic.gba?launcher=RAGBA",
+      );
+
+      expect(onChange).toHaveBeenLastCalledWith(
+        "/media/fat/games/GBA/Celeste Classic.gba?launcher=RAGBA",
+      );
+      expect(media).toHaveValue(
+        "/media/fat/games/GBA/Celeste Classic.gba?launcher=RAGBA",
       );
     });
 

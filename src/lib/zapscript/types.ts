@@ -52,6 +52,8 @@ export interface ZapAdvArgSpec {
   example?: string;
   /** Only offered while the connected Core runs on this platform. */
   platform?: "mister";
+  /** Core refuses the step without it, so it is shown with the arguments. */
+  required?: boolean;
 }
 
 export type ZapCommandGroup =
@@ -74,6 +76,8 @@ export interface ZapCommandSpec {
   advArgs?: readonly ZapAdvArgSpec[];
   /** Only meaningful on this platform. */
   platform?: "mister";
+  /** Core only runs it as the only step of a script. */
+  alone?: boolean;
   /** Name of the command that replaces this deprecated one. */
   replacedBy?: string;
   /**

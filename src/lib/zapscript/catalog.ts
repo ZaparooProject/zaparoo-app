@@ -387,6 +387,7 @@ export const ZAP_COMMANDS: readonly ZapCommandSpec[] = [
     name: "write",
     group: "utility",
     description: description("write"),
+    alone: true,
     // Core refuses a write that carries advanced arguments.
     args: [
       {
@@ -686,7 +687,8 @@ export const ZAP_COMMANDS: readonly ZapCommandSpec[] = [
         example: "15m",
       },
     ],
-    advArgs: [adv.profile, adv.when],
+    advArgs: [{ ...adv.profile, required: true }, adv.when],
+    alone: true,
   },
 
   {
