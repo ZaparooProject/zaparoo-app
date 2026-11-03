@@ -79,7 +79,7 @@ This command:
 ### Listing Deployed Updates
 
 ```bash
-npm run live-update:list
+npx @capawesome/cli apps:channels:list --app-id e96c260c-3271-4895-bff0-de9f8ca4d05a
 ```
 
 ---
@@ -139,7 +139,13 @@ git push origin v1.11.2
 ```
 
 13. Confirm the tag's GitHub release artifacts complete, then start the iOS and Android builds for the tag in Capawesome Cloud and confirm they complete. Tags do not start Capawesome Cloud builds.
-14. Submit/release from App Store Connect and Google Play Console.
+14. Create the protected live update channel for the new build number, `production-<build>`, before the build reaches users. A build whose channel does not exist never receives a live update:
+
+```bash
+npx @capawesome/cli apps:channels:create --app-id e96c260c-3271-4895-bff0-de9f8ca4d05a --name production-<build> --protected
+```
+
+15. Submit/release from App Store Connect and Google Play Console.
 
 ### Failed Release Tags
 
