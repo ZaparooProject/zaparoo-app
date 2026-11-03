@@ -21,6 +21,25 @@ export type WhatsNewAnnouncement = {
 
 export const WHATS_NEW_ANNOUNCEMENTS: WhatsNewAnnouncement[] = [
   {
+    // Live update on every native build that runs 2.0: 1.14.1 build 30,
+    // 2.0.0 build 31, 2.0.1 build 32 and 2.0.2 build 33.
+    id: "release-2.0.3",
+    version: "2.0.3",
+    releaseKeys: [
+      "live:1.14.1-ota.4",
+      "live:2.0.0-ota.2",
+      "live:2.0.1-ota.2",
+      "live:2.0.2-ota.2",
+    ],
+    title: "What's new in v2.0.3",
+    items: [
+      "Fixed cards not launching when a launcher was typed after the game's path in a ZapScript step.",
+      "Fixed random launches from more than one system.",
+      "Extra time steps now ask for the authorizing profile and warn when they are not the only step.",
+      "Fixed tags on game titles with a question mark in the name, and on non-English developer and publisher names.",
+    ],
+  },
+  {
     // Live update on the 1.14.1 build 30 binary, then the 2.0.0 build 31,
     // 2.0.1 build 32, and 2.0.2 build 33 native releases (2.0.1 adds iPad
     // support and 2.0.2 fixes the iPad launch screen that blocked its upload).
