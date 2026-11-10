@@ -37,6 +37,7 @@ import {
   reconcileStorePurchases,
   restorePurchasesForUser,
   runPurchasesOperation,
+  trackProPaywallImpression,
 } from "@/lib/purchasesSetup";
 import { Button } from "./wui/Button";
 import { ModalActionBar } from "./wui/ModalActionBar";
@@ -108,6 +109,18 @@ const ProPurchaseModal = (props: {
     setPreviousModalOpen(props.proPurchaseModalOpen);
     if (props.proPurchaseModalOpen) setStep("purchase");
   }
+
+  // One impression per open. The ref also absorbs StrictMode's effect replay.
+  const impressionTrackedRef = useRef(false);
+  useEffect(() => {
+    if (!props.proPurchaseModalOpen) {
+      impressionTrackedRef.current = false;
+      return;
+    }
+    if (impressionTrackedRef.current) return;
+    impressionTrackedRef.current = true;
+    void trackProPaywallImpression();
+  }, [props.proPurchaseModalOpen]);
 
   // The checkout footer that held focus unmounts when the step changes.
   useEffect(() => {

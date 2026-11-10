@@ -26,6 +26,7 @@ const {
   mockResolveRuntimeReleaseIdentity,
   mockGetPreferencesState,
   mockIsNativePlatform,
+  mockTrackCustomPaywallImpression,
 } = vi.hoisted(() => ({
   mockGetAppUserID: vi.fn(),
   mockLogIn: vi.fn(),
@@ -39,6 +40,7 @@ const {
   mockResolveRuntimeReleaseIdentity: vi.fn(),
   mockGetPreferencesState: vi.fn(() => ({ storeVerifiedProAccess: false })),
   mockIsNativePlatform: vi.fn(),
+  mockTrackCustomPaywallImpression: vi.fn(),
 }));
 
 vi.mock("@capacitor/core", () => ({
@@ -59,6 +61,7 @@ vi.mock("@revenuecat/purchases-capacitor", () => ({
     restorePurchases: mockRestorePurchases,
     invalidateCustomerInfoCache: mockInvalidateCustomerInfoCache,
     getOfferings: mockGetOfferings,
+    trackCustomPaywallImpression: mockTrackCustomPaywallImpression,
   },
 }));
 
@@ -71,6 +74,7 @@ vi.mock("@/lib/preferencesStore", () => ({
 }));
 
 import { PurchaseIdentityError } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 import {
   __resetOfferingsForTests,
   ensurePurchasesUser,
@@ -86,6 +90,7 @@ import {
   resolvePurchasesReady,
   restorePurchasesForUser,
   runPurchasesOperation,
+  trackProPaywallImpression,
   withPurchasesTimeout,
 } from "@/lib/purchasesSetup";
 
@@ -519,5 +524,52 @@ describe("purchasesSetup", () => {
 
     await expect(resetPurchasesUser()).rejects.toBe(error);
     expect(mockGetCustomerInfo).not.toHaveBeenCalled();
+  });
+
+  describe("trackProPaywallImpression", () => {
+    it("records the Pro paywall against the Pro offering", async () => {
+      mockIsNativePlatform.mockReturnValue(true);
+      mockTrackCustomPaywallImpression.mockResolvedValue(undefined);
+
+      await trackProPaywallImpression();
+
+      expect(mockTrackCustomPaywallImpression).toHaveBeenCalledTimes(1);
+      expect(mockTrackCustomPaywallImpression).toHaveBeenCalledWith({
+        paywallId: "pro",
+        offeringId: "tapto_basic",
+      });
+    });
+
+    it("does nothing off native platforms", async () => {
+      mockIsNativePlatform.mockReturnValue(false);
+
+      await trackProPaywallImpression();
+
+      expect(mockTrackCustomPaywallImpression).not.toHaveBeenCalled();
+    });
+
+    it("resolves and logs locally when tracking fails", async () => {
+      const warn = vi.spyOn(logger, "warn").mockImplementation(() => {});
+      const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+      mockIsNativePlatform.mockReturnValue(true);
+      const error = new Error("not configured");
+      mockTrackCustomPaywallImpression.mockImplementation(() => {
+        throw error;
+      });
+
+      await expect(trackProPaywallImpression()).resolves.toBeUndefined();
+      expect(warn).toHaveBeenCalledWith(
+        "RevenueCat paywall impression failed:",
+        error,
+      );
+      expect(errorSpy).not.toHaveBeenCalled();
+
+      mockTrackCustomPaywallImpression.mockRejectedValue(error);
+      await expect(trackProPaywallImpression()).resolves.toBeUndefined();
+      expect(warn).toHaveBeenCalledTimes(2);
+
+      warn.mockRestore();
+      errorSpy.mockRestore();
+    });
   });
 });

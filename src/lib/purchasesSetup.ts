@@ -20,11 +20,14 @@ import {
   type RuntimeReleaseIdentity,
 } from "@/lib/whatsNew";
 import { usePreferencesStore } from "@/lib/preferencesStore";
-import { sanitizeLogValue } from "@/lib/logger";
+import { logger, sanitizeLogValue } from "@/lib/logger";
 
 export const PRO_ENTITLEMENT_ID = "tapto_launcher";
 export const PRO_OFFERING_ID = "tapto_basic";
 export const PRO_PACKAGE_ID = "$rc_lifetime";
+// Fixed so RevenueCat counts every Pro modal view as one paywall, across copy
+// changes and entry points.
+export const PRO_PAYWALL_ID = "pro";
 export const WARP_ENTITLEMENT_ID = "warp";
 export const WARP_OFFERING_ID = "warp";
 export const WARP_MONTHLY_PACKAGE_ID = "$rc_monthly";
@@ -370,6 +373,24 @@ export function runPurchasesOperation<T>(
 
     return result;
   });
+}
+
+/**
+ * Records a Pro purchase modal view in RevenueCat's paywall analytics. Never
+ * rejects: a tracking failure must not affect the modal or a purchase.
+ */
+export async function trackProPaywallImpression(): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return;
+
+  try {
+    await purchasesReady;
+    await Purchases.trackCustomPaywallImpression({
+      paywallId: PRO_PAYWALL_ID,
+      offeringId: PRO_OFFERING_ID,
+    });
+  } catch (error) {
+    logger.warn("RevenueCat paywall impression failed:", error);
+  }
 }
 
 export function restorePurchasesForUser(

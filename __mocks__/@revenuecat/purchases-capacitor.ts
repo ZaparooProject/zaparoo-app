@@ -35,6 +35,7 @@ export const Purchases = {
   }),
   purchasePackage: vi.fn().mockResolvedValue({}),
   restorePurchases: vi.fn().mockResolvedValue({}),
+  trackCustomPaywallImpression: vi.fn().mockResolvedValue(undefined),
   addCustomerInfoUpdateListener: vi.fn().mockReturnValue({ remove: vi.fn() }),
 };
 

@@ -97,6 +97,7 @@ vi.mock("@revenuecat/purchases-capacitor", () => ({
     getCustomerInfo: vi.fn(),
     getOfferings: vi.fn(),
     purchasePackage: vi.fn(),
+    trackCustomPaywallImpression: vi.fn(),
   },
 }));
 
@@ -293,6 +294,7 @@ describe("useProPurchase", () => {
     // Set up default mock returns for the hook
     const { Purchases } = await import("@revenuecat/purchases-capacitor");
     vi.mocked(Purchases.getOfferings).mockResolvedValue(createOfferings());
+    vi.mocked(Purchases.trackCustomPaywallImpression).mockResolvedValue();
     vi.mocked(Purchases.getCustomerInfo).mockResolvedValue({
       customerInfo: {
         entitlements: {
@@ -1271,6 +1273,103 @@ describe("useProPurchase", () => {
     expect(
       screen.queryByText("scan.purchaseProWarpNote"),
     ).not.toBeInTheDocument();
+  });
+
+  it("should record one paywall impression each time the modal opens", async () => {
+    const user = userEvent.setup();
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    const { useStatusStore } = await import("@/lib/store");
+    const { rerender } = render(<ProPurchaseHarness />);
+    const dialog = screen
+      .getByText("scan.purchaseProTitle")
+      .closest('[role="dialog"]')!;
+
+    expect(Purchases.trackCustomPaywallImpression).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
+    await waitFor(() => {
+      expect(Purchases.trackCustomPaywallImpression).toHaveBeenCalledTimes(1);
+    });
+    expect(Purchases.trackCustomPaywallImpression).toHaveBeenCalledWith({
+      paywallId: "pro",
+      offeringId: "tapto_basic",
+    });
+
+    // Re-renders while open, including offerings settling, add nothing.
+    rerender(<ProPurchaseHarness />);
+    act(() => {
+      useStatusStore.setState({ loggedInUser: null });
+      useStatusStore.getState().setProPurchaseModalOpen(true);
+    });
+    await waitFor(() => expect(Purchases.getOfferings).toHaveBeenCalled());
+
+    act(() => {
+      useStatusStore.getState().setProPurchaseModalOpen(false);
+    });
+    await waitFor(() => {
+      expect(dialog).toHaveStyle({ transform: "translate3d(0, 100%, 0)" });
+    });
+    expect(Purchases.trackCustomPaywallImpression).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
+    await waitFor(() => {
+      expect(Purchases.trackCustomPaywallImpression).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it("should not record a paywall impression on web", async () => {
+    const { Capacitor } = await import("@capacitor/core");
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    vi.mocked(Capacitor.getPlatform).mockReturnValue("web");
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
+
+    const user = userEvent.setup();
+    render(<ProPurchaseHarness />);
+    await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
+
+    expect(
+      screen.getByRole("dialog", { name: "scan.purchaseProTitle" }),
+    ).toBeInTheDocument();
+    expect(Purchases.trackCustomPaywallImpression).not.toHaveBeenCalled();
+  });
+
+  it("should keep checkout working when the paywall impression fails", async () => {
+    const user = userEvent.setup();
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    const { logger } = await import("@/lib/logger");
+    const trackingError = new Error("not configured");
+    vi.mocked(Purchases.trackCustomPaywallImpression).mockRejectedValue(
+      trackingError,
+    );
+    vi.mocked(Purchases.getOfferings).mockResolvedValue(
+      createOfferings(createOffering([createPackage()])),
+    );
+    vi.mocked(Purchases.purchasePackage).mockResolvedValue({
+      customerInfo: {
+        entitlements: { active: { tapto_launcher: {} } },
+      },
+    } as never);
+
+    render(<ProPurchaseHarness />);
+    await waitFor(() => expect(Purchases.getOfferings).toHaveBeenCalled());
+    await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
+
+    await waitFor(() => {
+      expect(logger.warn).toHaveBeenCalledWith(
+        "RevenueCat paywall impression failed:",
+        trackingError,
+      );
+    });
+    await user.click(
+      await screen.findByRole("button", { name: "scan.purchaseProAction" }),
+    );
+
+    expect(
+      await screen.findByRole("dialog", { name: "scan.purchaseAccountTitle" }),
+    ).toBeInTheDocument();
+    expect(Purchases.purchasePackage).toHaveBeenCalledTimes(1);
+    const { usePreferencesStore } = await import("@/lib/preferencesStore");
+    expect(usePreferencesStore.getState().lifetimeProAccess).toBe(true);
   });
 
   it("should keep purchase modal hidden until opened", () => {
