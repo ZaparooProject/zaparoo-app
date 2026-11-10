@@ -204,6 +204,10 @@ describe("release configuration", () => {
       "live:2.0.0-ota.2",
       "live:2.0.1-ota.2",
       "live:2.0.2-ota.2",
+      "live:1.14.1-ota.5",
+      "live:2.0.0-ota.3",
+      "live:2.0.1-ota.3",
+      "live:2.0.2-ota.3",
     ]) {
       expect(versionFor(releaseKey)).toBe("2.0.3");
     }

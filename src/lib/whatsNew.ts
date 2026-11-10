@@ -22,7 +22,9 @@ export type WhatsNewAnnouncement = {
 export const WHATS_NEW_ANNOUNCEMENTS: WhatsNewAnnouncement[] = [
   {
     // Live update on every native build that runs 2.0: 1.14.1 build 30,
-    // 2.0.0 build 31, 2.0.1 build 32 and 2.0.2 build 33.
+    // 2.0.0 build 31, 2.0.1 build 32 and 2.0.2 build 33. The second set of
+    // keys is a follow-up live update with no user-facing changes; it keeps
+    // the 2.0.3 version and announcement so nothing new is shown.
     id: "release-2.0.3",
     version: "2.0.3",
     releaseKeys: [
@@ -30,6 +32,10 @@ export const WHATS_NEW_ANNOUNCEMENTS: WhatsNewAnnouncement[] = [
       "live:2.0.0-ota.2",
       "live:2.0.1-ota.2",
       "live:2.0.2-ota.2",
+      "live:1.14.1-ota.5",
+      "live:2.0.0-ota.3",
+      "live:2.0.1-ota.3",
+      "live:2.0.2-ota.3",
     ],
     title: "What's new in v2.0.3",
     items: [
