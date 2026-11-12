@@ -44,6 +44,7 @@ import { reconcileCredentialProvenAliases } from "@/lib/devices/credentialProof"
 // Capture event handlers for notification testing
 let capturedEventHandlers: {
   onConnectionChange?: (deviceId: string, connection: unknown) => void;
+  onLinkChange?: (deviceId: string, link: "wifi" | "bluetooth" | null) => void;
   onMessage?: (deviceId: string, event: unknown) => void;
   onError?: (deviceId: string, error: Error) => void;
   onEncryptedHandshakeOk?: () => void;
@@ -2996,6 +2997,44 @@ describe("connection event handling", () => {
         "Theme",
       );
     });
+  });
+
+  it("should record a link change without opening the connection again", async () => {
+    function LinkConsumer() {
+      const { activeConnection } = useConnection();
+      return <span data-testid="link">{String(activeConnection?.link)}</span>;
+    }
+    render(
+      <ConnectionProvider>
+        <LinkConsumer />
+      </ConnectionProvider>,
+    );
+    act(() => {
+      capturedEventHandlers.onConnectionChange!(RECORD_ID, {
+        deviceId: RECORD_ID,
+        state: "connected",
+        link: null,
+        hasData: false,
+        hasConnectedBefore: false,
+      });
+    });
+    await waitFor(() => {
+      expect(CoreAPI.version).toHaveBeenCalledTimes(1);
+    });
+
+    act(() => {
+      capturedEventHandlers.onLinkChange!(RECORD_ID, "bluetooth");
+    });
+
+    expect(screen.getByTestId("link")).toHaveTextContent("bluetooth");
+
+    act(() => {
+      capturedEventHandlers.onLinkChange!(RECORD_ID, null);
+    });
+
+    expect(screen.getByTestId("link")).toHaveTextContent("null");
+    expect(CoreAPI.version).toHaveBeenCalledTimes(1);
+    expect(CoreAPI.flushQueue).toHaveBeenCalledTimes(1);
   });
 
   it("should preserve legacy capabilities for older Core versions", async () => {

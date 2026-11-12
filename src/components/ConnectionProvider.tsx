@@ -1654,8 +1654,15 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         );
         setPairingOpen(true);
       },
-      onLinkChange: (_deviceId, link) => {
+      onLinkChange: (deviceId, link) => {
         if (!isCurrentConnection()) return;
+        // The link is not part of a connection change, so record it here for
+        // whatever shows which link is in use.
+        setLocalConnection((current) =>
+          current?.deviceId === deviceId && current.link !== link
+            ? { ...current, link }
+            : current,
+        );
         const previous = lastLink;
         if (link !== null) lastLink = link;
         // Moving between Wi-Fi and Bluetooth is a new session on Core; refetch

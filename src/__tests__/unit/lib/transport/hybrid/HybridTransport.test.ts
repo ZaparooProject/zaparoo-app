@@ -440,6 +440,32 @@ describe("HybridTransport", () => {
       expect(transport.link).toBe("wifi");
     });
 
+    it("stays on Bluetooth when Wi-Fi drops while owed replies drain", async () => {
+      const { transport, handlers, ws, bleChild } = await onBluetooth({
+        wsUrls: [URL_A],
+      });
+      transport.send('{"jsonrpc":"2.0","id":7,"method":"media.search"}');
+      await vi.advanceTimersByTimeAsync(60000);
+      const probe = probeOpens(ws);
+      probe.handlers.onEncryptedHandshakeOk?.();
+      const held = '{"jsonrpc":"2.0","id":8,"method":"version"}';
+      transport.send(held);
+      handlers.onLinkChange.mockClear();
+
+      probe.lose();
+      bleChild.reply({ jsonrpc: "2.0", id: 7, result: {} });
+
+      expect(bleChild.destroyed).toBe(false);
+      expect(probe.destroyed).toBe(true);
+      expect(bleChild.sent.at(-1)).toBe(held);
+      expect(transport.link).toBe("bluetooth");
+      expect(transport.state).toBe("connected");
+      expect(handlers.onLinkChange).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(60000);
+      expect(ws()).toHaveLength(2);
+    });
+
     it("stays on Bluetooth while Wi-Fi is much slower", async () => {
       const { transport, ws, bleChild } = await onBluetooth({
         wsUrls: [URL_A],

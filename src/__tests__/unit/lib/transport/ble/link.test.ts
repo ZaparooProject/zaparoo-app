@@ -298,6 +298,65 @@ describe("BleLink", () => {
     expect(__bluetoothListenerCount("deviceDisconnected")).toBe(0);
   });
 
+  it("leaves nothing behind when cancelled while its listeners are added", async () => {
+    const addListener = vi.mocked(BluetoothLowEnergy.addListener);
+    const add = addListener.getMockImplementation()!;
+    const controller = new AbortController();
+    let finishAdding = () => {};
+    const added = new Promise<void>((resolve) => {
+      finishAdding = resolve;
+    });
+    addListener
+      .mockImplementationOnce(add)
+      .mockImplementationOnce(async (...args: Parameters<typeof add>) => {
+        controller.abort();
+        await added;
+        return add(...args);
+      });
+
+    await expect(
+      BleLink.open(PERIPHERAL, handlers(), {
+        tag: TAG,
+        signal: controller.signal,
+      }),
+    ).rejects.toBeInstanceOf(BleLinkAbortedError);
+    finishAdding();
+    await new Promise((resolve) => setTimeout(resolve));
+
+    expect(__bluetoothListenerCount("deviceDisconnected")).toBe(0);
+    expect(__bluetoothListenerCount("characteristicChanged")).toBe(0);
+    expect(BluetoothLowEnergy.connect).not.toHaveBeenCalled();
+  });
+
+  it("goes no further when cancelled while the peripheral connects", async () => {
+    const controller = new AbortController();
+    let finishConnecting = () => {};
+    vi.mocked(BluetoothLowEnergy.connect).mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          finishConnecting = resolve;
+          controller.abort();
+        }),
+    );
+
+    await expect(
+      BleLink.open(PERIPHERAL, handlers(), {
+        tag: TAG,
+        signal: controller.signal,
+      }),
+    ).rejects.toBeInstanceOf(BleLinkAbortedError);
+    finishConnecting();
+    await new Promise((resolve) => setTimeout(resolve));
+
+    // The cancel asked for the one disconnect; setup adds neither another
+    // nor any further step once the connect it was waiting on returns.
+    expect(BluetoothLowEnergy.disconnect).toHaveBeenCalledExactlyOnceWith({
+      deviceId: PERIPHERAL,
+    });
+    expect(BluetoothLowEnergy.requestMtu).not.toHaveBeenCalled();
+    expect(BluetoothLowEnergy.discoverServices).not.toHaveBeenCalled();
+  });
+
   it("ignores a cancel that comes after the link opened", async () => {
     const controller = new AbortController();
     const h = handlers();

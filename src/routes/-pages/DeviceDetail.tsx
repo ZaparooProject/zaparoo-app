@@ -82,10 +82,13 @@ export function DeviceDetail() {
   const [combineFailed, setCombineFailed] = useState(false);
   const [isCombining, setIsCombining] = useState(false);
 
-  // Reset the draft when navigating between different device records.
+  // Reset the draft when navigating between different device records. The
+  // page is reused for the next record, so a combine that left for the
+  // record it kept has to stop being busy here.
   if (record?.recordId !== trackedRecordId) {
     setTrackedRecordId(record?.recordId);
     setDraftName(initialName);
+    if (record) setIsCombining(false);
   }
 
   // Records arrive asynchronously, so a page opened cold — a deep link, or a

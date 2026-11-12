@@ -163,9 +163,11 @@ export class ConnectionManager {
       onHeartbeat: (rttMs) =>
         this.handlers.onHeartbeat?.(config.deviceId, rttMs),
       onLinkChange: (link) => {
+        // Reported by itself: the state has not changed, and a listener that
+        // took this for a connection change would open the connection again.
         connection.link = link;
+        this.connections.set(config.deviceId, { ...connection });
         this.handlers.onLinkChange?.(config.deviceId, link);
-        this.handlers.onConnectionChange?.(config.deviceId, { ...connection });
       },
       onBluetoothIdentity: (identity) =>
         this.handlers.onBluetoothIdentity?.(config.deviceId, identity),

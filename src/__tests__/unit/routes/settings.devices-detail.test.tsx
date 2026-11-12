@@ -507,6 +507,59 @@ describe("Settings Device Detail Route", () => {
       ).not.toBeInTheDocument();
     });
 
+    it("should be ready to combine again on the record it left for", async () => {
+      const user = userEvent.setup();
+      const shown = mockDeviceRecord({
+        address: "steamdeck.local",
+        name: "Steamdeck",
+      });
+      const other = mockDeviceRecord({
+        address: "10.0.0.206",
+        name: "Steamdeck alias",
+      });
+      const third = mockDeviceRecord({
+        address: "10.0.0.207",
+        name: "Third deck",
+      });
+      await seedDeviceRegistry([shown, other, third], other.recordId);
+      mockParams.current = { recordId: shown.recordId };
+      const DeviceDetail = getDeviceDetail();
+      const page = () => (
+        <QueryClientProvider client={queryClient}>
+          <DeviceDetail />
+        </QueryClientProvider>
+      );
+      const view = render(page());
+
+      const confirmation = await chooseOther(user);
+      await user.click(
+        within(confirmation).getByRole("button", {
+          name: "settings.deviceCombine.confirm",
+        }),
+      );
+      await waitFor(() =>
+        expect(mockNavigate).toHaveBeenCalledWith(detailsOf(other)),
+      );
+
+      // The router reuses the page for the record that was kept.
+      mockParams.current = { recordId: other.recordId };
+      view.rerender(page());
+
+      await user.click(
+        screen.getByRole("button", { name: "settings.deviceCombine.open" }),
+      );
+      await user.click(
+        within(
+          screen.getByRole("dialog", { name: "settings.deviceCombine.choose" }),
+        ).getByRole("button", { name: /Third deck/ }),
+      );
+      expect(
+        within(
+          screen.getByRole("dialog", { name: "settings.deviceCombine.title" }),
+        ).getByRole("button", { name: "settings.deviceCombine.confirm" }),
+      ).toBeEnabled();
+    });
+
     it("should combine with the chosen record after confirmation, keeping the active one", async () => {
       const user = userEvent.setup();
       const { shown, other } = await seedPair("other");

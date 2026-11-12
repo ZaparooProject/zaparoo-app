@@ -249,12 +249,24 @@ export class BleLink {
   ): Promise<void> {
     const deviceId = this.peripheralId;
     onStep?.("connecting");
-    // Listeners first, so a disconnect during setup is not missed.
-    this.listeners.push(
-      await BluetoothLowEnergy.addListener("deviceDisconnected", (event) => {
+    // Listeners first, so a disconnect during setup is not missed. Each is
+    // kept as soon as it exists: a cancel between the two must find the
+    // first to remove, and the second must not outlive a link already closed.
+    const keep = async (adding: Promise<PluginListenerHandle>) => {
+      const handle = await adding;
+      if (this.closedFlag) {
+        await handle.remove().catch(() => undefined);
+        this.throwIfClosed();
+      }
+      this.listeners.push(handle);
+    };
+    await keep(
+      BluetoothLowEnergy.addListener("deviceDisconnected", (event) => {
         if (event.deviceId === deviceId) this.fail("peripheral disconnected");
       }),
-      await BluetoothLowEnergy.addListener("characteristicChanged", (event) => {
+    );
+    await keep(
+      BluetoothLowEnergy.addListener("characteristicChanged", (event) => {
         if (
           event.deviceId === deviceId &&
           sameUuid(event.characteristicId, BLE_TX_CHAR_UUID)
@@ -264,7 +276,12 @@ export class BleLink {
       }),
     );
 
+    this.throwIfClosed();
     await BluetoothLowEnergy.connect({ deviceId, timeout: connectTimeoutMs });
+    // Closed while connecting: whoever closed it already asked for the
+    // disconnect, which the plugin runs after this connect. A second one
+    // here could land on a link opened to the same peripheral since.
+    this.throwIfClosed();
     this.linked = true;
 
     if (Capacitor.getPlatform() === "android") {

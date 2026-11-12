@@ -786,6 +786,20 @@ export class HybridTransport implements Transport {
     clearTimeout(switching.capTimer);
     this.switching = null;
     const ws = switching.to;
+    if (
+      !ws.isConnected &&
+      this.active === "bluetooth" &&
+      this.ble?.isConnected
+    ) {
+      // Nothing watched the socket while replies drained. It dropped in that
+      // time, so Bluetooth is still the link that works: keep it.
+      logger.debug(`[Hybrid:${this.deviceId}] Wi-Fi dropped before the switch`);
+      ws.destroy();
+      this.wifiQuality.recordFailure();
+      this.releaseHeld();
+      this.scheduleProbe();
+      return;
+    }
     this.dropChild("wifi");
     this.ws = ws;
     ws.setEventHandlers(this.childHandlers("wifi", ws));
@@ -798,6 +812,12 @@ export class HybridTransport implements Transport {
     this.handlers.onOpen?.(switching.address);
     this.handlers.onLinkChange?.("wifi");
     this.deriveState();
+    this.releaseHeld();
+    if (!ws.isConnected) this.handleActiveLost("wifi");
+  }
+
+  /** Sends what was held during a switch over whichever link is now active. */
+  private releaseHeld(): void {
     const held = this.held;
     this.held = [];
     for (const data of held) {
@@ -807,7 +827,6 @@ export class HybridTransport implements Transport {
         logger.warn(`[Hybrid:${this.deviceId}] Held send failed`, error);
       }
     }
-    if (!ws.isConnected) this.handleActiveLost("wifi");
   }
 
   private clearTimer(

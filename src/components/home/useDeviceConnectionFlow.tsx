@@ -56,6 +56,8 @@ interface IdentifyProgress {
   name: string;
   step: IdentifyStep;
   slow: boolean;
+  /** The device answered and is being saved, which cannot be called off. */
+  committed: boolean;
 }
 
 const selectRecords = (snapshot: DeviceRegistrySnapshot) => snapshot.records;
@@ -117,6 +119,7 @@ export function useDeviceConnectionFlow({
   const activeRecordId = useDeviceRegistry(selectActiveRecordId);
   const [identifying, setIdentifying] = useState<IdentifyProgress | null>(null);
   const identifyAbortRef = useRef<AbortController | null>(null);
+  const identifyCommittedRef = useRef(false);
   const [nearbyError, setNearbyError] = useState(false);
   const scanTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [enteringAddress, setEnteringAddress] = useState(false);
@@ -185,6 +188,7 @@ export function useDeviceConnectionFlow({
     identifyAbortRef.current = null;
   }, []);
   const cancelIdentify = () => {
+    if (identifyCommittedRef.current) return;
     abortIdentify();
     setIdentifying(null);
   };
@@ -365,7 +369,13 @@ export function useDeviceConnectionFlow({
     const controller = new AbortController();
     identifyAbortRef.current = controller;
     const { peripheralId } = device;
-    setIdentifying({ peripheralId, name, step: "connecting", slow: false });
+    setIdentifying({
+      peripheralId,
+      name,
+      step: "connecting",
+      slow: false,
+      committed: false,
+    });
     setNearbyError(false);
     try {
       const info = await identifyBluetoothDevice(peripheralId, {
@@ -378,6 +388,14 @@ export function useDeviceConnectionFlow({
           ),
       });
       if (controller.signal.aborted) return;
+      // From here the device is saved and made active whatever happens, so
+      // Cancel goes away instead of promising what it cannot do.
+      identifyCommittedRef.current = true;
+      setIdentifying((current) =>
+        current?.peripheralId === peripheralId
+          ? { ...current, committed: true }
+          : current,
+      );
       await selectBluetoothDevice({
         deviceId: info.deviceId,
         peripheralId,
@@ -392,6 +410,7 @@ export function useDeviceConnectionFlow({
       });
       setNearbyError(true);
     } finally {
+      identifyCommittedRef.current = false;
       if (identifyAbortRef.current === controller) {
         identifyAbortRef.current = null;
         setIdentifying(null);
@@ -472,12 +491,14 @@ export function useDeviceConnectionFlow({
   };
 
   const footer = identifying ? (
-    <Button
-      variant="secondary"
-      label={t("nav.cancel")}
-      onClick={cancelIdentify}
-      className="w-full"
-    />
+    identifying.committed ? undefined : (
+      <Button
+        variant="secondary"
+        label={t("nav.cancel")}
+        onClick={cancelIdentify}
+        className="w-full"
+      />
+    )
   ) : enteringAddress ? (
     <div className="wui-action-grid [&>*]:min-h-12 [&>*]:w-full [&>*]:max-w-none">
       <Button

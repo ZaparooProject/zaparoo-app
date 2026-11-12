@@ -598,19 +598,39 @@ describe("ConnectionManager", () => {
       expect(createdLinkTransports[0]!.config.wsUrls).toEqual([]);
     });
 
-    it("records the link and reports it as a connection change", () => {
+    it("records the link and reports it without a connection change", () => {
       const onLinkChange = vi.fn();
       const onConnectionChange = vi.fn();
       manager.setEventHandlers({ onLinkChange, onConnectionChange });
       manager.addDevice({ deviceId: "device-1", type: "hybrid", address: "" });
+      const { handlers } = createdLinkTransports[0]!;
+      handlers.onStateChange!("connected");
+      onConnectionChange.mockClear();
 
-      createdLinkTransports[0]!.handlers.onLinkChange!("bluetooth");
+      handlers.onLinkChange!("bluetooth");
 
       expect(manager.getConnection("device-1")?.link).toBe("bluetooth");
       expect(onLinkChange).toHaveBeenCalledWith("device-1", "bluetooth");
-      expect(onConnectionChange).toHaveBeenCalledWith(
+      expect(onConnectionChange).not.toHaveBeenCalled();
+
+      handlers.onLinkChange!(null);
+
+      expect(manager.getConnection("device-1")?.link).toBeNull();
+      expect(onConnectionChange).not.toHaveBeenCalled();
+    });
+
+    it("carries the link in the next connection change", () => {
+      const onConnectionChange = vi.fn();
+      manager.setEventHandlers({ onConnectionChange });
+      manager.addDevice({ deviceId: "device-1", type: "hybrid", address: "" });
+      const { handlers } = createdLinkTransports[0]!;
+
+      handlers.onLinkChange!("wifi");
+      handlers.onStateChange!("connected");
+
+      expect(onConnectionChange).toHaveBeenLastCalledWith(
         "device-1",
-        expect.objectContaining({ link: "bluetooth" }),
+        expect.objectContaining({ link: "wifi", state: "connected" }),
       );
     });
 

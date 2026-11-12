@@ -599,6 +599,37 @@ describe("DeviceSheet nearby Bluetooth devices", () => {
     expect(close).not.toHaveBeenCalled();
   });
 
+  it("takes Cancel away once the device is being saved", async () => {
+    const user = userEvent.setup();
+    const close = vi.fn();
+    mocks.bluetooth.devices = [{ peripheralId: "NEAR", name: "Near Core" }];
+    mocks.identify.mockResolvedValue({ deviceId: "core-1" });
+    let saved!: () => void;
+    mocks.selectBluetoothDevice.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        saved = resolve;
+      }),
+    );
+    renderSheet(close);
+
+    await user.click(
+      within(deviceList()).getByRole("button", { name: /Near Core/ }),
+    );
+
+    await waitFor(() =>
+      expect(mocks.selectBluetoothDevice).toHaveBeenCalledTimes(1),
+    );
+    expect(
+      screen.queryByRole("button", { name: "nav.cancel" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Near Core")).toBeInTheDocument();
+    expect(close).not.toHaveBeenCalled();
+
+    saved();
+
+    await waitFor(() => expect(close).toHaveBeenCalledTimes(1));
+  });
+
   it("shows an inline error when the device cannot be reached", async () => {
     const user = userEvent.setup();
     const close = vi.fn();
