@@ -65,8 +65,26 @@ export class BleLinkDroppedError extends Error {
   }
 }
 
+/** The caller gave up on a link while it was opening. */
+export class BleLinkAbortedError extends Error {
+  constructor() {
+    super("Bluetooth link opening was cancelled");
+    this.name = "BleLinkAbortedError";
+  }
+}
+
+/**
+ * Where opening a link has got to: reaching the peripheral, the stretch in
+ * which the phone pairs if it has to, then reading Core's Info.
+ */
+export type BleLinkStep = "connecting" | "pairing" | "reading";
+
 export interface BleLinkOptions {
   connectTimeoutMs?: number;
+  /** Told each step as opening reaches it. */
+  onStep?: (step: BleLinkStep) => void;
+  /** Aborting ends the opening with BleLinkAbortedError. */
+  signal?: AbortSignal;
   /** Fixed tag for tests; a random non-zero tag otherwise. */
   tag?: number;
 }
@@ -129,24 +147,36 @@ export class BleLink {
       handlers,
       options.tag ?? randomTag(),
     );
+    const { signal } = options;
+    if (signal?.aborted) throw new BleLinkAbortedError();
+    let onAbort = () => {};
     // The plugin leaves a step waiting when the peripheral drops, so the
-    // drop itself has to end the wait.
+    // drop itself has to end the wait. So does the caller giving up.
     const dropped = new Promise<never>((_resolve, reject) => {
       link.onSetupDrop = () => reject(new BleLinkDroppedError());
+      onAbort = () => {
+        link.closedFlag = true;
+        reject(new BleLinkAbortedError());
+      };
     });
+    signal?.addEventListener("abort", onAbort, { once: true });
     const setup = link.setup(
       options.connectTimeoutMs ?? BLE_CONNECT_TIMEOUT_MS,
+      options.onStep,
     );
     // Left behind by a drop, setup still ends once its pending step does.
     setup.catch(() => undefined);
     try {
       await Promise.race([setup, dropped]);
     } catch (error) {
+      signal?.removeEventListener("abort", onAbort);
       link.onSetupDrop = null;
       await link.teardown();
+      if (error instanceof BleLinkAbortedError) throw error;
       if (link.linked && link.closedFlag) throw new BleLinkDroppedError();
       throw error;
     }
+    signal?.removeEventListener("abort", onAbort);
     if (link.closedFlag) {
       await link.teardown();
       throw new BleLinkDroppedError();
@@ -213,8 +243,12 @@ export class BleLink {
     await this.teardown();
   }
 
-  private async setup(connectTimeoutMs: number): Promise<void> {
+  private async setup(
+    connectTimeoutMs: number,
+    onStep?: (step: BleLinkStep) => void,
+  ): Promise<void> {
     const deviceId = this.peripheralId;
+    onStep?.("connecting");
     // Listeners first, so a disconnect during setup is not missed.
     this.listeners.push(
       await BluetoothLowEnergy.addListener("deviceDisconnected", (event) => {
@@ -257,10 +291,12 @@ export class BleLink {
       this.mtu = BLE_IOS_ASSUMED_MTU;
     }
 
+    onStep?.("pairing");
     await this.discover();
     this.throwIfClosed();
     await this.awaitBond();
     this.throwIfClosed();
+    onStep?.("reading");
     const { value } = await BluetoothLowEnergy.readCharacteristic({
       deviceId,
       serviceId: BLE_SERVICE_UUID,

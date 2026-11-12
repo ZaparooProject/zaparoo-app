@@ -1,12 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { render, screen, waitFor, within } from "@/test-utils";
+import { act, render, screen, waitFor, within } from "@/test-utils";
 import { DeviceSheet } from "@/components/home/DeviceSheet";
+import { IDENTIFY_SLOW_AFTER_MS } from "@/components/home/useDeviceConnectionFlow";
+import type { IdentifyOptions } from "@/lib/transport/ble/identify";
+import { BleLinkAbortedError } from "@/lib/transport/ble/link";
 import {
   ConnectionContext,
   type ConnectionContextValue,
 } from "@/hooks/useConnection";
-import { deviceRegistry } from "@/lib/devices/deviceRegistry";
+import type { DiscoveredDevice } from "@/hooks/useNetworkScan";
+import {
+  deviceRegistry,
+  type DeviceRecord,
+} from "@/lib/devices/deviceRegistry";
 import { ConnectionState, useStatusStore } from "@/lib/store";
 import type { NearbyBluetoothDevice } from "@/lib/transport/ble/scanner";
 
@@ -17,6 +24,12 @@ const mocks = vi.hoisted(() => ({
   identify: vi.fn(),
   rescan: vi.fn().mockResolvedValue(undefined),
   openSettings: vi.fn(),
+  startScan: vi.fn().mockResolvedValue(undefined),
+  stopScan: vi.fn(),
+  network: {
+    devices: [] as DiscoveredDevice[],
+    isScanning: false,
+  },
   bluetooth: {
     supported: true,
     devices: [] as NearbyBluetoothDevice[],
@@ -44,11 +57,10 @@ vi.mock("@/hooks/useAppUi", () => ({
 vi.mock("@/hooks/useNetworkScan", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/hooks/useNetworkScan")>()),
   useNetworkScan: () => ({
-    devices: [],
-    isScanning: false,
+    ...mocks.network,
     error: null,
-    startScan: vi.fn().mockResolvedValue(undefined),
-    stopScan: vi.fn(),
+    startScan: mocks.startScan,
+    stopScan: mocks.stopScan,
   }),
 }));
 
@@ -89,13 +101,64 @@ function renderSheet(close: () => void = vi.fn()) {
   );
 }
 
-function nearbySection() {
-  return screen.getByRole("region", { name: "settings.bluetoothScan.title" });
+function deviceList() {
+  return screen.getByRole("region", { name: "scan.deviceSheetRecent" });
+}
+
+/** The device rows in display order, each as its visible text. */
+function rowTexts() {
+  return within(deviceList())
+    .getAllByRole("button")
+    .map((button) => button.textContent ?? "")
+    .filter(
+      (text) =>
+        text !== "" &&
+        text !== "settings.deviceSetup.addDeviceManually" &&
+        text !== "settings.bluetoothScan.openSettings",
+    );
+}
+
+function networkRecord(
+  recordId: string,
+  overrides: Partial<DeviceRecord> = {},
+): DeviceRecord {
+  const host = `${recordId}.local`;
+  const endpointId = `ws://${host}:7497`;
+  return {
+    recordId,
+    discoveryId: `${recordId}-id`,
+    endpoints: [
+      { endpointId, scheme: "ws", host, port: 7497, source: "manual" },
+    ],
+    preferredEndpointId: endpointId,
+    name: `${recordId} Core`,
+    ...overrides,
+  };
+}
+
+function discovered(overrides: Partial<DiscoveredDevice> = {}) {
+  return {
+    name: "Network Core",
+    address: "192.168.1.50",
+    addresses: ["192.168.1.50"],
+    hostname: "network.local",
+    port: 7497,
+    deviceId: "network-id",
+    ...overrides,
+  } satisfies DiscoveredDevice;
+}
+
+function installRecords(
+  records: Record<string, DeviceRecord>,
+  activeRecordId = "active",
+) {
+  deviceRegistry.installForTests({ schemaVersion: 2, activeRecordId, records });
 }
 
 describe("DeviceSheet nearby Bluetooth devices", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.network = { devices: [], isScanning: false };
     mocks.bluetooth = {
       supported: true,
       devices: [],
@@ -144,89 +207,185 @@ describe("DeviceSheet nearby Bluetooth devices", () => {
     });
   });
 
-  it("is hidden when Bluetooth is not supported", () => {
-    mocks.bluetooth.supported = false;
+  it("has no separate Bluetooth section", () => {
+    mocks.bluetooth.devices = [{ peripheralId: "NEAR", name: "Near Core" }];
     renderSheet();
 
+    expect(screen.getAllByRole("region")).toEqual([deviceList()]);
     expect(
-      screen.queryByRole("region", { name: "settings.bluetoothScan.title" }),
+      within(deviceList()).getByRole("button", { name: "Near Core" }),
+    ).toBeVisible();
+    expect(
+      screen.queryByText("settings.bluetoothScan.title"),
     ).not.toBeInTheDocument();
   });
 
-  it("lists every device strongest first and marks the saved one", () => {
+  it.each([
+    { supported: false, readiness: "disabled" },
+    { supported: true, readiness: "unsupported" },
+  ])(
+    "says nothing about Bluetooth when supported=$supported and readiness=$readiness",
+    ({ supported, readiness }) => {
+      mocks.bluetooth.supported = supported;
+      mocks.bluetooth.readiness = readiness;
+      mocks.bluetooth.canOpenSettings = true;
+      renderSheet();
+
+      expect(
+        screen.queryByText(/^settings\.bluetoothScan\./),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", {
+          name: "settings.bluetoothScan.openSettings",
+        }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it("lists network and Bluetooth finds, then saved devices by last use", () => {
+    const { records } = deviceRegistry.getSnapshot();
+    installRecords({
+      ...records,
+      old: networkRecord("old", { lastConnectedAt: 9 }),
+      seen: networkRecord("seen", { lastConnectedAt: 5 }),
+      older: networkRecord("older", { lastConnectedAt: 3 }),
+      recent: networkRecord("recent", {
+        lastConnectedAt: 7,
+        ble: { deviceId: "recent-id", peripheralId: "RECENT" },
+      }),
+    });
+    mocks.network.devices = [
+      discovered({ name: "Beta Net", hostname: "beta.local", deviceId: "b" }),
+      discovered({
+        name: "Seen on the network",
+        hostname: "seen.local",
+        deviceId: "seen-id",
+      }),
+      discovered({ name: "Alpha Net", hostname: "alpha.local", deviceId: "a" }),
+    ];
     mocks.bluetooth.devices = [
       { peripheralId: "FAR", name: "Far Core", rssi: -90 },
       { peripheralId: "KNOWN", name: "Known Bluetooth Core", rssi: -40 },
-      { peripheralId: "NEAR", name: "Near Core", rssi: -50 },
       { peripheralId: "NONAME", name: "" },
+      { peripheralId: "NEAR", name: "Near Core", rssi: -50 },
+      { peripheralId: "RECENT", name: "Recent over Bluetooth", rssi: -95 },
     ];
     renderSheet();
 
-    const rows = within(nearbySection()).getAllByRole("button", {
-      name: /settings\.bluetoothScan\.(savedViaBluetooth|viaBluetooth)/,
-    });
-    expect(rows.map((row) => row.textContent)).toEqual([
-      expect.stringContaining("settings.bluetoothScan.savedViaBluetooth"),
-      expect.stringContaining("Near Core"),
-      expect.stringContaining("Far Core"),
-      expect.stringContaining("settings.bluetoothScan.unnamed"),
+    // New finds first; saved devices stay in last-used order whether or not
+    // a scan can see them.
+    expect(rowTexts()).toEqual([
+      "Alpha Net",
+      "Beta Net",
+      "Near Core",
+      "Far Core",
+      "settings.bluetoothScan.unnamed",
+      "old Core",
+      "recent Core",
+      "seen Core",
+      "older Core",
+      "Known Bluetooth Core",
     ]);
-    const recent = screen.getByRole("region", {
-      name: "scan.deviceSheetRecent",
-    });
-    expect(within(recent).getByText("Known Bluetooth Core")).toBeVisible();
+    // New finds get their own heading, and it carries the one refresh button.
+    const headings = within(deviceList())
+      .getAllByRole("heading")
+      .map((heading) => heading.textContent);
+    expect(headings).toEqual(["settings.newDevices", "scan.deviceSheetRecent"]);
     expect(
-      within(recent).getByText("settings.bluetoothScan.viaBluetooth"),
-    ).toBeVisible();
+      within(deviceList()).getAllByRole("button", {
+        name: "settings.networkScan.refresh",
+      }),
+    ).toHaveLength(1);
   });
 
   it("keeps listing a saved device that has never connected", () => {
     const { records } = deviceRegistry.getSnapshot();
-    const known = records.known!;
-    deviceRegistry.installForTests({
-      schemaVersion: 2,
-      activeRecordId: "known",
-      records: {
-        ...records,
-        known: { ...known, lastConnectedAt: undefined },
-      },
+    installRecords({
+      ...records,
+      known: { ...records.known!, lastConnectedAt: undefined },
     });
     mocks.bluetooth.devices = [
       { peripheralId: "KNOWN", name: "Known Bluetooth Core", rssi: -40 },
     ];
     renderSheet();
 
-    expect(
-      within(nearbySection()).getByRole("button", {
-        name: /Known Bluetooth Core/,
-      }),
-    ).toBeVisible();
+    expect(rowTexts()).toEqual(["Known Bluetooth Core"]);
   });
 
-  it("lists a Core whose Bluetooth identity a Wi-Fi record learned", () => {
+  it("lists a Core whose Bluetooth identity a Wi-Fi record learned once, as its saved row", () => {
     const { records } = deviceRegistry.getSnapshot();
-    const active = records.active!;
-    deviceRegistry.installForTests({
-      schemaVersion: 2,
-      activeRecordId: "active",
-      records: {
-        active: {
-          ...active,
-          ble: { deviceId: "active-id", peripheralId: "WIFI" },
-          lastConnectedAt: 5,
-        },
-      },
+    installRecords({
+      active: records.active!,
+      wifi: networkRecord("wifi", {
+        ble: { deviceId: "wifi-id", peripheralId: "WIFI" },
+        lastConnectedAt: 5,
+      }),
     });
     mocks.bluetooth.devices = [{ peripheralId: "WIFI", name: "MiSTer" }];
     renderSheet();
 
-    const row = within(nearbySection()).getByRole("button", {
-      name: /active Core/,
-    });
-    expect(row).toHaveTextContent("settings.bluetoothScan.savedViaBluetooth");
+    expect(rowTexts()).toEqual(["wifi Core"]);
     expect(
-      within(nearbySection()).queryByText("settings.bluetoothScan.noDevices"),
+      within(deviceList()).getAllByRole("button", {
+        name: "settings.pairDevice",
+      }),
+    ).toHaveLength(1);
+    expect(
+      within(deviceList()).queryByText("settings.networkScan.noOtherDevices"),
     ).not.toBeInTheDocument();
+  });
+
+  it("leaves the connected device out even when a scan can see it", () => {
+    const { records } = deviceRegistry.getSnapshot();
+    installRecords({
+      active: {
+        ...records.active!,
+        ble: { deviceId: "active-id", peripheralId: "ACTIVE" },
+        lastConnectedAt: 5,
+      },
+    });
+    mocks.bluetooth.devices = [{ peripheralId: "ACTIVE", name: "MiSTer" }];
+    renderSheet();
+
+    expect(rowTexts()).toEqual([]);
+    expect(
+      within(deviceList()).queryByRole("button", {
+        name: "settings.pairDevice",
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(deviceList()).getByText("settings.networkScan.noOtherDevices"),
+    ).toBeVisible();
+  });
+
+  it("shows the platform, and what tells same-named devices apart", () => {
+    const { records } = deviceRegistry.getSnapshot();
+    installRecords({
+      active: records.active!,
+      twin: networkRecord("twin", {
+        name: "Twin Core",
+        platform: "mister",
+        lastConnectedAt: 2,
+      }),
+      solo: networkRecord("solo", { platform: "batocera", lastConnectedAt: 1 }),
+    });
+    mocks.network.devices = [
+      discovered({
+        name: "Twin Core",
+        hostname: "other-twin.local",
+        deviceId: "other-twin-id",
+        platform: "linux",
+      }),
+    ];
+    mocks.bluetooth.devices = [{ peripheralId: "TWIN", name: "Twin Core" }];
+    renderSheet();
+
+    expect(rowTexts()).toEqual([
+      "Twin Corelinux · other-twin.local",
+      "Twin Coresettings.bluetoothScan.viaBluetooth",
+      "Twin Coremister · twin.local",
+      "solo Corebatocera",
+    ]);
   });
 
   it("connects a saved device with its saved record", async () => {
@@ -238,7 +397,7 @@ describe("DeviceSheet nearby Bluetooth devices", () => {
     renderSheet(close);
 
     await user.click(
-      within(nearbySection()).getByRole("button", {
+      within(deviceList()).getByRole("button", {
         name: /Known Bluetooth Core/,
       }),
     );
@@ -258,8 +417,8 @@ describe("DeviceSheet nearby Bluetooth devices", () => {
     renderSheet(close);
 
     await user.click(
-      within(nearbySection()).getByRole("button", {
-        name: "settings.bluetoothScan.pairAgain",
+      within(deviceList()).getByRole("button", {
+        name: "settings.pairDevice",
       }),
     );
 
@@ -271,12 +430,44 @@ describe("DeviceSheet nearby Bluetooth devices", () => {
     );
   });
 
-  it("offers no pair-again action for an unsaved device", () => {
+  it("pairs a saved device the network scan can see", async () => {
+    const user = userEvent.setup();
+    const { records } = deviceRegistry.getSnapshot();
+    installRecords({ ...records, seen: networkRecord("seen") });
+    mocks.network.devices = [
+      discovered({ hostname: "seen.local", deviceId: "seen-id" }),
+    ];
+    renderSheet();
+
+    await user.click(
+      within(deviceList()).getByRole("button", {
+        name: "settings.pairDevice",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(connection.openPairingModal).toHaveBeenCalledTimes(1),
+    );
+    expect(mocks.selectRecord).toHaveBeenCalledWith("seen");
+  });
+
+  it("offers no pair action for an unsaved device or a saved one out of reach", () => {
+    mocks.network.devices = [discovered()];
     mocks.bluetooth.devices = [{ peripheralId: "NEAR", name: "Near Core" }];
     renderSheet();
 
+    expect(rowTexts()).toEqual([
+      "Network Core",
+      "Near Core",
+      "Known Bluetooth Core",
+    ]);
     expect(
-      within(nearbySection()).queryByRole("button", {
+      within(deviceList()).queryByRole("button", {
+        name: "settings.pairDevice",
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
         name: "settings.bluetoothScan.pairAgain",
       }),
     ).not.toBeInTheDocument();
@@ -286,20 +477,126 @@ describe("DeviceSheet nearby Bluetooth devices", () => {
     const user = userEvent.setup();
     const close = vi.fn();
     mocks.bluetooth.devices = [{ peripheralId: "NEAR", name: "Near Core" }];
-    mocks.identify.mockResolvedValue({ deviceId: "core-1" });
+    let identified!: (info: { deviceId: string }) => void;
+    mocks.identify.mockReturnValue(
+      new Promise((resolve) => {
+        identified = resolve;
+      }),
+    );
     renderSheet(close);
 
     await user.click(
-      within(nearbySection()).getByRole("button", { name: /Near Core/ }),
+      within(deviceList()).getByRole("button", { name: /Near Core/ }),
     );
 
-    expect(mocks.identify).toHaveBeenCalledWith("NEAR");
+    expect(mocks.identify).toHaveBeenCalledWith(
+      "NEAR",
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+    // The list gives way to the one device being reached.
+    expect(screen.queryByText("Known Bluetooth Core")).not.toBeInTheDocument();
+    expect(screen.getByText("Near Core")).toBeInTheDocument();
+    expect(
+      screen.getByText("settings.bluetoothScan.connecting"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("settings.bluetoothScan.stillWorking"),
+    ).not.toBeInTheDocument();
+    expect(mocks.selectBluetoothDevice).not.toHaveBeenCalled();
+    expect(close).not.toHaveBeenCalled();
+
+    const { onStep } = mocks.identify.mock.calls[0]![1] as IdentifyOptions;
+    for (const [step, message] of [
+      ["pairing", "settings.bluetoothScan.stepPairing"],
+      ["securing", "settings.bluetoothScan.stepSecuring"],
+      ["reading", "settings.bluetoothScan.stepReading"],
+    ] as const) {
+      act(() => onStep?.(step));
+      expect(screen.getByText(message)).toBeInTheDocument();
+    }
+
+    identified({ deviceId: "core-1" });
+
+    await waitFor(() => expect(close).toHaveBeenCalledTimes(1));
     expect(mocks.selectBluetoothDevice).toHaveBeenCalledWith({
       deviceId: "core-1",
       peripheralId: "NEAR",
       name: "Near Core",
     });
-    await waitFor(() => expect(close).toHaveBeenCalledTimes(1));
+  });
+
+  it("says a slow connection is still working", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      mocks.bluetooth.devices = [{ peripheralId: "NEAR", name: "Near Core" }];
+      mocks.identify.mockReturnValue(new Promise(() => undefined));
+      renderSheet();
+
+      await user.click(
+        within(deviceList()).getByRole("button", { name: /Near Core/ }),
+      );
+      // The click itself let a little time pass already.
+      act(() => {
+        vi.advanceTimersByTime(IDENTIFY_SLOW_AFTER_MS / 2);
+      });
+      expect(
+        screen.queryByText("settings.bluetoothScan.stillWorking"),
+      ).not.toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(IDENTIFY_SLOW_AFTER_MS / 2);
+      });
+      expect(
+        screen.getByText("settings.bluetoothScan.stillWorking"),
+      ).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("stops scanning while a device is being reached", async () => {
+    const user = userEvent.setup();
+    mocks.bluetooth.devices = [{ peripheralId: "NEAR", name: "Near Core" }];
+    mocks.identify.mockReturnValue(new Promise(() => undefined));
+    renderSheet();
+    mocks.stopScan.mockClear();
+
+    await user.click(
+      within(deviceList()).getByRole("button", { name: /Near Core/ }),
+    );
+
+    expect(mocks.stopScan).toHaveBeenCalled();
+  });
+
+  it("cancels reaching a device and returns to the list", async () => {
+    const user = userEvent.setup();
+    const close = vi.fn();
+    mocks.bluetooth.devices = [{ peripheralId: "NEAR", name: "Near Core" }];
+    let fail!: (error: unknown) => void;
+    mocks.identify.mockReturnValue(
+      new Promise((_resolve, reject) => {
+        fail = reject;
+      }),
+    );
+    renderSheet(close);
+
+    await user.click(
+      within(deviceList()).getByRole("button", { name: /Near Core/ }),
+    );
+    const { signal } = mocks.identify.mock.calls[0]![1] as IdentifyOptions;
+    expect(signal?.aborted).toBe(false);
+
+    await user.click(screen.getByRole("button", { name: "nav.cancel" }));
+
+    expect(signal?.aborted).toBe(true);
+    expect(rowTexts()).toEqual(["Near Core", "Known Bluetooth Core"]);
+
+    await act(async () => fail(new BleLinkAbortedError()));
+
+    expect(within(deviceList()).queryByRole("alert")).not.toBeInTheDocument();
+    expect(mocks.selectBluetoothDevice).not.toHaveBeenCalled();
+    expect(close).not.toHaveBeenCalled();
   });
 
   it("shows an inline error when the device cannot be reached", async () => {
@@ -310,12 +607,13 @@ describe("DeviceSheet nearby Bluetooth devices", () => {
     renderSheet(close);
 
     await user.click(
-      within(nearbySection()).getByRole("button", { name: /Near Core/ }),
+      within(deviceList()).getByRole("button", { name: /Near Core/ }),
     );
 
-    expect(await within(nearbySection()).findByRole("alert")).toHaveTextContent(
+    expect(await within(deviceList()).findByRole("alert")).toHaveTextContent(
       "settings.bluetoothScan.connectFailed",
     );
+    expect(rowTexts()).toEqual(["Near Core", "Known Bluetooth Core"]);
     expect(mocks.selectBluetoothDevice).not.toHaveBeenCalled();
     expect(close).not.toHaveBeenCalled();
   });
@@ -324,39 +622,92 @@ describe("DeviceSheet nearby Bluetooth devices", () => {
     ["disabled", "settings.bluetoothScan.disabled"],
     ["denied", "settings.bluetoothScan.denied"],
     ["location_off", "settings.bluetoothScan.locationOff"],
-  ])("explains the %s state inline", async (readiness, message) => {
+  ])("explains the %s state below manual entry", async (readiness, message) => {
     const user = userEvent.setup();
     mocks.bluetooth.readiness = readiness;
     mocks.bluetooth.canOpenSettings = true;
     renderSheet();
 
-    expect(within(nearbySection()).getByText(message)).toBeVisible();
+    const notice = within(deviceList()).getByText(message);
+    expect(notice).toBeVisible();
+    expect(
+      within(deviceList())
+        .getByRole("button", {
+          name: "settings.deviceSetup.addDeviceManually",
+        })
+        .compareDocumentPosition(notice) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     await user.click(
-      within(nearbySection()).getByRole("button", {
+      within(deviceList()).getByRole("button", {
         name: "settings.bluetoothScan.openSettings",
       }),
     );
     expect(mocks.openSettings).toHaveBeenCalledTimes(1);
   });
 
-  it("says nothing was found after a scan with no results", () => {
+  it("explains a Bluetooth problem without a settings button when settings cannot be opened", () => {
+    mocks.bluetooth.readiness = "disabled";
     renderSheet();
 
     expect(
-      within(nearbySection()).getByText("settings.bluetoothScan.noDevices"),
+      within(deviceList()).getByText("settings.bluetoothScan.disabled"),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("button", {
+        name: "settings.bluetoothScan.openSettings",
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("says nothing was found after both scans end with no results", () => {
+    const { records } = deviceRegistry.getSnapshot();
+    installRecords({ active: records.active! });
+    renderSheet();
+
+    expect(
+      within(deviceList()).getByText("settings.networkScan.noOtherDevices"),
     ).toBeVisible();
   });
 
-  it("scans again from the refresh button", async () => {
+  it.each([
+    { network: true, bluetooth: false },
+    { network: false, bluetooth: true },
+  ])(
+    "is busy, not empty, while scanning network=$network bluetooth=$bluetooth",
+    ({ network, bluetooth }) => {
+      const { records } = deviceRegistry.getSnapshot();
+      installRecords({ active: records.active! });
+      mocks.network.isScanning = network;
+      mocks.bluetooth.isScanning = bluetooth;
+      renderSheet();
+
+      const refresh = within(deviceList()).getByRole("button", {
+        name: "settings.networkScan.refresh",
+      });
+      expect(refresh).toHaveAttribute("aria-busy", "true");
+      expect(refresh).toBeDisabled();
+      expect(
+        within(deviceList()).queryByText("settings.networkScan.noOtherDevices"),
+      ).not.toBeInTheDocument();
+      expect(
+        within(deviceList()).getByText("settings.networkScan.searching"),
+      ).toBeInTheDocument();
+    },
+  );
+
+  it("restarts both scans from the one refresh button", async () => {
     const user = userEvent.setup();
     renderSheet();
+    await waitFor(() => expect(mocks.startScan).toHaveBeenCalledTimes(1));
 
-    await user.click(
-      within(nearbySection()).getByRole("button", {
-        name: "settings.bluetoothScan.refresh",
-      }),
-    );
+    const refresh = within(deviceList()).getAllByRole("button", {
+      name: /refresh/,
+    });
+    expect(refresh).toHaveLength(1);
+    expect(refresh[0]).toHaveAttribute("aria-busy", "false");
+    await user.click(refresh[0]!);
 
     expect(mocks.rescan).toHaveBeenCalledTimes(1);
+    expect(mocks.startScan).toHaveBeenCalledTimes(2);
   });
 });

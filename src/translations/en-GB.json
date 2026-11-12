@@ -1350,13 +1350,9 @@
       },
       "deviceHistory": "Change device",
       "networkScan": {
-        "title": "Find Devices",
         "searching": "Searching for devices...",
         "refresh": "Search again",
         "noOtherDevices": "No other devices found",
-        "addresses_one": "IP address: {{addresses}}",
-        "addresses_other": "IP addresses: {{addresses}}",
-        "version": "v{{version}}",
         "scanFailed": "Could not search for devices"
       },
       "connectionFailed": "Unable to connect to device",
@@ -1379,7 +1375,7 @@
         "version": "Version: {{value}}",
         "lastConnected": "Last connected: {{when}}",
         "neverConnected": "Last connected: never",
-        "useThisDevice": "Use this device",
+        "useThisDevice": "Connect",
         "forget": "Forget device",
         "forgetTitle": "Forget this device?",
         "forgetBody": "This will remove it from your saved devices and erase the pairing credentials.",
@@ -1388,10 +1384,6 @@
         "forgetFailed": "Device could not be forgotten. Try again."
       },
       "deviceCombine": {
-        "edit": "Combine devices",
-        "cancelEdit": "Cancel selection",
-        "select": "Select {{device}}",
-        "action": "Combine selected",
         "title": "Combine devices?",
         "body": "Combine {{first}} and {{second}}? Saved addresses and pairing will be kept.",
         "cancel": "Cancel",
@@ -1641,7 +1633,6 @@
         "reportIssue": "Report an issue on GitHub",
         "emailLabel": "Support email:"
       },
-      "connectDevice": "Connect to {{device}}",
       "savedDevices": "Saved devices"
     },
     "systemSelector": {

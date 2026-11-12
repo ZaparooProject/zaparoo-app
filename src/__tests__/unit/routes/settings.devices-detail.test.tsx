@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor } from "../../../test-utils";
+import { render, screen, waitFor, within } from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Preferences } from "@capacitor/preferences";
@@ -406,6 +406,323 @@ describe("Settings Device Detail Route", () => {
       expect(mockForgetDevice).toHaveBeenCalledWith(record.recordId);
     });
     expect(deviceRegistry.getSnapshot().activeRecordId).toBeNull();
+  });
+
+  describe("combining with another saved device", () => {
+    /** Seed the viewed record and one other, then point the page at the first. */
+    async function seedPair(active: "shown" | "other" | null) {
+      const shown = mockDeviceRecord({
+        address: "steamdeck.local",
+        name: "Steamdeck",
+      });
+      const other = mockDeviceRecord({
+        address: "10.0.0.206",
+        name: "Steamdeck alias",
+        platform: "linux",
+      });
+      await seedDeviceRegistry(
+        [shown, other],
+        active === null ? null : (active === "shown" ? shown : other).recordId,
+      );
+      mockParams.current = { recordId: shown.recordId };
+      return { shown, other };
+    }
+
+    /** Open the combine modal and pick the other record, up to the confirmation. */
+    async function chooseOther(user: ReturnType<typeof userEvent.setup>) {
+      await user.click(
+        screen.getByRole("button", { name: "settings.deviceCombine.open" }),
+      );
+      const chooser = screen.getByRole("dialog", {
+        name: "settings.deviceCombine.choose",
+      });
+      await user.click(
+        within(chooser).getByRole("button", { name: /Steamdeck alias/ }),
+      );
+      return screen.getByRole("dialog", {
+        name: "settings.deviceCombine.title",
+      });
+    }
+
+    const detailsOf = (target: DeviceRecord) => ({
+      to: "/settings/devices/$recordId",
+      params: { recordId: target.recordId },
+      replace: true,
+    });
+
+    it("should not offer combining when no other record is saved", async () => {
+      const only = mockDeviceRecord({ address: "192.168.1.50", name: "Only" });
+      await seedDeviceRegistry([only]);
+      mockParams.current = { recordId: only.recordId };
+      renderRoute();
+
+      expect(
+        screen.getByRole("button", { name: "settings.deviceDetail.forget" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "settings.deviceCombine.open" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should list only the other saved records to combine with", async () => {
+      const user = userEvent.setup();
+      const shown = mockDeviceRecord({ address: "10.0.0.1", name: "Shown" });
+      const older = mockDeviceRecord({
+        address: "10.0.0.2",
+        name: "Older",
+        lastConnectedAt: 1,
+      });
+      const newer = mockDeviceRecord({
+        address: "10.0.0.3",
+        platform: "mister",
+        lastConnectedAt: 2,
+      });
+      const bluetoothOnly: DeviceRecord = {
+        recordId: "ble-only",
+        endpoints: [],
+        preferredEndpointId: "",
+        ble: { deviceId: "core-1", peripheralId: "AA:BB" },
+      };
+      await seedDeviceRegistry([shown, older, bluetoothOnly, newer]);
+      mockParams.current = { recordId: shown.recordId };
+      renderRoute();
+
+      await user.click(
+        screen.getByRole("button", { name: "settings.deviceCombine.open" }),
+      );
+
+      const chooser = screen.getByRole("dialog", {
+        name: "settings.deviceCombine.choose",
+      });
+      expect(
+        within(chooser)
+          .getAllByRole("button")
+          .map((row) => row.textContent)
+          .filter((text) => text !== ""),
+      ).toEqual(["10.0.0.3mister", "Older", "settings.bluetoothScan.unnamed"]);
+      expect(
+        screen.queryByRole("button", {
+          name: "settings.deviceCombine.confirm",
+        }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should combine with the chosen record after confirmation, keeping the active one", async () => {
+      const user = userEvent.setup();
+      const { shown, other } = await seedPair("other");
+      queryClient.setQueryData(["library", shown.recordId], "hostname cache");
+      queryClient.setQueryData(["library", other.recordId], "ip cache");
+      renderRoute();
+
+      const confirmation = await chooseOther(user);
+      expect(
+        within(confirmation).getByText("settings.deviceCombine.body"),
+      ).toBeInTheDocument();
+      expect(Object.keys(deviceRegistry.getSnapshot().records)).toHaveLength(2);
+
+      await user.click(
+        within(confirmation).getByRole("button", {
+          name: "settings.deviceCombine.confirm",
+        }),
+      );
+
+      await waitFor(() => {
+        expect(Object.keys(deviceRegistry.getSnapshot().records)).toEqual([
+          other.recordId,
+        ]);
+      });
+      expect(deviceRegistry.getSnapshot().activeRecordId).toBe(other.recordId);
+      expect(
+        deviceRegistry.getSnapshot().records[other.recordId]?.endpoints,
+      ).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ host: "steamdeck.local" }),
+          expect.objectContaining({ host: "10.0.0.206" }),
+        ]),
+      );
+      expect(
+        queryClient.getQueryData(["library", shown.recordId]),
+      ).toBeUndefined();
+      expect(
+        queryClient.getQueryData(["library", other.recordId]),
+      ).toBeUndefined();
+      await waitFor(() =>
+        expect(mockNavigate).toHaveBeenCalledWith(detailsOf(other)),
+      );
+      // The page is leaving for the survivor, so the redirect for a record
+      // that no longer exists must not follow it.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(mockNavigate).toHaveBeenCalledExactlyOnceWith(detailsOf(other));
+    });
+
+    it("should keep the shown record when it is the active one and move the other's pairing to it", async () => {
+      const user = userEvent.setup();
+      const { shown, other } = await seedPair("shown");
+      await credentialStore.set(
+        credentialKeyForRecord(other.recordId),
+        credentials,
+      );
+      renderRoute();
+
+      const confirmation = await chooseOther(user);
+      await user.click(
+        within(confirmation).getByRole("button", {
+          name: "settings.deviceCombine.confirm",
+        }),
+      );
+
+      await waitFor(() => {
+        expect(Object.keys(deviceRegistry.getSnapshot().records)).toEqual([
+          shown.recordId,
+        ]);
+      });
+      await expect(
+        credentialStore.get(credentialKeyForRecord(shown.recordId)),
+      ).resolves.toEqual(credentials);
+      await waitFor(() =>
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+      );
+      expect(mockNavigate).not.toHaveBeenCalled();
+      expect(
+        screen.queryByRole("button", { name: "settings.deviceCombine.open" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it.each([
+      { paired: ["other"], survivor: "other" },
+      { paired: ["shown"], survivor: "shown" },
+      { paired: ["shown", "other"], survivor: "shown" },
+      { paired: [], survivor: "shown" },
+    ] as const)(
+      "should keep the $survivor record when neither is active and $paired hold credentials",
+      async ({ paired, survivor }) => {
+        const user = userEvent.setup();
+        const pair = await seedPair(null);
+        for (const holder of paired) {
+          await credentialStore.set(
+            credentialKeyForRecord(pair[holder].recordId),
+            credentials,
+          );
+        }
+        const merge = vi.spyOn(deviceRegistry, "mergeRecords");
+        renderRoute();
+
+        const confirmation = await chooseOther(user);
+        await user.click(
+          within(confirmation).getByRole("button", {
+            name: "settings.deviceCombine.confirm",
+          }),
+        );
+
+        const kept = pair[survivor];
+        const dropped = survivor === "shown" ? pair.other : pair.shown;
+        await waitFor(() => {
+          expect(Object.keys(deviceRegistry.getSnapshot().records)).toEqual([
+            kept.recordId,
+          ]);
+        });
+        expect(merge).toHaveBeenCalledExactlyOnceWith(
+          kept.recordId,
+          dropped.recordId,
+        );
+        await expect(
+          credentialStore.get(credentialKeyForRecord(kept.recordId)),
+        ).resolves.toEqual(paired.length > 0 ? credentials : null);
+        if (survivor === "other") {
+          await waitFor(() =>
+            expect(mockNavigate).toHaveBeenCalledWith(detailsOf(kept)),
+          );
+        } else {
+          expect(mockNavigate).not.toHaveBeenCalled();
+        }
+      },
+    );
+
+    it("should keep the record whose pairing is still under its pre-V2 key", async () => {
+      const user = userEvent.setup();
+      const shown = mockDeviceRecord({
+        address: "10.0.0.1",
+        name: "Steamdeck",
+      });
+      const other = mockDeviceRecord({
+        address: "10.0.0.206",
+        name: "Steamdeck alias",
+        legacyCredentialKey: "10.0.0.206",
+      });
+      await seedDeviceRegistry([shown, other], null);
+      await credentialStore.set("10.0.0.206", credentials);
+      mockParams.current = { recordId: shown.recordId };
+      renderRoute();
+
+      const confirmation = await chooseOther(user);
+      await user.click(
+        within(confirmation).getByRole("button", {
+          name: "settings.deviceCombine.confirm",
+        }),
+      );
+
+      await waitFor(() => {
+        expect(Object.keys(deviceRegistry.getSnapshot().records)).toEqual([
+          other.recordId,
+        ]);
+      });
+      await waitFor(() =>
+        expect(mockNavigate).toHaveBeenCalledWith(detailsOf(other)),
+      );
+    });
+
+    it("should leave both records alone when the confirmation is cancelled", async () => {
+      const user = userEvent.setup();
+      const { shown, other } = await seedPair("other");
+      const merge = vi.spyOn(deviceRegistry, "mergeRecords");
+      renderRoute();
+
+      const confirmation = await chooseOther(user);
+      await user.click(
+        within(confirmation).getByRole("button", {
+          name: "settings.deviceCombine.cancel",
+        }),
+      );
+
+      await waitFor(() =>
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+      );
+      expect(merge).not.toHaveBeenCalled();
+      expect(Object.keys(deviceRegistry.getSnapshot().records)).toEqual([
+        shown.recordId,
+        other.recordId,
+      ]);
+    });
+
+    it("should retain both records when combining fails", async () => {
+      const user = userEvent.setup();
+      const { shown, other } = await seedPair("other");
+      vi.spyOn(deviceRegistry, "mergeRecords").mockRejectedValueOnce(
+        new Error("keychain locked"),
+      );
+      renderRoute();
+
+      const confirmation = await chooseOther(user);
+      await user.click(
+        within(confirmation).getByRole("button", {
+          name: "settings.deviceCombine.confirm",
+        }),
+      );
+
+      expect(
+        await within(confirmation).findByText("settings.deviceCombine.failed"),
+      ).toHaveAttribute("role", "alert");
+      expect(Object.keys(deviceRegistry.getSnapshot().records)).toEqual([
+        shown.recordId,
+        other.recordId,
+      ]);
+      expect(
+        within(confirmation).getByRole("button", {
+          name: "settings.deviceCombine.confirm",
+        }),
+      ).toBeEnabled();
+      expect(mockNavigate).not.toHaveBeenCalled();
+    });
   });
 
   it("should redirect to the device list when the record is unknown", () => {

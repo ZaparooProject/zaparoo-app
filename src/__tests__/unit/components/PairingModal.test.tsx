@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@/test-utils";
 import userEvent from "@testing-library/user-event";
-import { PairingModal } from "@/components/PairingModal";
+import {
+  PAIRING_FINISH_TIMEOUT_MS,
+  PAIRING_SETTLE_MS,
+  PairingModal,
+} from "@/components/PairingModal";
 import {
   performPairing,
   performPairingWithCarrier,
@@ -328,6 +332,103 @@ describe("PairingModal", () => {
         expect(onSuccess).toHaveBeenCalledTimes(1);
         expect(close).toHaveBeenCalledTimes(1);
       });
+    });
+  });
+
+  describe("waiting for the connection after pairing", () => {
+    const paired = {
+      authToken: "test-token",
+      clientId: "client-abc",
+      pairingKey: new Uint8Array([0xde, 0xad, 0xbe, 0xef]),
+    };
+    const modal = (close: () => void, connected: boolean) => (
+      <PairingModal
+        isOpen={true}
+        close={close}
+        address="192.168.1.10:7497"
+        recordId={RECORD_ID}
+        connected={connected}
+      />
+    );
+
+    it("should stay open until the restarted connection is back", async () => {
+      const user = userEvent.setup();
+      const close = vi.fn();
+      mockedPerformPairing.mockResolvedValue(paired);
+      const { rerender } = render(modal(close, true));
+
+      await user.type(screen.getByLabelText("pairing.pinLabel"), "654321");
+
+      expect(await screen.findByText("pairing.finishing")).toHaveAttribute(
+        "role",
+        "status",
+      );
+      expect(
+        screen.queryByLabelText("pairing.pinLabel"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "pairing.startPairing" }),
+      ).not.toBeInTheDocument();
+
+      rerender(modal(close, false));
+      expect(close).not.toHaveBeenCalled();
+
+      rerender(modal(close, true));
+      expect(close).toHaveBeenCalledTimes(1);
+    });
+
+    it("should close shortly after pairing when the connection never drops", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      try {
+        const user = userEvent.setup({
+          advanceTimers: vi.advanceTimersByTime,
+        });
+        const close = vi.fn();
+        mockedPerformPairing.mockResolvedValue(paired);
+        render(modal(close, true));
+
+        await user.type(screen.getByLabelText("pairing.pinLabel"), "654321");
+        await screen.findByText("pairing.finishing");
+
+        // Finding the text above let a little time pass already.
+        act(() => {
+          vi.advanceTimersByTime(PAIRING_SETTLE_MS / 2);
+        });
+        expect(close).not.toHaveBeenCalled();
+        act(() => {
+          vi.advanceTimersByTime(PAIRING_SETTLE_MS / 2);
+        });
+        expect(close).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("should stop waiting for a connection that does not come back", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      try {
+        const user = userEvent.setup({
+          advanceTimers: vi.advanceTimersByTime,
+        });
+        const close = vi.fn();
+        mockedPerformPairing.mockResolvedValue(paired);
+        render(modal(close, false));
+
+        await user.type(screen.getByLabelText("pairing.pinLabel"), "654321");
+        await screen.findByText("pairing.finishing");
+
+        // Finding the text above let a little time pass already.
+        act(() => {
+          vi.advanceTimersByTime(PAIRING_FINISH_TIMEOUT_MS / 2);
+        });
+        expect(close).not.toHaveBeenCalled();
+        act(() => {
+          vi.advanceTimersByTime(PAIRING_FINISH_TIMEOUT_MS / 2);
+        });
+        expect(close).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 

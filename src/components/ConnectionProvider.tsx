@@ -2048,6 +2048,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           getPairingCall={() => connectionManager.getActivePairingCall()}
           recordId={activeRecordId ?? ""}
           onSuccess={() => connectionManager.restartActiveConnection()}
+          connected={isConnected}
         />
       </DeviceConnectionActionsContext.Provider>
     </ConnectionContext.Provider>

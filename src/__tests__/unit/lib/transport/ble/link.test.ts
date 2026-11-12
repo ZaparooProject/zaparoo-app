@@ -19,6 +19,7 @@ import {
   BLE_DISCOVERY_WAIT_MS,
   BLE_WRITE_TIMEOUT_MS,
   BleLink,
+  BleLinkAbortedError,
   BleLinkDroppedError,
   type BleLinkHandlers,
 } from "@/lib/transport/ble/link";
@@ -262,6 +263,53 @@ describe("BleLink", () => {
     ).rejects.toBeInstanceOf(BleLinkDroppedError);
     expect(BluetoothLowEnergy.readCharacteristic).not.toHaveBeenCalled();
     expect(BluetoothLowEnergy.disconnect).toHaveBeenCalled();
+  });
+
+  it("refuses to open once already cancelled", async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      BleLink.open(PERIPHERAL, handlers(), {
+        tag: TAG,
+        signal: controller.signal,
+      }),
+    ).rejects.toBeInstanceOf(BleLinkAbortedError);
+    expect(BluetoothLowEnergy.connect).not.toHaveBeenCalled();
+  });
+
+  it("ends a waiting step when cancelled and cleans up", async () => {
+    vi.mocked(BluetoothLowEnergy.discoverServices).mockImplementation(
+      () => new Promise<void>(() => undefined),
+    );
+    const controller = new AbortController();
+    vi.mocked(BluetoothLowEnergy.connect).mockImplementation(async () => {
+      queueMicrotask(() => controller.abort());
+    });
+
+    await expect(
+      BleLink.open(PERIPHERAL, handlers(), {
+        tag: TAG,
+        signal: controller.signal,
+      }),
+    ).rejects.toBeInstanceOf(BleLinkAbortedError);
+    expect(BluetoothLowEnergy.readCharacteristic).not.toHaveBeenCalled();
+    expect(BluetoothLowEnergy.disconnect).toHaveBeenCalled();
+    expect(__bluetoothListenerCount("deviceDisconnected")).toBe(0);
+  });
+
+  it("ignores a cancel that comes after the link opened", async () => {
+    const controller = new AbortController();
+    const h = handlers();
+    const link = await BleLink.open(PERIPHERAL, h, {
+      tag: TAG,
+      signal: controller.signal,
+    });
+
+    controller.abort();
+
+    expect(link.closed).toBe(false);
+    expect(h.onClose).not.toHaveBeenCalled();
   });
 
   it("reports a drop when a step fails because the peripheral dropped", async () => {

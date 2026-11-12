@@ -15,7 +15,13 @@ import {
   useDeviceRegistry,
   type DeviceRecord,
 } from "@/lib/devices/deviceRegistry";
+import {
+  credentialKeyForRecord,
+  credentialStore,
+} from "@/lib/crypto/credentials";
 import { invalidateLibraryImageCache } from "@/lib/libraryImageCache";
+import { logger } from "@/lib/logger";
+import { DeviceRow } from "@/components/DeviceRow";
 import { PageFrame } from "@/components/PageFrame";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { Card } from "@/components/wui/Card";
@@ -71,6 +77,10 @@ export function DeviceDetail() {
   const [trackedRecordId, setTrackedRecordId] = useState(record?.recordId);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [forgetting, setForgetting] = useState(false);
+  const [combineOpen, setCombineOpen] = useState(false);
+  const [combineWithId, setCombineWithId] = useState<string | null>(null);
+  const [combineFailed, setCombineFailed] = useState(false);
+  const [isCombining, setIsCombining] = useState(false);
 
   // Reset the draft when navigating between different device records.
   if (record?.recordId !== trackedRecordId) {
@@ -83,10 +93,15 @@ export function DeviceDetail() {
   // id in the URL. Redirecting before the read has settled would bounce the
   // user off a device that was about to appear.
   useEffect(() => {
-    if (!forgetting && registrySettled && (!record || !address)) {
+    if (
+      !forgetting &&
+      !isCombining &&
+      registrySettled &&
+      (!record || !address)
+    ) {
       router.navigate({ to: "/settings/devices", replace: true });
     }
-  }, [address, forgetting, record, registrySettled, router]);
+  }, [address, forgetting, isCombining, record, registrySettled, router]);
 
   if (!record || !address) return null;
 
@@ -120,6 +135,79 @@ export function DeviceDetail() {
       // confirmation instead of receiving a false success.
       setForgetting(false);
       toast.error(t("settings.deviceDetail.forgetFailed"));
+    }
+  };
+
+  const nameOf = (other: DeviceRecord) =>
+    other.name ||
+    parsedEndpointForRecord(other)?.address ||
+    t("settings.bluetoothScan.unnamed");
+  const otherRecords = Object.values(records)
+    .filter((other) => other.recordId !== record.recordId)
+    .sort(
+      (left, right) =>
+        (right.lastConnectedAt ?? 0) - (left.lastConnectedAt ?? 0),
+    );
+  const combineWith = combineWithId ? records[combineWithId] : undefined;
+
+  const closeCombine = () => {
+    if (isCombining) return;
+    setCombineOpen(false);
+    setCombineWithId(null);
+    setCombineFailed(false);
+  };
+
+  const handleConfirmCombine = async () => {
+    if (!combineWith || isCombining) return;
+    setIsCombining(true);
+    setCombineFailed(false);
+    // Once this page's own record is merged away the page is leaving, and
+    // the redirect for a missing record must not run over that navigation.
+    let leaving = false;
+    try {
+      // The record that survives is the one in use, else one that holds a
+      // pairing, else the one this page is showing.
+      let keepOther = combineWith.recordId === activeRecordId;
+      if (!keepOther && !isCurrentDevice) {
+        const paired = new Set(
+          (await credentialStore.list()).map((entry) => entry.deviceKey),
+        );
+        const hasCredentials = (candidate: DeviceRecord) =>
+          paired.has(credentialKeyForRecord(candidate.recordId)) ||
+          (candidate.legacyCredentialKey !== undefined &&
+            paired.has(candidate.legacyCredentialKey));
+        keepOther = !hasCredentials(record) && hasCredentials(combineWith);
+      }
+      const target = keepOther ? combineWith : record;
+      const source = keepOther ? record : combineWith;
+      await deviceRegistry.mergeRecords(target.recordId, source.recordId);
+      for (const recordId of [target.recordId, source.recordId]) {
+        invalidateLibraryImageCache(recordId);
+        queryClient.removeQueries({
+          predicate: (query) => query.queryKey.includes(recordId),
+        });
+      }
+      setCombineOpen(false);
+      setCombineWithId(null);
+      if (keepOther) {
+        leaving = true;
+        router.navigate({
+          to: "/settings/devices/$recordId",
+          params: { recordId: target.recordId },
+          replace: true,
+        });
+      }
+    } catch (error) {
+      logger.error("Failed to combine device records", error, {
+        category: "storage",
+        action: "combineDeviceRecords",
+        severity: "error",
+        recordId: record.recordId,
+        otherRecordId: combineWith.recordId,
+      });
+      setCombineFailed(true);
+    } finally {
+      if (!leaving) setIsCombining(false);
     }
   };
 
@@ -216,6 +304,15 @@ export function DeviceDetail() {
           />
         )}
 
+        {otherRecords.length > 0 && (
+          <Button
+            label={t("settings.deviceCombine.open")}
+            variant="outline"
+            onClick={() => setCombineOpen(true)}
+            className="w-full"
+          />
+        )}
+
         <Button
           label={t("settings.deviceDetail.forget")}
           variant="outline"
@@ -259,6 +356,70 @@ export function DeviceDetail() {
         <p className="py-4 text-center">
           {t("settings.deviceDetail.forgetBody")}
         </p>
+      </SlideModal>
+
+      <SlideModal
+        isOpen={combineOpen}
+        close={closeCombine}
+        dismissible={!isCombining}
+        title={t(
+          combineWith
+            ? "settings.deviceCombine.title"
+            : "settings.deviceCombine.choose",
+        )}
+        footer={
+          combineWith ? (
+            <ModalActionBar
+              secondaryAction={
+                <Button
+                  variant="secondary"
+                  label={t("settings.deviceCombine.cancel")}
+                  onClick={closeCombine}
+                  disabled={isCombining}
+                  disabledAppearance="busy"
+                />
+              }
+              primaryAction={
+                <Button
+                  intent="primary"
+                  label={t("settings.deviceCombine.confirm")}
+                  onClick={() => void handleConfirmCombine()}
+                  disabled={isCombining}
+                  disabledAppearance="busy"
+                />
+              }
+            />
+          ) : undefined
+        }
+      >
+        {combineWith ? (
+          <div className="flex flex-col gap-4 py-4 text-center">
+            <p>
+              {t("settings.deviceCombine.body", {
+                first: nameOf(record),
+                second: nameOf(combineWith),
+              })}
+            </p>
+            {combineFailed && (
+              <p className="text-error text-sm" role="alert">
+                {t("settings.deviceCombine.failed")}
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2 py-2">
+            {otherRecords.map((other) => (
+              <DeviceRow
+                key={other.recordId}
+                entry={{
+                  name: nameOf(other),
+                  ...(other.platform ? { detail: other.platform } : {}),
+                }}
+                onSelect={() => setCombineWithId(other.recordId)}
+              />
+            ))}
+          </div>
+        )}
       </SlideModal>
     </PageFrame>
   );

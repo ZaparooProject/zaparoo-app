@@ -9,7 +9,10 @@ import {
   identifyBluetoothDevice,
   takeIdentifiedLink,
 } from "@/lib/transport/ble/identify";
-import { BleLinkDroppedError } from "@/lib/transport/ble/link";
+import {
+  BleLinkAbortedError,
+  BleLinkDroppedError,
+} from "@/lib/transport/ble/link";
 
 const info = (value: unknown) =>
   Array.from(new TextEncoder().encode(JSON.stringify(value)));
@@ -94,6 +97,69 @@ describe("identifyBluetoothDevice", () => {
     });
     expect(BluetoothLowEnergy.connect).toHaveBeenCalledTimes(2);
     expect(takeIdentifiedLink("AA")?.closed).toBe(false);
+  });
+
+  it("reports each step of a first connection", async () => {
+    const onStep = vi.fn();
+
+    await identifyBluetoothDevice("AA", { onStep });
+
+    expect(onStep.mock.calls.map(([step]) => step)).toEqual([
+      "connecting",
+      "pairing",
+      "reading",
+    ]);
+  });
+
+  it("reports the second connection as securing", async () => {
+    vi.mocked(BluetoothLowEnergy.discoverServices).mockImplementationOnce(
+      async () => {
+        __simulateDeviceDisconnected("AA");
+      },
+    );
+    const onStep = vi.fn();
+
+    await identifyBluetoothDevice("AA", { onStep });
+
+    expect(onStep.mock.calls.map(([step]) => step)).toEqual([
+      "connecting",
+      "pairing",
+      "securing",
+      "reading",
+    ]);
+  });
+
+  it("stops when cancelled while opening", async () => {
+    vi.mocked(BluetoothLowEnergy.discoverServices).mockImplementation(
+      () => new Promise<void>(() => undefined),
+    );
+    const controller = new AbortController();
+
+    const identifying = identifyBluetoothDevice("AA", {
+      signal: controller.signal,
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    controller.abort();
+
+    await expect(identifying).rejects.toBeInstanceOf(BleLinkAbortedError);
+    expect(BluetoothLowEnergy.connect).toHaveBeenCalledTimes(1);
+    expect(BluetoothLowEnergy.disconnect).toHaveBeenCalled();
+    expect(takeIdentifiedLink("AA")).toBeNull();
+  });
+
+  it("does not connect again when cancelled as the peripheral drops", async () => {
+    const controller = new AbortController();
+    vi.mocked(BluetoothLowEnergy.discoverServices).mockImplementationOnce(
+      async () => {
+        __simulateDeviceDisconnected("AA");
+        controller.abort();
+      },
+    );
+
+    await expect(
+      identifyBluetoothDevice("AA", { signal: controller.signal }),
+    ).rejects.toBeInstanceOf(BleLinkAbortedError);
+    expect(BluetoothLowEnergy.connect).toHaveBeenCalledTimes(1);
   });
 
   it("gives up when the peripheral drops while opening twice", async () => {

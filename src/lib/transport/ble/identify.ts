@@ -1,8 +1,21 @@
 import type { BleInfo } from "./info";
-import { BleLink, BleLinkDroppedError } from "./link";
+import { BleLink, BleLinkAbortedError, BleLinkDroppedError } from "./link";
 
 /** How long an identified link waits for the transport to take it. */
 export const IDENTIFIED_LINK_HOLD_MS = 15000;
+
+/**
+ * Where identifying has got to. "securing" is the second connection, made
+ * after Core dropped a phone that had just bonded.
+ */
+export type IdentifyStep = "connecting" | "pairing" | "securing" | "reading";
+
+export interface IdentifyOptions {
+  /** Told each step as identifying reaches it. */
+  onStep?: (step: IdentifyStep) => void;
+  /** Aborting ends identifying with BleLinkAbortedError. */
+  signal?: AbortSignal;
+}
 
 interface HeldLink {
   link: BleLink;
@@ -28,6 +41,7 @@ function release(): void {
  */
 export async function identifyBluetoothDevice(
   peripheralId: string,
+  { onStep, signal }: IdentifyOptions = {},
 ): Promise<BleInfo> {
   release();
   const handlers = {
@@ -41,13 +55,23 @@ export async function identifyBluetoothDevice(
   };
   let link: BleLink;
   try {
-    link = await BleLink.open(peripheralId, handlers);
+    link = await BleLink.open(peripheralId, handlers, {
+      ...(onStep ? { onStep } : {}),
+      ...(signal ? { signal } : {}),
+    });
   } catch (error) {
     // Core drops a phone that bonded during this connection but stalled
     // before reaching its service; the phone gets through once it connects
     // again, now bonded.
     if (!(error instanceof BleLinkDroppedError)) throw error;
-    link = await BleLink.open(peripheralId, handlers);
+    if (signal?.aborted) throw new BleLinkAbortedError();
+    onStep?.("securing");
+    link = await BleLink.open(peripheralId, handlers, {
+      onStep: (step) => {
+        if (step === "reading") onStep?.("reading");
+      },
+      ...(signal ? { signal } : {}),
+    });
   }
   release();
   held = { link, timer: setTimeout(release, IDENTIFIED_LINK_HOLD_MS) };

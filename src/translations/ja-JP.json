@@ -1350,13 +1350,9 @@
       },
       "deviceHistory": "デバイスを変更",
       "networkScan": {
-        "title": "デバイスを検索",
         "searching": "デバイスを検索中...",
         "refresh": "再検索",
         "noOtherDevices": "他のデバイスが見つかりません",
-        "addresses_one": "IPアドレス: {{addresses}}",
-        "addresses_other": "IPアドレス: {{addresses}}",
-        "version": "v{{version}}",
         "scanFailed": "デバイスを検索できませんでした"
       },
       "connectionFailed": "デバイスに接続できません",
@@ -1388,10 +1384,6 @@
         "forgetFailed": "デバイスを削除できませんでした。再試行してください。"
       },
       "deviceCombine": {
-        "edit": "デバイスを統合",
-        "cancelEdit": "選択をキャンセル",
-        "select": "{{device}}を選択",
-        "action": "選択したデバイスを統合",
         "title": "デバイスを統合しますか？",
         "body": "{{first}}と{{second}}を統合しますか？保存済みのアドレスとペアリング情報は保持されます。",
         "cancel": "キャンセル",
@@ -1641,7 +1633,6 @@
         "reportIssue": "GitHubで問題を報告",
         "emailLabel": "サポートメール:"
       },
-      "connectDevice": "{{device}}に接続",
       "savedDevices": "保存済みデバイス"
     },
     "systemSelector": {

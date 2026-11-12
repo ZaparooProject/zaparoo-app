@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Device } from "@capacitor/device";
 import { Capacitor } from "@capacitor/core";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { SlideModal } from "@/components/SlideModal";
 import { Button } from "@/components/wui/Button";
 import { TextInput } from "@/components/wui/TextInput";
@@ -46,7 +47,17 @@ interface PairingModalProps {
   /** The device record the resulting credentials belong to. */
   recordId: string;
   onSuccess?: () => void;
+  /**
+   * Whether the device's connection is up. When given, the modal stays open
+   * after a successful pairing until the connection it restarted is back.
+   */
+  connected?: boolean;
 }
+
+/** How long a connection that never dropped is given to show that it will. */
+export const PAIRING_SETTLE_MS = 1500;
+/** The longest the modal waits for the connection after pairing. */
+export const PAIRING_FINISH_TIMEOUT_MS = 20000;
 
 export function PairingModal({
   isOpen,
@@ -56,6 +67,7 @@ export function PairingModal({
   getPairingCall,
   recordId,
   onSuccess,
+  connected,
 }: PairingModalProps) {
   const { t } = useTranslation();
 
@@ -68,6 +80,37 @@ export function PairingModal({
   // Tracks an in-flight pair attempt so onComplete doesn't fire twice if the
   // user is still mid-submit when the 6th digit lands.
   const pairingInFlight = useRef(false);
+  const [finishing, setFinishing] = useState(false);
+  const sawReconnect = useRef(false);
+  const closeRef = useRef(close);
+  useEffect(() => {
+    closeRef.current = close;
+  }, [close]);
+
+  // Pairing restarts the connection. The modal closes once it is back, so
+  // the wait is spent here saying so instead of on a screen that looks idle.
+  useEffect(() => {
+    if (!finishing) return;
+    if (!connected) {
+      sawReconnect.current = true;
+      return;
+    }
+    if (sawReconnect.current) {
+      closeRef.current();
+      return;
+    }
+    const timer = setTimeout(() => closeRef.current(), PAIRING_SETTLE_MS);
+    return () => clearTimeout(timer);
+  }, [connected, finishing]);
+
+  useEffect(() => {
+    if (!finishing) return;
+    const timer = setTimeout(
+      () => closeRef.current(),
+      PAIRING_FINISH_TIMEOUT_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [finishing]);
   const fallbackName = truncateClientName(
     t("pairing.defaultClientName", { platform: safePlatform() }),
   );
@@ -82,6 +125,8 @@ export function PairingModal({
       setRetryAt(null);
       setRetrySeconds(0);
       setIsPairing(false);
+      setFinishing(false);
+      sawReconnect.current = false;
       pairingInFlight.current = false;
       return;
     }
@@ -167,7 +212,8 @@ export function PairingModal({
       });
       connectionManager.clearEncryptionBlockActive();
       onSuccess?.();
-      close();
+      if (connected === undefined) close();
+      else setFinishing(true);
     } catch (e) {
       if (e instanceof PairingError) {
         if (isExpectedPairingError(e)) {
@@ -207,76 +253,87 @@ export function PairingModal({
       close={close}
       title={t("pairing.title")}
       footer={
-        <Button
-          label={isPairing ? t("pairing.pairing") : t("pairing.startPairing")}
-          disabled={
-            isPairing ||
-            retryAt !== null ||
-            pin.length !== 6 ||
-            !hasTarget ||
-            !recordId
-          }
-          disabledAppearance={
-            isPairing || retryAt !== null ? "busy" : "unavailable"
-          }
-          onClick={() => void handlePair()}
-          intent="primary"
-          className="w-full"
-        />
+        finishing ? undefined : (
+          <Button
+            label={isPairing ? t("pairing.pairing") : t("pairing.startPairing")}
+            disabled={
+              isPairing ||
+              retryAt !== null ||
+              pin.length !== 6 ||
+              !hasTarget ||
+              !recordId
+            }
+            disabledAppearance={
+              isPairing || retryAt !== null ? "busy" : "unavailable"
+            }
+            onClick={() => void handlePair()}
+            intent="primary"
+            className="w-full"
+          />
+        )
       }
     >
-      <div className="flex flex-col gap-4 py-4">
-        <p className="text-muted-foreground text-sm">
-          {t("pairing.description")}
-        </p>
-
-        {overBluetooth ? (
-          <p className="text-foreground text-sm font-medium">
-            {t("pairing.overBluetooth")}
+      {finishing ? (
+        <div className="flex flex-col items-center gap-4 py-8 text-center">
+          <LoadingSpinner size={32} decorative />
+          <p className="text-foreground" role="status">
+            {t("pairing.finishing")}
           </p>
-        ) : address ? (
-          <p className="text-foreground text-sm font-medium break-all">
-            {address}
-          </p>
-        ) : (
+        </div>
+      ) : (
+        <div className="flex flex-col gap-4 py-4">
           <p className="text-muted-foreground text-sm">
-            {t("pairing.noAddress")}
+            {t("pairing.description")}
           </p>
-        )}
 
-        <TextInput
-          label={t("pairing.clientNameLabel")}
-          value={clientName}
-          setValue={(v) => setClientName(truncateClientName(v))}
-          maxLength={PAIRING_CLIENT_NAME_MAX_BYTES}
-          disabled={isPairing}
-        />
+          {overBluetooth ? (
+            <p className="text-foreground text-sm font-medium">
+              {t("pairing.overBluetooth")}
+            </p>
+          ) : address ? (
+            <p className="text-foreground text-sm font-medium break-all">
+              {address}
+            </p>
+          ) : (
+            <p className="text-muted-foreground text-sm">
+              {t("pairing.noAddress")}
+            </p>
+          )}
 
-        <PinInput
-          label={t("pairing.pinLabel")}
-          value={pin}
-          setValue={setPin}
-          length={6}
-          disabled={isPairing}
-          onComplete={(value) => {
-            void handlePair(value);
-          }}
-        />
+          <TextInput
+            label={t("pairing.clientNameLabel")}
+            value={clientName}
+            setValue={(v) => setClientName(truncateClientName(v))}
+            maxLength={PAIRING_CLIENT_NAME_MAX_BYTES}
+            disabled={isPairing}
+          />
 
-        {errorKind && (
-          <p
-            className="text-error text-sm"
-            role={errorKind === "rate_limited" ? "status" : "alert"}
-          >
-            {t(
-              `pairing.error.${errorKind}`,
-              errorKind === "rate_limited"
-                ? { count: Math.max(1, retrySeconds) }
-                : undefined,
-            )}
-          </p>
-        )}
-      </div>
+          <PinInput
+            label={t("pairing.pinLabel")}
+            value={pin}
+            setValue={setPin}
+            length={6}
+            disabled={isPairing}
+            onComplete={(value) => {
+              void handlePair(value);
+            }}
+          />
+
+          {errorKind && (
+            <p
+              className="text-error text-sm"
+              role={errorKind === "rate_limited" ? "status" : "alert"}
+            >
+              {t(
+                `pairing.error.${errorKind}`,
+                errorKind === "rate_limited"
+                  ? { count: Math.max(1, retrySeconds) }
+                  : undefined,
+              )}
+            </p>
+          )}
+        </div>
+      )}
     </SlideModal>
   );
 }

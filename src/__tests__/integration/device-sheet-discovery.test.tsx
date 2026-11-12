@@ -57,7 +57,7 @@ describe("Shared device discovery flow", () => {
   });
   afterEach(() => vi.restoreAllMocks());
 
-  it("shows discovered device identity and metadata while scanning", async () => {
+  it("shows each discovered device's name and platform while scanning", async () => {
     const user = userEvent.setup();
     const sheet = within(await openSheet(user));
     await waitForScan();
@@ -72,11 +72,17 @@ describe("Shared device discovery flow", () => {
         }),
       ),
     );
-    expect(await sheet.findByRole("button", { name: /MiSTer/ })).toBeVisible();
-    expect(sheet.getByRole("button", { name: /Office PC/ })).toBeVisible();
-    expect(sheet.getByText("mister.local")).toBeVisible();
-    expect(sheet.getByText("mister")).toBeVisible();
-    expect(sheet.getByText("settings.networkScan.version")).toBeVisible();
+    const mister = await sheet.findByRole("button", { name: /MiSTer/ });
+    expect(mister).toBeVisible();
+    expect(mister).toHaveTextContent(/^MiSTermister$/);
+    expect(sheet.getByRole("button", { name: /Office PC/ })).toHaveTextContent(
+      /^Office PC$/,
+    );
+    expect(sheet.queryByText(/mister\.local/)).not.toBeInTheDocument();
+    expect(sheet.queryByText(/192\.168\.1\.10/)).not.toBeInTheDocument();
+    expect(
+      sheet.queryByText(/settings\.networkScan\.version|2\.18\.0/),
+    ).not.toBeInTheDocument();
     expect(
       sheet.getByRole("button", { name: "settings.networkScan.refresh" }),
     ).toHaveAttribute("aria-busy", "true");
@@ -85,6 +91,37 @@ describe("Shared device discovery flow", () => {
         sheet.getByRole("region", { name: "scan.deviceSheetRecent" }),
       ).getByRole("status"),
     ).toHaveTextContent("settings.networkScan.searching");
+  });
+
+  it("tells discovered devices with the same name apart by address", async () => {
+    const user = userEvent.setup();
+    const sheet = within(await openSheet(user));
+    await waitForScan();
+    act(() => __simulateDeviceDiscovered(service()));
+    act(() =>
+      __simulateDeviceDiscovered(
+        service({
+          hostname: "bedroom.local",
+          port: 9000,
+          ipv4Addresses: ["192.168.1.101"],
+          txtRecord: { id: "bedroom-id" },
+        }),
+      ),
+    );
+    await waitFor(() =>
+      expect(
+        sheet
+          .getAllByRole("button", { name: /MiSTer/ })
+          .map((row) => row.textContent)
+          .sort(),
+      ).toEqual(["MiSTerbedroom.local:9000", "MiSTermister · mister.local"]),
+    );
+    await user.click(sheet.getByRole("button", { name: /bedroom\.local/ }));
+    await waitFor(() =>
+      expect(activeAddressOf(deviceRegistry.getSnapshot())).toBe(
+        "bedroom.local:9000",
+      ),
+    );
   });
 
   it.each([
@@ -98,8 +135,7 @@ describe("Shared device discovery flow", () => {
       const sheet = within(await openSheet(user));
       await waitForScan();
       act(() => __simulateDeviceDiscovered(service({ hostname, port })));
-      expect(await sheet.findByText(expected)).toBeVisible();
-      await user.click(sheet.getByRole("button", { name: /MiSTer/ }));
+      await user.click(await sheet.findByRole("button", { name: /MiSTer/ }));
       await waitFor(() =>
         expect(activeAddressOf(deviceRegistry.getSnapshot())).toBe(expected),
       );

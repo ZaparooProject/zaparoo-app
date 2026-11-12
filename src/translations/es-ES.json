@@ -1350,13 +1350,9 @@
       },
       "deviceHistory": "Cambiar dispositivo",
       "networkScan": {
-        "title": "Buscar dispositivos",
         "searching": "Buscando dispositivos...",
         "refresh": "Buscar de nuevo",
         "noOtherDevices": "No se encontraron otros dispositivos",
-        "addresses_one": "Dirección IP: {{addresses}}",
-        "addresses_other": "Direcciones IP: {{addresses}}",
-        "version": "v{{version}}",
         "scanFailed": "No se pudieron buscar dispositivos"
       },
       "connectionFailed": "No se puede conectar al dispositivo",
@@ -1388,10 +1384,6 @@
         "forgetFailed": "No se pudo olvidar el dispositivo. Inténtalo de nuevo."
       },
       "deviceCombine": {
-        "edit": "Combinar dispositivos",
-        "cancelEdit": "Cancelar selección",
-        "select": "Seleccionar {{device}}",
-        "action": "Combinar seleccionados",
         "title": "¿Combinar dispositivos?",
         "body": "¿Combinar {{first}} y {{second}}? Se conservarán las direcciones guardadas y el emparejamiento.",
         "cancel": "Cancelar",
@@ -1641,7 +1633,6 @@
         "reportIssue": "Informar de un problema en GitHub",
         "emailLabel": "Correo de soporte:"
       },
-      "connectDevice": "Conectar a {{device}}",
       "savedDevices": "Dispositivos guardados"
     },
     "systemSelector": {
