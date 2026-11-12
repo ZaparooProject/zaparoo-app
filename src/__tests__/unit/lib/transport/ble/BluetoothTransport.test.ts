@@ -362,12 +362,79 @@ describe("BluetoothTransport", () => {
       await vi.waitFor(() =>
         expect(handlers.onOpen).toHaveBeenCalledTimes(attempt),
       );
-      fake.links[attempt - 1]!.handlers.onClose("peripheral disconnected");
+      const link = fake.links[attempt - 1]!;
+      transport.send("hello");
+      await vi.waitFor(() => expect(link.sent).toHaveLength(1));
+      link.handlers.onClose("peripheral disconnected");
       await vi.advanceTimersByTimeAsync(2000);
     }
 
     expect(handlers.onEncryptedHandshakeRejected).toHaveBeenCalledTimes(1);
     expect(transport.state).toBe("disconnected");
+    transport.destroy();
+  });
+
+  it("keeps reconnecting when the link drops before the handshake is sent", async () => {
+    const { transport, handlers } = await connected();
+
+    for (let attempt = 1; attempt <= 4; attempt++) {
+      await vi.waitFor(() =>
+        expect(handlers.onOpen).toHaveBeenCalledTimes(attempt),
+      );
+      fake.links[attempt - 1]!.handlers.onClose("peripheral disconnected");
+      expect(transport.state).toBe("reconnecting");
+      await vi.advanceTimersByTimeAsync(2000);
+    }
+
+    await vi.waitFor(() => expect(handlers.onOpen).toHaveBeenCalledTimes(5));
+    expect(handlers.onEncryptedHandshakeRejected).not.toHaveBeenCalled();
+    expect(transport.state).toBe("connected");
+    transport.destroy();
+  });
+
+  it("keeps the session after dropping a first message that is too large", async () => {
+    const { transport, link } = await connected();
+    link.info.maxMessage = 200;
+
+    transport.send("x".repeat(300));
+    transport.send("hello");
+
+    await vi.waitFor(() => expect(link.sent).toHaveLength(1));
+    const core = new CoreSession(link.sent[0]!);
+    expect(core.decrypt(CoreSession.ciphertextOf(link.sent[0]!))).toBe("hello");
+    transport.destroy();
+  });
+
+  it("keeps the session after dropping a later message that is too large", async () => {
+    const { transport, link } = await connected();
+    link.info.maxMessage = 200;
+
+    transport.send("one");
+    transport.send("x".repeat(300));
+    transport.send("two");
+
+    await vi.waitFor(() => expect(link.sent).toHaveLength(2));
+    const core = new CoreSession(link.sent[0]!);
+    expect(core.decrypt(CoreSession.ciphertextOf(link.sent[0]!))).toBe("one");
+    expect(core.decrypt(link.sent[1]!)).toBe("two");
+    transport.destroy();
+  });
+
+  it("sends a message that exactly fills Core's limit", async () => {
+    const { transport, link } = await connected();
+    // Version, salt, token length and token, then the text and its tag.
+    const firstFrame = 1 + 16 + 1 + authToken.length + "hello".length + 16;
+    link.info.maxMessage = firstFrame;
+
+    transport.send("hello");
+    transport.send("x".repeat(firstFrame - 16));
+    transport.send("x".repeat(firstFrame - 15));
+
+    await vi.waitFor(() => expect(link.sent).toHaveLength(2));
+    expect(link.sent.map((frame) => frame.length)).toEqual([
+      firstFrame,
+      firstFrame,
+    ]);
     transport.destroy();
   });
 
@@ -479,6 +546,24 @@ describe("BluetoothTransport", () => {
     pairing.handlers.onMessage(control({ id, result: {} }));
 
     await expect(result).resolves.toEqual({});
+    transport.destroy();
+  });
+
+  it("reports the link gone once pairing replaces the encrypted one", async () => {
+    const { transport, handlers } = await connected();
+
+    const result = transport.pairingCall()("pair.start", {});
+
+    expect(transport.state).toBe("disconnected");
+    expect(transport.link).toBeNull();
+    expect(handlers.onStateChange).toHaveBeenLastCalledWith("disconnected");
+    await vi.waitFor(() => expect(fake.links).toHaveLength(2));
+    const pairing = fake.links[1]!;
+    await vi.waitFor(() => expect(pairing.sent).toHaveLength(1));
+    const { id } = JSON.parse(new TextDecoder().decode(pairing.sent[0]!));
+    pairing.handlers.onMessage(control({ id, result: {} }));
+    await expect(result).resolves.toEqual({});
+    expect(transport.state).toBe("disconnected");
     transport.destroy();
   });
 

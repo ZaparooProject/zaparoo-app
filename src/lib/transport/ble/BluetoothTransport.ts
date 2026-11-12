@@ -54,6 +54,7 @@ const SESSION_CLOSED_CODE = -32004;
 const ENCRYPTION_REQUIRED_CODE = -32002;
 const UNSUPPORTED_VERSION_CODE = -32001;
 const MAX_HANDSHAKE_REJECTIONS = 3;
+const GCM_TAG_LENGTH = 16;
 /** How long the connect to a known peripheral may take while a scan runs. */
 export const KNOWN_PERIPHERAL_CONNECT_TIMEOUT_MS = 3000;
 
@@ -124,6 +125,24 @@ function parseControl(
   }
 }
 
+/**
+ * The size of the frame EncryptedSession.encryptAndFrameBinary makes for
+ * `plaintext`: the ciphertext with its tag, behind the version, salt and
+ * token on a session's first frame.
+ */
+function frameLength(
+  plaintext: string,
+  session: EncryptedSession,
+  first: boolean,
+): number {
+  const header = first
+    ? 2 +
+      session.sessionSalt.length +
+      textEncoder.encode(session.authToken).length
+    : 0;
+  return header + textEncoder.encode(plaintext).length + GCM_TAG_LENGTH;
+}
+
 export class BluetoothTransport implements Transport {
   readonly deviceId: string;
   private readonly config: typeof DEFAULTS & {
@@ -144,6 +163,8 @@ export class BluetoothTransport implements Transport {
   private ble: BleLink | null = null;
   private opening: Promise<BleLink> | null = null;
   private session: EncryptedSession | null = null;
+  /** How far the session's first frame, which carries the handshake, got. */
+  private handshake: "unsent" | "framed" | "delivered" = "unsent";
   private outbound: string[] = [];
   private draining = false;
   private inbound: Promise<void> = Promise.resolve();
@@ -485,6 +506,7 @@ export class BluetoothTransport implements Transport {
     }
 
     this.session = session;
+    this.handshake = "unsent";
     this.mode = "trying-encrypted";
     this._hasConnectedBefore = true;
     this.setState("connected");
@@ -604,6 +626,7 @@ export class BluetoothTransport implements Transport {
 
   private handleLinkClosed(reason: string): void {
     const mode = this.mode;
+    const handshakeDelivered = this.handshake === "delivered";
     this.rejectPairing(new Error("Bluetooth connection lost"));
     this.closeLink();
     this.heartReset();
@@ -613,7 +636,9 @@ export class BluetoothTransport implements Transport {
       this.mode = "idle";
       return;
     }
-    if (mode === "trying-encrypted") {
+    // Core cannot have refused a handshake that never reached it, so a link
+    // lost before then is an ordinary drop.
+    if (mode === "trying-encrypted" && handshakeDelivered) {
       this.handshakeRejections++;
       if (this.handshakeRejections >= MAX_HANDSHAKE_REJECTIONS) {
         logger.warn(
@@ -647,9 +672,10 @@ export class BluetoothTransport implements Transport {
           return;
         }
         const item = this.outbound.shift()!;
-        const frame = await session.encryptAndFrameBinary(item);
-        if (generation !== this.generation || link.closed) return;
-        if (frame.length > link.info.maxMessage) {
+        // Sized before encrypting: an encrypted frame has used a counter
+        // value Core expects next, so dropping one would end the session.
+        const first = this.handshake === "unsent";
+        if (frameLength(item, session, first) > link.info.maxMessage) {
           logger.error(
             `[BLE:${this.deviceId}] Message too large for Bluetooth`,
             undefined,
@@ -657,7 +683,11 @@ export class BluetoothTransport implements Transport {
           );
           continue;
         }
+        const frame = await session.encryptAndFrameBinary(item);
+        if (first && session === this.session) this.handshake = "framed";
+        if (generation !== this.generation || link.closed) return;
         await link.send(frame);
+        if (first && session === this.session) this.handshake = "delivered";
       }
     } catch (error) {
       if (generation !== this.generation) return;
@@ -695,6 +725,8 @@ export class BluetoothTransport implements Transport {
     this.closeLink();
     this.heartReset();
     this.encryptionBlocked = true;
+    // The encrypted link is gone, so nothing can be sent until pairing ends.
+    this.setState("disconnected");
     const generation = ++this.generation;
     this.mode = "opening";
     try {

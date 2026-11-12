@@ -16,6 +16,7 @@ import {
 import { Chunker, encodeAck, parseChunk } from "@/lib/transport/ble/frame";
 import {
   BLE_BOND_TIMEOUT_MS,
+  BLE_BOND_WAIT_MS,
   BLE_DISCOVERY_WAIT_MS,
   BLE_WRITE_TIMEOUT_MS,
   BleLink,
@@ -68,6 +69,25 @@ function writtenChunks(): Uint8Array[] {
 
 const text = (value: string) => new TextEncoder().encode(value);
 
+/** Answers each Bond read with `bond`; every other read gets Info. */
+function bondReads(bond: () => Promise<{ value: number[] }>) {
+  vi.mocked(BluetoothLowEnergy.readCharacteristic).mockImplementation(
+    async (options: { characteristicId: string }) =>
+      options.characteristicId === BLE_BOND_CHAR_UUID
+        ? bond()
+        : { value: infoBytes() },
+  );
+}
+
+function readsOf(characteristicId: string): number {
+  return vi
+    .mocked(BluetoothLowEnergy.readCharacteristic)
+    .mock.calls.filter(
+      ([options]: [{ characteristicId: string }]) =>
+        options.characteristicId === characteristicId,
+    ).length;
+}
+
 describe("BleLink", () => {
   beforeEach(() => {
     vi.mocked(Capacitor.getPlatform).mockReturnValue("android");
@@ -119,7 +139,7 @@ describe("BleLink", () => {
     expect(BluetoothLowEnergy.readCharacteristic).toHaveBeenCalledWith(
       expect.objectContaining({
         characteristicId: BLE_BOND_CHAR_UUID,
-        timeout: BLE_BOND_TIMEOUT_MS,
+        timeout: BLE_BOND_WAIT_MS,
       }),
     );
   });
@@ -188,6 +208,65 @@ describe("BleLink", () => {
 
     expect(link.info.deviceId).toBe("core-1");
     expect(link.closed).toBe(false);
+    expect(readsOf(BLE_BOND_CHAR_UUID)).toBe(1);
+  });
+
+  it("keeps reading Bond while the pairing prompt holds it", async () => {
+    let reads = 0;
+    bondReads(async () => {
+      if (++reads < 3) throw new Error("Operation timed out");
+      return { value: [1] };
+    });
+
+    const link = await BleLink.open(PERIPHERAL, handlers(), { tag: TAG });
+
+    expect(link.closed).toBe(false);
+    expect(readsOf(BLE_BOND_CHAR_UUID)).toBe(3);
+    expect(readsOf(BLE_INFO_CHAR_UUID)).toBe(1);
+  });
+
+  it("gives up on Bond once the pairing prompt's time has passed", async () => {
+    const now = vi.spyOn(Date, "now").mockReturnValue(0);
+    bondReads(async () => {
+      now.mockReturnValue(BLE_BOND_TIMEOUT_MS);
+      throw new Error("Operation timed out");
+    });
+
+    const link = await BleLink.open(PERIPHERAL, handlers(), { tag: TAG });
+
+    expect(link.info.deviceId).toBe("core-1");
+    expect(readsOf(BLE_BOND_CHAR_UUID)).toBe(1);
+    now.mockRestore();
+  });
+
+  it("stops reading Bond once the peripheral drops", async () => {
+    bondReads(async () => {
+      __simulateDeviceDisconnected(PERIPHERAL);
+      throw new Error("Operation timed out");
+    });
+
+    await expect(
+      BleLink.open(PERIPHERAL, handlers(), { tag: TAG }),
+    ).rejects.toBeInstanceOf(BleLinkDroppedError);
+    expect(readsOf(BLE_BOND_CHAR_UUID)).toBe(1);
+    expect(readsOf(BLE_INFO_CHAR_UUID)).toBe(0);
+  });
+
+  it("stops reading Bond once the opening is cancelled", async () => {
+    const controller = new AbortController();
+    bondReads(async () => {
+      controller.abort();
+      throw new Error("Operation timed out");
+    });
+
+    await expect(
+      BleLink.open(PERIPHERAL, handlers(), {
+        tag: TAG,
+        signal: controller.signal,
+      }),
+    ).rejects.toBeInstanceOf(BleLinkAbortedError);
+    expect(readsOf(BLE_BOND_CHAR_UUID)).toBe(1);
+    expect(readsOf(BLE_INFO_CHAR_UUID)).toBe(0);
   });
 
   it("asks for a large MTU on Android and caps it at Core's preference", async () => {

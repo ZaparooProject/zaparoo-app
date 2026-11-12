@@ -35,6 +35,8 @@ const BLE_OPERATION_TIMEOUT_MS = 10000;
 export const BLE_BOND_TIMEOUT_MS = 60000;
 /** One wait for discovery; see BleLink.discover. */
 export const BLE_DISCOVERY_WAIT_MS = 2000;
+/** One wait for the Bond read; see BleLink.awaitBond. */
+export const BLE_BOND_WAIT_MS = 2000;
 /**
  * A write is answered only once the radio has carried it, and on a slow or
  * crowded link that can lag far behind. Matches Core's wait for an
@@ -342,17 +344,32 @@ export class BleLink {
    * that reveals the phone's real address strands it, so Core's replies
    * never arrive. A failure means there is no pairing to wait for, as with
    * a Core that predates the characteristic or one that is not pairable.
+   *
+   * The read gets as long as the prompt does, in short waits for the reason
+   * discover() gives: one long read would hold back the disconnect and the
+   * next connect for all of it after a cancel or a drop.
    */
   private async awaitBond(): Promise<void> {
-    try {
-      await BluetoothLowEnergy.readCharacteristic({
-        deviceId: this.peripheralId,
-        serviceId: BLE_SERVICE_UUID,
-        characteristicId: BLE_BOND_CHAR_UUID,
-        timeout: BLE_BOND_TIMEOUT_MS,
-      });
-    } catch (error) {
-      logger.debug("Bluetooth bond wait ended without a read", error);
+    const deadline = Date.now() + BLE_BOND_TIMEOUT_MS;
+    for (;;) {
+      try {
+        await BluetoothLowEnergy.readCharacteristic({
+          deviceId: this.peripheralId,
+          serviceId: BLE_SERVICE_UUID,
+          characteristicId: BLE_BOND_CHAR_UUID,
+          timeout: BLE_BOND_WAIT_MS,
+        });
+        return;
+      } catch (error) {
+        if (
+          this.closedFlag ||
+          Date.now() >= deadline ||
+          !isPluginTimeout(error)
+        ) {
+          logger.debug("Bluetooth bond wait ended without a read", error);
+          return;
+        }
+      }
     }
   }
 

@@ -95,6 +95,8 @@ class FakeChild implements Transport {
 }
 
 const URL_A = "ws://10.0.0.5:7497/api/v0.1";
+const URL_B = "ws://10.0.0.6:7497/api/v0.1";
+const URL_C = "ws://10.0.0.7:7497/api/v0.1";
 
 function setup(config: Partial<HybridTransportConfig> = {}) {
   const children: FakeChild[] = [];
@@ -494,6 +496,34 @@ describe("HybridTransport", () => {
       expect(transport.link).toBe("bluetooth");
       await vi.advanceTimersByTimeAsync(60000);
       expect(ws()).toHaveLength(2);
+    });
+
+    it("gives a probe time to reach its last address", async () => {
+      const urls = [URL_A, URL_B, URL_C];
+      const { transport, ws } = await onBluetooth({ wsUrls: urls });
+      await vi.advanceTimersByTimeAsync(60000);
+      const probe = ws()[0]!;
+
+      // Two addresses time out at 5 s each, with the socket's 2 s rest after
+      // each, so the third is first tried 14 s in and has 5 s of its own.
+      await vi.advanceTimersByTimeAsync(18500);
+
+      expect(probe.destroyed).toBe(false);
+      probe.open(URL_C);
+      probe.handlers.onEncryptedHandshakeOk?.();
+      expect(transport.link).toBe("wifi");
+    });
+
+    it("drops a probe that reaches none of its addresses", async () => {
+      const urls = [URL_A, URL_B, URL_C];
+      const { transport, ws } = await onBluetooth({ wsUrls: urls });
+      await vi.advanceTimersByTimeAsync(60000);
+      const probe = ws()[0]!;
+
+      await vi.advanceTimersByTimeAsync(20000);
+
+      expect(probe.destroyed).toBe(true);
+      expect(transport.link).toBe("bluetooth");
     });
 
     it("drops a probe Core refuses", async () => {

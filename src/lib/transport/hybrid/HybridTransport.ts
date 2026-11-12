@@ -74,6 +74,9 @@ const DEFAULTS = {
 
 const ENDPOINTS_ID_PREFIX = "hybrid-endpoints-";
 
+/** How long a socket waits after one address fails before trying the next. */
+const WS_RECONNECT_INTERVAL_MS = 2000;
+
 function defaultWebSocket(
   deviceId: string,
 ): NonNullable<HybridTransportConfig["createWebSocket"]> {
@@ -84,7 +87,7 @@ function defaultWebSocket(
       fallbackUrls: urls.slice(1),
       pingInterval: 15000,
       pongTimeout: 10000,
-      reconnectInterval: 2000,
+      reconnectInterval: WS_RECONNECT_INTERVAL_MS,
       maxReconnectInterval: 30000,
       maxReconnectAttempts: Infinity,
       pingMessage: "ping",
@@ -752,9 +755,13 @@ export class HybridTransport implements Transport {
       onEncryptedHandshakeRejected: () => finish(false),
       onUnsupportedVersion: () => finish(false),
     });
+    // The socket rests between addresses, so a probe that left that out
+    // would end before it reached the later ones.
     this.probeDeadline = setTimeout(
       () => finish(false),
-      this.settings.probeTimeoutPerUrlMs * urls.length + 1000,
+      this.settings.probeTimeoutPerUrlMs * urls.length +
+        WS_RECONNECT_INTERVAL_MS * (urls.length - 1) +
+        1000,
     );
     probe.connect();
   }
