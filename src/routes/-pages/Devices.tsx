@@ -17,7 +17,6 @@ import {
   useDeviceRegistry,
   type DeviceRecord,
 } from "@/lib/devices/deviceRegistry";
-import type { ParsedDeviceEndpoint } from "@/lib/devices/endpoint";
 import { invalidateLibraryImageCache } from "@/lib/libraryImageCache";
 import { logger } from "@/lib/logger";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
@@ -36,7 +35,8 @@ import { DeviceRow } from "@/components/DeviceRow";
 
 interface DeviceListEntry {
   record: DeviceRecord;
-  endpoint: ParsedDeviceEndpoint;
+  /** The network address, or the Bluetooth label for a Bluetooth-only device. */
+  address: string;
 }
 
 const selectRecords = (state: { records: Record<string, DeviceRecord> }) =>
@@ -117,6 +117,14 @@ export function Devices() {
     return Object.values(records)
       .flatMap((record) => {
         const endpoint = parsedEndpointForRecord(record);
+        if (!endpoint && record.ble) {
+          return [
+            {
+              record,
+              address: t("settings.bluetoothScan.viaBluetooth"),
+            } satisfies DeviceListEntry,
+          ];
+        }
         if (!endpoint) {
           // A record with no parseable endpoint is unreachable and cannot be
           // rendered, so it is dropped — but silently vanishing from the list
@@ -130,14 +138,16 @@ export function Devices() {
           });
           return [];
         }
-        return [{ record, endpoint } satisfies DeviceListEntry];
+        return [
+          { record, address: endpoint.address } satisfies DeviceListEntry,
+        ];
       })
       .sort((left, right) =>
-        (left.record.name || left.endpoint.address).localeCompare(
-          right.record.name || right.endpoint.address,
+        (left.record.name || left.address).localeCompare(
+          right.record.name || right.address,
         ),
       );
-  }, [records]);
+  }, [records, t]);
 
   const hasCredentials = (record: DeviceRecord) =>
     pairedKeys.has(credentialKeyForRecord(record.recordId)) ||
@@ -318,11 +328,11 @@ export function Devices() {
               }
             />
           ) : (
-            sortedRecords.map(({ record, endpoint }) => (
+            sortedRecords.map(({ record, address }) => (
               <DeviceRow
                 key={record.recordId}
                 entry={{
-                  address: endpoint.address,
+                  address,
                   name: record.name,
                   platform: record.platform,
                   version: record.version,
@@ -339,7 +349,7 @@ export function Devices() {
                       checked={selectedRecordIds.has(record.recordId)}
                       onCheckedChange={() => toggleSelected(record.recordId)}
                       aria-label={t("settings.deviceCombine.select", {
-                        device: record.name || endpoint.address,
+                        device: record.name || address,
                       })}
                       disabled={
                         selectedRecordIds.size >= 2 &&
@@ -352,7 +362,7 @@ export function Devices() {
                       variant="ghost"
                       shape="square"
                       aria-label={t("settings.connectDevice", {
-                        device: record.name || endpoint.address,
+                        device: record.name || address,
                       })}
                       disabled={
                         isConnected && activeRecordId === record.recordId

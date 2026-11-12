@@ -18,6 +18,7 @@ import {
   parseDeviceRegistry,
   parsedEndpointForRecord,
   resolvedEndpointForRecord,
+  reportedWebSocketUrlsForRecord,
   resolvedEndpointsForRecord,
   type DeviceRecord,
 } from "@/lib/devices/deviceRegistry";
@@ -1197,6 +1198,223 @@ describe("applying device-reported metadata", () => {
     });
 
     expect(Preferences.set).not.toHaveBeenCalled();
+  });
+});
+
+describe("Bluetooth devices", () => {
+  const nearby = { deviceId: "Core-1", peripheralId: "AA:BB", name: " Den " };
+
+  it("should create a Bluetooth-only record for a new Core", async () => {
+    const record = await deviceRegistry.selectBluetooth(nearby);
+
+    expect(record).toMatchObject({
+      discoveryId: "core-1",
+      endpoints: [],
+      preferredEndpointId: "",
+      name: "Den",
+      ble: { deviceId: "Core-1", peripheralId: "AA:BB", name: "Den" },
+    });
+    expect(deviceRegistry.getSnapshot().activeRecordId).toBe(record!.recordId);
+    expect(activeAddressOf(deviceRegistry.getSnapshot())).toBe("");
+  });
+
+  it("should keep a Bluetooth-only record across a reload", async () => {
+    const record = await deviceRegistry.selectBluetooth(nearby);
+
+    const stored = await storedRegistry();
+
+    expect(stored?.records[record!.recordId]).toMatchObject({
+      endpoints: [],
+      ble: { deviceId: "Core-1" },
+    });
+  });
+
+  it("should drop a stored record with no endpoints and no Bluetooth", () => {
+    const parsed = parseDeviceRegistry({
+      schemaVersion: 2,
+      activeRecordId: null,
+      records: {
+        r1: { recordId: "r1", endpoints: [], preferredEndpointId: "" },
+        r2: {
+          recordId: "r2",
+          endpoints: [],
+          preferredEndpointId: "",
+          ble: { deviceId: "  " },
+        },
+      },
+    });
+
+    expect(parsed?.records).toEqual({});
+  });
+
+  it("should drop a stored record with malformed reported endpoints", () => {
+    const parsed = parseDeviceRegistry({
+      schemaVersion: 2,
+      activeRecordId: null,
+      records: {
+        r1: {
+          recordId: "r1",
+          endpoints: [],
+          preferredEndpointId: "",
+          ble: { deviceId: "core-1" },
+          reportedEndpoints: { addresses: ["bad host!"], port: 7497, at: 1 },
+        },
+      },
+    });
+
+    expect(parsed?.records).toEqual({});
+  });
+
+  it("should add Bluetooth to the record that already knows the Core", async () => {
+    const record = await deviceRegistry.selectAddress("10.0.0.206");
+    await deviceRegistry.applyDeviceEndpoints(record!.recordId, {
+      deviceId: "core-1",
+      addresses: ["10.0.0.206"],
+      port: 7497,
+      ble: false,
+    });
+
+    const selected = await deviceRegistry.selectBluetooth(nearby);
+
+    expect(records()).toHaveLength(1);
+    expect(selected).toMatchObject({
+      recordId: record!.recordId,
+      preferredEndpointId: "ws://10.0.0.206:7497",
+      ble: { deviceId: "Core-1", peripheralId: "AA:BB" },
+    });
+  });
+
+  it("should ignore a Core with no device id", async () => {
+    await expect(
+      deviceRegistry.selectBluetooth({ deviceId: " ", peripheralId: "AA" }),
+    ).resolves.toBeNull();
+    expect(records()).toHaveLength(0);
+  });
+
+  it("should remember where Bluetooth last found the Core", async () => {
+    const record = await deviceRegistry.selectAddress("10.0.0.206");
+
+    await deviceRegistry.noteBluetoothIdentity(record!.recordId, {
+      coreDeviceId: "core-1",
+      peripheralId: "CC",
+    });
+
+    expect(recordById(record!.recordId)).toMatchObject({
+      discoveryId: "core-1",
+      ble: { deviceId: "core-1", peripheralId: "CC" },
+    });
+  });
+
+  it("should not tie a record to a second Core over Bluetooth", async () => {
+    const record = await deviceRegistry.selectBluetooth(nearby);
+
+    await deviceRegistry.noteBluetoothIdentity(record!.recordId, {
+      coreDeviceId: "core-2",
+      peripheralId: "DD",
+    });
+
+    expect(recordById(record!.recordId)?.ble?.peripheralId).toBe("AA:BB");
+  });
+
+  it("should store the addresses Core reports and learn its Bluetooth", async () => {
+    const record = await deviceRegistry.selectAddress("10.0.0.206");
+
+    await deviceRegistry.applyDeviceEndpoints(record!.recordId, {
+      deviceId: "core-1",
+      addresses: ["10.0.0.206", "192.168.1.9", "not a host!"],
+      port: 7497,
+      ble: true,
+    });
+
+    const updated = recordById(record!.recordId)!;
+    expect(updated).toMatchObject({
+      discoveryId: "core-1",
+      reportedEndpoints: {
+        addresses: ["10.0.0.206", "192.168.1.9"],
+        port: 7497,
+      },
+      ble: { deviceId: "core-1" },
+    });
+    expect(reportedWebSocketUrlsForRecord(updated)).toEqual([
+      "ws://192.168.1.9:7497/api/v0.1",
+    ]);
+  });
+
+  it("should not write when Core reports nothing new", async () => {
+    const record = await deviceRegistry.selectAddress("10.0.0.206");
+    const endpoints = {
+      deviceId: "core-1",
+      addresses: ["192.168.1.9"],
+      port: 7497,
+      ble: true,
+    };
+    await deviceRegistry.applyDeviceEndpoints(record!.recordId, endpoints);
+    vi.clearAllMocks();
+
+    await deviceRegistry.applyDeviceEndpoints(record!.recordId, endpoints);
+
+    expect(Preferences.set).not.toHaveBeenCalled();
+  });
+
+  it("should take the name Core reports unless the user named it", async () => {
+    const record = await deviceRegistry.selectBluetooth({
+      deviceId: "core-1",
+      peripheralId: "AA:BB",
+    });
+    const endpoints = {
+      deviceId: "core-1",
+      name: "MiSTer",
+      addresses: [],
+      port: 7497,
+      ble: true,
+    };
+
+    await deviceRegistry.applyDeviceEndpoints(record!.recordId, endpoints);
+    expect(recordById(record!.recordId)?.name).toBe("MiSTer");
+
+    await deviceRegistry.setCustomName(record!.recordId, "Den");
+    await deviceRegistry.applyDeviceEndpoints(record!.recordId, endpoints);
+    expect(recordById(record!.recordId)?.name).toBe("Den");
+  });
+
+  it("should ignore endpoints from a different Core", async () => {
+    const record = await deviceRegistry.selectBluetooth(nearby);
+
+    await deviceRegistry.applyDeviceEndpoints(record!.recordId, {
+      deviceId: "core-2",
+      addresses: ["192.168.1.9"],
+      port: 7497,
+      ble: true,
+    });
+
+    expect(recordById(record!.recordId)?.reportedEndpoints).toBeUndefined();
+  });
+
+  it("should report no extra URLs for a record Core never reported on", () => {
+    expect(reportedWebSocketUrlsForRecord(null)).toEqual([]);
+  });
+
+  it("should keep Bluetooth and the Wi-Fi route when merging", async () => {
+    const bluetooth = await deviceRegistry.selectBluetooth(nearby);
+    const wifi = await deviceRegistry.selectAddress("10.0.0.206");
+    await deviceRegistry.applyDeviceEndpoints(wifi!.recordId, {
+      deviceId: "core-1",
+      addresses: ["10.0.0.206"],
+      port: 7497,
+      ble: false,
+    });
+
+    const merged = await deviceRegistry.mergeRecords(
+      bluetooth!.recordId,
+      wifi!.recordId,
+    );
+
+    expect(merged).toMatchObject({
+      recordId: bluetooth!.recordId,
+      preferredEndpointId: "ws://10.0.0.206:7497",
+      ble: { deviceId: "Core-1", peripheralId: "AA:BB" },
+      reportedEndpoints: { addresses: ["10.0.0.206"] },
+    });
   });
 });
 

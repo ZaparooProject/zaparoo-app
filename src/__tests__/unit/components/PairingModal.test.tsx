@@ -2,7 +2,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@/test-utils";
 import userEvent from "@testing-library/user-event";
 import { PairingModal } from "@/components/PairingModal";
-import { performPairing, PairingError } from "@/lib/crypto/pairing";
+import {
+  performPairing,
+  performPairingWithCarrier,
+  PairingError,
+} from "@/lib/crypto/pairing";
 import {
   credentialKeyForRecord,
   credentialStore,
@@ -18,6 +22,7 @@ vi.mock("@/lib/crypto/pairing", async () => {
   return {
     ...actual,
     performPairing: vi.fn(),
+    performPairingWithCarrier: vi.fn(),
   };
 });
 
@@ -36,6 +41,7 @@ vi.mock("react-hot-toast", () => ({
 }));
 
 const mockedPerformPairing = vi.mocked(performPairing);
+const mockedPerformPairingWithCarrier = vi.mocked(performPairingWithCarrier);
 const mockedDeviceGetInfo = vi.mocked(Device.getInfo);
 
 const RECORD_ID = "record-under-test";
@@ -320,6 +326,70 @@ describe("PairingModal", () => {
 
       await waitFor(() => {
         expect(onSuccess).toHaveBeenCalledTimes(1);
+        expect(close).toHaveBeenCalledTimes(1);
+      });
+    });
+  });
+
+  describe("pairing over Bluetooth", () => {
+    it("should name the Bluetooth link instead of an address", () => {
+      render(
+        <PairingModal
+          isOpen={true}
+          close={vi.fn()}
+          address=""
+          recordId={RECORD_ID}
+          overBluetooth
+          getPairingCall={() => vi.fn()}
+        />,
+      );
+
+      expect(screen.getByText("pairing.overBluetooth")).toBeInTheDocument();
+      expect(screen.queryByText("pairing.noAddress")).not.toBeInTheDocument();
+    });
+
+    it("should pair through the connected link without an address", async () => {
+      const user = userEvent.setup();
+      const close = vi.fn();
+      const call = vi.fn();
+      mockedPerformPairingWithCarrier.mockResolvedValue({
+        authToken: "ble-token",
+        clientId: "client-ble",
+        pairingKey: new Uint8Array([0x01, 0x02]),
+      });
+
+      render(
+        <PairingModal
+          isOpen={true}
+          close={close}
+          address=""
+          recordId={RECORD_ID}
+          overBluetooth
+          getPairingCall={() => call}
+        />,
+      );
+
+      await user.type(screen.getByLabelText("pairing.pinLabel"), "654321");
+
+      await waitFor(() => {
+        expect(mockedPerformPairingWithCarrier).toHaveBeenCalledTimes(1);
+      });
+      expect(mockedPerformPairingWithCarrier).toHaveBeenCalledWith(
+        expect.anything(),
+        "654321",
+        expect.stringContaining("Pixel 8"),
+      );
+      expect(mockedPerformPairing).not.toHaveBeenCalled();
+      await waitFor(async () => {
+        await expect(
+          credentialStore.get(credentialKeyForRecord(RECORD_ID)),
+        ).resolves.toMatchObject({
+          authToken: "ble-token",
+          clientId: "client-ble",
+          pairingKey: "0102",
+        });
+      });
+      await waitFor(() => {
         expect(close).toHaveBeenCalledTimes(1);
       });
     });

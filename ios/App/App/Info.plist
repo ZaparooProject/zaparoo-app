@@ -54,6 +54,8 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Allows finding and connecting to nearby Zaparoo devices without Wi-Fi.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Allows scanning of QR and barcodes for use with Zaparoo.</string>
 	<key>NSLocalNetworkUsageDescription</key>

@@ -347,4 +347,29 @@ describe("useSelectDevice", () => {
       expect(await deviceScopedStateWasCleared()).toBe(false);
     });
   });
+
+  describe("selectBluetoothDevice", () => {
+    it("should activate a device known only over Bluetooth", async () => {
+      await seedActiveDevice({ address: "192.168.1.10" });
+      await primeDeviceScopedState();
+      const { result } = renderSelectDevice();
+
+      await act(async () => {
+        await result.current.selectBluetoothDevice({
+          deviceId: "core-1",
+          peripheralId: "AA:BB",
+          name: "Zaparoo-1234",
+        });
+      });
+
+      const snapshot = deviceRegistry.getSnapshot();
+      const active = snapshot.records[snapshot.activeRecordId!];
+      expect(active?.endpoints).toEqual([]);
+      expect(active?.ble).toMatchObject({
+        deviceId: "core-1",
+        peripheralId: "AA:BB",
+      });
+      expect(await deviceScopedStateWasCleared()).toBe(true);
+    });
+  });
 });

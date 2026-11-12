@@ -2,18 +2,20 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Device } from "@capacitor/device";
 import { Capacitor } from "@capacitor/core";
-import toast from "react-hot-toast";
 import { SlideModal } from "@/components/SlideModal";
 import { Button } from "@/components/wui/Button";
 import { TextInput } from "@/components/wui/TextInput";
 import { PinInput } from "@/components/wui/PinInput";
 import { parseDeviceAddress } from "@/lib/coreApi";
 import {
+  createRpcPairingCarrier,
   isExpectedPairingError,
   PAIRING_CLIENT_NAME_MAX_BYTES,
   PAIRING_REQUEST_INTERVAL_MS,
   performPairing,
+  performPairingWithCarrier,
   PairingError,
+  type RpcCall,
   type PairingErrorKind,
   truncateClientName,
 } from "@/lib/crypto/pairing";
@@ -35,8 +37,12 @@ function safePlatform(): string {
 interface PairingModalProps {
   isOpen: boolean;
   close: () => void;
-  /** Where the pairing handshake is sent. */
+  /** Where the pairing handshake is sent over HTTP. */
   address: string;
+  /** Pair over the device's Bluetooth link instead of HTTP. */
+  overBluetooth?: boolean;
+  /** The JSON-RPC call pairing uses over Bluetooth. */
+  getPairingCall?: () => RpcCall | null;
   /** The device record the resulting credentials belong to. */
   recordId: string;
   onSuccess?: () => void;
@@ -46,6 +52,8 @@ export function PairingModal({
   isOpen,
   close,
   address,
+  overBluetooth = false,
+  getPairingCall,
   recordId,
   onSuccess,
 }: PairingModalProps) {
@@ -122,17 +130,29 @@ export function PairingModal({
     return truncateClientName(clientName.trim() || fallbackName);
   }, [clientName, fallbackName]);
 
+  const hasTarget = overBluetooth || address !== "";
+
   const handlePair = async (pinOverride?: string) => {
     const submittedPin = pinOverride ?? pin;
-    if (!/^\d{6}$/.test(submittedPin) || !address || !recordId) return;
+    if (!/^\d{6}$/.test(submittedPin) || !hasTarget || !recordId) return;
     if (pairingInFlight.current || retryAt !== null) return;
     pairingInFlight.current = true;
     setErrorKind(null);
     setIsPairing(true);
     try {
       const name = resolveClientName();
-      const { host, port } = parseDeviceAddress(address);
-      const result = await performPairing(host, port, submittedPin, name);
+      const call = overBluetooth ? (getPairingCall?.() ?? null) : null;
+      let result;
+      if (call) {
+        result = await performPairingWithCarrier(
+          createRpcPairingCarrier(call),
+          submittedPin,
+          name,
+        );
+      } else {
+        const { host, port } = parseDeviceAddress(address);
+        result = await performPairing(host, port, submittedPin, name);
+      }
       const hexKey = Array.from(result.pairingKey)
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
@@ -145,7 +165,6 @@ export function PairingModal({
         clientId: result.clientId,
         pairedAt: Date.now(),
       });
-      toast.success(t("pairing.success"));
       connectionManager.clearEncryptionBlockActive();
       onSuccess?.();
       close();
@@ -194,7 +213,7 @@ export function PairingModal({
             isPairing ||
             retryAt !== null ||
             pin.length !== 6 ||
-            !address ||
+            !hasTarget ||
             !recordId
           }
           disabledAppearance={
@@ -211,7 +230,11 @@ export function PairingModal({
           {t("pairing.description")}
         </p>
 
-        {address ? (
+        {overBluetooth ? (
+          <p className="text-foreground text-sm font-medium">
+            {t("pairing.overBluetooth")}
+          </p>
+        ) : address ? (
           <p className="text-foreground text-sm font-medium break-all">
             {address}
           </p>

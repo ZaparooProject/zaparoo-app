@@ -50,6 +50,9 @@ project(':capacitor-status-bar').projectDir = new File('../node_modules/@capacit
 include ':capacitor-text-zoom'
 project(':capacitor-text-zoom').projectDir = new File('../node_modules/@capacitor/text-zoom/android')
 
+include ':capawesome-team-capacitor-bluetooth-low-energy'
+project(':capawesome-team-capacitor-bluetooth-low-energy').projectDir = new File('../node_modules/@capawesome-team/capacitor-bluetooth-low-energy/android')
+
 include ':capawesome-team-capacitor-nfc'
 project(':capawesome-team-capacitor-nfc').projectDir = new File('../node_modules/@capawesome-team/capacitor-nfc/android')
 

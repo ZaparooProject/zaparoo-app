@@ -7,6 +7,8 @@ import {
 } from "@/hooks/useConnection";
 import { useStatusStore } from "@/lib/store";
 import { seedActiveDevice } from "@/test-utils/deviceRegistry";
+import { deviceRegistry } from "@/lib/devices/deviceRegistry";
+import type { DeviceConnection } from "@/lib/transport/types";
 import { ReactNode } from "react";
 
 function wrap(
@@ -149,5 +151,99 @@ describe("ConnectionStatusDisplay encryption gate", () => {
     );
 
     expect(screen.getByText("connection.pairingRequired")).toBeInTheDocument();
+  });
+});
+
+describe("ConnectionStatusDisplay link", () => {
+  function connectionOn(link: "wifi" | "bluetooth"): DeviceConnection {
+    return {
+      deviceId: "record-1",
+      address: "192.168.1.100",
+      type: "hybrid",
+      link,
+      state: "connected",
+      hasData: true,
+      lastDataTimestamp: null,
+      hasConnectedBefore: true,
+    };
+  }
+
+  beforeEach(async () => {
+    useStatusStore.setState({
+      encryptionState: "encrypted",
+      pairingRequired: false,
+      networkAvailable: true,
+      connectionIssueStartedAt: null,
+    });
+    await seedActiveDevice({ address: "192.168.1.100" });
+  });
+
+  it("should name Wi-Fi when connected over Wi-Fi", () => {
+    render(
+      wrap(<ConnectionStatusDisplay />, {
+        isConnected: true,
+        activeConnection: connectionOn("wifi"),
+      }),
+    );
+
+    expect(
+      screen.getByRole("img", { name: "connection.linkWifi" }),
+    ).toBeInTheDocument();
+  });
+
+  it("should name Bluetooth and stay connected without a network", () => {
+    useStatusStore.setState({
+      networkAvailable: false,
+      connectionIssueStartedAt: Date.now() - 10_000,
+    });
+
+    render(
+      wrap(<ConnectionStatusDisplay />, {
+        isConnected: true,
+        activeConnection: connectionOn("bluetooth"),
+      }),
+    );
+
+    expect(screen.getByText("scan.connectedHeading")).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: "connection.linkBluetooth" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("connection.networkUnavailable"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("should not name a link while not connected", () => {
+    render(
+      wrap(<ConnectionStatusDisplay />, {
+        isConnected: false,
+        activeConnection: connectionOn("bluetooth"),
+      }),
+    );
+
+    expect(
+      screen.queryByRole("img", { name: "connection.linkBluetooth" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("should describe a Bluetooth-only device instead of an address", () => {
+    deviceRegistry.installForTests({
+      schemaVersion: 2,
+      activeRecordId: "ble",
+      records: {
+        ble: {
+          recordId: "ble",
+          endpoints: [],
+          preferredEndpointId: "",
+          ble: { deviceId: "core-1", peripheralId: "AA:BB" },
+        },
+      },
+    });
+
+    render(wrap(<ConnectionStatusDisplay />));
+
+    expect(
+      screen.getByText("settings.bluetoothScan.viaBluetooth"),
+    ).toBeInTheDocument();
   });
 });

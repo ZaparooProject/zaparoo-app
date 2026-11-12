@@ -14,6 +14,7 @@ import {
   type ConnectionUIState,
   connectionStateLabelKey,
 } from "@/hooks/useDevicePresentation";
+import { ConnectionLinkIcon } from "@/components/ConnectionLinkIcon";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface ConnectionStatusConfig {
@@ -58,7 +59,7 @@ export function ConnectionStatusDisplay({
   className,
 }: ConnectionStatusDisplayProps) {
   const { t } = useTranslation();
-  const { uiState, savedAddress, encryptionState } =
+  const { uiState, savedAddress, encryptionState, link } =
     useConnectionUiState(connectionError);
   const addressOrPlaceholder = savedAddress || t("settings.enterDeviceAddress");
 
@@ -162,6 +163,12 @@ export function ConnectionStatusDisplay({
             <LockOpenIcon
               className="text-muted-foreground h-4 w-4 shrink-0"
               aria-label={t("connection.unencrypted")}
+            />
+          )}
+          {uiState === "connected" && link && (
+            <ConnectionLinkIcon
+              link={link}
+              className="text-muted-foreground h-4 w-4 shrink-0"
             />
           )}
           {uiState === "connected" && connectedTitleSuffix && (

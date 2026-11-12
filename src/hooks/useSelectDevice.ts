@@ -103,5 +103,24 @@ export function useSelectDevice() {
     [activate],
   );
 
-  return { selectDevice, selectScanDevice, selectRecord };
+  /** Select a Core found over Bluetooth, keyed by the device id it reported. */
+  const selectBluetoothDevice = useCallback(
+    (identity: {
+      deviceId: string;
+      peripheralId: string;
+      name?: string;
+    }): Promise<void> =>
+      activate(
+        () => deviceRegistry.selectBluetooth(identity),
+        "selectBluetoothDevice",
+      ),
+    [activate],
+  );
+
+  return {
+    selectDevice,
+    selectScanDevice,
+    selectRecord,
+    selectBluetoothDevice,
+  };
 }

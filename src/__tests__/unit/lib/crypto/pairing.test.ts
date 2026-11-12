@@ -6,9 +6,12 @@ import { hmac } from "@noble/hashes/hmac.js";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { server } from "@/test-setup";
 import {
+  createRpcPairingCarrier,
   PAIRING_CLIENT_NAME_MAX_BYTES,
   PAIRING_REQUEST_INTERVAL_MS,
+  PairingError,
   performPairing as performPairingRequest,
+  performPairingWithCarrier,
   truncateClientName,
 } from "@/lib/crypto/pairing";
 import { base64Encode } from "@/lib/crypto/base64";
@@ -433,5 +436,113 @@ describe("truncateClientName", () => {
     const prefix = "a".repeat(PAIRING_CLIENT_NAME_MAX_BYTES - 2);
 
     expect(truncateClientName(`${prefix}😀b`)).toBe(prefix);
+  });
+});
+
+describe("performPairingWithCarrier over JSON-RPC", () => {
+  function serverConfirm() {
+    return base64Encode(
+      computeServerConfirm(
+        MOCK_MSG_A,
+        MOCK_MSG_B,
+        MOCK_SESSION_KEY,
+        CLIENT_NAME,
+      ),
+    );
+  }
+
+  it("runs pair.start and pair.finish and derives the same key as HTTP", async () => {
+    const calls: { method: string; params: unknown }[] = [];
+    const call = vi.fn(async (method: string, params: unknown) => {
+      calls.push({ method, params });
+      if (method === "pair.start") {
+        return { session: SESSION_ID, pake: base64Encode(MOCK_MSG_B) };
+      }
+      return {
+        authToken: AUTH_TOKEN,
+        clientId: CLIENT_ID,
+        confirm: serverConfirm(),
+      };
+    });
+
+    const result = await performPairingWithCarrier(
+      createRpcPairingCarrier(call, { requestIntervalMs: 0 }),
+      PIN,
+      CLIENT_NAME,
+    );
+
+    expect(calls.map((c) => c.method)).toEqual(["pair.start", "pair.finish"]);
+    expect(calls[0]!.params).toEqual({
+      pake: base64Encode(MOCK_MSG_A),
+      name: CLIENT_NAME,
+    });
+    expect((calls[1]!.params as { session: string }).session).toBe(SESSION_ID);
+    expect(result.authToken).toBe(AUTH_TOKEN);
+
+    server.use(...successHandlers());
+    const viaHttp = await performPairing(HOST, PORT, PIN, CLIENT_NAME);
+    expect(result.pairingKey).toEqual(viaHttp.pairingKey);
+  });
+
+  it.each([
+    [401, "wrong PIN", "wrong_pin"],
+    [410, "pairing expired", "pin_expired"],
+    [403, "too many failed attempts", "limit_reached"],
+    [403, "maximum paired clients reached", "too_many_clients"],
+    [404, "unknown pairing session", "session_unknown"],
+    [400, "no pairing in progress", "no_pairing"],
+    [429, "too many pairing requests", "rate_limited"],
+    [503, "pairing unavailable", "unknown"],
+  ])("maps -32005 status %i (%s) to %s", async (status, message, kind) => {
+    const call = vi.fn(async (method: string) => {
+      if (method === "pair.start") {
+        return { session: SESSION_ID, pake: base64Encode(MOCK_MSG_B) };
+      }
+      throw {
+        code: -32005,
+        message: "pairing failed",
+        data: { status, message },
+      };
+    });
+
+    const err = await performPairingWithCarrier(
+      createRpcPairingCarrier(call, { requestIntervalMs: 0 }),
+      PIN,
+      CLIENT_NAME,
+    ).catch((e: unknown) => e);
+
+    expect(err).toBeInstanceOf(PairingError);
+    expect((err as PairingError).kind).toBe(kind);
+    expect((err as PairingError).httpStatus).toBe(status);
+  });
+
+  it("treats a dropped link as a network error", async () => {
+    const call = vi.fn(async () => {
+      throw {
+        code: -32004,
+        message: "session closed",
+        data: { reason: "idle" },
+      };
+    });
+
+    await expect(
+      performPairingWithCarrier(
+        createRpcPairingCarrier(call, { requestIntervalMs: 0 }),
+        PIN,
+        CLIENT_NAME,
+      ),
+    ).rejects.toMatchObject({ kind: "network" });
+  });
+
+  it("rejects a malformed pair.start result", async () => {
+    const call = vi.fn(async () => ({ session: 1 }));
+
+    await expect(
+      performPairingWithCarrier(
+        createRpcPairingCarrier(call, { requestIntervalMs: 0 }),
+        PIN,
+        CLIENT_NAME,
+      ),
+    ).rejects.toMatchObject({ kind: "malformed" });
   });
 });

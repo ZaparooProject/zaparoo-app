@@ -6,12 +6,18 @@
  */
 
 import { isInvalidDeviceAddressError } from "@/lib/coreApi";
+import type { RpcCall } from "@/lib/crypto/pairing";
 import { logger } from "../logger";
+import { BluetoothTransport } from "./ble/BluetoothTransport";
+import { HybridTransport } from "./hybrid/HybridTransport";
 import type {
   Transport,
   TransportConfig,
   DeviceConnection,
+  DeviceEndpointsResult,
+  LearnedBluetoothIdentity,
   TransportEventHandlers,
+  TransportLink,
 } from "./types";
 import { WebSocketTransport } from "./WebSocketTransport";
 
@@ -36,6 +42,17 @@ export interface ConnectionManagerEventHandlers {
   onCredentialsRevoked?: (deviceId: string) => void;
   /** Called when the server keeps silently closing the encrypted handshake. */
   onEncryptedHandshakeRejected?: (deviceId: string) => void;
+  /** Called with each heartbeat round trip on the device's current link. */
+  onHeartbeat?: (deviceId: string, rttMs: number) => void;
+  /** Called when a device's link changes between Wi-Fi and Bluetooth. */
+  onLinkChange?: (deviceId: string, link: TransportLink | null) => void;
+  /** Called when Bluetooth learns how to find a device again. */
+  onBluetoothIdentity?: (
+    deviceId: string,
+    identity: LearnedBluetoothIdentity,
+  ) => void;
+  /** Called when a device reports the addresses it can be reached at. */
+  onEndpoints?: (deviceId: string, endpoints: DeviceEndpointsResult) => void;
 }
 
 export class ConnectionManager {
@@ -71,6 +88,7 @@ export class ConnectionManager {
       deviceId: config.deviceId,
       address: config.address,
       type: config.type,
+      link: null,
       state: "disconnected",
       hasData: false,
       lastDataTimestamp: null,
@@ -142,6 +160,17 @@ export class ConnectionManager {
         this.handlers.onCredentialsRevoked?.(config.deviceId),
       onEncryptedHandshakeRejected: () =>
         this.handlers.onEncryptedHandshakeRejected?.(config.deviceId),
+      onHeartbeat: (rttMs) =>
+        this.handlers.onHeartbeat?.(config.deviceId, rttMs),
+      onLinkChange: (link) => {
+        connection.link = link;
+        this.handlers.onLinkChange?.(config.deviceId, link);
+        this.handlers.onConnectionChange?.(config.deviceId, { ...connection });
+      },
+      onBluetoothIdentity: (identity) =>
+        this.handlers.onBluetoothIdentity?.(config.deviceId, identity),
+      onEndpoints: (endpoints) =>
+        this.handlers.onEndpoints?.(config.deviceId, endpoints),
     };
 
     transport.setEventHandlers(transportHandlers);
@@ -350,6 +379,19 @@ export class ConnectionManager {
   }
 
   /**
+   * How to run pairing's JSON-RPC exchange on the active device's own link,
+   * or null when pairing should use Core's HTTP endpoints.
+   */
+  getActivePairingCall(): RpcCall | null {
+    return this.getActiveTransport()?.pairingCall?.() ?? null;
+  }
+
+  /** Whether pairing the active device would run over Bluetooth. */
+  activePairsOverBluetooth(): boolean {
+    return this.getActiveTransport()?.pairsOverBluetooth ?? false;
+  }
+
+  /**
    * Destroy all connections and clean up.
    */
   destroy(): void {
@@ -383,8 +425,21 @@ export class ConnectionManager {
         });
 
       case "bluetooth":
-        // Placeholder for future Bluetooth transport
-        throw new Error("Bluetooth transport not yet implemented");
+        return new BluetoothTransport({
+          deviceId: config.deviceId,
+          identity: config.bluetooth ?? {},
+          encryption: config.encryption,
+        });
+
+      case "hybrid":
+        return new HybridTransport({
+          deviceId: config.deviceId,
+          wsUrls: [config.address, ...(config.fallbackAddresses ?? [])].filter(
+            (url) => url !== "",
+          ),
+          encryption: config.encryption,
+          bluetooth: config.bluetooth,
+        });
 
       default:
         throw new Error(`Unknown transport type: ${config.type}`);

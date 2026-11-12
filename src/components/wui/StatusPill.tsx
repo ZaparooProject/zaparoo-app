@@ -6,6 +6,8 @@ interface StatusPillProps {
   /** Status indicator, coloured by the caller and never the only cue. */
   dot: ReactNode;
   label: string;
+  /** Shown after the label, such as how the device is reached. */
+  trailing?: ReactNode;
   onClick: () => void;
   disabled?: boolean;
   "aria-label": string;
@@ -49,6 +51,11 @@ export const StatusPill = memo(
               {props.dot}
             </span>
             <span className="min-w-0 truncate">{props.label}</span>
+            {props.trailing && (
+              <span className="flex shrink-0 items-center" aria-hidden="true">
+                {props.trailing}
+              </span>
+            )}
           </span>
         </button>
       );

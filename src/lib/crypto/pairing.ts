@@ -1,5 +1,5 @@
-// HTTP PAKE pairing flow — browser port of zaparoo-mcp/src/crypto/pairing.ts.
-// Uses fetch, WebCrypto HMAC, and our own base64/constant-time helpers.
+// PAKE pairing flow — browser port of zaparoo-mcp/src/crypto/pairing.ts.
+// Runs over HTTP or over a Bluetooth LE JSON-RPC link; the crypto is shared.
 
 import { expand, extract } from "@noble/hashes/hkdf.js";
 import { hmac } from "@noble/hashes/hmac.js";
@@ -255,6 +255,169 @@ interface PairingOptions {
   requestIntervalMs?: number;
 }
 
+export interface PairingStartRequest {
+  pake: string;
+  name: string;
+}
+
+export interface PairingFinishRequest {
+  session: string;
+  confirm: string;
+}
+
+/**
+ * Carries the two pairing exchanges to Core. The PAKE, HKDF and HMAC steps are
+ * identical on every carrier; only how the two messages travel differs. Both
+ * methods return the parsed JSON response and throw PairingError on failure.
+ */
+export interface PairingCarrier {
+  start(request: PairingStartRequest): Promise<unknown>;
+  finish(request: PairingFinishRequest): Promise<unknown>;
+}
+
+function createPacer(options: PairingOptions): PairingRequestPacer {
+  return {
+    intervalMs:
+      options.requestIntervalMs === undefined
+        ? PAIRING_REQUEST_INTERVAL_MS
+        : Math.max(0, options.requestIntervalMs),
+    nextRequestAt: 0,
+  };
+}
+
+function networkError(err: unknown): PairingError {
+  return new PairingError(
+    "network",
+    err instanceof Error ? err.message : "Network error",
+  );
+}
+
+/** Pairing over Core's HTTP endpoints, /api/pair/start and /api/pair/finish. */
+export function createHttpPairingCarrier(
+  host: string,
+  port: number,
+  options: PairingOptions = {},
+): PairingCarrier {
+  const pacer = createPacer(options);
+  const base = `http://${formatHost(host)}:${port}/api/pair`;
+
+  const post = async (
+    step: "start" | "finish",
+    body: PairingStartRequest | PairingFinishRequest,
+  ): Promise<unknown> => {
+    let resp: Response;
+    try {
+      resp = await fetchWithRetry(
+        `${base}/${step}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        },
+        pacer,
+      );
+    } catch (err) {
+      throw networkError(err);
+    }
+    if (!resp.ok) {
+      throw await pairingHttpError(step, resp);
+    }
+    try {
+      return await resp.json();
+    } catch (err) {
+      throw new PairingError(
+        "malformed",
+        err instanceof Error
+          ? `Failed to read /pair/${step} response: ${err.message}`
+          : `Failed to read /pair/${step} response`,
+      );
+    }
+  };
+
+  return {
+    start: (request) => post("start", request),
+    finish: (request) => post("finish", request),
+  };
+}
+
+/** JSON-RPC error code Core returns when pair.start or pair.finish fails. */
+export const PAIRING_FAILED_RPC_CODE = -32005;
+
+/** A JSON-RPC error as received from Core. */
+export interface RpcCallError {
+  code: number;
+  message: string;
+  data?: unknown;
+}
+
+export function isRpcCallError(value: unknown): value is RpcCallError {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as { code?: unknown }).code === "number" &&
+    typeof (value as { message?: unknown }).message === "string"
+  );
+}
+
+/** Sends one plaintext JSON-RPC call; rejects with an RpcCallError on error. */
+export type RpcCall = (method: string, params: unknown) => Promise<unknown>;
+
+function rpcPairingError(
+  step: "start" | "finish",
+  error: RpcCallError,
+): PairingError {
+  const data =
+    typeof error.data === "object" && error.data !== null
+      ? (error.data as { status?: unknown; message?: unknown })
+      : {};
+  const status = typeof data.status === "number" ? data.status : undefined;
+  const coreError =
+    typeof data.message === "string" ? data.message : error.message;
+  const kind =
+    CORE_ERROR_KINDS[coreError] ??
+    (status === undefined ? undefined : HTTP_ERROR_KINDS[status]) ??
+    "unknown";
+  return new PairingError(
+    kind,
+    `Pairing ${step} failed (${status ?? error.code}: ${coreError})`,
+    status,
+    kind === "rate_limited" ? PAIRING_REQUEST_INTERVAL_MS : undefined,
+  );
+}
+
+/**
+ * Pairing over a Bluetooth LE link, using the plaintext JSON-RPC methods
+ * pair.start and pair.finish. Core limits these per connection, so requests
+ * are paced the same way as the HTTP carrier.
+ */
+export function createRpcPairingCarrier(
+  call: RpcCall,
+  options: PairingOptions = {},
+): PairingCarrier {
+  const pacer = createPacer(options);
+
+  const send = async (
+    step: "start" | "finish",
+    params: PairingStartRequest | PairingFinishRequest,
+  ): Promise<unknown> => {
+    await waitForRequestSlot(pacer);
+    try {
+      return await call(`pair.${step}`, params);
+    } catch (err) {
+      if (isRpcCallError(err) && err.code === PAIRING_FAILED_RPC_CODE) {
+        throw rpcPairingError(step, err);
+      }
+      if (err instanceof PairingError) throw err;
+      throw networkError(isRpcCallError(err) ? new Error(err.message) : err);
+    }
+  };
+
+  return {
+    start: (request) => send("start", request),
+    finish: (request) => send("finish", request),
+  };
+}
+
 export async function performPairing(
   host: string,
   port: number,
@@ -262,45 +425,32 @@ export async function performPairing(
   clientName = "Zaparoo App",
   options: PairingOptions = {},
 ): Promise<PairingResult> {
+  return performPairingWithCarrier(
+    createHttpPairingCarrier(host, port, options),
+    pin,
+    clientName,
+  );
+}
+
+export async function performPairingWithCarrier(
+  carrier: PairingCarrier,
+  pin: string,
+  clientName = "Zaparoo App",
+): Promise<PairingResult> {
   const client = new PakeClient(pin);
-  const pacer: PairingRequestPacer = {
-    intervalMs:
-      options.requestIntervalMs === undefined
-        ? PAIRING_REQUEST_INTERVAL_MS
-        : Math.max(0, options.requestIntervalMs),
-    nextRequestAt: 0,
-  };
   // msgA must be captured before update() — the HMAC transcript uses the original wire bytes.
   const msgA = client.bytes();
 
-  const startUrl = `http://${formatHost(host)}:${port}/api/pair/start`;
-  let startResp: Response;
-  try {
-    startResp = await fetchWithRetry(
-      startUrl,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pake: base64Encode(msgA), name: clientName }),
-      },
-      pacer,
-    );
-  } catch (err) {
-    throw new PairingError(
-      "network",
-      err instanceof Error ? err.message : "Network error",
-    );
-  }
-
-  if (!startResp.ok) {
-    throw await pairingHttpError("start", startResp);
-  }
+  const startJson = await carrier.start({
+    pake: base64Encode(msgA),
+    name: clientName,
+  });
 
   let startResult: { session: string; pake: string };
   let msgB: Uint8Array;
   let sessionKey: Uint8Array;
   try {
-    startResult = parseStartResult(await startResp.json());
+    startResult = parseStartResult(startJson);
     // msgB must be the exact decoded bytes from the server response.
     msgB = base64Decode(startResult.pake);
     client.update(msgB);
@@ -332,36 +482,15 @@ export async function performPairing(
   );
   const clientHmac = hmac(sha256, confirmKeyA, clientTranscript);
 
-  const finishUrl = `http://${formatHost(host)}:${port}/api/pair/finish`;
-  let finishResp: Response;
-  try {
-    finishResp = await fetchWithRetry(
-      finishUrl,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          session: startResult.session,
-          confirm: base64Encode(clientHmac),
-        }),
-      },
-      pacer,
-    );
-  } catch (err) {
-    throw new PairingError(
-      "network",
-      err instanceof Error ? err.message : "Network error",
-    );
-  }
-
-  if (!finishResp.ok) {
-    throw await pairingHttpError("finish", finishResp);
-  }
+  const finishJson = await carrier.finish({
+    session: startResult.session,
+    confirm: base64Encode(clientHmac),
+  });
 
   let finishResult: { authToken: string; clientId: string; confirm: string };
   let serverHmac: Uint8Array;
   try {
-    finishResult = parseFinishResult(await finishResp.json());
+    finishResult = parseFinishResult(finishJson);
     serverHmac = base64Decode(finishResult.confirm);
   } catch (err) {
     if (err instanceof PairingError) throw err;

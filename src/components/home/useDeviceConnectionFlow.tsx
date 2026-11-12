@@ -19,6 +19,7 @@ import { TextInput } from "@/components/wui/TextInput";
 import { useAppUi } from "@/hooks/useAppUi";
 import { useConnection } from "@/hooks/useConnection";
 import { useActiveDeviceSummary } from "@/hooks/useDevicePresentation";
+import { useBluetoothScan } from "@/hooks/useBluetoothScan";
 import {
   getDiscoveredDeviceIdentity,
   useNetworkScan,
@@ -37,6 +38,9 @@ import {
   type DeviceRegistrySnapshot,
 } from "@/lib/devices/deviceRegistry";
 import type { ParsedDeviceEndpoint } from "@/lib/devices/endpoint";
+import { logger } from "@/lib/logger";
+import { identifyBluetoothDevice } from "@/lib/transport/ble/identify";
+import type { NearbyBluetoothDevice } from "@/lib/transport/ble/scanner";
 
 const DEVICE_SCAN_DURATION_MS = 5_000;
 
@@ -46,8 +50,15 @@ const selectActiveRecordId = (snapshot: DeviceRegistrySnapshot) =>
 
 interface SavedDevice {
   record: DeviceRecord;
-  endpoint: ParsedDeviceEndpoint;
+  /** Null for a device known only over Bluetooth. */
+  endpoint: ParsedDeviceEndpoint | null;
 }
+
+const BLUETOOTH_READINESS_MESSAGES = {
+  disabled: "settings.bluetoothScan.disabled",
+  denied: "settings.bluetoothScan.denied",
+  location_off: "settings.bluetoothScan.locationOff",
+} as const;
 
 interface SwitchDevice {
   key: string;
@@ -78,17 +89,22 @@ export function useDeviceConnectionFlow({
   const { t } = useTranslation();
   const router = useRouter();
   const appUi = useAppUi();
-  const { isConnected } = useConnection();
+  const { isConnected, openPairingModal } = useConnection();
   const {
     selectRecord,
     selectScanDevice,
     selectDevice: selectAddress,
+    selectBluetoothDevice,
   } = useSelectDevice();
   const { devices, isScanning, error, startScan, stopScan } = useNetworkScan();
-  const { address: activeAddress } = useActiveDeviceSummary();
+  const { address: activeAddress, bluetoothOnly: activeBluetoothOnly } =
+    useActiveDeviceSummary();
   const records = useDeviceRegistry(selectRecords);
   const activeRecordId = useDeviceRegistry(selectActiveRecordId);
   const switchHeadingId = useId();
+  const nearbyHeadingId = useId();
+  const [identifying, setIdentifying] = useState<string | null>(null);
+  const [nearbyError, setNearbyError] = useState(false);
   const scanTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [enteringAddress, setEnteringAddress] = useState(false);
   const [address, setAddress] = useState("");
@@ -127,7 +143,7 @@ export function useDeviceConnectionFlow({
   };
 
   const openAddressEntry = () => {
-    setAddress(activeAddress);
+    setAddress(activeBluetoothOnly ? "" : activeAddress);
     setAddressError("");
     setEnteringAddress(true);
   };
@@ -146,7 +162,7 @@ export function useDeviceConnectionFlow({
     return Object.values(records)
       .flatMap((record) => {
         const endpoint = parsedEndpointForRecord(record);
-        return endpoint ? [{ record, endpoint }] : [];
+        return endpoint || record.ble ? [{ record, endpoint }] : [];
       })
       .sort(
         (left, right) =>
@@ -233,6 +249,77 @@ export function useDeviceConnectionFlow({
       void selectScanDevice(discoveredDeviceToRegistration(entry.discovered));
     }
     finish();
+  };
+
+  const bluetooth = useBluetoothScan(
+    isOpen && !enteringAddress && appUi.enabled,
+    DEVICE_SCAN_DURATION_MS,
+  );
+  const nearbyDevices = useMemo(() => {
+    // Every Core the scan finds is listed. One this phone already saved is
+    // marked so, rather than hidden, so a stale record never makes it vanish.
+    const saved = new Map<string, DeviceRecord>();
+    for (const record of Object.values(records)) {
+      const peripheralId = record.ble?.peripheralId;
+      if (!peripheralId) continue;
+      const current = saved.get(peripheralId);
+      if (
+        !current ||
+        (record.lastConnectedAt ?? 0) > (current.lastConnectedAt ?? 0)
+      ) {
+        saved.set(peripheralId, record);
+      }
+    }
+    return bluetooth.devices
+      .map((device) => ({ device, saved: saved.get(device.peripheralId) }))
+      .sort(
+        (left, right) =>
+          (right.device.rssi ?? -999) - (left.device.rssi ?? -999),
+      );
+  }, [bluetooth.devices, records]);
+  const showNearby =
+    bluetooth.supported &&
+    appUi.enabled &&
+    bluetooth.readiness !== "unsupported";
+  const nearbyProblem =
+    bluetooth.readiness && bluetooth.readiness in BLUETOOTH_READINESS_MESSAGES
+      ? BLUETOOTH_READINESS_MESSAGES[
+          bluetooth.readiness as keyof typeof BLUETOOTH_READINESS_MESSAGES
+        ]
+      : null;
+
+  const selectSavedNearby = (recordId: string) => {
+    void selectRecord(recordId);
+    finish();
+  };
+
+  const pairNearbyAgain = async (recordId: string) => {
+    await selectRecord(recordId);
+    openPairingModal();
+    finish();
+  };
+
+  const selectNearby = async (device: NearbyBluetoothDevice) => {
+    if (identifying) return;
+    setIdentifying(device.peripheralId);
+    setNearbyError(false);
+    try {
+      const info = await identifyBluetoothDevice(device.peripheralId);
+      await selectBluetoothDevice({
+        deviceId: info.deviceId,
+        peripheralId: device.peripheralId,
+        ...(device.name ? { name: device.name } : {}),
+      });
+      finish();
+    } catch (error) {
+      logger.warn("Could not reach the Bluetooth device", error, {
+        category: "bluetooth",
+        action: "identify",
+      });
+      setNearbyError(true);
+    } finally {
+      setIdentifying(null);
+    }
   };
 
   const showSwitchList = appUi.enabled || switchDevices.length > 0;
@@ -338,7 +425,8 @@ export function useDeviceConnectionFlow({
                   key={entry.key}
                   entry={{
                     address: saved
-                      ? saved.endpoint.address
+                      ? (saved.endpoint?.address ??
+                        t("settings.bluetoothScan.viaBluetooth"))
                       : displayDiscoveredDeviceAddress(discovered!),
                     name: saved?.record.name || discovered?.name,
                     platform: saved?.record.platform || discovered?.platform,
@@ -380,6 +468,112 @@ export function useDeviceConnectionFlow({
               </Card>
             </div>
           </section>
+          {showNearby && (
+            <section
+              className="flex flex-col gap-2"
+              aria-labelledby={nearbyHeadingId}
+              aria-busy={identifying !== null}
+            >
+              <div className="flex min-h-12 items-center justify-between gap-2">
+                {presentation === "page" ? (
+                  <h2 id={nearbyHeadingId} className="text-lg font-semibold">
+                    {t("settings.bluetoothScan.title")}
+                  </h2>
+                ) : (
+                  <h3
+                    id={nearbyHeadingId}
+                    className="text-muted-foreground font-bold"
+                  >
+                    {t("settings.bluetoothScan.title")}
+                  </h3>
+                )}
+                <Button
+                  icon={
+                    bluetooth.isScanning ? (
+                      <LoadingSpinner size={20} decorative />
+                    ) : (
+                      <RefreshCwIcon size={20} />
+                    )
+                  }
+                  variant="ghost"
+                  shape="square"
+                  size="sm"
+                  disabled={bluetooth.isScanning}
+                  disabledAppearance={
+                    bluetooth.isScanning ? "busy" : "unavailable"
+                  }
+                  aria-label={t("settings.bluetoothScan.refresh")}
+                  aria-busy={bluetooth.isScanning}
+                  onClick={() => void bluetooth.rescan()}
+                />
+              </div>
+              {nearbyDevices.map(({ device, saved }) => (
+                <DeviceRow
+                  key={device.peripheralId}
+                  entry={{
+                    name:
+                      identifying === device.peripheralId
+                        ? t("settings.bluetoothScan.connecting")
+                        : saved?.name ||
+                          device.name ||
+                          t("settings.bluetoothScan.unnamed"),
+                    address: t(
+                      saved
+                        ? "settings.bluetoothScan.savedViaBluetooth"
+                        : "settings.bluetoothScan.viaBluetooth",
+                    ),
+                  }}
+                  onSelect={() =>
+                    saved
+                      ? selectSavedNearby(saved.recordId)
+                      : void selectNearby(device)
+                  }
+                  rightSlot={
+                    saved ? (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        label={t("settings.bluetoothScan.pairAgain")}
+                        onClick={() => void pairNearbyAgain(saved.recordId)}
+                      />
+                    ) : undefined
+                  }
+                />
+              ))}
+              <p className="sr-only" role="status">
+                {bluetooth.isScanning
+                  ? t("settings.bluetoothScan.searching")
+                  : ""}
+              </p>
+              {nearbyProblem && (
+                <div className="flex flex-col gap-2">
+                  <p className="text-muted-foreground text-sm" role="status">
+                    {t(nearbyProblem)}
+                  </p>
+                  {bluetooth.canOpenSettings && (
+                    <Button
+                      variant="secondary"
+                      label={t("settings.bluetoothScan.openSettings")}
+                      onClick={bluetooth.openSettings}
+                    />
+                  )}
+                </div>
+              )}
+              {nearbyError && (
+                <p className="text-error text-sm" role="alert">
+                  {t("settings.bluetoothScan.connectFailed")}
+                </p>
+              )}
+              {!nearbyProblem &&
+                bluetooth.readiness === "ready" &&
+                !bluetooth.isScanning &&
+                nearbyDevices.length === 0 && (
+                  <p className="text-muted-foreground text-sm" role="status">
+                    {t("settings.bluetoothScan.noDevices")}
+                  </p>
+                )}
+            </section>
+          )}
           {presentation === "sheet" && (
             <Button
               variant="text"

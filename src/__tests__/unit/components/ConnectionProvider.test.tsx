@@ -564,6 +564,7 @@ describe("ConnectionProvider", () => {
     });
 
     it("should add device with correct config", () => {
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
       render(
         <ConnectionProvider>
           <div>Test</div>
@@ -581,6 +582,31 @@ describe("ConnectionProvider", () => {
             getCredentials: expect.any(Function),
           }),
         }),
+      );
+    });
+
+    it("should add a hybrid transport with the Bluetooth identity on native", async () => {
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+      await deviceRegistry.noteBluetoothIdentity(RECORD_ID, {
+        coreDeviceId: "core-1",
+        peripheralId: "AA:BB",
+      });
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await waitFor(() =>
+        expect(connectionManager.addDevice).toHaveBeenCalledWith(
+          expect.objectContaining({
+            deviceId: RECORD_ID,
+            type: "hybrid",
+            address: "ws://192.168.1.100:7497/api/v0.1",
+            bluetooth: { coreDeviceId: "core-1", peripheralId: "AA:BB" },
+          }),
+        ),
       );
     });
 

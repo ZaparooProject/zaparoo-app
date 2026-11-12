@@ -233,6 +233,7 @@ export type ErrorCategory =
   | "share"
   | "lifecycle"
   | "websocket"
+  | "bluetooth"
   | "general";
 
 /** Severity levels for error reporting */

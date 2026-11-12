@@ -803,6 +803,7 @@
       "noReaderTitle": "No reader on this phone",
       "noReaderSub": "This phone has no NFC or camera available, so it cannot scan. You can still use it to manage your device.",
       "devicePill": "{{device}}, {{status}}",
+      "devicePillLink": "{{status}} over {{link}}",
       "deviceNone": "No device",
       "deviceSheetTitle": "Device",
       "deviceSheetRecent": "Switch device",
@@ -1385,7 +1386,8 @@
         "forgetBody": "This will remove it from your saved devices and erase the pairing credentials.",
         "forgetCancel": "Cancel",
         "forgetConfirm": "Forget device",
-        "forgetFailed": "Device could not be forgotten. Try again."
+        "forgetFailed": "Device could not be forgotten. Try again.",
+        "link": "Connected over: {{value}}"
       },
       "deviceCombine": {
         "edit": "Combine devices",
@@ -1642,7 +1644,23 @@
         "emailLabel": "Support email:"
       },
       "connectDevice": "Connect to {{device}}",
-      "savedDevices": "Saved devices"
+      "savedDevices": "Saved devices",
+      "bluetoothScan": {
+        "title": "Nearby (Bluetooth)",
+        "searching": "Searching for nearby devices...",
+        "refresh": "Search nearby again",
+        "noDevices": "No nearby devices found",
+        "unnamed": "Zaparoo device",
+        "viaBluetooth": "Bluetooth",
+        "savedViaBluetooth": "Saved · Bluetooth",
+        "pairAgain": "Pair again",
+        "connecting": "Connecting...",
+        "connectFailed": "Could not connect. Move closer to the device and try again.",
+        "disabled": "Bluetooth is off. Turn it on to find nearby devices.",
+        "denied": "Allow Bluetooth access to find nearby devices.",
+        "locationOff": "Turn on Location to find nearby devices.",
+        "openSettings": "Open settings"
+      }
     },
     "systemSelector": {
       "loadError": "Could not load systems",
@@ -1761,7 +1779,9 @@
       "encrypted": "Encrypted connection",
       "unencrypted": "Unencrypted connection",
       "clientRoleAdmin": "Admin",
-      "clientRoleMember": "Member"
+      "clientRoleMember": "Member",
+      "linkWifi": "Wi-Fi",
+      "linkBluetooth": "Bluetooth"
     },
     "features": {
       "requiresCoreVersion": "Requires Zaparoo Core v{{version}} or later",
@@ -1877,7 +1897,8 @@
         "malformed": "Pairing failed, try again",
         "network": "Network error, check your connection and try again",
         "unknown": "Pairing failed, try again"
-      }
+      },
+      "overBluetooth": "Pairing over Bluetooth"
     },
     "tour": {
       "stepIndicator": "{{current}}/{{total}}",

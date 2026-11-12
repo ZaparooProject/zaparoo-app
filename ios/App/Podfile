@@ -27,6 +27,7 @@ def capacitor_pods
   pod 'CapacitorShare', :path => '../../node_modules/@capacitor/share'
   pod 'CapacitorStatusBar', :path => '../../node_modules/@capacitor/status-bar'
   pod 'CapacitorTextZoom', :path => '../../node_modules/@capacitor/text-zoom'
+  pod 'CapawesomeTeamCapacitorBluetoothLowEnergy', :path => '../../node_modules/@capawesome-team/capacitor-bluetooth-low-energy'
   pod 'CapawesomeTeamCapacitorNfc', :path => '../../node_modules/@capawesome-team/capacitor-nfc'
   pod 'CapawesomeCapacitorAppReview', :path => '../../node_modules/@capawesome/capacitor-app-review'
   pod 'CapawesomeCapacitorBadge', :path => '../../node_modules/@capawesome/capacitor-badge'

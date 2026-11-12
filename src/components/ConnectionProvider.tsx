@@ -31,6 +31,7 @@ import {
   connectionManager,
   type TransportState,
   type DeviceConnection,
+  type TransportLink,
 } from "@/lib/transport";
 import { logger } from "@/lib/logger";
 import {
@@ -76,11 +77,13 @@ import { reconcileCredentialProvenAliases } from "@/lib/devices/credentialProof"
 import {
   deviceRegistry,
   parsedEndpointForRecord,
+  reportedWebSocketUrlsForRecord,
   resolvedEndpointForRecord,
   resolvedEndpointsForRecord,
   useDeviceRegistry,
   type DeviceRegistrySnapshot,
 } from "@/lib/devices/deviceRegistry";
+import { isBluetoothTransportSupported } from "@/lib/transport/ble/bluetooth";
 import { isNativePluginAvailable } from "@/lib/capacitorBridge";
 import { parseDeviceEndpoint } from "@/lib/devices/endpoint";
 import { formatDurationDisplay, formatDurationAccessible } from "@/lib/utils";
@@ -148,6 +151,13 @@ const selectMdnsHostname = (state: DeviceRegistrySnapshot) => {
 
 const selectMdnsPort = (state: DeviceRegistrySnapshot) =>
   parsedEndpointForRecord(activeRecordOf(state))?.port ?? 0;
+
+/**
+ * Whether the active record can be reached over Bluetooth on this build. A
+ * boolean, so learning or refreshing the identity never rebuilds the link.
+ */
+const selectActiveHasBluetooth = (state: DeviceRegistrySnapshot) =>
+  isBluetoothTransportSupported() && !!activeRecordOf(state)?.ble;
 
 const selectActiveDiscoveryId = (state: DeviceRegistrySnapshot) =>
   activeRecordOf(state)?.discoveryId ?? "";
@@ -340,6 +350,8 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     [connectionWsUrlsKey],
   );
   const connectionWsUrl = connectionWsUrls[0] ?? "";
+  const activeHasBluetooth = useDeviceRegistry(selectActiveHasBluetooth);
+  const hasConnectionTarget = connectionWsUrl !== "" || activeHasBluetooth;
   const connectionAddress = useDeviceRegistry(selectConnectionAddress);
   const mdnsHostname = useDeviceRegistry(selectMdnsHostname);
   const mdnsPort = useDeviceRegistry(selectMdnsPort);
@@ -359,7 +371,11 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     (available: boolean) => {
       setNetworkAvailable(available);
       if (!available) {
-        if (deviceRegistry.getSnapshot().activeRecordId !== null) {
+        // A Bluetooth link does not need the phone's network.
+        if (
+          deviceRegistry.getSnapshot().activeRecordId !== null &&
+          connectionManager.getActiveConnection()?.link !== "bluetooth"
+        ) {
           beginConnectionIssue();
         }
         return;
@@ -387,7 +403,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     !isConnected &&
     !hasConnectedBefore &&
     (localConnection === null
-      ? connectionWsUrl !== ""
+      ? hasConnectionTarget
       : localConnection.state === "connecting" ||
         localConnection.state === "reconnecting");
 
@@ -1356,7 +1372,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     // Reset local connection state when device changes so UI doesn't show stale data
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: reset state for the newly selected external device.
     setLocalConnection(null);
-    if (connectionWsUrl === "") {
+    if (!hasConnectionTarget) {
       clearConnectionIssue();
     } else {
       beginConnectionIssue();
@@ -1378,7 +1394,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setPairingOpen(false);
 
     if (
-      connectionWsUrl === "" ||
+      !hasConnectionTarget ||
       activeRecordId === null ||
       forgettingRecordIdsRef.current.has(activeRecordId)
     ) {
@@ -1398,6 +1414,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     let legacyKeyUsed: string | null = null;
     let credentialsUsed: StoredCredentials | null = null;
     let aliasReconciliationInFlight = false;
+    let lastLink: TransportLink | null = null;
 
     // Generate unique ID for this connection session to prevent stale events
     // Use crypto.randomUUID if available, fallback for older Android WebViews
@@ -1637,6 +1654,33 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         );
         setPairingOpen(true);
       },
+      onLinkChange: (_deviceId, link) => {
+        if (!isCurrentConnection()) return;
+        const previous = lastLink;
+        if (link !== null) lastLink = link;
+        // Moving between Wi-Fi and Bluetooth is a new session on Core; refetch
+        // what it may have changed while the switch was in progress.
+        if (
+          link !== null &&
+          previous !== null &&
+          previous !== link &&
+          connectionManager.getActiveConnection()?.state === "connected"
+        ) {
+          handleConnectionOpenRef.current();
+        }
+      },
+      onBluetoothIdentity: (_deviceId, identity) => {
+        if (!isCurrentConnection()) return;
+        void deviceRegistry
+          .noteBluetoothIdentity(recordId, identity)
+          .catch(ignoreReportedRegistryFailure);
+      },
+      onEndpoints: (_deviceId, endpoints) => {
+        if (!isCurrentConnection()) return;
+        void deviceRegistry
+          .applyDeviceEndpoints(recordId, endpoints)
+          .catch(ignoreReportedRegistryFailure);
+      },
       onEncryptedHandshakeRejected: () => {
         if (!isCurrentConnection()) return;
         clearConnectionIssue();
@@ -1652,12 +1696,28 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       },
     });
 
-    // Add device and set as active
+    // Native builds reach Core over Wi-Fi or Bluetooth, whichever works;
+    // the web build has only WebSockets.
+    const recordAtConnect = deviceRegistry.getSnapshot().records[recordId];
+    const ble = recordAtConnect?.ble;
     const transport = connectionManager.addDevice({
       deviceId,
-      type: "websocket",
+      type: isBluetoothTransportSupported() ? "hybrid" : "websocket",
       address: connectionWsUrl,
-      fallbackAddresses: connectionWsUrls.slice(1),
+      fallbackAddresses: [
+        ...connectionWsUrls.slice(1),
+        ...(isBluetoothTransportSupported()
+          ? reportedWebSocketUrlsForRecord(recordAtConnect)
+          : []),
+      ],
+      ...(ble
+        ? {
+            bluetooth: {
+              coreDeviceId: ble.deviceId,
+              ...(ble.peripheralId ? { peripheralId: ble.peripheralId } : {}),
+            },
+          }
+        : {}),
       encryption: {
         getCredentials: async () => {
           const record = deviceRegistry.getSnapshot().records[recordId];
@@ -1724,6 +1784,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     connectionRevision,
     connectionWsUrl,
     connectionWsUrls,
+    hasConnectionTarget,
     invalidateCurrentClientRequest,
     invalidateMediaStateRequest,
     cancelMediaIndexReconciliation,
@@ -1981,6 +2042,10 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           isOpen={pairingOpen}
           close={() => setPairingOpen(false)}
           address={pairingAddress}
+          overBluetooth={
+            pairingOpen && connectionManager.activePairsOverBluetooth()
+          }
+          getPairingCall={() => connectionManager.getActivePairingCall()}
           recordId={activeRecordId ?? ""}
           onSuccess={() => connectionManager.restartActiveConnection()}
         />

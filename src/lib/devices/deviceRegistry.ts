@@ -9,6 +9,8 @@ import {
   type StoredCredentials,
 } from "@/lib/crypto/credentials";
 import {
+  formatDeviceEndpoint,
+  isValidHost,
   parseDeviceEndpoint,
   replaceDeviceEndpointHost,
   type DeviceEndpointScheme,
@@ -41,11 +43,40 @@ export interface DeviceEndpoint {
   resolvedAddresses?: string[];
 }
 
+/**
+ * How to find a Core over Bluetooth LE. Kept beside `endpoints` rather than as
+ * an endpoint kind so app versions without Bluetooth still read the record.
+ */
+export interface DeviceBluetoothIdentity {
+  /** Core's device id, as its Bluetooth Info and `device.endpoints` report. */
+  deviceId: string;
+  /** The phone's last handle for the peripheral; it can change. */
+  peripheralId?: string;
+  /** The advertised Bluetooth name. */
+  name?: string;
+  lastSeenAt?: number;
+}
+
+/** The LAN addresses Core last reported for itself via `device.endpoints`. */
+export interface DeviceReportedEndpoints {
+  addresses: string[];
+  port: number;
+  at: number;
+}
+
 export interface DeviceRecord {
   recordId: string;
   discoveryId?: string;
+  /** Empty only for a Core known solely over Bluetooth (`ble` is then set). */
   endpoints: DeviceEndpoint[];
+  /** `""` when `endpoints` is empty. */
   preferredEndpointId: string;
+  ble?: DeviceBluetoothIdentity;
+  /**
+   * Addresses Core reported itself; used as extra Wi-Fi candidates but never
+   * shown or edited as the user's own endpoints.
+   */
+  reportedEndpoints?: DeviceReportedEndpoints;
   /**
    * A pre-V2 credential key this record may still hold its pairing under.
    *
@@ -163,6 +194,34 @@ function mergeEndpoint(
   };
 }
 
+/** A merged record's preferred endpoint must be one it actually holds. */
+function preferredAfterMerge(first: DeviceRecord, second: DeviceRecord) {
+  if (first.endpoints.length > 0) return first.preferredEndpointId;
+  return second.preferredEndpointId;
+}
+
+function mergeBluetoothIdentity(
+  left: DeviceBluetoothIdentity | undefined,
+  right: DeviceBluetoothIdentity | undefined,
+): DeviceBluetoothIdentity {
+  if (!left) return right!;
+  if (!right) return left;
+  const newer = (right.lastSeenAt ?? 0) > (left.lastSeenAt ?? 0) ? right : left;
+  const older = newer === left ? right : left;
+  return { ...older, ...newer };
+}
+
+function sameBluetoothIdentity(
+  left: DeviceBluetoothIdentity | undefined,
+  right: DeviceBluetoothIdentity | undefined,
+): boolean {
+  return (
+    left?.deviceId === right?.deviceId &&
+    left?.peripheralId === right?.peripheralId &&
+    left?.name === right?.name
+  );
+}
+
 function endpointFromParsed(
   endpoint: ParsedDeviceEndpoint,
   source: DeviceEndpointSource,
@@ -256,6 +315,27 @@ export function resolvedEndpointForRecord(
   return resolvedEndpointsForRecord(record)[0] ?? null;
 }
 
+/**
+ * WebSocket URLs Core reported for itself that the record's own endpoints do
+ * not already cover. They are later fallbacks, never the preferred route.
+ */
+export function reportedWebSocketUrlsForRecord(
+  record: DeviceRecord | null | undefined,
+): string[] {
+  const reported = record?.reportedEndpoints;
+  if (!reported) return [];
+  const known = new Set(
+    resolvedEndpointsForRecord(record).map((endpoint) => endpoint.wsUrl),
+  );
+  return unique(
+    reported.addresses
+      .filter((address) => isValidHost(address))
+      .map(
+        (address) => formatDeviceEndpoint(address, reported.port, "ws").wsUrl,
+      ),
+  ).filter((url) => !known.has(url));
+}
+
 /** The active record's display address, or `""` before hydration. */
 export function activeAddressOf(snapshot: DeviceRegistrySnapshot): string {
   const record = snapshot.activeRecordId
@@ -290,18 +370,64 @@ function validEndpoint(value: unknown): value is DeviceEndpoint {
   );
 }
 
+function validBluetoothIdentity(
+  value: unknown,
+): value is DeviceBluetoothIdentity {
+  if (typeof value !== "object" || value === null) return false;
+  const ble = value as Partial<DeviceBluetoothIdentity>;
+  return (
+    typeof ble.deviceId === "string" &&
+    ble.deviceId.trim() !== "" &&
+    (ble.peripheralId === undefined || typeof ble.peripheralId === "string") &&
+    (ble.name === undefined || typeof ble.name === "string") &&
+    (ble.lastSeenAt === undefined || typeof ble.lastSeenAt === "number")
+  );
+}
+
+function validReportedEndpoints(
+  value: unknown,
+): value is DeviceReportedEndpoints {
+  if (typeof value !== "object" || value === null) return false;
+  const reported = value as Partial<DeviceReportedEndpoints>;
+  return (
+    Array.isArray(reported.addresses) &&
+    reported.addresses.every(
+      (address) => typeof address === "string" && isValidHost(address),
+    ) &&
+    typeof reported.port === "number" &&
+    Number.isInteger(reported.port) &&
+    reported.port > 0 &&
+    reported.port <= 65535 &&
+    typeof reported.at === "number"
+  );
+}
+
 function validRecord(key: string, value: unknown): value is DeviceRecord {
   if (typeof value !== "object" || value === null) return false;
   const record = value as Partial<DeviceRecord>;
+  if (record.ble !== undefined && !validBluetoothIdentity(record.ble)) {
+    return false;
+  }
+  if (
+    record.reportedEndpoints !== undefined &&
+    !validReportedEndpoints(record.reportedEndpoints)
+  ) {
+    return false;
+  }
+  const bluetoothOnly =
+    Array.isArray(record.endpoints) &&
+    record.endpoints.length === 0 &&
+    record.ble !== undefined;
   return (
     record.recordId === key &&
     Array.isArray(record.endpoints) &&
-    record.endpoints.length > 0 &&
+    (record.endpoints.length > 0 || bluetoothOnly) &&
     record.endpoints.every(validEndpoint) &&
     typeof record.preferredEndpointId === "string" &&
-    record.endpoints.some(
-      (endpoint) => endpoint.endpointId === record.preferredEndpointId,
-    ) &&
+    (bluetoothOnly ||
+      record.endpoints.some(
+        (endpoint) => endpoint.endpointId === record.preferredEndpointId,
+      )) &&
     (record.legacyCredentialKey === undefined ||
       typeof record.legacyCredentialKey === "string")
   );
@@ -1092,9 +1218,19 @@ class DeviceRegistryRepository {
         ? { discoveryId: target.discoveryId ?? source.discoveryId }
         : {}),
       endpoints: [...endpoints.values()],
-      preferredEndpointId: sourceWasActive
-        ? source.preferredEndpointId
-        : target.preferredEndpointId,
+      preferredEndpointId: preferredAfterMerge(
+        sourceWasActive ? source : target,
+        sourceWasActive ? target : source,
+      ),
+      ...((target.ble ?? source.ble)
+        ? { ble: mergeBluetoothIdentity(target.ble, source.ble) }
+        : {}),
+      ...((newest.reportedEndpoints ?? oldest.reportedEndpoints)
+        ? {
+            reportedEndpoints:
+              newest.reportedEndpoints ?? oldest.reportedEndpoints,
+          }
+        : {}),
       ...(name ? { name } : {}),
       nameIsCustom: customNameOwner !== null,
       ...((newest.platform ?? oldest.platform)
@@ -1155,6 +1291,149 @@ class DeviceRegistryRepository {
     }
 
     return merged;
+  }
+
+  /**
+   * Select the Core the user picked from the nearby Bluetooth list. A record
+   * that already knows this Core (by its device id) gains the Bluetooth
+   * identity; otherwise a Bluetooth-only record is created.
+   */
+  async selectBluetooth(identity: {
+    deviceId: string;
+    peripheralId: string;
+    name?: string;
+  }): Promise<DeviceRecord | null> {
+    await this.hydrate();
+    const deviceId = normalizeDiscoveryId(identity.deviceId);
+    if (!deviceId) return null;
+    let selected: DeviceRecord | null = null;
+    await this.commit((registry) => {
+      const now = Date.now();
+      const name = identity.name?.trim() || undefined;
+      const existing = Object.values(registry.records).find(
+        (record) =>
+          normalizeDiscoveryId(record.discoveryId) === deviceId ||
+          normalizeDiscoveryId(record.ble?.deviceId) === deviceId,
+      );
+      const ble: DeviceBluetoothIdentity = {
+        ...(existing?.ble ?? {}),
+        deviceId: identity.deviceId.trim(),
+        peripheralId: identity.peripheralId,
+        ...(name ? { name } : {}),
+        lastSeenAt: now,
+      };
+      const record: DeviceRecord = existing
+        ? {
+            ...existing,
+            ...(existing.discoveryId ? {} : { discoveryId: deviceId }),
+            ble,
+          }
+        : {
+            recordId: uuidv4(),
+            discoveryId: deviceId,
+            endpoints: [],
+            preferredEndpointId: "",
+            ble,
+            ...(name ? { name } : {}),
+          };
+      selected = record;
+      return {
+        ...registry,
+        activeRecordId: record.recordId,
+        records: { ...registry.records, [record.recordId]: record },
+      };
+    });
+    return selected;
+  }
+
+  /** Remember how Bluetooth last found this record's Core. */
+  async noteBluetoothIdentity(
+    recordId: string,
+    identity: { coreDeviceId: string; peripheralId: string },
+  ): Promise<void> {
+    await this.hydrate();
+    const deviceId = normalizeDiscoveryId(identity.coreDeviceId);
+    if (!deviceId) return;
+    await this.commit((registry) => {
+      const record = registry.records[recordId];
+      if (!record) return null;
+      // A record already tied to another Core never adopts this one.
+      const known = normalizeDiscoveryId(record.discoveryId);
+      if (known && known !== deviceId) return null;
+      const ble: DeviceBluetoothIdentity = {
+        ...(record.ble ?? {}),
+        deviceId: identity.coreDeviceId.trim(),
+        peripheralId: identity.peripheralId,
+        lastSeenAt: Date.now(),
+      };
+      if (known && sameBluetoothIdentity(record.ble, ble)) return null;
+      return {
+        ...registry,
+        records: {
+          ...registry.records,
+          [recordId]: { ...record, discoveryId: known ?? deviceId, ble },
+        },
+      };
+    });
+  }
+
+  /**
+   * Store what Core reported about where it can be reached. A Core serving
+   * Bluetooth becomes reachable over it as a fallback.
+   */
+  async applyDeviceEndpoints(
+    recordId: string,
+    endpoints: {
+      deviceId: string;
+      name?: string;
+      addresses: readonly string[];
+      port: number;
+      ble: boolean;
+    },
+  ): Promise<void> {
+    await this.hydrate();
+    const deviceId = normalizeDiscoveryId(endpoints.deviceId);
+    if (!deviceId) return;
+    await this.commit((registry) => {
+      const record = registry.records[recordId];
+      if (!record) return null;
+      const known = normalizeDiscoveryId(record.discoveryId);
+      if (known && known !== deviceId) {
+        logger.warn("Core reported a different device id than its record");
+        return null;
+      }
+      const addresses = unique(
+        endpoints.addresses.filter((address) => isValidHost(address)),
+      );
+      const reportedChanged =
+        !record.reportedEndpoints ||
+        record.reportedEndpoints.port !== endpoints.port ||
+        !sameAddressSet(record.reportedEndpoints.addresses, addresses);
+      const learnsBluetooth =
+        endpoints.ble &&
+        normalizeDiscoveryId(record.ble?.deviceId) !== deviceId;
+      const name = endpoints.name?.trim();
+      const learnsName = !!name && !record.nameIsCustom && record.name !== name;
+      if (known && !reportedChanged && !learnsBluetooth && !learnsName) {
+        return null;
+      }
+
+      const next: DeviceRecord = {
+        ...record,
+        discoveryId: known ?? deviceId,
+        reportedEndpoints: reportedChanged
+          ? { addresses, port: endpoints.port, at: Date.now() }
+          : record.reportedEndpoints!,
+        ...(learnsBluetooth
+          ? { ble: { deviceId: endpoints.deviceId.trim() } }
+          : {}),
+        ...(learnsName ? { name } : {}),
+      };
+      return {
+        ...registry,
+        records: { ...registry.records, [recordId]: next },
+      };
+    });
   }
 
   /** Set or clear the user's own name for a record. Blank clears it. */

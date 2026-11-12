@@ -87,6 +87,7 @@ export class WebSocketTransport implements Transport {
   private currentAttemptConnected = false;
   private readonly encryptionRejectedCandidates = new Set<number>();
   private heartbeatPaused = false;
+  private pingSentAt = 0;
 
   // Encryption state for the current connect cycle.
   private encMode: EncMode = "idle";
@@ -727,7 +728,10 @@ export class WebSocketTransport implements Transport {
       }
 
       // Intercept heartbeat pong in decrypted payload.
-      if (plaintext === "pong") return;
+      if (plaintext === "pong") {
+        this.reportHeartbeat();
+        return;
+      }
 
       this.handlers.onMessage?.(
         new MessageEvent("message", { data: plaintext }),
@@ -739,7 +743,10 @@ export class WebSocketTransport implements Transport {
     const raw = event.data as string;
 
     // Intercept heartbeat pong.
-    if (raw === "pong") return;
+    if (raw === "pong") {
+      this.reportHeartbeat();
+      return;
+    }
 
     // Detect encryption-required or unsupported-version signals.
     try {
@@ -775,6 +782,13 @@ export class WebSocketTransport implements Transport {
     }
 
     this.handlers.onMessage?.(event);
+  }
+
+  private reportHeartbeat(): void {
+    if (this.pingSentAt === 0) return;
+    const rtt = Date.now() - this.pingSentAt;
+    this.pingSentAt = 0;
+    this.handlers.onHeartbeat?.(rtt);
   }
 
   // A route-level rejection does not prove credentials are revoked: resolved
@@ -1017,6 +1031,7 @@ export class WebSocketTransport implements Transport {
     this.pingTimeoutId = setTimeout(() => {
       if (this.ws?.readyState === WebSocket.OPEN) {
         try {
+          this.pingSentAt = Date.now();
           this.send(this.config.pingMessage);
 
           // Start pong timeout - if no response, force disconnect
@@ -1108,5 +1123,6 @@ export class WebSocketTransport implements Transport {
     this.session = null;
     this.encMode = "idle";
     this.plaintextVerified = false;
+    this.pingSentAt = 0;
   }
 }

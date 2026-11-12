@@ -22,6 +22,7 @@ vi.mock("@capacitor-firebase/authentication");
 vi.mock("@capacitor-community/keep-awake");
 vi.mock("@capacitor-mlkit/barcode-scanning");
 vi.mock("@capawesome-team/capacitor-nfc");
+vi.mock("@capawesome-team/capacitor-bluetooth-low-energy");
 vi.mock("@/lib/shakeDetector");
 vi.mock("@revenuecat/purchases-capacitor");
 vi.mock("capacitor-plugin-safe-area");
@@ -41,6 +42,7 @@ import { CoreAPI } from "@/lib/coreApi";
 import { __resetPreferencesStorage } from "../__mocks__/@capacitor/preferences";
 import { __resetZeroConfMock } from "../__mocks__/capacitor-zeroconf";
 import { __resetNfcMock } from "../__mocks__/@capawesome-team/capacitor-nfc";
+import { __resetBluetoothMock } from "../__mocks__/@capawesome-team/capacitor-bluetooth-low-energy";
 import { __resetLiveUpdateMock } from "../__mocks__/@capawesome/capacitor-live-update";
 import { __resetSecureStorageMock } from "../__mocks__/@aparajita/capacitor-secure-storage";
 import { __resetDeviceCache } from "@/hooks/useNetworkScan";
@@ -97,6 +99,16 @@ afterEach(async () => {
   __resetZeroConfMock();
   // Reset NFC mock state between tests
   __resetNfcMock();
+  // Reset Bluetooth LE mock state between tests
+  __resetBluetoothMock();
+  // Forget the cached Bluetooth initialization. Files that mock the module
+  // without the reset export throw on access, so ignore those.
+  try {
+    const bluetoothModule = await import("@/lib/transport/ble/bluetooth");
+    bluetoothModule.__resetBluetoothReadinessForTests();
+  } catch {
+    // ble/bluetooth is mocked without the test-reset export in this file
+  }
   // Reset NFC session lock so unfinished sessions can't block the next test.
   // Dynamic import so lib/nfc is not evaluated before per-file plugin mocks
   // apply. Files that replace lib/nfc with a partial mock throw on access to

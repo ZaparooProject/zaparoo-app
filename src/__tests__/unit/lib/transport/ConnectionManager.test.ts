@@ -82,6 +82,57 @@ vi.mock("../../../../lib/transport/WebSocketTransport", () => {
   return { WebSocketTransport: MockWebSocketTransport };
 });
 
+const createdLinkTransports = vi.hoisted(
+  () =>
+    [] as {
+      kind: "bluetooth" | "hybrid";
+      config: Record<string, unknown>;
+      handlers: Record<string, (...args: unknown[]) => void>;
+    }[],
+);
+
+function linkTransportMock(kind: "bluetooth" | "hybrid") {
+  return class {
+    readonly deviceId: string;
+    readonly state = "disconnected";
+    readonly isConnected = false;
+    readonly hasEverConnected = false;
+    readonly pairsOverBluetooth = kind === "bluetooth";
+    private readonly entry: (typeof createdLinkTransports)[number];
+    pairing = vi.fn();
+    connect = vi.fn();
+    disconnect = vi.fn();
+    destroy = vi.fn();
+    send = vi.fn();
+    immediateReconnect = vi.fn();
+    clearEncryptionBlock = vi.fn();
+    pauseHeartbeat = vi.fn();
+    resumeHeartbeat = vi.fn();
+
+    constructor(config: Record<string, unknown>) {
+      this.deviceId = config.deviceId as string;
+      this.entry = { kind, config, handlers: {} };
+      createdLinkTransports.push(this.entry);
+    }
+
+    setEventHandlers(h: Record<string, (...args: unknown[]) => void>): void {
+      this.entry.handlers = h;
+    }
+
+    pairingCall() {
+      return this.pairing;
+    }
+  };
+}
+
+vi.mock("../../../../lib/transport/ble/BluetoothTransport", () => ({
+  BluetoothTransport: linkTransportMock("bluetooth"),
+}));
+
+vi.mock("../../../../lib/transport/hybrid/HybridTransport", () => ({
+  HybridTransport: linkTransportMock("hybrid"),
+}));
+
 // Import after mock is set up
 import { ConnectionManager } from "../../../../lib/transport/ConnectionManager";
 
@@ -500,15 +551,125 @@ describe("ConnectionManager", () => {
     });
   });
 
-  describe("bluetooth transport", () => {
-    it("should throw error for bluetooth transport (not yet implemented)", () => {
-      expect(() =>
-        manager.addDevice({
-          deviceId: "device-1",
-          type: "bluetooth",
-          address: "bt://device-uuid",
-        }),
-      ).toThrow("Bluetooth transport not yet implemented");
+  describe("bluetooth and hybrid transports", () => {
+    beforeEach(() => {
+      createdLinkTransports.length = 0;
+    });
+
+    it("creates a Bluetooth transport with the stored identity", () => {
+      manager.addDevice({
+        deviceId: "device-1",
+        type: "bluetooth",
+        address: "",
+        bluetooth: { coreDeviceId: "core-1", peripheralId: "AA:BB" },
+      });
+
+      expect(createdLinkTransports).toHaveLength(1);
+      expect(createdLinkTransports[0]!.kind).toBe("bluetooth");
+      expect(createdLinkTransports[0]!.config).toMatchObject({
+        deviceId: "device-1",
+        identity: { coreDeviceId: "core-1", peripheralId: "AA:BB" },
+      });
+    });
+
+    it("creates a hybrid transport with every non-empty WebSocket address", () => {
+      manager.addDevice({
+        deviceId: "device-1",
+        type: "hybrid",
+        address: "ws://10.0.0.5:7497/api/v0.1",
+        fallbackAddresses: ["", "ws://192.168.1.5:7497/api/v0.1"],
+        bluetooth: { coreDeviceId: "core-1" },
+      });
+
+      expect(createdLinkTransports[0]!.kind).toBe("hybrid");
+      expect(createdLinkTransports[0]!.config).toMatchObject({
+        deviceId: "device-1",
+        wsUrls: [
+          "ws://10.0.0.5:7497/api/v0.1",
+          "ws://192.168.1.5:7497/api/v0.1",
+        ],
+        bluetooth: { coreDeviceId: "core-1" },
+      });
+    });
+
+    it("gives a hybrid transport with no address no WebSocket URLs", () => {
+      manager.addDevice({ deviceId: "device-1", type: "hybrid", address: "" });
+
+      expect(createdLinkTransports[0]!.config.wsUrls).toEqual([]);
+    });
+
+    it("records the link and reports it as a connection change", () => {
+      const onLinkChange = vi.fn();
+      const onConnectionChange = vi.fn();
+      manager.setEventHandlers({ onLinkChange, onConnectionChange });
+      manager.addDevice({ deviceId: "device-1", type: "hybrid", address: "" });
+
+      createdLinkTransports[0]!.handlers.onLinkChange!("bluetooth");
+
+      expect(manager.getConnection("device-1")?.link).toBe("bluetooth");
+      expect(onLinkChange).toHaveBeenCalledWith("device-1", "bluetooth");
+      expect(onConnectionChange).toHaveBeenCalledWith(
+        "device-1",
+        expect.objectContaining({ link: "bluetooth" }),
+      );
+    });
+
+    it("starts a connection with no known link", () => {
+      manager.addDevice({ deviceId: "device-1", type: "hybrid", address: "" });
+
+      expect(manager.getConnection("device-1")?.link).toBeNull();
+    });
+
+    it("forwards heartbeat, identity and endpoint events with the device id", () => {
+      const onHeartbeat = vi.fn();
+      const onBluetoothIdentity = vi.fn();
+      const onEndpoints = vi.fn();
+      manager.setEventHandlers({
+        onHeartbeat,
+        onBluetoothIdentity,
+        onEndpoints,
+      });
+      manager.addDevice({ deviceId: "device-1", type: "hybrid", address: "" });
+      const { handlers } = createdLinkTransports[0]!;
+      const identity = { coreDeviceId: "core-1", peripheralId: "AA:BB" };
+      const endpoints = {
+        deviceId: "core-1",
+        addresses: ["10.0.0.5"],
+        port: 7497,
+        ble: true,
+      };
+
+      handlers.onHeartbeat!(42);
+      handlers.onBluetoothIdentity!(identity);
+      handlers.onEndpoints!(endpoints);
+
+      expect(onHeartbeat).toHaveBeenCalledWith("device-1", 42);
+      expect(onBluetoothIdentity).toHaveBeenCalledWith("device-1", identity);
+      expect(onEndpoints).toHaveBeenCalledWith("device-1", endpoints);
+    });
+
+    it("exposes the active transport's Bluetooth pairing", () => {
+      manager.addDevice({
+        deviceId: "device-1",
+        type: "bluetooth",
+        address: "",
+      });
+      manager.setActiveDevice("device-1");
+
+      expect(manager.activePairsOverBluetooth()).toBe(true);
+      expect(manager.getActivePairingCall()).toBeTypeOf("function");
+    });
+
+    it("reports no Bluetooth pairing for a WebSocket device", () => {
+      manager.addDevice({
+        deviceId: "device-1",
+        type: "websocket",
+        address: "ws://localhost:7497",
+      });
+      manager.setActiveDevice("device-1");
+
+      expect(manager.activePairsOverBluetooth()).toBe(false);
+      expect(manager.getActivePairingCall()).toBeNull();
     });
   });
 });

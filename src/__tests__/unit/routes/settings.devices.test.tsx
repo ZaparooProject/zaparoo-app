@@ -216,6 +216,30 @@ describe("Settings Devices Route", () => {
     });
   });
 
+  it("should list a Bluetooth-only device with a Bluetooth label", async () => {
+    const [wifi] = await seedRecords([
+      { address: "192.168.1.10", name: "Wi-Fi Core" },
+    ]);
+    await seedDeviceRegistry([
+      wifi!,
+      {
+        recordId: "ble-only",
+        endpoints: [],
+        preferredEndpointId: "",
+        name: "Bluetooth Core",
+        ble: { deviceId: "core-1", peripheralId: "AA:BB" },
+      },
+    ]);
+
+    renderRoute();
+
+    expect(await screen.findByText("Bluetooth Core")).toBeInTheDocument();
+    expect(screen.getByText("Wi-Fi Core")).toBeInTheDocument();
+    expect(
+      screen.getByText("settings.bluetoothScan.viaBluetooth"),
+    ).toBeInTheDocument();
+  });
+
   it("should mark the currently connected device as active", async () => {
     await seedRecords(
       [

@@ -56,11 +56,14 @@ export function DeviceDetail() {
 
   const record = records[params.recordId];
   const endpoint = parsedEndpointForRecord(record);
-  const { isConnected } = useConnection();
+  const address =
+    endpoint?.address ??
+    (record?.ble ? t("settings.bluetoothScan.viaBluetooth") : null);
+  const { isConnected, activeConnection } = useConnection();
   const { forgetDevice } = useDeviceConnectionActions();
   const { selectRecord } = useSelectDevice();
 
-  const headingTitle = record?.name || endpoint?.address || "";
+  const headingTitle = record?.name || address || "";
   const headingRef = usePageHeadingFocus<HTMLHeadingElement>(headingTitle);
 
   const initialName = record?.name ?? "";
@@ -80,12 +83,12 @@ export function DeviceDetail() {
   // id in the URL. Redirecting before the read has settled would bounce the
   // user off a device that was about to appear.
   useEffect(() => {
-    if (!forgetting && registrySettled && (!record || !endpoint)) {
+    if (!forgetting && registrySettled && (!record || !address)) {
       router.navigate({ to: "/settings/devices", replace: true });
     }
-  }, [endpoint, forgetting, record, registrySettled, router]);
+  }, [address, forgetting, record, registrySettled, router]);
 
-  if (!record || !endpoint) return null;
+  if (!record || !address) return null;
 
   const isCurrentDevice = activeRecordId === record.recordId;
   const isActive = isCurrentDevice && isConnected;
@@ -162,7 +165,7 @@ export function DeviceDetail() {
       <Card className="flex flex-col gap-4">
         <TextInput
           label={t("settings.deviceDetail.nameLabel")}
-          placeholder={endpoint.address}
+          placeholder={address}
           value={draftName}
           setValue={setDraftName}
           saveValue={handleSaveName}
@@ -178,8 +181,19 @@ export function DeviceDetail() {
             {t("settings.deviceDetail.infoHeading")}
           </h2>
           <p className="break-all">
-            {t("settings.deviceDetail.address", { value: endpoint.address })}
+            {t("settings.deviceDetail.address", { value: address })}
           </p>
+          {isActive && activeConnection?.link && (
+            <p>
+              {t("settings.deviceDetail.link", {
+                value: t(
+                  activeConnection.link === "bluetooth"
+                    ? "connection.linkBluetooth"
+                    : "connection.linkWifi",
+                ),
+              })}
+            </p>
+          )}
           {record.platform && (
             <p>
               {t("settings.deviceDetail.platform", { value: record.platform })}

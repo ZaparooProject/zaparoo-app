@@ -61,8 +61,12 @@ vi.mock("react-hot-toast", () => ({
 }));
 
 const mockIsConnected = vi.fn(() => true);
+const mockActiveLink = vi.fn<() => "wifi" | "bluetooth" | null>(() => null);
 vi.mock("@/hooks/useConnection", () => ({
-  useConnection: () => ({ isConnected: mockIsConnected() }),
+  useConnection: () => ({
+    isConnected: mockIsConnected(),
+    activeConnection: { link: mockActiveLink() },
+  }),
   useDeviceConnectionActions: () => ({ forgetDevice: mockForgetDevice }),
 }));
 
@@ -108,6 +112,7 @@ describe("Settings Device Detail Route", () => {
       },
     });
     mockIsConnected.mockReturnValue(true);
+    mockActiveLink.mockReturnValue(null);
     mockForgetDevice.mockImplementation((recordId: string) =>
       deviceRegistry.removeRecord(recordId),
     );
@@ -201,6 +206,42 @@ describe("Settings Device Detail Route", () => {
     expect(
       screen.queryByRole("button", { name: "online.deviceLink.link" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("should show the link in use on the active connected device", async () => {
+    await seedRecord(true);
+    mockActiveLink.mockReturnValue("bluetooth");
+    renderRoute();
+
+    expect(screen.getByText("settings.deviceDetail.link")).toBeInTheDocument();
+  });
+
+  it("should not show a link for a device that is not in use", () => {
+    mockActiveLink.mockReturnValue("wifi");
+    renderRoute();
+
+    expect(
+      screen.queryByText("settings.deviceDetail.link"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("should show a Bluetooth-only device instead of redirecting", async () => {
+    const bluetoothOnly: DeviceRecord = {
+      recordId: "ble-only",
+      endpoints: [],
+      preferredEndpointId: "",
+      ble: { deviceId: "core-1", peripheralId: "AA:BB" },
+    };
+    await seedDeviceRegistry([bluetoothOnly], bluetoothOnly.recordId);
+    mockParams.current = { recordId: bluetoothOnly.recordId };
+    renderRoute();
+
+    expect(
+      screen.getByPlaceholderText("settings.bluetoothScan.viaBluetooth"),
+    ).toBeInTheDocument();
+    expect(mockNavigate).not.toHaveBeenCalledWith(
+      expect.objectContaining({ to: "/settings/devices" }),
+    );
   });
 
   it("should navigate back to the device list without resetting scroll", async () => {
