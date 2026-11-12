@@ -1662,12 +1662,17 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       onLinkChange: (deviceId, link) => {
         if (!isCurrentConnection()) return;
         // The link is not part of a connection change, so record it here for
-        // whatever shows which link is in use.
-        setLocalConnection((current) =>
-          current?.deviceId === deviceId && current.link !== link
-            ? { ...current, link }
-            : current,
-        );
+        // whatever shows which link is in use. The address that opened is
+        // noted on the connection just before its link is reported, with no
+        // change of its own, so it is picked up here too.
+        const opened = connectionManager.getActiveConnection()?.address;
+        setLocalConnection((current) => {
+          if (current?.deviceId !== deviceId) return current;
+          const address = opened ?? current.address;
+          return current.link !== link || current.address !== address
+            ? { ...current, link, address }
+            : current;
+        });
         const previous = lastLink;
         const alreadyRefreshed = refreshedAheadOfLink;
         if (link !== null) {

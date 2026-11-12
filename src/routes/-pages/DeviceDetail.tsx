@@ -12,6 +12,7 @@ import { useSelectDevice } from "@/hooks/useSelectDevice";
 import {
   deviceRegistry,
   parsedEndpointForRecord,
+  reportedAddressForRecord,
   useDeviceRegistry,
   type DeviceRecord,
 } from "@/lib/devices/deviceRegistry";
@@ -62,10 +63,20 @@ export function DeviceDetail() {
 
   const record = records[params.recordId];
   const endpoint = parsedEndpointForRecord(record);
+  const { isConnected, activeConnection } = useConnection();
+  // A device saved over Bluetooth has no address of its own. While it is the
+  // one connected, and over Wi-Fi, the address it is reached at is shown.
+  const networkAddress =
+    isConnected &&
+    activeRecordId === record?.recordId &&
+    activeConnection?.link === "wifi"
+      ? reportedAddressForRecord(record, activeConnection.address)
+      : null;
   const address =
     endpoint?.address ??
-    (record?.ble ? t("settings.bluetoothScan.viaBluetooth") : null);
-  const { isConnected, activeConnection } = useConnection();
+    (record?.ble
+      ? (networkAddress ?? t("settings.bluetoothScan.viaBluetooth"))
+      : null);
   const { forgetDevice } = useDeviceConnectionActions();
   const { selectRecord } = useSelectDevice();
 

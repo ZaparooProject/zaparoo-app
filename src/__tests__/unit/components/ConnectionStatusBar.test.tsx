@@ -6,6 +6,7 @@ import {
   ConnectionContext,
   type ConnectionContextValue,
 } from "@/hooks/useConnection";
+import { deviceRegistry } from "@/lib/devices/deviceRegistry";
 import { ConnectionState, useStatusStore } from "@/lib/store";
 
 const mockUseLocation = vi.fn();
@@ -206,6 +207,77 @@ describe("ConnectionStatusBar", () => {
     expect(screen.getAllByText("connection.networkUnavailable")).toHaveLength(
       2,
     );
+  });
+
+  describe("without a network, for a device saved over Bluetooth", () => {
+    const dropped = connectionValue({
+      activeConnection: {
+        deviceId: "ble",
+        address: "",
+        type: "hybrid",
+        link: null,
+        state: "reconnecting",
+        hasData: true,
+        lastDataTimestamp: null,
+        hasConnectedBefore: true,
+      },
+      showConnecting: false,
+      showReconnecting: true,
+    });
+
+    function installBluetoothDevice(addresses?: string[]) {
+      deviceRegistry.installForTests({
+        schemaVersion: 2,
+        activeRecordId: "ble",
+        records: {
+          ble: {
+            recordId: "ble",
+            endpoints: [],
+            preferredEndpointId: "",
+            ble: { deviceId: "core-1", peripheralId: "AA:BB" },
+            ...(addresses
+              ? { reportedEndpoints: { addresses, port: 7497, at: 1 } }
+              : {}),
+          },
+        },
+      });
+    }
+
+    beforeEach(() => {
+      useStatusStore.setState({ networkAvailable: false });
+    });
+
+    it("shows a device with no network address as reconnecting", () => {
+      installBluetoothDevice();
+
+      render(
+        <Wrapper value={dropped}>
+          <ConnectionStatusBar />
+        </Wrapper>,
+      );
+      act(() => vi.advanceTimersByTime(1_000));
+
+      expect(screen.getAllByText("connection.reconnectingToCore")).toHaveLength(
+        2,
+      );
+      expect(
+        screen.queryByText("connection.networkUnavailable"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("keeps the network message once Core has reported an address", () => {
+      installBluetoothDevice(["10.0.0.206"]);
+
+      render(
+        <Wrapper value={dropped}>
+          <ConnectionStatusBar />
+        </Wrapper>,
+      );
+
+      expect(screen.getAllByText("connection.networkUnavailable")).toHaveLength(
+        2,
+      );
+    });
   });
 
   it("suppresses generic status while pairing requires action", () => {

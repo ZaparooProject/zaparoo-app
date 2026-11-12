@@ -121,6 +121,7 @@ export function useDeviceConnectionFlow({
   const identifyAbortRef = useRef<AbortController | null>(null);
   const identifyCommittedRef = useRef(false);
   const [nearbyError, setNearbyError] = useState(false);
+  const [saveError, setSaveError] = useState(false);
   const scanTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [enteringAddress, setEnteringAddress] = useState(false);
   const [address, setAddress] = useState("");
@@ -135,6 +136,7 @@ export function useDeviceConnectionFlow({
     setEnteringAddress(false);
     setAddressError("");
     setIdentifying(null);
+    setSaveError(false);
   }
 
   useEffect(() => {
@@ -157,14 +159,20 @@ export function useDeviceConnectionFlow({
     setEnteringAddress(true);
   };
 
-  const connectByAddress = () => {
+  const connectByAddress = async () => {
     const result = selectAddress(address);
     if (!result.ok) {
       setAddressError(t(result.errorKey));
       addressInputRef.current?.focus();
       return;
     }
-    finish();
+    setAddressError("");
+    if (await result.saved) {
+      finish();
+      return;
+    }
+    setAddressError(t("settings.deviceSaveFailed"));
+    addressInputRef.current?.focus();
   };
 
   const savedDevices = useMemo(() => {
@@ -361,11 +369,23 @@ export function useDeviceConnectionFlow({
         ]
       : null;
 
-  const pairAgain = async (recordId: string) => {
-    await selectRecord(recordId);
-    openPairingModal();
-    finish();
+  // The sheet closes only once the device is saved and active. A choice that
+  // was not saved stays on screen with the reason, ready to be made again.
+  const whenSaved = async (
+    selection: Promise<boolean>,
+    onSaved: () => void = finish,
+  ) => {
+    setSaveError(false);
+    setNearbyError(false);
+    if (await selection) onSaved();
+    else setSaveError(true);
   };
+
+  const pairAgain = (recordId: string) =>
+    whenSaved(selectRecord(recordId), () => {
+      openPairingModal();
+      finish();
+    });
 
   const selectNearby = async (device: NearbyBluetoothDevice, name: string) => {
     if (identifyAbortRef.current) return;
@@ -380,6 +400,7 @@ export function useDeviceConnectionFlow({
       committed: false,
     });
     setNearbyError(false);
+    setSaveError(false);
     try {
       const info = await identifyBluetoothDevice(peripheralId, {
         signal: controller.signal,
@@ -399,12 +420,13 @@ export function useDeviceConnectionFlow({
           ? { ...current, committed: true }
           : current,
       );
-      await selectBluetoothDevice({
-        deviceId: info.deviceId,
-        peripheralId,
-        ...(device.name ? { name: device.name } : {}),
-      });
-      finish();
+      await whenSaved(
+        selectBluetoothDevice({
+          deviceId: info.deviceId,
+          peripheralId,
+          ...(device.name ? { name: device.name } : {}),
+        }),
+      );
     } catch (error) {
       // An attempt the user left has nothing to report, however it ended.
       if (error instanceof BleLinkAbortedError || controller.signal.aborted) {
@@ -426,11 +448,11 @@ export function useDeviceConnectionFlow({
 
   const selectDevice = (entry: ListedDevice, name: string) => {
     if (entry.saved) {
-      void selectRecord(entry.saved.record.recordId);
-      finish();
+      void whenSaved(selectRecord(entry.saved.record.recordId));
     } else if (entry.discovered) {
-      void selectScanDevice(discoveredDeviceToRegistration(entry.discovered));
-      finish();
+      void whenSaved(
+        selectScanDevice(discoveredDeviceToRegistration(entry.discovered)),
+      );
     } else if (entry.nearby) {
       void selectNearby(entry.nearby, name);
     }
@@ -438,6 +460,7 @@ export function useDeviceConnectionFlow({
 
   const scanning = isScanning || bluetooth.isScanning;
   const rescan = () => {
+    setSaveError(false);
     beginScan();
     void bluetooth.rescan();
   };
@@ -515,7 +538,7 @@ export function useDeviceConnectionFlow({
       <Button
         intent="primary"
         label={t("settings.deviceSetup.connect")}
-        onClick={connectByAddress}
+        onClick={() => void connectByAddress()}
       />
     </div>
   ) : undefined;
@@ -544,7 +567,7 @@ export function useDeviceConnectionFlow({
           noValidate
           onSubmit={(event) => {
             event.preventDefault();
-            connectByAddress();
+            void connectByAddress();
           }}
         >
           <TextInput
@@ -613,6 +636,11 @@ export function useDeviceConnectionFlow({
             {nearbyError && (
               <p className="text-error text-sm" role="alert">
                 {t("settings.bluetoothScan.connectFailed")}
+              </p>
+            )}
+            {saveError && (
+              <p className="text-error text-sm" role="alert">
+                {t("settings.deviceSaveFailed")}
               </p>
             )}
             {bluetoothScanFailed && (

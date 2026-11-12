@@ -62,10 +62,11 @@ vi.mock("react-hot-toast", () => ({
 
 const mockIsConnected = vi.fn(() => true);
 const mockActiveLink = vi.fn<() => "wifi" | "bluetooth" | null>(() => null);
+const mockActiveAddress = vi.fn(() => "");
 vi.mock("@/hooks/useConnection", () => ({
   useConnection: () => ({
     isConnected: mockIsConnected(),
-    activeConnection: { link: mockActiveLink() },
+    activeConnection: { link: mockActiveLink(), address: mockActiveAddress() },
   }),
   useDeviceConnectionActions: () => ({ forgetDevice: mockForgetDevice }),
 }));
@@ -113,6 +114,7 @@ describe("Settings Device Detail Route", () => {
     });
     mockIsConnected.mockReturnValue(true);
     mockActiveLink.mockReturnValue(null);
+    mockActiveAddress.mockReturnValue("");
     mockForgetDevice.mockImplementation((recordId: string) =>
       deviceRegistry.removeRecord(recordId),
     );
@@ -222,6 +224,89 @@ describe("Settings Device Detail Route", () => {
 
     expect(
       screen.queryByText("settings.deviceDetail.link"),
+    ).not.toBeInTheDocument();
+  });
+
+  describe("the address of a device saved over Bluetooth", () => {
+    const bluetoothOnly: DeviceRecord = {
+      recordId: "ble-only",
+      endpoints: [],
+      preferredEndpointId: "",
+      ble: { deviceId: "core-1", peripheralId: "AA:BB" },
+      reportedEndpoints: {
+        addresses: ["10.0.0.206", "192.168.1.9"],
+        port: 7497,
+        at: 1,
+      },
+    };
+
+    beforeEach(async () => {
+      await seedDeviceRegistry([bluetoothOnly], bluetoothOnly.recordId);
+      mockParams.current = { recordId: bluetoothOnly.recordId };
+      mockActiveAddress.mockReturnValue("ws://192.168.1.9:7497/api/v0.1");
+    });
+
+    it("should be the network address in use while connected over Wi-Fi", () => {
+      mockActiveLink.mockReturnValue("wifi");
+      renderRoute();
+
+      expect(screen.getByPlaceholderText("192.168.1.9")).toBeInTheDocument();
+      // The heading also carries the active-device marker.
+      expect(
+        screen.getByRole("heading", { level: 1, name: /192\.168\.1\.9/ }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText("settings.bluetoothScan.viaBluetooth"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should stay Bluetooth while connected over Bluetooth", () => {
+      mockActiveLink.mockReturnValue("bluetooth");
+      mockActiveAddress.mockReturnValue("bluetooth:AA:BB");
+      renderRoute();
+
+      expect(
+        screen.getByPlaceholderText("settings.bluetoothScan.viaBluetooth"),
+      ).toBeInTheDocument();
+    });
+
+    it("should stay Bluetooth while not connected", () => {
+      mockIsConnected.mockReturnValue(false);
+      mockActiveLink.mockReturnValue("wifi");
+      renderRoute();
+
+      expect(
+        screen.getByPlaceholderText("settings.bluetoothScan.viaBluetooth"),
+      ).toBeInTheDocument();
+    });
+
+    it("should stay Bluetooth while another device is the one connected", async () => {
+      const other = mockDeviceRecord({ address: "192.168.1.10" });
+      await seedDeviceRegistry([bluetoothOnly, other], other.recordId);
+      mockActiveLink.mockReturnValue("wifi");
+      renderRoute();
+
+      expect(
+        screen.getByPlaceholderText("settings.bluetoothScan.viaBluetooth"),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("should keep a device's own saved address while connected over Wi-Fi", async () => {
+    const saved = mockDeviceRecord({
+      address: "192.168.1.50",
+      ble: { deviceId: "core-1", peripheralId: "AA:BB" },
+      reportedEndpoints: { addresses: ["192.168.1.9"], port: 7497, at: 1 },
+    });
+    await seedDeviceRegistry([saved], saved.recordId);
+    mockParams.current = { recordId: saved.recordId };
+    mockActiveLink.mockReturnValue("wifi");
+    mockActiveAddress.mockReturnValue("ws://192.168.1.9:7497/api/v0.1");
+    renderRoute();
+
+    expect(screen.getByPlaceholderText("192.168.1.50")).toBeInTheDocument();
+    expect(
+      screen.queryByPlaceholderText("192.168.1.9"),
     ).not.toBeInTheDocument();
   });
 

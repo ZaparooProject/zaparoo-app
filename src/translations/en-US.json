@@ -1641,6 +1641,7 @@
       "addDevice": "Add device",
       "newDevices": "New devices",
       "pairDevice": "Pair with {{device}} again",
+      "deviceSaveFailed": "Could not save this device. Try again.",
       "bluetoothScan": {
         "unnamed": "Zaparoo device",
         "viaBluetooth": "Bluetooth",

@@ -106,6 +106,61 @@ describe("HomeDevicePill", () => {
     ).toBeInTheDocument();
   });
 
+  describe("an unnamed device saved over Bluetooth", () => {
+    beforeEach(() => {
+      deviceRegistry.installForTests({
+        schemaVersion: 2,
+        activeRecordId: "ble",
+        records: {
+          ble: {
+            recordId: "ble",
+            endpoints: [],
+            preferredEndpointId: "",
+            ble: { deviceId: "core-1", peripheralId: "AA:BB" },
+            reportedEndpoints: {
+              addresses: ["10.0.0.206", "192.168.1.9"],
+              port: 7497,
+              at: 1,
+            },
+          },
+        },
+      });
+    });
+
+    it("should be labeled with the network address in use on Wi-Fi", async () => {
+      render(
+        wrap(pill(), {
+          isConnected: true,
+          activeConnection: {
+            ...connectionOn("wifi"),
+            address: "ws://192.168.1.9:7497/api/v0.1",
+          },
+        }),
+      );
+
+      expect(await screen.findByText("192.168.1.9")).toBeVisible();
+      expect(
+        screen.queryByText("settings.bluetoothScan.viaBluetooth"),
+      ).not.toBeInTheDocument();
+    });
+
+    it.each([
+      ["connected over Bluetooth", true, "bluetooth"],
+      ["not connected", false, "wifi"],
+    ] as const)(
+      "should stay labeled Bluetooth while %s",
+      async (_state, isConnected, link) => {
+        render(
+          wrap(pill(), { isConnected, activeConnection: connectionOn(link) }),
+        );
+
+        expect(
+          await screen.findByText("settings.bluetoothScan.viaBluetooth"),
+        ).toBeVisible();
+      },
+    );
+  });
+
   it("should show no link while not connected", async () => {
     await seedActiveDevice({ address: "192.168.1.100", name: "MiSTer" });
 

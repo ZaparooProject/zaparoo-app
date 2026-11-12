@@ -13,8 +13,9 @@ import { ConnectionState, useStatusStore } from "@/lib/store";
 const mocks = vi.hoisted(() => ({
   startScan: vi.fn().mockResolvedValue(undefined),
   stopScan: vi.fn(),
-  selectRecord: vi.fn().mockResolvedValue(undefined),
-  selectScanDevice: vi.fn().mockResolvedValue(undefined),
+  selectRecord: vi.fn().mockResolvedValue(true),
+  selectScanDevice: vi.fn().mockResolvedValue(true),
+  selectDevice: vi.fn(),
   openPairingModal: vi.fn(),
   navigate: vi.fn().mockResolvedValue(undefined),
   devices: [] as DiscoveredDevice[],
@@ -52,6 +53,7 @@ vi.mock("@/hooks/useSelectDevice", () => ({
   useSelectDevice: () => ({
     selectRecord: mocks.selectRecord,
     selectScanDevice: mocks.selectScanDevice,
+    selectDevice: mocks.selectDevice,
   }),
 }));
 
@@ -178,6 +180,127 @@ describe("DeviceSheet", () => {
       version: undefined,
     });
     expect(close).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["saved", /saved Core/, () => mocks.selectRecord],
+    ["network-found", /Nearby Core/, () => mocks.selectScanDevice],
+  ] as const)(
+    "stays open with an error when a %s device cannot be saved, and closes once it can",
+    async (_kind, rowName, select) => {
+      const user = userEvent.setup();
+      const close = vi.fn();
+      mocks.devices = [discovered()];
+      select().mockResolvedValueOnce(false);
+      renderSheet({ isOpen: true, close });
+      const switchList = screen.getByRole("region", {
+        name: "scan.deviceSheetRecent",
+      });
+
+      await user.click(
+        within(switchList).getByRole("button", { name: rowName }),
+      );
+
+      expect(await within(switchList).findByRole("alert")).toHaveTextContent(
+        "settings.deviceSaveFailed",
+      );
+      expect(close).not.toHaveBeenCalled();
+
+      await user.click(
+        within(switchList).getByRole("button", { name: rowName }),
+      );
+
+      await waitFor(() => expect(close).toHaveBeenCalledTimes(1));
+      expect(select()).toHaveBeenCalledTimes(2);
+      expect(within(switchList).queryByRole("alert")).not.toBeInTheDocument();
+    },
+  );
+
+  it("clears a failed save's error when the user searches again", async () => {
+    const user = userEvent.setup();
+    const close = vi.fn();
+    mocks.selectRecord.mockResolvedValueOnce(false);
+    renderSheet({ isOpen: true, close });
+    const switchList = screen.getByRole("region", {
+      name: "scan.deviceSheetRecent",
+    });
+
+    await user.click(
+      within(switchList).getByRole("button", { name: /saved Core/ }),
+    );
+    expect(await within(switchList).findByRole("alert")).toHaveTextContent(
+      "settings.deviceSaveFailed",
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "settings.networkScan.refresh" }),
+    );
+
+    expect(within(switchList).queryByRole("alert")).not.toBeInTheDocument();
+    expect(close).not.toHaveBeenCalled();
+  });
+
+  it("keeps the pairing prompt closed when the device to pair cannot be saved", async () => {
+    const user = userEvent.setup();
+    const close = vi.fn();
+    mocks.devices = [
+      discovered({ hostname: "saved.local", deviceId: "saved-id" }),
+    ];
+    mocks.selectRecord.mockResolvedValueOnce(false);
+    renderSheet({ isOpen: true, close });
+
+    await user.click(
+      screen.getByRole("button", { name: "settings.pairDevice" }),
+    );
+
+    expect(
+      await screen.findByText("settings.deviceSaveFailed"),
+    ).toHaveAttribute("role", "alert");
+    expect(mocks.openPairingModal).not.toHaveBeenCalled();
+    expect(close).not.toHaveBeenCalled();
+  });
+
+  it("shows a failed save in the address form, and closes once it saves", async () => {
+    const user = userEvent.setup();
+    const close = vi.fn();
+    mocks.selectDevice
+      .mockReturnValueOnce({
+        ok: true,
+        address: "10.0.0.5",
+        saved: Promise.resolve(false),
+      })
+      .mockReturnValueOnce({
+        ok: true,
+        address: "10.0.0.5",
+        saved: Promise.resolve(true),
+      });
+    renderSheet({ isOpen: true, close });
+    await user.click(
+      screen.getByRole("button", {
+        name: "settings.deviceSetup.addDeviceManually",
+      }),
+    );
+    const input = screen.getByRole("textbox", { name: "settings.device" });
+    await user.clear(input);
+    await user.type(input, "10.0.0.5");
+    const connect = screen.getByRole("button", {
+      name: "settings.deviceSetup.connect",
+    });
+
+    await user.click(connect);
+
+    expect(
+      await screen.findByText("settings.deviceSaveFailed"),
+    ).toHaveAttribute("role", "alert");
+    expect(input).toBeInTheDocument();
+    expect(close).not.toHaveBeenCalled();
+
+    await user.click(connect);
+
+    await waitFor(() => expect(close).toHaveBeenCalledTimes(1));
+    expect(
+      screen.queryByText("settings.deviceSaveFailed"),
+    ).not.toBeInTheDocument();
   });
 
   it("pairs from the connected-device action and can search again", async () => {

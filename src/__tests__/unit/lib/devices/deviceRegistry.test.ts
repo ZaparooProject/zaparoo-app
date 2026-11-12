@@ -18,6 +18,8 @@ import {
   parseDeviceRegistry,
   parsedEndpointForRecord,
   resolvedEndpointForRecord,
+  recordHasNetworkRoute,
+  reportedAddressForRecord,
   reportedWebSocketUrlsForRecord,
   resolvedEndpointsForRecord,
   type DeviceRecord,
@@ -1392,6 +1394,86 @@ describe("Bluetooth devices", () => {
 
   it("should report no extra URLs for a record Core never reported on", () => {
     expect(reportedWebSocketUrlsForRecord(null)).toEqual([]);
+  });
+
+  describe("the address shown for a route Core reported", () => {
+    const neverReported: DeviceRecord = {
+      recordId: "ble",
+      endpoints: [],
+      preferredEndpointId: "",
+      ble: { deviceId: "core-1", peripheralId: "AA:BB" },
+    };
+    const bluetoothOnly = (addresses: string[], port = 7497): DeviceRecord => ({
+      ...neverReported,
+      reportedEndpoints: { addresses, port, at: 1 },
+    });
+
+    it("should have none for a record Core never reported on", () => {
+      expect(reportedAddressForRecord(null)).toBeNull();
+      expect(reportedAddressForRecord(neverReported)).toBeNull();
+      expect(reportedAddressForRecord(bluetoothOnly([]))).toBeNull();
+    });
+
+    it("should show the first reported address the way a saved one reads", () => {
+      expect(
+        reportedAddressForRecord(bluetoothOnly(["10.0.0.206", "192.168.1.9"])),
+      ).toBe("10.0.0.206");
+      expect(
+        reportedAddressForRecord(bluetoothOnly(["10.0.0.206"], 8080)),
+      ).toBe("10.0.0.206:8080");
+      expect(reportedAddressForRecord(bluetoothOnly(["FE80::1"]))).toBe(
+        "[fe80::1]",
+      );
+    });
+
+    it("should skip a reported address that is not a host", () => {
+      expect(
+        reportedAddressForRecord(bluetoothOnly(["not a host!", "10.0.0.206"])),
+      ).toBe("10.0.0.206");
+    });
+
+    it("should prefer the address the connection opened at", () => {
+      const record = bluetoothOnly(["10.0.0.206", "192.168.1.9"]);
+
+      expect(
+        reportedAddressForRecord(record, "ws://192.168.1.9:7497/api/v0.1"),
+      ).toBe("192.168.1.9");
+    });
+
+    it("should fall back to the first reported address for one Core did not report", () => {
+      const record = bluetoothOnly(["10.0.0.206", "192.168.1.9"]);
+
+      for (const inUse of [
+        "ws://172.16.0.4:7497/api/v0.1",
+        "bluetooth:AA:BB",
+        "",
+      ]) {
+        expect(reportedAddressForRecord(record, inUse)).toBe("10.0.0.206");
+      }
+    });
+
+    it("should say whether a record can be reached over the network", () => {
+      const unreported = neverReported;
+      const saved: DeviceRecord = {
+        ...unreported,
+        endpoints: [
+          {
+            endpointId: "ws://10.0.0.2:7497",
+            scheme: "ws",
+            host: "10.0.0.2",
+            port: 7497,
+            source: "manual",
+          },
+        ],
+        preferredEndpointId: "ws://10.0.0.2:7497",
+      };
+
+      expect(recordHasNetworkRoute(null)).toBe(false);
+      expect(recordHasNetworkRoute(unreported)).toBe(false);
+      expect(recordHasNetworkRoute(bluetoothOnly([]))).toBe(false);
+      expect(recordHasNetworkRoute(bluetoothOnly(["10.0.0.206"]))).toBe(true);
+      expect(recordHasNetworkRoute(saved)).toBe(true);
+    });
   });
 
   it("should keep Bluetooth and the Wi-Fi route when merging", async () => {

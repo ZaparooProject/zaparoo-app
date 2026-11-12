@@ -337,6 +337,44 @@ export function reportedWebSocketUrlsForRecord(
 }
 
 /** The active record's display address, or `""` before hydration. */
+/**
+ * The address to show for the network route Core reported for a record, in
+ * the form a saved address takes. `inUse` is the address a connection opened
+ * at: it is shown when Core reported it, and the first reported address is
+ * shown otherwise. Null when Core has reported nowhere it can be reached.
+ */
+export function reportedAddressForRecord(
+  record: DeviceRecord | null | undefined,
+  inUse?: string | null,
+): string | null {
+  const reported = record?.reportedEndpoints;
+  if (!reported) return null;
+  const endpoints = reported.addresses
+    .filter((address) => isValidHost(address))
+    .map((address) => formatDeviceEndpoint(address, reported.port, "ws"));
+  const opened = inUse ? parseDeviceEndpoint(inUse) : null;
+  const used = opened?.ok
+    ? endpoints.find(
+        (endpoint) => endpoint.endpointId === opened.endpoint.endpointId,
+      )
+    : undefined;
+  return (used ?? endpoints[0])?.address ?? null;
+}
+
+/**
+ * True when a record can be reached over the network, through an address the
+ * user saved or one Core reported. A record without either is reachable over
+ * Bluetooth alone, whatever the phone's network is doing.
+ */
+export function recordHasNetworkRoute(
+  record: DeviceRecord | null | undefined,
+): boolean {
+  if (!record) return false;
+  return (
+    record.endpoints.length > 0 || reportedAddressForRecord(record) !== null
+  );
+}
+
 export function activeAddressOf(snapshot: DeviceRegistrySnapshot): string {
   const record = snapshot.activeRecordId
     ? snapshot.records[snapshot.activeRecordId]

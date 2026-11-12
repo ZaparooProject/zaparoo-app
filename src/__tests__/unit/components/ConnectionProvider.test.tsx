@@ -3045,6 +3045,53 @@ describe("connection event handling", () => {
     expect(CoreAPI.flushQueue).toHaveBeenCalledTimes(1);
   });
 
+  it("should pick up the address that opened when the link is reported", async () => {
+    function AddressConsumer() {
+      const { activeConnection } = useConnection();
+      return <span data-testid="address">{activeConnection?.address}</span>;
+    }
+    render(
+      <ConnectionProvider>
+        <AddressConsumer />
+      </ConnectionProvider>,
+    );
+    const connection = {
+      deviceId: RECORD_ID,
+      address: "",
+      type: "hybrid" as const,
+      state: "connected" as const,
+      link: null,
+      hasData: false,
+      lastDataTimestamp: null,
+      hasConnectedBefore: false,
+    };
+    act(() => {
+      capturedEventHandlers.onConnectionChange!(RECORD_ID, connection);
+    });
+    await waitFor(() => {
+      expect(CoreAPI.version).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.getByTestId("address")).toHaveTextContent("");
+
+    vi.mocked(connectionManager.getActiveConnection).mockReturnValue({
+      ...connection,
+      link: "wifi",
+      address: "ws://192.168.1.9:7497/api/v0.1",
+    });
+    try {
+      act(() => {
+        capturedEventHandlers.onLinkChange!(RECORD_ID, "wifi");
+      });
+
+      expect(screen.getByTestId("address")).toHaveTextContent(
+        "ws://192.168.1.9:7497/api/v0.1",
+      );
+      expect(CoreAPI.version).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.mocked(connectionManager.getActiveConnection).mockReturnValue(null);
+    }
+  });
+
   it("should refetch once when another link takes over a dropped connection", async () => {
     render(
       <ConnectionProvider>

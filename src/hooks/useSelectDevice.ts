@@ -15,6 +15,16 @@ import { useStatusStore } from "@/lib/store";
 
 export type ScanDeviceSelection = DiscoveredDeviceRegistration;
 
+/**
+ * A valid address also carries the outcome of saving it, which arrives later
+ * than the validation the form needs on the same tick.
+ */
+export type SelectDeviceResult =
+  | Exclude<DeviceAddressValidationResult, { ok: true }>
+  | (Extract<DeviceAddressValidationResult, { ok: true }> & {
+      saved: Promise<boolean>;
+    });
+
 export function useSelectDevice() {
   const queryClient = useQueryClient();
   const resetConnectionState = useStatusStore((s) => s.resetConnectionState);
@@ -45,20 +55,28 @@ export function useSelectDevice() {
     [queryClient, resetConnectionState],
   );
 
+  /**
+   * Resolves to whether the device was saved and made active. It never
+   * rejects, so a caller with nowhere to show a failure can ignore it.
+   */
   const activate = useCallback(
     (
       select: () => Promise<DeviceRecord | null>,
       action: string,
-    ): Promise<void> => {
+    ): Promise<boolean> => {
       const previousRecordId = deviceRegistry.getSnapshot().activeRecordId;
       return select()
-        .then((record) => activateSelection(record, previousRecordId))
+        .then((record) => {
+          activateSelection(record, previousRecordId);
+          return record !== null;
+        })
         .catch((err) => {
           logger.error("Failed to select device", err, {
             category: "connection",
             action,
             severity: "error",
           });
+          return false;
         });
     },
     [activateSelection],
@@ -69,21 +87,21 @@ export function useSelectDevice() {
    * on the same tick; the registry write and the teardown it triggers do not.
    */
   const selectDevice = useCallback(
-    (newAddress: string): DeviceAddressValidationResult => {
+    (newAddress: string): SelectDeviceResult => {
       const result = validateDeviceAddress(newAddress);
       if (!result.ok) return result;
 
-      void activate(
+      const saved = activate(
         () => deviceRegistry.selectAddress(result.address),
         "selectDevice",
       );
-      return result;
+      return { ...result, saved };
     },
     [activate],
   );
 
   const selectScanDevice = useCallback(
-    (device: ScanDeviceSelection): Promise<void> =>
+    (device: ScanDeviceSelection): Promise<boolean> =>
       activate(
         () => deviceRegistry.selectDiscovered(device),
         "selectScanDevice",
@@ -92,7 +110,7 @@ export function useSelectDevice() {
   );
 
   const selectRecord = useCallback(
-    (recordId: string): Promise<void> =>
+    (recordId: string): Promise<boolean> =>
       activate(
         () =>
           deviceRegistry
@@ -109,7 +127,7 @@ export function useSelectDevice() {
       deviceId: string;
       peripheralId: string;
       name?: string;
-    }): Promise<void> =>
+    }): Promise<boolean> =>
       activate(
         () => deviceRegistry.selectBluetooth(identity),
         "selectBluetoothDevice",

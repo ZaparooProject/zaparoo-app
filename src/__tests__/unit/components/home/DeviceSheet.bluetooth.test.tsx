@@ -18,9 +18,9 @@ import { ConnectionState, useStatusStore } from "@/lib/store";
 import type { NearbyBluetoothDevice } from "@/lib/transport/ble/scanner";
 
 const mocks = vi.hoisted(() => ({
-  selectRecord: vi.fn().mockResolvedValue(undefined),
-  selectScanDevice: vi.fn().mockResolvedValue(undefined),
-  selectBluetoothDevice: vi.fn().mockResolvedValue(undefined),
+  selectRecord: vi.fn().mockResolvedValue(true),
+  selectScanDevice: vi.fn().mockResolvedValue(true),
+  selectBluetoothDevice: vi.fn().mockResolvedValue(true),
   identify: vi.fn(),
   rescan: vi.fn().mockResolvedValue(undefined),
   openSettings: vi.fn(),
@@ -627,9 +627,9 @@ describe("DeviceSheet nearby Bluetooth devices", () => {
     const close = vi.fn();
     mocks.bluetooth.devices = [{ peripheralId: "NEAR", name: "Near Core" }];
     mocks.identify.mockResolvedValue({ deviceId: "core-1" });
-    let saved!: () => void;
+    let saved!: (ok: boolean) => void;
     mocks.selectBluetoothDevice.mockReturnValueOnce(
-      new Promise<void>((resolve) => {
+      new Promise<boolean>((resolve) => {
         saved = resolve;
       }),
     );
@@ -648,9 +648,40 @@ describe("DeviceSheet nearby Bluetooth devices", () => {
     expect(screen.getByText("Near Core")).toBeInTheDocument();
     expect(close).not.toHaveBeenCalled();
 
-    saved();
+    saved(true);
 
     await waitFor(() => expect(close).toHaveBeenCalledTimes(1));
+  });
+
+  it("returns to the list with an error when the device cannot be saved, and closes once it can", async () => {
+    const user = userEvent.setup();
+    const close = vi.fn();
+    mocks.bluetooth.devices = [{ peripheralId: "NEAR", name: "Near Core" }];
+    mocks.identify.mockResolvedValue({ deviceId: "core-1" });
+    mocks.selectBluetoothDevice.mockResolvedValueOnce(false);
+    renderSheet(close);
+
+    await user.click(
+      within(deviceList()).getByRole("button", { name: /Near Core/ }),
+    );
+
+    // The progress view is gone: the list is back, with the one error.
+    expect(await within(deviceList()).findByRole("alert")).toHaveTextContent(
+      "settings.deviceSaveFailed",
+    );
+    expect(within(deviceList()).getAllByRole("alert")).toHaveLength(1);
+    expect(rowTexts()).toEqual(["Near Core", "Known Bluetooth Core"]);
+    expect(close).not.toHaveBeenCalled();
+
+    await user.click(
+      within(deviceList()).getByRole("button", { name: /Near Core/ }),
+    );
+
+    await waitFor(() => expect(close).toHaveBeenCalledTimes(1));
+    expect(mocks.selectBluetoothDevice).toHaveBeenCalledTimes(2);
+    expect(
+      screen.queryByText("settings.deviceSaveFailed"),
+    ).not.toBeInTheDocument();
   });
 
   it("shows an inline error when the device cannot be reached", async () => {
