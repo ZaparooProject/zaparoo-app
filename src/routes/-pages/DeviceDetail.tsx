@@ -151,6 +151,26 @@ export function DeviceDetail() {
       (left, right) =>
         (right.lastConnectedAt ?? 0) - (left.lastConnectedAt ?? 0),
     );
+  const otherNameCounts = new Map<string, number>();
+  for (const other of otherRecords) {
+    const name = nameOf(other);
+    otherNameCounts.set(name, (otherNameCounts.get(name) ?? 0) + 1);
+  }
+  /** Platform, plus what tells this record apart from one with its name. */
+  const detailOf = (other: DeviceRecord) => {
+    const name = nameOf(other);
+    const distinction =
+      parsedEndpointForRecord(other)?.address ??
+      t("settings.bluetoothScan.viaBluetooth");
+    return [
+      other.platform,
+      (otherNameCounts.get(name) ?? 0) > 1 && distinction !== name
+        ? distinction
+        : undefined,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  };
   const combineWith = combineWithId ? records[combineWithId] : undefined;
 
   const closeCombine = () => {
@@ -411,16 +431,19 @@ export function DeviceDetail() {
           </div>
         ) : (
           <div className="flex flex-col gap-2 py-2">
-            {otherRecords.map((other) => (
-              <DeviceRow
-                key={other.recordId}
-                entry={{
-                  name: nameOf(other),
-                  ...(other.platform ? { detail: other.platform } : {}),
-                }}
-                onSelect={() => setCombineWithId(other.recordId)}
-              />
-            ))}
+            {otherRecords.map((other) => {
+              const detail = detailOf(other);
+              return (
+                <DeviceRow
+                  key={other.recordId}
+                  entry={{
+                    name: nameOf(other),
+                    ...(detail ? { detail } : {}),
+                  }}
+                  onSelect={() => setCombineWithId(other.recordId)}
+                />
+              );
+            })}
           </div>
         )}
       </SlideModal>

@@ -1415,6 +1415,10 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     let credentialsUsed: StoredCredentials | null = null;
     let aliasReconciliationInFlight = false;
     let lastLink: TransportLink | null = null;
+    // A connection that comes up reports its state before its link. Set when
+    // that state already refetched, so the link that follows does not repeat
+    // the same requests.
+    let refreshedAheadOfLink = false;
 
     // Generate unique ID for this connection session to prevent stale events
     // Use crypto.randomUUID if available, fallback for older Android WebViews
@@ -1502,6 +1506,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             if (!isInitialized.current) {
               isInitialized.current = true;
             }
+            refreshedAheadOfLink = connection.link == null;
             handleConnectionOpenRef.current();
           }
         }
@@ -1664,13 +1669,18 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             : current,
         );
         const previous = lastLink;
-        if (link !== null) lastLink = link;
+        const alreadyRefreshed = refreshedAheadOfLink;
+        if (link !== null) {
+          lastLink = link;
+          refreshedAheadOfLink = false;
+        }
         // Moving between Wi-Fi and Bluetooth is a new session on Core; refetch
         // what it may have changed while the switch was in progress.
         if (
           link !== null &&
           previous !== null &&
           previous !== link &&
+          !alreadyRefreshed &&
           connectionManager.getActiveConnection()?.state === "connected"
         ) {
           handleConnectionOpenRef.current();

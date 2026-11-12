@@ -1650,6 +1650,7 @@
         "stepReading": "Almost there...",
         "stillWorking": "Still working. Setting up Bluetooth for the first time can take up to half a minute.",
         "connectFailed": "Could not connect. Move closer to the device and try again.",
+        "scanFailed": "Could not search for Bluetooth devices",
         "disabled": "Bluetooth is off. Turn it on to find nearby devices.",
         "denied": "Allow Bluetooth access to find nearby devices.",
         "locationOff": "Turn on Location to find nearby devices.",

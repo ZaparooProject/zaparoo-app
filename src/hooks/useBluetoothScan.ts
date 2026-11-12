@@ -15,13 +15,15 @@ import {
 
 /**
  * Nearby Cores over Bluetooth while `active`, for `durationMs` per scan.
- * Readiness problems (off, no permission) are returned for inline display.
+ * Readiness problems (off, no permission) and a scan that could not start
+ * are returned for inline display.
  */
 export function useBluetoothScan(active: boolean, durationMs: number) {
   const supported = isBluetoothTransportSupported();
   const [devices, setDevices] = useState<NearbyBluetoothDevice[]>([]);
   const [readiness, setReadiness] = useState<BluetoothReadiness | null>(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [scanFailed, setScanFailed] = useState(false);
   const scanRef = useRef<BluetoothScan | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const runRef = useRef(0);
@@ -43,14 +45,17 @@ export function useBluetoothScan(active: boolean, durationMs: number) {
     stop();
     const run = runRef.current;
     setIsScanning(true);
+    setScanFailed(false);
     const ready = await getBluetoothReadiness({ request: true });
     if (run !== runRef.current) return;
     setReadiness(ready);
+    // What an earlier scan found cannot be reached now either way: a new scan
+    // starts from nothing, and without Bluetooth there is no scan.
+    setDevices([]);
     if (ready !== "ready") {
       setIsScanning(false);
       return;
     }
-    setDevices([]);
     try {
       const scan = await startBluetoothScan((device) => {
         if (run !== runRef.current) return;
@@ -73,7 +78,10 @@ export function useBluetoothScan(active: boolean, durationMs: number) {
         category: "bluetooth",
         action: "scan",
       });
-      if (run === runRef.current) setIsScanning(false);
+      if (run === runRef.current) {
+        setIsScanning(false);
+        setScanFailed(true);
+      }
     }
   }, [durationMs, stop, supported]);
 
@@ -94,6 +102,7 @@ export function useBluetoothScan(active: boolean, durationMs: number) {
     devices,
     readiness,
     isScanning,
+    scanFailed,
     rescan: start,
     canOpenSettings:
       readiness !== null && canOpenBluetoothFixSettings(readiness),

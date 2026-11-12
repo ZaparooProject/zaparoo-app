@@ -323,6 +323,8 @@ export function useDeviceConnectionFlow({
           discovered?.name ||
           address ||
           nearby?.name ||
+          // A saved device out of reach still has the name it advertised.
+          saved?.record.ble?.name ||
           t("settings.bluetoothScan.unnamed"),
         platform: saved?.record.platform || discovered?.platform,
         // What tells this row apart from another with the same name.
@@ -351,6 +353,7 @@ export function useDeviceConnectionFlow({
     bluetooth.supported &&
     appUi.enabled &&
     bluetooth.readiness !== "unsupported";
+  const bluetoothScanFailed = showNearby && bluetooth.scanFailed;
   const nearbyProblem =
     bluetooth.readiness && bluetooth.readiness in BLUETOOTH_READINESS_MESSAGES
       ? BLUETOOTH_READINESS_MESSAGES[
@@ -403,7 +406,10 @@ export function useDeviceConnectionFlow({
       });
       finish();
     } catch (error) {
-      if (error instanceof BleLinkAbortedError) return;
+      // An attempt the user left has nothing to report, however it ended.
+      if (error instanceof BleLinkAbortedError || controller.signal.aborted) {
+        return;
+      }
       logger.warn("Could not reach the Bluetooth device", error, {
         category: "bluetooth",
         action: "identify",
@@ -609,9 +615,15 @@ export function useDeviceConnectionFlow({
                 {t("settings.bluetoothScan.connectFailed")}
               </p>
             )}
+            {bluetoothScanFailed && (
+              <p className="text-error text-sm" role="alert">
+                {t("settings.bluetoothScan.scanFailed")}
+              </p>
+            )}
             {showSwitchList &&
               !scanning &&
               !error &&
+              !bluetoothScanFailed &&
               listedDevices.length === 0 && (
                 <p className="text-muted-foreground text-sm" role="status">
                   {t("settings.networkScan.noOtherDevices")}

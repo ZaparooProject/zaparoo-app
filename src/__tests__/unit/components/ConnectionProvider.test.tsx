@@ -5,7 +5,15 @@
  * connection lifecycle handling, and notification processing.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+  onTestFinished,
+} from "vitest";
 import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
 import { SecureStorage } from "@aparajita/capacitor-secure-storage";
@@ -3035,6 +3043,62 @@ describe("connection event handling", () => {
     expect(screen.getByTestId("link")).toHaveTextContent("null");
     expect(CoreAPI.version).toHaveBeenCalledTimes(1);
     expect(CoreAPI.flushQueue).toHaveBeenCalledTimes(1);
+  });
+
+  it("should refetch once when another link takes over a dropped connection", async () => {
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+    const connectionAt = (state: "connected" | "reconnecting") => ({
+      deviceId: RECORD_ID,
+      state,
+      link: null,
+      hasData: false,
+      hasConnectedBefore: true,
+    });
+    vi.mocked(connectionManager.getActiveConnection).mockReturnValue(
+      connectionAt("connected") as never,
+    );
+    onTestFinished(() => {
+      vi.mocked(connectionManager.getActiveConnection).mockReturnValue(null);
+    });
+
+    act(() => {
+      capturedEventHandlers.onConnectionChange!(
+        RECORD_ID,
+        connectionAt("connected"),
+      );
+      capturedEventHandlers.onLinkChange!(RECORD_ID, "wifi");
+    });
+    await waitFor(() => {
+      expect(CoreAPI.version).toHaveBeenCalledTimes(1);
+    });
+
+    // Wi-Fi drops and Bluetooth takes over: the state comes back first, then
+    // the link it came back on.
+    act(() => {
+      capturedEventHandlers.onLinkChange!(RECORD_ID, null);
+      capturedEventHandlers.onConnectionChange!(
+        RECORD_ID,
+        connectionAt("reconnecting"),
+      );
+      capturedEventHandlers.onConnectionChange!(
+        RECORD_ID,
+        connectionAt("connected"),
+      );
+      capturedEventHandlers.onLinkChange!(RECORD_ID, "bluetooth");
+    });
+
+    expect(CoreAPI.version).toHaveBeenCalledTimes(2);
+
+    // A switch that never drops the connection has only the link to go on.
+    act(() => {
+      capturedEventHandlers.onLinkChange!(RECORD_ID, "wifi");
+    });
+
+    expect(CoreAPI.version).toHaveBeenCalledTimes(3);
   });
 
   it("should preserve legacy capabilities for older Core versions", async () => {

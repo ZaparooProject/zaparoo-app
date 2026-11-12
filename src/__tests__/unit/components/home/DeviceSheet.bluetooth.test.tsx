@@ -35,6 +35,7 @@ const mocks = vi.hoisted(() => ({
     devices: [] as NearbyBluetoothDevice[],
     readiness: "ready" as string | null,
     isScanning: false,
+    scanFailed: false,
     canOpenSettings: false,
   },
 }));
@@ -164,6 +165,7 @@ describe("DeviceSheet nearby Bluetooth devices", () => {
       devices: [],
       readiness: "ready",
       isScanning: false,
+      scanFailed: false,
       canOpenSettings: false,
     };
     deviceRegistry.installForTests({
@@ -599,6 +601,27 @@ describe("DeviceSheet nearby Bluetooth devices", () => {
     expect(close).not.toHaveBeenCalled();
   });
 
+  it("says nothing when a cancelled attempt fails for another reason", async () => {
+    const user = userEvent.setup();
+    mocks.bluetooth.devices = [{ peripheralId: "NEAR", name: "Near Core" }];
+    let fail!: (error: unknown) => void;
+    mocks.identify.mockReturnValue(
+      new Promise((_resolve, reject) => {
+        fail = reject;
+      }),
+    );
+    renderSheet();
+
+    await user.click(
+      within(deviceList()).getByRole("button", { name: /Near Core/ }),
+    );
+    await user.click(screen.getByRole("button", { name: "nav.cancel" }));
+    await act(async () => fail(new Error("link dropped")));
+
+    expect(within(deviceList()).queryByRole("alert")).not.toBeInTheDocument();
+    expect(rowTexts()).toEqual(["Near Core", "Known Bluetooth Core"]);
+  });
+
   it("takes Cancel away once the device is being saved", async () => {
     const user = userEvent.setup();
     const close = vi.fn();
@@ -687,6 +710,41 @@ describe("DeviceSheet nearby Bluetooth devices", () => {
       screen.queryByRole("button", {
         name: "settings.bluetoothScan.openSettings",
       }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("names a saved Bluetooth device by the name it advertised", () => {
+    const { records } = deviceRegistry.getSnapshot();
+    installRecords({
+      active: records.active!,
+      known: {
+        recordId: "known",
+        discoveryId: "known-id",
+        endpoints: [],
+        preferredEndpointId: "",
+        ble: {
+          deviceId: "known-id",
+          peripheralId: "KNOWN",
+          name: "Advertised Core",
+        },
+      },
+    });
+    renderSheet();
+
+    expect(rowTexts()).toEqual(["Advertised Core"]);
+  });
+
+  it("says the Bluetooth scan failed instead of that nothing was found", () => {
+    const { records } = deviceRegistry.getSnapshot();
+    installRecords({ active: records.active! });
+    mocks.bluetooth.scanFailed = true;
+    renderSheet();
+
+    expect(within(deviceList()).getByRole("alert")).toHaveTextContent(
+      "settings.bluetoothScan.scanFailed",
+    );
+    expect(
+      within(deviceList()).queryByText("settings.networkScan.noOtherDevices"),
     ).not.toBeInTheDocument();
   });
 

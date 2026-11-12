@@ -507,6 +507,51 @@ describe("Settings Device Detail Route", () => {
       ).not.toBeInTheDocument();
     });
 
+    it("should tell same-named records apart by address or Bluetooth", async () => {
+      const user = userEvent.setup();
+      const shown = mockDeviceRecord({ address: "10.0.0.1", name: "Shown" });
+      const overNetwork = mockDeviceRecord({
+        address: "10.0.0.2",
+        name: "MiSTer",
+        platform: "mister",
+        lastConnectedAt: 3,
+      });
+      const overBluetooth: DeviceRecord = {
+        recordId: "ble-only",
+        endpoints: [],
+        preferredEndpointId: "",
+        name: "MiSTer",
+        ble: { deviceId: "core-1", peripheralId: "AA:BB" },
+        lastConnectedAt: 2,
+      };
+      const unique = mockDeviceRecord({
+        address: "10.0.0.4",
+        name: "Deck",
+        lastConnectedAt: 1,
+      });
+      await seedDeviceRegistry([shown, overNetwork, overBluetooth, unique]);
+      mockParams.current = { recordId: shown.recordId };
+      renderRoute();
+
+      await user.click(
+        screen.getByRole("button", { name: "settings.deviceCombine.open" }),
+      );
+
+      const chooser = screen.getByRole("dialog", {
+        name: "settings.deviceCombine.choose",
+      });
+      expect(
+        within(chooser)
+          .getAllByRole("button")
+          .map((row) => row.textContent)
+          .filter((text) => text !== ""),
+      ).toEqual([
+        "MiSTermister · 10.0.0.2",
+        "MiSTersettings.bluetoothScan.viaBluetooth",
+        "Deck",
+      ]);
+    });
+
     it("should be ready to combine again on the record it left for", async () => {
       const user = userEvent.setup();
       const shown = mockDeviceRecord({

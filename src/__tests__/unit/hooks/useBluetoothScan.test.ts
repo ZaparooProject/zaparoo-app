@@ -212,4 +212,39 @@ describe("useBluetoothScan", () => {
 
     expect(result.current.isScanning).toBe(false);
   });
+
+  it("should report a scan that failed to start until the next scan", async () => {
+    mocks.startScan.mockRejectedValueOnce(new Error("radio busy"));
+    const { result } = renderHook(() => useBluetoothScan(true, 5000));
+    await flush();
+
+    expect(result.current.scanFailed).toBe(true);
+
+    await act(async () => {
+      await result.current.rescan();
+    });
+
+    expect(result.current.scanFailed).toBe(false);
+    expect(result.current.isScanning).toBe(true);
+  });
+
+  it("should drop what an earlier scan found when Bluetooth is no longer ready", async () => {
+    const { result, rerender } = renderHook(
+      ({ active }) => useBluetoothScan(active, 5000),
+      { initialProps: { active: true } },
+    );
+    await flush();
+    act(() => {
+      mocks.onDevice?.({ peripheralId: "p1", name: "MiSTer", rssi: -50 });
+    });
+    expect(result.current.devices).toHaveLength(1);
+
+    rerender({ active: false });
+    mocks.readiness = "disabled";
+    rerender({ active: true });
+    await flush();
+
+    expect(result.current.readiness).toBe("disabled");
+    expect(result.current.devices).toEqual([]);
+  });
 });
