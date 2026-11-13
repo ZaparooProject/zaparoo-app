@@ -637,6 +637,44 @@ describe("Settings Device Detail Route", () => {
       ]);
     });
 
+    it("should tell same-named Bluetooth records apart by when each last connected", async () => {
+      const user = userEvent.setup();
+      const shown = mockDeviceRecord({ address: "10.0.0.1", name: "Shown" });
+      const bluetooth = (
+        recordId: string,
+        lastConnectedAt?: number,
+      ): DeviceRecord => ({
+        recordId,
+        endpoints: [],
+        preferredEndpointId: "",
+        name: "MiSTer",
+        ble: { deviceId: recordId, peripheralId: recordId },
+        ...(lastConnectedAt === undefined ? {} : { lastConnectedAt }),
+      });
+      await seedDeviceRegistry([
+        shown,
+        bluetooth("ble-a", 1_700_000_000_000),
+        bluetooth("ble-b"),
+      ]);
+      mockParams.current = { recordId: shown.recordId };
+      renderRoute();
+
+      await user.click(
+        screen.getByRole("button", { name: "settings.deviceCombine.open" }),
+      );
+
+      const rows = within(
+        screen.getByRole("dialog", { name: "settings.deviceCombine.choose" }),
+      )
+        .getAllByRole("button")
+        .map((row) => row.textContent)
+        .filter((text) => text !== "");
+      expect(rows).toEqual([
+        "MiSTersettings.bluetoothScan.viaBluetooth · settings.deviceDetail.lastConnected",
+        "MiSTersettings.bluetoothScan.viaBluetooth · settings.deviceDetail.neverConnected",
+      ]);
+    });
+
     it("should be ready to combine again on the record it left for", async () => {
       const user = userEvent.setup();
       const shown = mockDeviceRecord({

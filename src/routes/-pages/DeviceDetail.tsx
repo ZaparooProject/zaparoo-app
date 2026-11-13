@@ -162,22 +162,37 @@ export function DeviceDetail() {
       (left, right) =>
         (right.lastConnectedAt ?? 0) - (left.lastConnectedAt ?? 0),
     );
+  const distinctionOf = (other: DeviceRecord) =>
+    parsedEndpointForRecord(other)?.address ??
+    t("settings.bluetoothScan.viaBluetooth");
+  const lastConnectedOf = (other: DeviceRecord) =>
+    other.lastConnectedAt !== undefined
+      ? t("settings.deviceDetail.lastConnected", {
+          when: formatAppDateTime(other.lastConnectedAt) ?? "",
+        })
+      : t("settings.deviceDetail.neverConnected");
   const otherNameCounts = new Map<string, number>();
+  const otherRowCounts = new Map<string, number>();
   for (const other of otherRecords) {
     const name = nameOf(other);
     otherNameCounts.set(name, (otherNameCounts.get(name) ?? 0) + 1);
+    const row = `${name}\n${distinctionOf(other)}`;
+    otherRowCounts.set(row, (otherRowCounts.get(row) ?? 0) + 1);
   }
-  /** Platform, plus what tells this record apart from one with its name. */
+  /**
+   * Platform, plus what tells this record apart from one with its name: its
+   * address, or for records saved over Bluetooth, which have none, when each
+   * was last connected.
+   */
   const detailOf = (other: DeviceRecord) => {
     const name = nameOf(other);
-    const distinction =
-      parsedEndpointForRecord(other)?.address ??
-      t("settings.bluetoothScan.viaBluetooth");
+    const distinction = distinctionOf(other);
+    const sameName = (otherNameCounts.get(name) ?? 0) > 1;
+    const sameRow = (otherRowCounts.get(`${name}\n${distinction}`) ?? 0) > 1;
     return [
       other.platform,
-      (otherNameCounts.get(name) ?? 0) > 1 && distinction !== name
-        ? distinction
-        : undefined,
+      sameName && distinction !== name ? distinction : undefined,
+      sameRow ? lastConnectedOf(other) : undefined,
     ]
       .filter(Boolean)
       .join(" · ");
