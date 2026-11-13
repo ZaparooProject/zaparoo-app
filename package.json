@@ -59,6 +59,7 @@
     "@capacitor/share": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
     "@capacitor/text-zoom": "^8.0.1",
+    "@capawesome-team/capacitor-bluetooth-low-energy": "~8.3.2",
     "@capawesome-team/capacitor-nfc": "^8.1.0",
     "@capawesome/capacitor-app-review": "^8.0.1",
     "@capawesome/capacitor-badge": "^8.0.2",

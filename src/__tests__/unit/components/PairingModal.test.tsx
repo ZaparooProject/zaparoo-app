@@ -1,8 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@/test-utils";
 import userEvent from "@testing-library/user-event";
-import { PairingModal } from "@/components/PairingModal";
-import { performPairing, PairingError } from "@/lib/crypto/pairing";
+import {
+  PAIRING_FINISH_TIMEOUT_MS,
+  PAIRING_SETTLE_MS,
+  PairingModal,
+} from "@/components/PairingModal";
+import {
+  performPairing,
+  performPairingWithCarrier,
+  PairingError,
+} from "@/lib/crypto/pairing";
 import {
   credentialKeyForRecord,
   credentialStore,
@@ -18,6 +26,7 @@ vi.mock("@/lib/crypto/pairing", async () => {
   return {
     ...actual,
     performPairing: vi.fn(),
+    performPairingWithCarrier: vi.fn(),
   };
 });
 
@@ -36,6 +45,7 @@ vi.mock("react-hot-toast", () => ({
 }));
 
 const mockedPerformPairing = vi.mocked(performPairing);
+const mockedPerformPairingWithCarrier = vi.mocked(performPairingWithCarrier);
 const mockedDeviceGetInfo = vi.mocked(Device.getInfo);
 
 const RECORD_ID = "record-under-test";
@@ -320,6 +330,167 @@ describe("PairingModal", () => {
 
       await waitFor(() => {
         expect(onSuccess).toHaveBeenCalledTimes(1);
+        expect(close).toHaveBeenCalledTimes(1);
+      });
+    });
+  });
+
+  describe("waiting for the connection after pairing", () => {
+    const paired = {
+      authToken: "test-token",
+      clientId: "client-abc",
+      pairingKey: new Uint8Array([0xde, 0xad, 0xbe, 0xef]),
+    };
+    const modal = (close: () => void, connected: boolean) => (
+      <PairingModal
+        isOpen={true}
+        close={close}
+        address="192.168.1.10:7497"
+        recordId={RECORD_ID}
+        connected={connected}
+      />
+    );
+
+    it("should stay open until the restarted connection is back", async () => {
+      const user = userEvent.setup();
+      const close = vi.fn();
+      mockedPerformPairing.mockResolvedValue(paired);
+      const { rerender } = render(modal(close, true));
+
+      await user.type(screen.getByLabelText("pairing.pinLabel"), "654321");
+
+      expect(await screen.findByText("pairing.finishing")).toHaveAttribute(
+        "role",
+        "status",
+      );
+      expect(
+        screen.queryByLabelText("pairing.pinLabel"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "pairing.startPairing" }),
+      ).not.toBeInTheDocument();
+
+      rerender(modal(close, false));
+      expect(close).not.toHaveBeenCalled();
+
+      rerender(modal(close, true));
+      expect(close).toHaveBeenCalledTimes(1);
+    });
+
+    it("should close shortly after pairing when the connection never drops", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      try {
+        const user = userEvent.setup({
+          advanceTimers: vi.advanceTimersByTime,
+        });
+        const close = vi.fn();
+        mockedPerformPairing.mockResolvedValue(paired);
+        render(modal(close, true));
+
+        await user.type(screen.getByLabelText("pairing.pinLabel"), "654321");
+        await screen.findByText("pairing.finishing");
+
+        // Finding the text above let a little time pass already.
+        act(() => {
+          vi.advanceTimersByTime(PAIRING_SETTLE_MS / 2);
+        });
+        expect(close).not.toHaveBeenCalled();
+        act(() => {
+          vi.advanceTimersByTime(PAIRING_SETTLE_MS / 2);
+        });
+        expect(close).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("should stop waiting for a connection that does not come back", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      try {
+        const user = userEvent.setup({
+          advanceTimers: vi.advanceTimersByTime,
+        });
+        const close = vi.fn();
+        mockedPerformPairing.mockResolvedValue(paired);
+        render(modal(close, false));
+
+        await user.type(screen.getByLabelText("pairing.pinLabel"), "654321");
+        await screen.findByText("pairing.finishing");
+
+        // Finding the text above let a little time pass already.
+        act(() => {
+          vi.advanceTimersByTime(PAIRING_FINISH_TIMEOUT_MS / 2);
+        });
+        expect(close).not.toHaveBeenCalled();
+        act(() => {
+          vi.advanceTimersByTime(PAIRING_FINISH_TIMEOUT_MS / 2);
+        });
+        expect(close).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
+
+  describe("pairing over Bluetooth", () => {
+    it("should name the Bluetooth link instead of an address", () => {
+      render(
+        <PairingModal
+          isOpen={true}
+          close={vi.fn()}
+          address=""
+          recordId={RECORD_ID}
+          overBluetooth
+          getPairingCall={() => vi.fn()}
+        />,
+      );
+
+      expect(screen.getByText("pairing.overBluetooth")).toBeInTheDocument();
+      expect(screen.queryByText("pairing.noAddress")).not.toBeInTheDocument();
+    });
+
+    it("should pair through the connected link without an address", async () => {
+      const user = userEvent.setup();
+      const close = vi.fn();
+      const call = vi.fn();
+      mockedPerformPairingWithCarrier.mockResolvedValue({
+        authToken: "ble-token",
+        clientId: "client-ble",
+        pairingKey: new Uint8Array([0x01, 0x02]),
+      });
+
+      render(
+        <PairingModal
+          isOpen={true}
+          close={close}
+          address=""
+          recordId={RECORD_ID}
+          overBluetooth
+          getPairingCall={() => call}
+        />,
+      );
+
+      await user.type(screen.getByLabelText("pairing.pinLabel"), "654321");
+
+      await waitFor(() => {
+        expect(mockedPerformPairingWithCarrier).toHaveBeenCalledTimes(1);
+      });
+      expect(mockedPerformPairingWithCarrier).toHaveBeenCalledWith(
+        expect.anything(),
+        "654321",
+        expect.stringContaining("Pixel 8"),
+      );
+      expect(mockedPerformPairing).not.toHaveBeenCalled();
+      await waitFor(async () => {
+        await expect(
+          credentialStore.get(credentialKeyForRecord(RECORD_ID)),
+        ).resolves.toMatchObject({
+          authToken: "ble-token",
+          clientId: "client-ble",
+          pairingKey: "0102",
+        });
+      });
+      await waitFor(() => {
         expect(close).toHaveBeenCalledTimes(1);
       });
     });

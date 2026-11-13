@@ -385,6 +385,30 @@ describe("WebSocketTransport lifecycle", () => {
       transport.destroy();
     });
 
+    it("should report the heartbeat round trip", () => {
+      const onHeartbeat = vi.fn();
+      const transport = new WebSocketTransport({
+        deviceId: "test-device",
+        url: "ws://localhost:7497",
+        pingInterval: 1000,
+        pongTimeout: 500,
+      });
+      transport.setEventHandlers({ onHeartbeat });
+
+      transport.connect();
+      const ws = MockWebSocket.getLatest()!;
+      ws.simulateOpen();
+      vi.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(40);
+      ws.simulateMessage("pong");
+      ws.simulateMessage("pong");
+
+      expect(onHeartbeat).toHaveBeenCalledTimes(1);
+      expect(onHeartbeat).toHaveBeenCalledWith(40);
+
+      transport.destroy();
+    });
+
     it("should clear pong timeout when any message received", () => {
       const transport = new WebSocketTransport({
         deviceId: "test-device",

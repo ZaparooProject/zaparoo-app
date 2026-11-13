@@ -1350,13 +1350,9 @@
       },
       "deviceHistory": "Gerät wechseln",
       "networkScan": {
-        "title": "Geräte suchen",
         "searching": "Geräte werden gesucht...",
         "refresh": "Erneut suchen",
         "noOtherDevices": "Keine weiteren Geräte gefunden",
-        "addresses_one": "IP-Adresse: {{addresses}}",
-        "addresses_other": "IP-Adressen: {{addresses}}",
-        "version": "v{{version}}",
         "scanFailed": "Gerätesuche fehlgeschlagen"
       },
       "connectionFailed": "Verbindung zum Gerät konnte nicht hergestellt werden",
@@ -1388,10 +1384,6 @@
         "forgetFailed": "Das Gerät konnte nicht vergessen werden. Versuche es erneut."
       },
       "deviceCombine": {
-        "edit": "Geräte zusammenführen",
-        "cancelEdit": "Auswahl abbrechen",
-        "select": "{{device}} auswählen",
-        "action": "Ausgewählte zusammenführen",
         "title": "Geräte zusammenführen?",
         "body": "{{first}} und {{second}} zusammenführen? Gespeicherte Adressen und Kopplungsdaten bleiben erhalten.",
         "cancel": "Abbrechen",
@@ -1641,7 +1633,6 @@
         "reportIssue": "Problem auf GitHub melden",
         "emailLabel": "Support-E-Mail:"
       },
-      "connectDevice": "Mit {{device}} verbinden",
       "savedDevices": "Gespeicherte Geräte"
     },
     "systemSelector": {

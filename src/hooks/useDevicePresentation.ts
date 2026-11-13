@@ -4,6 +4,7 @@ import { useConnectionPresentation } from "@/hooks/useConnectionPresentation";
 import { satisfies as versionSatisfies } from "@/lib/coreVersion";
 import {
   activeAddressOf,
+  reportedAddressForRecord,
   useDeviceRegistry,
   type DeviceRegistrySnapshot,
 } from "@/lib/devices/deviceRegistry";
@@ -12,11 +13,49 @@ import { useStatusStore } from "@/lib/store";
 const selectRegistryHydrated = (snapshot: DeviceRegistrySnapshot) =>
   snapshot.hydrated;
 
+const selectActiveRecord = (state: DeviceRegistrySnapshot) =>
+  state.activeRecordId ? state.records[state.activeRecordId] : undefined;
+
+/** True when the active device is reachable only over Bluetooth. */
+function activeBluetoothOnly(state: DeviceRegistrySnapshot): boolean {
+  const record = state.activeRecordId
+    ? state.records[state.activeRecordId]
+    : undefined;
+  return record !== undefined && record.endpoints.length === 0 && !!record.ble;
+}
+
 function activeRecordName(state: DeviceRegistrySnapshot): string | undefined {
   const record = state.activeRecordId
     ? state.records[state.activeRecordId]
     : undefined;
-  return record?.name;
+  // A Core found over Bluetooth is known by its advertised name until it
+  // reports the one it goes by.
+  return record?.name ?? record?.ble?.name;
+}
+
+/**
+ * What stands in for the address of the active device. A device saved over
+ * Bluetooth has none of its own, so it shows the network address it is being
+ * reached at while the link is Wi-Fi and is otherwise described as Bluetooth.
+ */
+function useActiveDeviceAddress(): { address: string; bluetoothOnly: boolean } {
+  const { t } = useTranslation();
+  const { isConnected, activeConnection } = useConnection();
+  const savedAddress = useDeviceRegistry(activeAddressOf);
+  const bluetoothOnly = useDeviceRegistry(activeBluetoothOnly);
+  const inUse =
+    isConnected && activeConnection?.link === "wifi"
+      ? activeConnection.address
+      : null;
+  const record = useDeviceRegistry(selectActiveRecord);
+  const networkAddress =
+    inUse === null ? null : reportedAddressForRecord(record, inUse);
+  const address =
+    savedAddress ||
+    (bluetoothOnly
+      ? (networkAddress ?? t("settings.bluetoothScan.viaBluetooth"))
+      : "");
+  return { address, bluetoothOnly };
 }
 
 export type ConnectionUIState =
@@ -50,11 +89,13 @@ export function connectionStateLabelKey(state: ConnectionUIState): string {
  * device pill and the settings device card can never disagree about it.
  */
 export function useConnectionUiState(connectionError?: string) {
-  const { isConnected, showConnecting, showReconnecting } = useConnection();
+  const { isConnected, showConnecting, showReconnecting, activeConnection } =
+    useConnection();
   const connectionPresentation = useConnectionPresentation({ immediate: true });
   const encryptionState = useStatusStore((s) => s.encryptionState);
   const pairingRequired = useStatusStore((s) => s.pairingRequired);
-  const savedAddress = useDeviceRegistry(activeAddressOf);
+  const { address: savedAddress } = useActiveDeviceAddress();
+  const link = activeConnection?.link ?? null;
   const registryHydrated = useDeviceRegistry(selectRegistryHydrated);
 
   const derive = (): ConnectionUIState => {
@@ -68,6 +109,10 @@ export function useConnectionUiState(connectionError?: string) {
     // blocker instead of a generic "Reconnecting..." spinner that won't resolve
     // without their action.
     if (pairingRequired) return "pairingRequired";
+    // Bluetooth does not need the phone's network.
+    if (isConnected && link === "bluetooth" && encryptionState !== "unknown") {
+      return "connected";
+    }
     // Confirmed network and prolonged Core outages outrank optimistic transport
     // state, including the open-but-unverified handshake window.
     if (connectionPresentation.kind === "networkUnavailable") {
@@ -94,6 +139,7 @@ export function useConnectionUiState(connectionError?: string) {
     savedAddress,
     registryHydrated,
     encryptionState,
+    link,
   };
 }
 
@@ -101,6 +147,8 @@ export interface ActiveDeviceSummary {
   /** The name the user gave this device, when they gave it one. */
   name: string | null;
   address: string;
+  /** The device has no network address; it is reached over Bluetooth. */
+  bluetoothOnly: boolean;
   deviceDetails?: string;
   clientRoleLabel?: string;
 }
@@ -108,7 +156,7 @@ export interface ActiveDeviceSummary {
 /** Identity of the device currently selected, as shown to the user. */
 export function useActiveDeviceSummary(): ActiveDeviceSummary {
   const { t } = useTranslation();
-  const address = useDeviceRegistry(activeAddressOf);
+  const { address, bluetoothOnly } = useActiveDeviceAddress();
   const name = useDeviceRegistry(activeRecordName);
   const coreVersion = useStatusStore((state) => state.coreVersion);
   const corePlatform = useStatusStore((state) => state.corePlatform);
@@ -137,6 +185,7 @@ export function useActiveDeviceSummary(): ActiveDeviceSummary {
   return {
     name: name ?? null,
     address,
+    bluetoothOnly,
     deviceDetails,
     clientRoleLabel,
   };

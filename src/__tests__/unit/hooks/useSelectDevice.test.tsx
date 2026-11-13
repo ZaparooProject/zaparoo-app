@@ -242,7 +242,7 @@ describe("useSelectDevice", () => {
         .mockImplementationOnce(() => persistence);
       const { result } = renderSelectDevice();
 
-      let selection: Promise<void> | undefined;
+      let selection: Promise<boolean> | undefined;
       try {
         act(() => {
           selection = result.current.selectScanDevice({
@@ -345,6 +345,122 @@ describe("useSelectDevice", () => {
 
       expect(deviceRegistry.getSnapshot().activeRecordId).toBe(record.recordId);
       expect(await deviceScopedStateWasCleared()).toBe(false);
+    });
+  });
+
+  describe("reporting whether the device was saved", () => {
+    const scanDevice = {
+      discoveryId: "living-room._zaparoo._tcp.",
+      hostname: "living-room.local",
+      addresses: ["10.0.0.5"],
+      port: 7497,
+    };
+    const bluetoothDevice = { deviceId: "core-1", peripheralId: "AA:BB" };
+    type Select = ReturnType<typeof useSelectDevice>;
+    // Each selection, and the saved record `selectRecord` needs to exist.
+    const selections: [string, (select: Select) => Promise<boolean>][] = [
+      [
+        "selectDevice",
+        (select) => {
+          const result = select.selectDevice("10.0.0.5");
+          return result.ok ? result.saved : Promise.resolve(false);
+        },
+      ],
+      ["selectScanDevice", (select) => select.selectScanDevice(scanDevice)],
+      ["selectRecord", (select) => select.selectRecord("other")],
+      [
+        "selectBluetoothDevice",
+        (select) => select.selectBluetoothDevice(bluetoothDevice),
+      ],
+    ];
+
+    async function seedTwoDevices() {
+      const active = mockDeviceRecord({ address: "192.168.1.10" });
+      await seedDeviceRegistry([
+        active,
+        mockDeviceRecord({ recordId: "other", address: "10.0.0.9" }),
+      ]);
+      return active;
+    }
+
+    it.each(selections)(
+      "%s should report a save that succeeded",
+      async (_name, run) => {
+        const previous = await seedTwoDevices();
+        const { result } = renderSelectDevice();
+
+        let saved: boolean | undefined;
+        await act(async () => {
+          saved = await run(result.current);
+        });
+
+        expect(saved).toBe(true);
+        expect(deviceRegistry.getSnapshot().activeRecordId).not.toBe(
+          previous.recordId,
+        );
+      },
+    );
+
+    it.each(selections)(
+      "%s should report a save that failed, leaving the previous device active",
+      async (_name, run) => {
+        const previous = await seedTwoDevices();
+        const persistSpy = vi
+          .spyOn(Preferences, "set")
+          .mockRejectedValueOnce(new Error("storage is full"));
+        const { result } = renderSelectDevice();
+
+        let saved: boolean | undefined;
+        try {
+          await act(async () => {
+            saved = await run(result.current);
+          });
+        } finally {
+          persistSpy.mockRestore();
+        }
+
+        expect(saved).toBe(false);
+        expect(deviceRegistry.getSnapshot().activeRecordId).toBe(
+          previous.recordId,
+        );
+      },
+    );
+
+    it("selectRecord should report failure for a record that no longer exists", async () => {
+      await seedActiveDevice({ address: "192.168.1.10" });
+      const { result } = renderSelectDevice();
+
+      let saved: boolean | undefined;
+      await act(async () => {
+        saved = await result.current.selectRecord("record-that-was-forgotten");
+      });
+
+      expect(saved).toBe(false);
+    });
+  });
+
+  describe("selectBluetoothDevice", () => {
+    it("should activate a device known only over Bluetooth", async () => {
+      await seedActiveDevice({ address: "192.168.1.10" });
+      await primeDeviceScopedState();
+      const { result } = renderSelectDevice();
+
+      await act(async () => {
+        await result.current.selectBluetoothDevice({
+          deviceId: "core-1",
+          peripheralId: "AA:BB",
+          name: "Zaparoo-1234",
+        });
+      });
+
+      const snapshot = deviceRegistry.getSnapshot();
+      const active = snapshot.records[snapshot.activeRecordId!];
+      expect(active?.endpoints).toEqual([]);
+      expect(active?.ble).toMatchObject({
+        deviceId: "core-1",
+        peripheralId: "AA:BB",
+      });
+      expect(await deviceScopedStateWasCleared()).toBe(true);
     });
   });
 });

@@ -5,7 +5,15 @@
  * connection lifecycle handling, and notification processing.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+  onTestFinished,
+} from "vitest";
 import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
 import { SecureStorage } from "@aparajita/capacitor-secure-storage";
@@ -44,6 +52,7 @@ import { reconcileCredentialProvenAliases } from "@/lib/devices/credentialProof"
 // Capture event handlers for notification testing
 let capturedEventHandlers: {
   onConnectionChange?: (deviceId: string, connection: unknown) => void;
+  onLinkChange?: (deviceId: string, link: "wifi" | "bluetooth" | null) => void;
   onMessage?: (deviceId: string, event: unknown) => void;
   onError?: (deviceId: string, error: Error) => void;
   onEncryptedHandshakeOk?: () => void;
@@ -564,6 +573,7 @@ describe("ConnectionProvider", () => {
     });
 
     it("should add device with correct config", () => {
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
       render(
         <ConnectionProvider>
           <div>Test</div>
@@ -581,6 +591,31 @@ describe("ConnectionProvider", () => {
             getCredentials: expect.any(Function),
           }),
         }),
+      );
+    });
+
+    it("should add a hybrid transport with the Bluetooth identity on native", async () => {
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+      await deviceRegistry.noteBluetoothIdentity(RECORD_ID, {
+        coreDeviceId: "core-1",
+        peripheralId: "AA:BB",
+      });
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await waitFor(() =>
+        expect(connectionManager.addDevice).toHaveBeenCalledWith(
+          expect.objectContaining({
+            deviceId: RECORD_ID,
+            type: "hybrid",
+            address: "ws://192.168.1.100:7497/api/v0.1",
+            bluetooth: { coreDeviceId: "core-1", peripheralId: "AA:BB" },
+          }),
+        ),
       );
     });
 
@@ -2970,6 +3005,147 @@ describe("connection event handling", () => {
         "Theme",
       );
     });
+  });
+
+  it("should record a link change without opening the connection again", async () => {
+    function LinkConsumer() {
+      const { activeConnection } = useConnection();
+      return <span data-testid="link">{String(activeConnection?.link)}</span>;
+    }
+    render(
+      <ConnectionProvider>
+        <LinkConsumer />
+      </ConnectionProvider>,
+    );
+    act(() => {
+      capturedEventHandlers.onConnectionChange!(RECORD_ID, {
+        deviceId: RECORD_ID,
+        state: "connected",
+        link: null,
+        hasData: false,
+        hasConnectedBefore: false,
+      });
+    });
+    await waitFor(() => {
+      expect(CoreAPI.version).toHaveBeenCalledTimes(1);
+    });
+
+    act(() => {
+      capturedEventHandlers.onLinkChange!(RECORD_ID, "bluetooth");
+    });
+
+    expect(screen.getByTestId("link")).toHaveTextContent("bluetooth");
+
+    act(() => {
+      capturedEventHandlers.onLinkChange!(RECORD_ID, null);
+    });
+
+    expect(screen.getByTestId("link")).toHaveTextContent("null");
+    expect(CoreAPI.version).toHaveBeenCalledTimes(1);
+    expect(CoreAPI.flushQueue).toHaveBeenCalledTimes(1);
+  });
+
+  it("should pick up the address that opened when the link is reported", async () => {
+    function AddressConsumer() {
+      const { activeConnection } = useConnection();
+      return <span data-testid="address">{activeConnection?.address}</span>;
+    }
+    render(
+      <ConnectionProvider>
+        <AddressConsumer />
+      </ConnectionProvider>,
+    );
+    const connection = {
+      deviceId: RECORD_ID,
+      address: "",
+      type: "hybrid" as const,
+      state: "connected" as const,
+      link: null,
+      hasData: false,
+      lastDataTimestamp: null,
+      hasConnectedBefore: false,
+    };
+    act(() => {
+      capturedEventHandlers.onConnectionChange!(RECORD_ID, connection);
+    });
+    await waitFor(() => {
+      expect(CoreAPI.version).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.getByTestId("address")).toHaveTextContent("");
+
+    vi.mocked(connectionManager.getActiveConnection).mockReturnValue({
+      ...connection,
+      link: "wifi",
+      address: "ws://192.168.1.9:7497/api/v0.1",
+    });
+    try {
+      act(() => {
+        capturedEventHandlers.onLinkChange!(RECORD_ID, "wifi");
+      });
+
+      expect(screen.getByTestId("address")).toHaveTextContent(
+        "ws://192.168.1.9:7497/api/v0.1",
+      );
+      expect(CoreAPI.version).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.mocked(connectionManager.getActiveConnection).mockReturnValue(null);
+    }
+  });
+
+  it("should refetch once when another link takes over a dropped connection", async () => {
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+    const connectionAt = (state: "connected" | "reconnecting") => ({
+      deviceId: RECORD_ID,
+      state,
+      link: null,
+      hasData: false,
+      hasConnectedBefore: true,
+    });
+    vi.mocked(connectionManager.getActiveConnection).mockReturnValue(
+      connectionAt("connected") as never,
+    );
+    onTestFinished(() => {
+      vi.mocked(connectionManager.getActiveConnection).mockReturnValue(null);
+    });
+
+    act(() => {
+      capturedEventHandlers.onConnectionChange!(
+        RECORD_ID,
+        connectionAt("connected"),
+      );
+      capturedEventHandlers.onLinkChange!(RECORD_ID, "wifi");
+    });
+    await waitFor(() => {
+      expect(CoreAPI.version).toHaveBeenCalledTimes(1);
+    });
+
+    // Wi-Fi drops and Bluetooth takes over: the state comes back first, then
+    // the link it came back on.
+    act(() => {
+      capturedEventHandlers.onLinkChange!(RECORD_ID, null);
+      capturedEventHandlers.onConnectionChange!(
+        RECORD_ID,
+        connectionAt("reconnecting"),
+      );
+      capturedEventHandlers.onConnectionChange!(
+        RECORD_ID,
+        connectionAt("connected"),
+      );
+      capturedEventHandlers.onLinkChange!(RECORD_ID, "bluetooth");
+    });
+
+    expect(CoreAPI.version).toHaveBeenCalledTimes(2);
+
+    // A switch that never drops the connection has only the link to go on.
+    act(() => {
+      capturedEventHandlers.onLinkChange!(RECORD_ID, "wifi");
+    });
+
+    expect(CoreAPI.version).toHaveBeenCalledTimes(3);
   });
 
   it("should preserve legacy capabilities for older Core versions", async () => {

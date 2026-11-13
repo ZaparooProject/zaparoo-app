@@ -803,6 +803,7 @@
       "noReaderTitle": "No reader on this phone",
       "noReaderSub": "This phone has no NFC or camera available, so it cannot scan. You can still use it to manage your device.",
       "devicePill": "{{device}}, {{status}}",
+      "devicePillLink": "{{status}} over {{link}}",
       "deviceNone": "No device",
       "deviceSheetTitle": "Device",
       "deviceSheetRecent": "Switch device",
@@ -1350,13 +1351,9 @@
       },
       "deviceHistory": "Change device",
       "networkScan": {
-        "title": "Find Devices",
         "searching": "Searching for devices...",
         "refresh": "Search again",
         "noOtherDevices": "No other devices found",
-        "addresses_one": "IP address: {{addresses}}",
-        "addresses_other": "IP addresses: {{addresses}}",
-        "version": "v{{version}}",
         "scanFailed": "Could not search for devices"
       },
       "connectionFailed": "Unable to connect to device",
@@ -1379,19 +1376,18 @@
         "version": "Version: {{value}}",
         "lastConnected": "Last connected: {{when}}",
         "neverConnected": "Last connected: never",
-        "useThisDevice": "Use this device",
+        "useThisDevice": "Connect",
         "forget": "Forget device",
         "forgetTitle": "Forget this device?",
         "forgetBody": "This will remove it from your saved devices and erase the pairing credentials.",
         "forgetCancel": "Cancel",
         "forgetConfirm": "Forget device",
-        "forgetFailed": "Device could not be forgotten. Try again."
+        "forgetFailed": "Device could not be forgotten. Try again.",
+        "link": "Connected over: {{value}}"
       },
       "deviceCombine": {
-        "edit": "Combine devices",
-        "cancelEdit": "Cancel selection",
-        "select": "Select {{device}}",
-        "action": "Combine selected",
+        "open": "Combine with another device",
+        "choose": "Combine with",
         "title": "Combine devices?",
         "body": "Combine {{first}} and {{second}}? Saved addresses and pairing will be kept.",
         "cancel": "Cancel",
@@ -1641,8 +1637,26 @@
         "reportIssue": "Report an issue on GitHub",
         "emailLabel": "Support email:"
       },
-      "connectDevice": "Connect to {{device}}",
-      "savedDevices": "Saved devices"
+      "savedDevices": "Saved devices",
+      "addDevice": "Add device",
+      "newDevices": "New devices",
+      "pairDevice": "Pair with {{device}} again",
+      "deviceSaveFailed": "Could not save this device. Try again.",
+      "bluetoothScan": {
+        "unnamed": "Zaparoo device",
+        "viaBluetooth": "Bluetooth",
+        "connecting": "Connecting...",
+        "stepPairing": "If your phone asks, tap Pair.",
+        "stepSecuring": "Securing the connection...",
+        "stepReading": "Almost there...",
+        "stillWorking": "Still working. Setting up Bluetooth for the first time can take up to half a minute.",
+        "connectFailed": "Could not connect. Move closer to the device and try again.",
+        "scanFailed": "Could not search for Bluetooth devices",
+        "disabled": "Bluetooth is off. Turn it on to find nearby devices.",
+        "denied": "Allow Bluetooth access to find nearby devices.",
+        "locationOff": "Turn on Location to find nearby devices.",
+        "openSettings": "Open settings"
+      }
     },
     "systemSelector": {
       "loadError": "Could not load systems",
@@ -1761,7 +1775,9 @@
       "encrypted": "Encrypted connection",
       "unencrypted": "Unencrypted connection",
       "clientRoleAdmin": "Admin",
-      "clientRoleMember": "Member"
+      "clientRoleMember": "Member",
+      "linkWifi": "Wi-Fi",
+      "linkBluetooth": "Bluetooth"
     },
     "features": {
       "requiresCoreVersion": "Requires Zaparoo Core v{{version}} or later",
@@ -1855,6 +1871,7 @@
       "startPairing": "Pair",
       "pairing": "Pairing...",
       "success": "Paired successfully",
+      "finishing": "Paired. Connecting...",
       "openPairing": "Pair with device",
       "defaultClientName": "Zaparoo App {{platform}}",
       "unknownDeviceName": "Unknown",
@@ -1877,7 +1894,8 @@
         "malformed": "Pairing failed, try again",
         "network": "Network error, check your connection and try again",
         "unknown": "Pairing failed, try again"
-      }
+      },
+      "overBluetooth": "Pairing over Bluetooth"
     },
     "tour": {
       "stepIndicator": "{{current}}/{{total}}",

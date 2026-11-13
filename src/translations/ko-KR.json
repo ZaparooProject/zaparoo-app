@@ -1350,13 +1350,9 @@
       },
       "deviceHistory": "기기 변경",
       "networkScan": {
-        "title": "기기 찾기",
         "searching": "기기를 검색하는 중...",
         "refresh": "다시 검색",
         "noOtherDevices": "다른 기기를 찾을 수 없습니다",
-        "addresses_one": "IP 주소: {{addresses}}",
-        "addresses_other": "IP 주소: {{addresses}}",
-        "version": "v{{version}}",
         "scanFailed": "기기를 검색하지 못했습니다"
       },
       "connectionFailed": "기기에 연결할 수 없습니다",
@@ -1388,10 +1384,6 @@
         "forgetFailed": "기기를 삭제하지 못했습니다. 다시 시도하세요."
       },
       "deviceCombine": {
-        "edit": "기기 통합",
-        "cancelEdit": "선택 취소",
-        "select": "{{device}} 선택",
-        "action": "선택한 기기 통합",
         "title": "기기를 통합할까요?",
         "body": "두 기기({{first}}, {{second}})를 통합할까요? 저장된 주소와 페어링 정보는 유지됩니다.",
         "cancel": "취소",
@@ -1641,7 +1633,6 @@
         "reportIssue": "GitHub에 문제 신고",
         "emailLabel": "지원 이메일:"
       },
-      "connectDevice": "{{device}}에 연결",
       "savedDevices": "저장된 기기"
     },
     "systemSelector": {

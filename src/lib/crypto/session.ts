@@ -1,11 +1,19 @@
-// Per-WebSocket encrypted session using WebCrypto AES-256-GCM.
+// Per-connection encrypted session using WebCrypto AES-256-GCM.
 // Port of zaparoo-mcp/src/crypto/session.ts with Node crypto replaced by SubtleCrypto.
+// WebSocket carries the JSON envelope; Bluetooth LE carries the binary envelope.
 
 import { hkdf } from "@noble/hashes/hkdf.js";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { base64Decode, base64Encode } from "./base64";
 
 const PROTOCOL_VERSION = 1;
+const SALT_LENGTH = 16;
+const GCM_TAG_LENGTH = 16;
+const MAX_TOKEN_LENGTH = 255;
+
+// The transport label bound into the AAD. A frame encrypted for one transport
+// fails authentication on the other.
+export type SessionTransport = "ws" | "ble";
 
 // Raw key bytes — returned from deriveSessionKeyBytes for test interop.
 export interface SessionKeyBytes {
@@ -79,33 +87,42 @@ export class EncryptedSession {
   private firstFrameSent = false;
   readonly authToken: string;
   readonly sessionSalt: Uint8Array;
+  readonly transport: SessionTransport;
   private aad: Uint8Array;
 
   private constructor(
     authToken: string,
     sessionSalt: Uint8Array,
     keys: SessionKeys,
+    transport: SessionTransport,
   ) {
     this.authToken = authToken;
     this.sessionSalt = sessionSalt;
     this.keys = keys;
-    this.aad = enc.encode(`${authToken}:ws`);
+    this.transport = transport;
+    this.aad = enc.encode(`${authToken}:${transport}`);
   }
 
   static async create(
     authToken: string,
     pairingKey: Uint8Array,
+    transport: SessionTransport = "ws",
   ): Promise<EncryptedSession> {
-    const sessionSalt = crypto.getRandomValues(new Uint8Array(16));
+    const sessionSalt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
     const raw = deriveSessionKeyBytes(pairingKey, sessionSalt);
     const keys = await importSessionKeys(raw);
-    return new EncryptedSession(authToken, sessionSalt, keys);
+    return new EncryptedSession(authToken, sessionSalt, keys, transport);
   }
 
   // Encrypt plaintext and return base64(ciphertext || 16-byte tag).
   // WebCrypto encrypt output is [ciphertext || tag] in one ArrayBuffer,
   // byte-identical to Node createCipheriv layout.
   async encrypt(plaintext: string): Promise<string> {
+    return base64Encode(await this.encryptBytes(plaintext));
+  }
+
+  // Encrypt plaintext and return the raw ciphertext || 16-byte tag.
+  async encryptBytes(plaintext: string): Promise<Uint8Array> {
     const nonce = buildNonce(this.keys.c2sBase, this.sendCounter);
     this.sendCounter++;
 
@@ -119,16 +136,20 @@ export class EncryptedSession {
       this.keys.c2sKey,
       enc.encode(plaintext),
     );
-    return base64Encode(new Uint8Array(ct));
+    return new Uint8Array(ct);
   }
 
   // Decrypt base64(ciphertext || 16-byte tag) and return plaintext.
   async decrypt(ciphertext: string): Promise<string> {
+    return this.decryptBytes(base64Decode(ciphertext));
+  }
+
+  // Decrypt raw ciphertext || 16-byte tag and return plaintext.
+  async decryptBytes(data: Uint8Array): Promise<string> {
     const nonce = buildNonce(this.keys.s2cBase, this.recvCounter);
     this.recvCounter++;
 
-    const data = base64Decode(ciphertext);
-    if (data.length < 16) throw new Error("Ciphertext too short");
+    if (data.length < GCM_TAG_LENGTH) throw new Error("Ciphertext too short");
 
     const pt = await crypto.subtle.decrypt(
       {
@@ -155,5 +176,29 @@ export class EncryptedSession {
       });
     }
     return JSON.stringify({ e: encrypted });
+  }
+
+  // Binary envelope. The first frame is
+  // [version][16-byte salt][token length][token][ciphertext]; every later
+  // frame is the ciphertext alone.
+  async encryptAndFrameBinary(plaintext: string): Promise<Uint8Array> {
+    const ciphertext = await this.encryptBytes(plaintext);
+    if (this.firstFrameSent) {
+      return ciphertext;
+    }
+    const token = enc.encode(this.authToken);
+    if (token.length < 1 || token.length > MAX_TOKEN_LENGTH) {
+      throw new Error("Auth token length out of range for binary envelope");
+    }
+    this.firstFrameSent = true;
+    const frame = new Uint8Array(
+      1 + SALT_LENGTH + 1 + token.length + ciphertext.length,
+    );
+    frame[0] = PROTOCOL_VERSION;
+    frame.set(this.sessionSalt, 1);
+    frame[1 + SALT_LENGTH] = token.length;
+    frame.set(token, 2 + SALT_LENGTH);
+    frame.set(ciphertext, 2 + SALT_LENGTH + token.length);
+    return frame;
   }
 }

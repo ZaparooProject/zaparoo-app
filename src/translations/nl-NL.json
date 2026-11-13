@@ -1350,13 +1350,9 @@
       },
       "deviceHistory": "Apparaat wijzigen",
       "networkScan": {
-        "title": "Apparaten zoeken",
         "searching": "Apparaten zoeken...",
         "refresh": "Opnieuw zoeken",
         "noOtherDevices": "Geen andere apparaten gevonden",
-        "addresses_one": "IP-adres: {{addresses}}",
-        "addresses_other": "IP-adressen: {{addresses}}",
-        "version": "v{{version}}",
         "scanFailed": "Zoeken naar apparaten mislukt"
       },
       "connectionFailed": "Kan geen verbinding maken met apparaat",
@@ -1388,10 +1384,6 @@
         "forgetFailed": "Apparaat kon niet worden vergeten. Probeer het opnieuw."
       },
       "deviceCombine": {
-        "edit": "Apparaten combineren",
-        "cancelEdit": "Selectie annuleren",
-        "select": "Selecteer {{device}}",
-        "action": "Geselecteerde apparaten combineren",
         "title": "Apparaten combineren?",
         "body": "{{first}} en {{second}} combineren? Opgeslagen adressen en koppeling blijven behouden.",
         "cancel": "Annuleren",
@@ -1641,7 +1633,6 @@
         "reportIssue": "Een probleem melden op GitHub",
         "emailLabel": "E-mailadres voor ondersteuning:"
       },
-      "connectDevice": "Verbinden met {{device}}",
       "savedDevices": "Opgeslagen apparaten"
     },
     "systemSelector": {

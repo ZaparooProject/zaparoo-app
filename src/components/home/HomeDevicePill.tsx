@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { ConnectionLinkIcon } from "@/components/ConnectionLinkIcon";
 import { StatusPill } from "@/components/wui/StatusPill";
 import {
   connectionStateLabelKey,
@@ -33,14 +34,25 @@ export function HomeDevicePill({
 }: HomeDevicePillProps) {
   const { t } = useTranslation();
   const connectionError = useStatusStore((state) => state.connectionError);
-  const { uiState } = useConnectionUiState(connectionError);
+  const { uiState, link } = useConnectionUiState(connectionError);
+  const shownLink = uiState === "connected" ? link : null;
   const { name, address } = useActiveDeviceSummary();
 
   const deviceLabel = name || address || t("scan.deviceNone");
 
+  const status = t(connectionStateLabelKey(uiState));
   const accessibleName = t("scan.devicePill", {
     device: deviceLabel,
-    status: t(connectionStateLabelKey(uiState)),
+    status: shownLink
+      ? t("scan.devicePillLink", {
+          status,
+          link: t(
+            shownLink === "bluetooth"
+              ? "connection.linkBluetooth"
+              : "connection.linkWifi",
+          ),
+        })
+      : status,
   });
 
   return (
@@ -52,6 +64,14 @@ export function HomeDevicePill({
         />
       }
       label={deviceLabel}
+      trailing={
+        shownLink ? (
+          <ConnectionLinkIcon
+            link={shownLink}
+            className="text-muted-foreground h-3.5 w-3.5"
+          />
+        ) : undefined
+      }
       // The dot is a shorthand; the name carries the state for anyone who
       // cannot see it, or whose device name is truncated away.
       aria-label={accessibleName}

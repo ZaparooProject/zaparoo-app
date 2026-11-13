@@ -4,11 +4,9 @@ import { LockIcon } from "lucide-react";
 import { Card } from "./wui/Card";
 
 export interface DeviceRowEntry {
-  address: string;
-  name?: string;
-  platform?: string;
-  version?: string;
-  resolvedAddresses?: string[];
+  name: string;
+  /** One quiet line under the name, such as the platform. */
+  detail?: string;
 }
 
 interface DeviceRowProps {
@@ -44,7 +42,7 @@ export function DeviceRow({
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex items-center justify-between gap-2">
             <span className="text-foreground truncate font-medium">
-              {entry.name || entry.address}
+              {entry.name}
             </span>
             {isPaired && (
               <LockIcon
@@ -53,37 +51,10 @@ export function DeviceRow({
               />
             )}
           </div>
-          {entry.name && (
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-muted-foreground min-w-0 truncate text-sm">
-                {entry.address}
-              </span>
-              {entry.platform && (
-                <span className="text-muted-foreground shrink-0 text-sm">
-                  {entry.platform}
-                </span>
-              )}
-            </div>
-          )}
-          {entry.resolvedAddresses && entry.resolvedAddresses.length > 0 && (
-            <span className="text-muted-foreground text-xs break-all">
-              {t("settings.networkScan.addresses", {
-                addresses: entry.resolvedAddresses.join(", "),
-                count: entry.resolvedAddresses.length,
-              })}
+          {entry.detail && (
+            <span className="text-muted-foreground min-w-0 truncate text-sm">
+              {entry.detail}
             </span>
-          )}
-          {entry.version && (
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-muted-foreground text-xs">
-                {t("settings.networkScan.version", { version: entry.version })}
-              </span>
-              {!entry.name && entry.platform && (
-                <span className="text-muted-foreground shrink-0 text-sm">
-                  {entry.platform}
-                </span>
-              )}
-            </div>
           )}
         </div>
       </Card>

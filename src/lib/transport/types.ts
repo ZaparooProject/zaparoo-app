@@ -6,6 +6,35 @@
  */
 
 import type { StoredCredentials } from "../crypto/credentials";
+import type { RpcCall } from "../crypto/pairing";
+
+/** The physical link a connection currently runs over. */
+export type TransportLink = "wifi" | "bluetooth";
+
+/** How to find a Core over Bluetooth LE. */
+export interface BluetoothIdentity {
+  /** Core's device id, as reported by Info and device.endpoints. */
+  coreDeviceId?: string;
+  /** The phone's handle for the peripheral, when one is known. */
+  peripheralId?: string;
+}
+
+/** A learned Bluetooth identity for a Core. */
+export interface LearnedBluetoothIdentity {
+  coreDeviceId: string;
+  peripheralId: string;
+}
+
+/** The result of Core's device.endpoints method. */
+export interface DeviceEndpointsResult {
+  deviceId: string;
+  /** The name Core goes by on the network, when it said. */
+  name?: string;
+  scheme: string;
+  addresses: string[];
+  port: number;
+  ble: boolean;
+}
 
 /**
  * Possible states of a transport connection.
@@ -34,14 +63,22 @@ export interface TransportConfig {
   /** Unique identifier for the device */
   deviceId: string;
   /** Transport type */
-  type: "websocket" | "bluetooth";
-  /** Primary connection address (IP:port for WS, device ID for BT) */
+  type: TransportType;
+  /** Primary WebSocket address. Empty for a device known only by Bluetooth. */
   address: string;
   /** Alternate addresses for the same canonical device. */
   fallbackAddresses?: readonly string[];
   /** Optional encryption config */
   encryption?: TransportEncryptionConfig;
+  /** Bluetooth identity for the bluetooth and hybrid transports. */
+  bluetooth?: BluetoothIdentity;
 }
+
+/**
+ * websocket: Wi-Fi only. bluetooth: Bluetooth LE only. hybrid: whichever of
+ * the two works best, switching between them while connected.
+ */
+export type TransportType = "websocket" | "bluetooth" | "hybrid";
 
 /**
  * Event handlers for transport events.
@@ -72,6 +109,14 @@ export interface TransportEventHandlers {
    * handshake without an error frame, which Core does for an unknown auth token.
    */
   onEncryptedHandshakeRejected?: () => void;
+  /** Round-trip time of a completed heartbeat ping. */
+  onHeartbeat?: (rttMs: number) => void;
+  /** The connection moved to another link, or lost its link (null). */
+  onLinkChange?: (link: TransportLink | null) => void;
+  /** Bluetooth found the Core and learned how to reach it again. */
+  onBluetoothIdentity?: (identity: LearnedBluetoothIdentity) => void;
+  /** Core reported the addresses it can be reached at. */
+  onEndpoints?: (endpoints: DeviceEndpointsResult) => void;
 }
 
 /**
@@ -137,6 +182,18 @@ export interface Transport {
    * @param handlers - Event handler callbacks
    */
   setEventHandlers(handlers: TransportEventHandlers): void;
+
+  /** The link in use while connected; transports with one link may omit it. */
+  readonly link?: TransportLink | null;
+
+  /**
+   * A plaintext JSON-RPC call for pairing over this transport, or null when
+   * pairing goes over HTTP instead.
+   */
+  pairingCall?(): RpcCall | null;
+
+  /** Whether pairing would run over Bluetooth rather than HTTP. */
+  readonly pairsOverBluetooth?: boolean;
 }
 
 /**
@@ -148,7 +205,9 @@ export interface DeviceConnection {
   /** Connection address */
   address: string;
   /** Transport type */
-  type: "websocket" | "bluetooth";
+  type: TransportType;
+  /** The link in use, when known. */
+  link?: TransportLink | null;
   /** Current connection state */
   state: TransportState;
   /** Whether we have received data from this device */

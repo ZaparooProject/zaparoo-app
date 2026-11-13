@@ -1,14 +1,7 @@
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "@tanstack/react-router";
-import { RefreshCwIcon } from "lucide-react";
+import { KeyRoundIcon, RefreshCwIcon } from "lucide-react";
 import { DeviceRow } from "@/components/DeviceRow";
 import { ActiveDeviceStatus } from "@/components/home/ActiveDeviceStatus";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -19,6 +12,7 @@ import { TextInput } from "@/components/wui/TextInput";
 import { useAppUi } from "@/hooks/useAppUi";
 import { useConnection } from "@/hooks/useConnection";
 import { useActiveDeviceSummary } from "@/hooks/useDevicePresentation";
+import { useBluetoothScan } from "@/hooks/useBluetoothScan";
 import {
   getDiscoveredDeviceIdentity,
   useNetworkScan,
@@ -37,8 +31,34 @@ import {
   type DeviceRegistrySnapshot,
 } from "@/lib/devices/deviceRegistry";
 import type { ParsedDeviceEndpoint } from "@/lib/devices/endpoint";
+import { logger } from "@/lib/logger";
+import {
+  identifyBluetoothDevice,
+  type IdentifyStep,
+} from "@/lib/transport/ble/identify";
+import { BleLinkAbortedError } from "@/lib/transport/ble/link";
+import type { NearbyBluetoothDevice } from "@/lib/transport/ble/scanner";
 
 const DEVICE_SCAN_DURATION_MS = 5_000;
+/** How long a Bluetooth connection runs before it is called slow but fine. */
+export const IDENTIFY_SLOW_AFTER_MS = 6_000;
+
+const IDENTIFY_STEP_MESSAGES = {
+  connecting: "settings.bluetoothScan.connecting",
+  pairing: "settings.bluetoothScan.stepPairing",
+  securing: "settings.bluetoothScan.stepSecuring",
+  reading: "settings.bluetoothScan.stepReading",
+} as const satisfies Record<IdentifyStep, string>;
+
+/** A Bluetooth device being reached for the first time. */
+interface IdentifyProgress {
+  peripheralId: string;
+  name: string;
+  step: IdentifyStep;
+  slow: boolean;
+  /** The device answered and is being saved, which cannot be called off. */
+  committed: boolean;
+}
 
 const selectRecords = (snapshot: DeviceRegistrySnapshot) => snapshot.records;
 const selectActiveRecordId = (snapshot: DeviceRegistrySnapshot) =>
@@ -46,49 +66,62 @@ const selectActiveRecordId = (snapshot: DeviceRegistrySnapshot) =>
 
 interface SavedDevice {
   record: DeviceRecord;
-  endpoint: ParsedDeviceEndpoint;
+  /** Null for a device known only over Bluetooth. */
+  endpoint: ParsedDeviceEndpoint | null;
 }
 
-interface SwitchDevice {
+const BLUETOOTH_READINESS_MESSAGES = {
+  disabled: "settings.bluetoothScan.disabled",
+  denied: "settings.bluetoothScan.denied",
+  location_off: "settings.bluetoothScan.locationOff",
+} as const;
+
+/**
+ * One row of the list. A saved device carries whatever the scans found of it;
+ * a device found for the first time carries the one scan result it came from.
+ */
+interface ListedDevice {
   key: string;
   saved?: SavedDevice;
   discovered?: DiscoveredDevice;
+  nearby?: NearbyBluetoothDevice;
 }
 
 interface DeviceConnectionFlowOptions {
   /** Discovery runs and drafts are kept only while the flow is on screen. */
   isOpen: boolean;
-  /** Dismisses the hosting sheet; the Devices page has nothing to dismiss. */
-  close?: () => void;
-  /** Runs when a flow without a sheet completes and stays on screen. */
-  onSettled?: () => void;
+  /** Dismisses the hosting sheet. */
+  close: () => void;
 }
 
 /**
- * Device selection, discovery and manual entry, without a shell. The phone
- * sheet and the Devices page each place the returned title, body and footer in
- * their own chrome.
+ * Device selection, discovery and manual entry, without a shell: the sheet
+ * places the returned title, body and footer in its own chrome.
  */
 export function useDeviceConnectionFlow({
   isOpen,
   close,
-  onSettled,
 }: DeviceConnectionFlowOptions) {
-  const presentation = close ? "sheet" : "page";
   const { t } = useTranslation();
   const router = useRouter();
   const appUi = useAppUi();
-  const { isConnected } = useConnection();
+  const { isConnected, openPairingModal } = useConnection();
   const {
     selectRecord,
     selectScanDevice,
     selectDevice: selectAddress,
+    selectBluetoothDevice,
   } = useSelectDevice();
   const { devices, isScanning, error, startScan, stopScan } = useNetworkScan();
-  const { address: activeAddress } = useActiveDeviceSummary();
+  const { address: activeAddress, bluetoothOnly: activeBluetoothOnly } =
+    useActiveDeviceSummary();
   const records = useDeviceRegistry(selectRecords);
   const activeRecordId = useDeviceRegistry(selectActiveRecordId);
-  const switchHeadingId = useId();
+  const [identifying, setIdentifying] = useState<IdentifyProgress | null>(null);
+  const identifyAbortRef = useRef<AbortController | null>(null);
+  const identifyCommittedRef = useRef(false);
+  const [nearbyError, setNearbyError] = useState(false);
+  const [saveError, setSaveError] = useState(false);
   const scanTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [enteringAddress, setEnteringAddress] = useState(false);
   const [address, setAddress] = useState("");
@@ -102,6 +135,8 @@ export function useDeviceConnectionFlow({
     setWasOpen(isOpen);
     setEnteringAddress(false);
     setAddressError("");
+    setIdentifying(null);
+    setSaveError(false);
   }
 
   useEffect(() => {
@@ -116,37 +151,35 @@ export function useDeviceConnectionFlow({
     wasEnteringAddressRef.current = enteringAddress;
   }, [isOpen, enteringAddress]);
 
-  const finish = () => {
-    if (close) {
-      close();
-      return;
-    }
-    onSettled?.();
-    setEnteringAddress(false);
-    setAddressError("");
-  };
+  const finish = close;
 
   const openAddressEntry = () => {
-    setAddress(activeAddress);
+    setAddress(activeBluetoothOnly ? "" : activeAddress);
     setAddressError("");
     setEnteringAddress(true);
   };
 
-  const connectByAddress = () => {
+  const connectByAddress = async () => {
     const result = selectAddress(address);
     if (!result.ok) {
       setAddressError(t(result.errorKey));
       addressInputRef.current?.focus();
       return;
     }
-    finish();
+    setAddressError("");
+    if (await result.saved) {
+      finish();
+      return;
+    }
+    setAddressError(t("settings.deviceSaveFailed"));
+    addressInputRef.current?.focus();
   };
 
   const savedDevices = useMemo(() => {
     return Object.values(records)
       .flatMap((record) => {
         const endpoint = parsedEndpointForRecord(record);
-        return endpoint ? [{ record, endpoint }] : [];
+        return endpoint || record.ble ? [{ record, endpoint }] : [];
       })
       .sort(
         (left, right) =>
@@ -155,38 +188,36 @@ export function useDeviceConnectionFlow({
       );
   }, [records]);
 
-  const switchDevices = useMemo(() => {
-    const unmatched = new Map(
-      devices.map((device) => [getDiscoveredDeviceIdentity(device), device]),
-    );
-    const savedEntries: SwitchDevice[] = savedDevices.map((saved) => {
-      const match = devices.find((device) =>
-        discoveredDeviceMatchesRecord(device, saved.record),
-      );
-      if (match) unmatched.delete(getDiscoveredDeviceIdentity(match));
-      return {
-        key: `saved:${saved.record.recordId}`,
-        saved,
-        ...(match ? { discovered: match } : {}),
-      };
-    });
-    const discoveredEntries = [...unmatched.values()]
-      .sort((left, right) =>
-        (left.name || left.address).localeCompare(right.name || right.address),
-      )
-      .map(
-        (discovered): SwitchDevice => ({
-          key: `discovered:${getDiscoveredDeviceIdentity(discovered)}`,
-          discovered,
-        }),
-      );
+  const isIdentifying = identifying !== null;
+  const identifyingId = identifying?.peripheralId;
 
-    if (presentation === "page") return discoveredEntries;
-    return [...savedEntries, ...discoveredEntries].filter(
-      (entry) =>
-        !isConnected || entry.saved?.record.recordId !== activeRecordId,
-    );
-  }, [activeRecordId, devices, isConnected, savedDevices, presentation]);
+  const abortIdentify = useCallback(() => {
+    identifyAbortRef.current?.abort();
+    identifyAbortRef.current = null;
+  }, []);
+  const cancelIdentify = () => {
+    if (identifyCommittedRef.current) return;
+    abortIdentify();
+    setIdentifying(null);
+  };
+
+  // A sheet that closes takes its connection attempt with it.
+  useEffect(() => {
+    if (!isOpen) abortIdentify();
+  }, [abortIdentify, isOpen]);
+  useEffect(() => abortIdentify, [abortIdentify]);
+
+  useEffect(() => {
+    if (identifyingId === undefined) return;
+    const timer = setTimeout(() => {
+      setIdentifying((current) =>
+        current?.peripheralId === identifyingId
+          ? { ...current, slow: true }
+          : current,
+      );
+    }, IDENTIFY_SLOW_AFTER_MS);
+    return () => clearTimeout(timer);
+  }, [identifyingId]);
 
   const clearScanTimer = useCallback(() => {
     if (scanTimerRef.current === null) return;
@@ -206,7 +237,7 @@ export function useDeviceConnectionFlow({
   }, [appUi.enabled, clearScanTimer, startScan, stopScan]);
 
   useEffect(() => {
-    if (!isOpen || enteringAddress || !appUi.enabled) {
+    if (!isOpen || enteringAddress || isIdentifying || !appUi.enabled) {
       clearScanTimer();
       stopScan();
       return;
@@ -223,21 +254,281 @@ export function useDeviceConnectionFlow({
     clearScanTimer,
     isOpen,
     enteringAddress,
+    isIdentifying,
     stopScan,
   ]);
 
-  const selectDevice = (entry: SwitchDevice) => {
-    if (entry.saved) {
-      void selectRecord(entry.saved.record.recordId);
-    } else if (entry.discovered) {
-      void selectScanDevice(discoveredDeviceToRegistration(entry.discovered));
+  const bluetooth = useBluetoothScan(
+    isOpen && !enteringAddress && !isIdentifying && appUi.enabled,
+    DEVICE_SCAN_DURATION_MS,
+  );
+  const nearbyFound = bluetooth.devices;
+
+  const listedDevices = useMemo(() => {
+    const newDiscovered = new Map(
+      devices.map((device) => [getDiscoveredDeviceIdentity(device), device]),
+    );
+    const newNearby = new Map(
+      nearbyFound.map((device) => [device.peripheralId, device]),
+    );
+    const savedEntries: ListedDevice[] = savedDevices.map((saved) => {
+      const discovered = devices.find((device) =>
+        discoveredDeviceMatchesRecord(device, saved.record),
+      );
+      if (discovered) {
+        newDiscovered.delete(getDiscoveredDeviceIdentity(discovered));
+      }
+      const peripheralId = saved.record.ble?.peripheralId;
+      const nearby = peripheralId
+        ? nearbyFound.find((device) => device.peripheralId === peripheralId)
+        : undefined;
+      if (nearby) newNearby.delete(nearby.peripheralId);
+      return {
+        key: `saved:${saved.record.recordId}`,
+        saved,
+        ...(discovered ? { discovered } : {}),
+        ...(nearby ? { nearby } : {}),
+      };
+    });
+    const discoveredEntries = [...newDiscovered.values()]
+      .sort((left, right) =>
+        (left.name || left.address).localeCompare(right.name || right.address),
+      )
+      .map(
+        (discovered): ListedDevice => ({
+          key: `discovered:${getDiscoveredDeviceIdentity(discovered)}`,
+          discovered,
+        }),
+      );
+    const nearbyEntries = [...newNearby.values()]
+      .sort((left, right) => (right.rssi ?? -999) - (left.rssi ?? -999))
+      .map(
+        (nearby): ListedDevice => ({
+          key: `nearby:${nearby.peripheralId}`,
+          nearby,
+        }),
+      );
+
+    // Devices found for the first time, then the saved ones by last use.
+    // Saved devices keep that order whatever the scans see, so a row never
+    // moves under a finger as results arrive.
+    return [...discoveredEntries, ...nearbyEntries, ...savedEntries].filter(
+      (entry) =>
+        !isConnected || entry.saved?.record.recordId !== activeRecordId,
+    );
+  }, [activeRecordId, devices, isConnected, nearbyFound, savedDevices]);
+
+  const rows = useMemo(() => {
+    const named = listedDevices.map((entry) => {
+      const { saved, discovered, nearby } = entry;
+      const address =
+        saved?.endpoint?.address ??
+        (discovered ? displayDiscoveredDeviceAddress(discovered) : undefined);
+      return {
+        entry,
+        name:
+          saved?.record.name ||
+          discovered?.name ||
+          address ||
+          nearby?.name ||
+          // A saved device out of reach still has the name it advertised.
+          saved?.record.ble?.name ||
+          t("settings.bluetoothScan.unnamed"),
+        platform: saved?.record.platform || discovered?.platform,
+        // What tells this row apart from another with the same name.
+        distinction: address ?? t("settings.bluetoothScan.viaBluetooth"),
+      };
+    });
+    const nameCounts = new Map<string, number>();
+    for (const row of named) {
+      nameCounts.set(row.name, (nameCounts.get(row.name) ?? 0) + 1);
     }
-    finish();
+    return named.map((row) => ({
+      entry: row.entry,
+      name: row.name,
+      detail: [
+        row.platform,
+        (nameCounts.get(row.name) ?? 0) > 1 && row.distinction !== row.name
+          ? row.distinction
+          : undefined,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    }));
+  }, [listedDevices, t]);
+
+  const showNearby =
+    bluetooth.supported &&
+    appUi.enabled &&
+    bluetooth.readiness !== "unsupported";
+  const bluetoothScanFailed = showNearby && bluetooth.scanFailed;
+  const nearbyProblem =
+    bluetooth.readiness && bluetooth.readiness in BLUETOOTH_READINESS_MESSAGES
+      ? BLUETOOTH_READINESS_MESSAGES[
+          bluetooth.readiness as keyof typeof BLUETOOTH_READINESS_MESSAGES
+        ]
+      : null;
+
+  // The sheet closes only once the device is saved and active. A choice that
+  // was not saved stays on screen with the reason, ready to be made again.
+  const whenSaved = async (
+    selection: Promise<boolean>,
+    onSaved: () => void = finish,
+  ) => {
+    setSaveError(false);
+    setNearbyError(false);
+    if (await selection) onSaved();
+    else setSaveError(true);
   };
 
-  const showSwitchList = appUi.enabled || switchDevices.length > 0;
+  const pairAgain = (recordId: string) =>
+    whenSaved(selectRecord(recordId), () => {
+      openPairingModal();
+      finish();
+    });
 
-  const footer = enteringAddress ? (
+  const selectNearby = async (device: NearbyBluetoothDevice, name: string) => {
+    if (identifyAbortRef.current) return;
+    const controller = new AbortController();
+    identifyAbortRef.current = controller;
+    const { peripheralId } = device;
+    setIdentifying({
+      peripheralId,
+      name,
+      step: "connecting",
+      slow: false,
+      committed: false,
+    });
+    setNearbyError(false);
+    setSaveError(false);
+    try {
+      const info = await identifyBluetoothDevice(peripheralId, {
+        signal: controller.signal,
+        onStep: (step) =>
+          setIdentifying((current) =>
+            current?.peripheralId === peripheralId
+              ? { ...current, step }
+              : current,
+          ),
+      });
+      if (controller.signal.aborted) return;
+      // From here the device is saved and made active whatever happens, so
+      // Cancel goes away instead of promising what it cannot do.
+      identifyCommittedRef.current = true;
+      setIdentifying((current) =>
+        current?.peripheralId === peripheralId
+          ? { ...current, committed: true }
+          : current,
+      );
+      await whenSaved(
+        selectBluetoothDevice({
+          deviceId: info.deviceId,
+          peripheralId,
+          ...(device.name ? { name: device.name } : {}),
+        }),
+      );
+    } catch (error) {
+      // An attempt the user left has nothing to report, however it ended.
+      if (error instanceof BleLinkAbortedError || controller.signal.aborted) {
+        return;
+      }
+      logger.warn("Could not reach the Bluetooth device", error, {
+        category: "bluetooth",
+        action: "identify",
+      });
+      setNearbyError(true);
+    } finally {
+      identifyCommittedRef.current = false;
+      if (identifyAbortRef.current === controller) {
+        identifyAbortRef.current = null;
+        setIdentifying(null);
+      }
+    }
+  };
+
+  const selectDevice = (entry: ListedDevice, name: string) => {
+    if (entry.saved) {
+      void whenSaved(selectRecord(entry.saved.record.recordId));
+    } else if (entry.discovered) {
+      void whenSaved(
+        selectScanDevice(discoveredDeviceToRegistration(entry.discovered)),
+      );
+    } else if (entry.nearby) {
+      void selectNearby(entry.nearby, name);
+    }
+  };
+
+  const scanning = isScanning || bluetooth.isScanning;
+  const rescan = () => {
+    setSaveError(false);
+    beginScan();
+    void bluetooth.rescan();
+  };
+
+  const showSwitchList = appUi.enabled || listedDevices.length > 0;
+
+  const newRows = rows.filter((row) => row.entry.saved === undefined);
+  const savedRows = rows.filter((row) => row.entry.saved !== undefined);
+  // With only new devices to show, a heading over no saved ones says nothing.
+  const showSavedHeading =
+    showSwitchList && (savedRows.length > 0 || newRows.length === 0);
+
+  const refreshButton = appUi.enabled ? (
+    <Button
+      icon={
+        scanning ? (
+          <LoadingSpinner size={20} decorative />
+        ) : (
+          <RefreshCwIcon size={20} />
+        )
+      }
+      variant="ghost"
+      shape="square"
+      size="sm"
+      disabled={scanning}
+      disabledAppearance={scanning ? "busy" : "unavailable"}
+      aria-label={t("settings.networkScan.refresh")}
+      aria-busy={scanning}
+      onClick={rescan}
+    />
+  ) : null;
+
+  const renderRow = ({ entry, name, detail }: (typeof rows)[number]) => {
+    const record = entry.saved?.record;
+    const reachable =
+      entry.discovered !== undefined || entry.nearby !== undefined;
+    return (
+      <DeviceRow
+        key={entry.key}
+        entry={{ name, ...(detail ? { detail } : {}) }}
+        onSelect={() => selectDevice(entry, name)}
+        rightSlot={
+          // Pairing needs the device in reach, so the action is
+          // offered only for a saved device a scan can see.
+          record && reachable ? (
+            <Button
+              icon={<KeyRoundIcon size={20} />}
+              variant="ghost"
+              shape="square"
+              aria-label={t("settings.pairDevice", { device: name })}
+              onClick={() => void pairAgain(record.recordId)}
+            />
+          ) : undefined
+        }
+      />
+    );
+  };
+
+  const footer = identifying ? (
+    identifying.committed ? undefined : (
+      <Button
+        variant="secondary"
+        label={t("nav.cancel")}
+        onClick={cancelIdentify}
+        className="w-full"
+      />
+    )
+  ) : enteringAddress ? (
     <div className="wui-action-grid [&>*]:min-h-12 [&>*]:w-full [&>*]:max-w-none">
       <Button
         variant="secondary"
@@ -247,13 +538,28 @@ export function useDeviceConnectionFlow({
       <Button
         intent="primary"
         label={t("settings.deviceSetup.connect")}
-        onClick={connectByAddress}
+        onClick={() => void connectByAddress()}
       />
     </div>
   ) : undefined;
   const content = (
     <>
-      {enteringAddress ? (
+      {identifying ? (
+        <div className="flex flex-col items-center gap-4 py-8 text-center">
+          <LoadingSpinner size={32} decorative />
+          <p className="text-foreground text-lg font-semibold wrap-anywhere">
+            {identifying.name}
+          </p>
+          <p className="text-foreground" role="status">
+            {t(IDENTIFY_STEP_MESSAGES[identifying.step])}
+          </p>
+          {identifying.slow && (
+            <p className="text-muted-foreground text-sm" role="status">
+              {t("settings.bluetoothScan.stillWorking")}
+            </p>
+          )}
+        </div>
+      ) : enteringAddress ? (
         // Enter submits on keydown through the form, so the keypress that
         // opened this view cannot also submit it when the key is released.
         <form
@@ -261,7 +567,7 @@ export function useDeviceConnectionFlow({
           noValidate
           onSubmit={(event) => {
             event.preventDefault();
-            connectByAddress();
+            void connectByAddress();
           }}
         >
           <TextInput
@@ -292,78 +598,61 @@ export function useDeviceConnectionFlow({
 
           <section
             className="flex flex-col gap-2"
-            aria-labelledby={showSwitchList ? switchHeadingId : undefined}
+            // One name whichever groups are showing.
+            aria-label={
+              showSwitchList || rows.length > 0
+                ? t("scan.deviceSheetRecent")
+                : undefined
+            }
           >
-            {showSwitchList && (
+            {newRows.length > 0 && (
               <div className="flex min-h-12 items-center justify-between gap-2">
-                {presentation === "page" ? (
-                  // A Settings page section, not a Home/status heading.
-                  <h2 id={switchHeadingId} className="text-lg font-semibold">
-                    {t("settings.networkScan.title")}
-                  </h2>
-                ) : (
-                  <h3
-                    id={switchHeadingId}
-                    className="text-muted-foreground font-bold capitalize"
-                  >
-                    {t("scan.deviceSheetRecent")}
-                  </h3>
-                )}
-                {appUi.enabled && (
-                  <Button
-                    icon={
-                      isScanning ? (
-                        <LoadingSpinner size={20} decorative />
-                      ) : (
-                        <RefreshCwIcon size={20} />
-                      )
-                    }
-                    variant="ghost"
-                    shape="square"
-                    size="sm"
-                    disabled={isScanning}
-                    disabledAppearance={isScanning ? "busy" : "unavailable"}
-                    aria-label={t("settings.networkScan.refresh")}
-                    aria-busy={isScanning}
-                    onClick={beginScan}
-                  />
-                )}
+                <h3 className="text-muted-foreground font-bold">
+                  {t("settings.newDevices")}
+                </h3>
+                {refreshButton}
               </div>
             )}
+            {newRows.map(renderRow)}
 
-            {switchDevices.map((entry) => {
-              const { saved, discovered } = entry;
-              return (
-                <DeviceRow
-                  key={entry.key}
-                  entry={{
-                    address: saved
-                      ? saved.endpoint.address
-                      : displayDiscoveredDeviceAddress(discovered!),
-                    name: saved?.record.name || discovered?.name,
-                    platform: saved?.record.platform || discovered?.platform,
-                    version: saved?.record.version || discovered?.version,
-                    ...(discovered?.hostname && discovered.addresses.length > 0
-                      ? { resolvedAddresses: discovered.addresses }
-                      : {}),
-                  }}
-                  onSelect={() => selectDevice(entry)}
-                />
-              );
-            })}
+            {showSavedHeading && (
+              <div className="flex min-h-12 items-center justify-between gap-2">
+                <h3 className="text-muted-foreground font-bold capitalize">
+                  {t("scan.deviceSheetRecent")}
+                </h3>
+                {newRows.length === 0 && refreshButton}
+              </div>
+            )}
+            {savedRows.map(renderRow)}
 
             <p className="sr-only" role="status">
-              {isScanning ? t("settings.networkScan.searching") : ""}
+              {scanning ? t("settings.networkScan.searching") : ""}
             </p>
             {error && (
               <p className="text-error text-sm" role="alert">
                 {t(error)}
               </p>
             )}
+            {nearbyError && (
+              <p className="text-error text-sm" role="alert">
+                {t("settings.bluetoothScan.connectFailed")}
+              </p>
+            )}
+            {saveError && (
+              <p className="text-error text-sm" role="alert">
+                {t("settings.deviceSaveFailed")}
+              </p>
+            )}
+            {bluetoothScanFailed && (
+              <p className="text-error text-sm" role="alert">
+                {t("settings.bluetoothScan.scanFailed")}
+              </p>
+            )}
             {showSwitchList &&
-              !isScanning &&
+              !scanning &&
               !error &&
-              switchDevices.length === 0 && (
+              !bluetoothScanFailed &&
+              listedDevices.length === 0 && (
                 <p className="text-muted-foreground text-sm" role="status">
                   {t("settings.networkScan.noOtherDevices")}
                 </p>
@@ -379,17 +668,30 @@ export function useDeviceConnectionFlow({
                 <NextIcon size="20" />
               </Card>
             </div>
+            {showNearby && nearbyProblem && (
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-muted-foreground text-sm" role="status">
+                  {t(nearbyProblem)}
+                </p>
+                {bluetooth.canOpenSettings && (
+                  <Button
+                    variant="text"
+                    size="sm"
+                    label={t("settings.bluetoothScan.openSettings")}
+                    onClick={bluetooth.openSettings}
+                  />
+                )}
+              </div>
+            )}
           </section>
-          {presentation === "sheet" && (
-            <Button
-              variant="text"
-              label={t("scan.deviceSheetAllDevices")}
-              onClick={() => {
-                close?.();
-                void router.navigate({ to: "/settings/devices" });
-              }}
-            />
-          )}
+          <Button
+            variant="text"
+            label={t("scan.deviceSheetAllDevices")}
+            onClick={() => {
+              close();
+              void router.navigate({ to: "/settings/devices" });
+            }}
+          />
         </div>
       )}
     </>

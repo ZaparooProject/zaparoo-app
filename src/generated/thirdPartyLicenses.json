@@ -1,5 +1,5 @@
 {
-  "noticesFile": "thirdPartyLicenseNotices.bed28e43c74e.json",
+  "noticesFile": "thirdPartyLicenseNotices.7ee2c90b5f92.json",
   "packages": [
     {
       "name": "@alloc/quick-lru",
@@ -161,6 +161,13 @@
       "license": "MIT",
       "repository": "https://github.com/ionic-team/capacitor-plugins",
       "noticeId": "eb99a0d61b507ad0"
+    },
+    {
+      "name": "@capawesome-team/capacitor-bluetooth-low-energy",
+      "version": "8.3.2",
+      "license": "SEE LICENSE IN LICENSE",
+      "repository": "https://github.com/capawesome-team/sponsorware",
+      "noticeId": "244577b213d199f1"
     },
     {
       "name": "@capawesome-team/capacitor-nfc",

@@ -2,6 +2,9 @@
 # ESLint is already enforced by CI. Disable CodeRabbit's sandboxed ESLint
 # because its dependency install cannot authenticate against private registries.
 reviews:
+  # Review a pull request once, not again on every push to it.
+  auto_review:
+    auto_incremental_review: false
   tools:
     eslint:
       enabled: false

@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { act, render, screen, waitFor } from "@/test-utils";
+import { act, render, screen, waitFor, within } from "@/test-utils";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
+import { ZeroConf } from "capacitor-zeroconf";
+import { DeviceSheetContext } from "@/hooks/useDeviceSheetController";
 import {
   credentialKeyForRecord,
   credentialStore,
@@ -72,6 +74,16 @@ vi.mock("@/hooks/useConnection", () => ({
 import "@/routes/settings.devices";
 
 const getDevices = () => componentRef.current;
+
+const savedList = () =>
+  screen.getByRole("region", { name: "settings.savedDevices" });
+
+/** The saved-device rows in display order, each as its visible text. */
+const savedRowTexts = () =>
+  within(savedList())
+    .getAllByRole("button")
+    .map((row) => row.textContent)
+    .filter((text) => text !== "settings.addDevice");
 
 const credentials: StoredCredentials = {
   authToken: "token-abc",
@@ -152,15 +164,21 @@ describe("Settings Devices Route", () => {
     expect(
       await screen.findByText("settings.deviceHistoryLoading"),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "settings.addDevice" }),
+    ).not.toBeInTheDocument();
 
     await act(async () => {
       await seedRecords([{ address: "192.168.1.10", name: "Alpha" }]);
     });
 
-    expect(await screen.findByText("Alpha")).toBeInTheDocument();
+    expect(await within(savedList()).findByText("Alpha")).toBeInTheDocument();
     expect(
       screen.queryByText("settings.deviceHistoryLoading"),
     ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "settings.addDevice" }),
+    ).toBeVisible();
   });
 
   it("should let the user retry a failed registry read", async () => {
@@ -199,21 +217,81 @@ describe("Settings Devices Route", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("should render one row per record, sorted alphabetically", async () => {
+  it("should render one row per record, most recently connected first", async () => {
     await seedRecords([
-      { address: "192.168.1.10", name: "Zulu" },
-      { address: "192.168.1.11", name: "Alpha" },
-      { address: "192.168.1.12", name: "Mike" },
+      { address: "192.168.1.10", name: "Alpha", lastConnectedAt: 20 },
+      { address: "192.168.1.11", name: "Never" },
+      { address: "192.168.1.12", name: "Zulu", lastConnectedAt: 30 },
+      { address: "192.168.1.13", name: "Mike", lastConnectedAt: 10 },
     ]);
 
     renderRoute();
 
     await waitFor(() => {
-      const names = screen
-        .getAllByText(/Alpha|Mike|Zulu/)
-        .map((element) => element.textContent);
-      expect(names).toEqual(["Alpha", "Mike", "Zulu"]);
+      expect(savedRowTexts()).toEqual(["Zulu", "Alpha", "Mike", "Never"]);
     });
+  });
+
+  it("should show each row as a name and platform, without address or version", async () => {
+    await seedRecords([
+      {
+        address: "192.168.1.10",
+        name: "Living room",
+        platform: "mister",
+        version: "2.18.0",
+        lastConnectedAt: 3,
+      },
+      { address: "192.168.1.11", name: "No platform", lastConnectedAt: 2 },
+      { address: "nameless.local", platform: "linux", lastConnectedAt: 1 },
+    ]);
+
+    renderRoute();
+
+    await waitFor(() => {
+      expect(savedRowTexts()).toEqual([
+        "Living roommister",
+        "No platform",
+        "nameless.locallinux",
+      ]);
+    });
+  });
+
+  it("should list a Bluetooth-only device by its name, or as an unnamed device", async () => {
+    const [wifi] = await seedRecords([
+      { address: "192.168.1.10", name: "Wi-Fi Core", lastConnectedAt: 3 },
+    ]);
+    await seedDeviceRegistry([
+      wifi!,
+      {
+        recordId: "ble-only",
+        endpoints: [],
+        preferredEndpointId: "",
+        name: "Bluetooth Core",
+        ble: { deviceId: "core-1", peripheralId: "AA:BB" },
+        lastConnectedAt: 2,
+      },
+      {
+        recordId: "ble-unnamed",
+        endpoints: [],
+        preferredEndpointId: "",
+        platform: "mister",
+        ble: { deviceId: "core-2", peripheralId: "CC:DD" },
+        lastConnectedAt: 1,
+      },
+    ]);
+
+    renderRoute();
+
+    await waitFor(() => {
+      expect(savedRowTexts()).toEqual([
+        "Wi-Fi Core",
+        "Bluetooth Core",
+        "settings.bluetoothScan.unnamedmister",
+      ]);
+    });
+    expect(
+      within(savedList()).queryByText("settings.bluetoothScan.viaBluetooth"),
+    ).not.toBeInTheDocument();
   });
 
   it("should mark the currently connected device as active", async () => {
@@ -266,8 +344,8 @@ describe("Settings Devices Route", () => {
     ).toBeInTheDocument();
   });
 
-  it("should use settings section headings, not the Home status heading", async () => {
-    await seedRecords([{ address: "192.168.1.10", name: "Alpha" }]);
+  it("should be management only, with no scan, manual entry or status on the page", async () => {
+    await seedRecords([{ address: "192.168.1.10", name: "Alpha" }], 0);
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
     try {
       renderRoute();
@@ -275,18 +353,28 @@ describe("Settings Devices Route", () => {
       expect(
         await screen.findByRole("heading", {
           level: 2,
-          name: "settings.networkScan.title",
-        }),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole("heading", {
-          level: 2,
           name: "settings.savedDevices",
         }),
       ).toBeInTheDocument();
+      expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(1);
       expect(
         screen.queryByRole("heading", { level: 3 }),
       ).not.toBeInTheDocument();
+      expect(screen.getAllByRole("region")).toEqual([savedList()]);
+      for (const name of [
+        "settings.deviceSetup.addDeviceManually",
+        "settings.networkScan.refresh",
+        "pairing.openPairing",
+        "settings.connectDevice",
+        "settings.deviceCombine.edit",
+        "settings.deviceCombine.open",
+      ]) {
+        expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
+      }
+      expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+      expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(ZeroConf.watch).not.toHaveBeenCalled();
     } finally {
       vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
     }
@@ -340,7 +428,7 @@ describe("Settings Devices Route", () => {
     expect(deviceRegistry.getSnapshot().activeRecordId).toBe(second!.recordId);
 
     renderRoute();
-    await user.click(screen.getByText("Pick me"));
+    await user.click(within(savedList()).getByText("Pick me"));
 
     expect(deviceRegistry.getSnapshot().activeRecordId).toBe(second!.recordId);
     expect(mockNavigate).toHaveBeenCalledWith({
@@ -368,62 +456,58 @@ describe("Settings Devices Route", () => {
     });
   });
 
-  it("should combine two manually selected records after confirmation", async () => {
+  it("should open its own device sheet from Add device", async () => {
     const user = userEvent.setup();
-    const [hostname, activeIp] = await seedRecords(
-      [
-        { address: "steamdeck.local", name: "Steamdeck" },
-        { address: "10.0.0.206", name: "Steamdeck" },
-      ],
-      1,
-    );
-    queryClient.setQueryData(["library", hostname!.recordId], "hostname cache");
-    queryClient.setQueryData(["library", activeIp!.recordId], "ip cache");
+    await seedRecords([{ address: "192.168.1.10", name: "Alpha" }], 0);
     renderRoute();
 
-    await user.click(
-      screen.getByRole("button", { name: "settings.deviceCombine.edit" }),
-    );
-    const selections = screen.getAllByRole("checkbox", {
-      name: "settings.deviceCombine.select",
+    const add = await screen.findByRole("button", {
+      name: "settings.addDevice",
     });
-    await user.click(selections[0]!);
-    await user.click(selections[1]!);
-    await user.click(
-      screen.getByRole("button", { name: "settings.deviceCombine.action" }),
-    );
-    expect(screen.getByText("settings.deviceCombine.body")).toBeInTheDocument();
+    expect(add).toHaveAttribute("aria-expanded", "false");
+    expect(savedList()).toContainElement(add);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
-    await user.click(
-      screen.getByRole("button", { name: "settings.deviceCombine.confirm" }),
-    );
+    await user.click(add);
 
-    await waitFor(() => {
-      expect(Object.keys(deviceRegistry.getSnapshot().records)).toEqual([
-        activeIp!.recordId,
-      ]);
+    const sheet = await screen.findByRole("dialog", {
+      name: "scan.deviceSheetTitle",
     });
-    expect(deviceRegistry.getSnapshot().activeRecordId).toBe(
-      activeIp!.recordId,
-    );
     expect(
-      deviceRegistry.getSnapshot().records[activeIp!.recordId]?.endpoints,
-    ).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ host: "steamdeck.local" }),
-        expect.objectContaining({ host: "10.0.0.206" }),
-      ]),
-    );
+      within(sheet).getByRole("button", {
+        name: "settings.deviceSetup.addDeviceManually",
+      }),
+    ).toBeInTheDocument();
     expect(
-      queryClient.getQueryData(["library", hostname!.recordId]),
-    ).toBeUndefined();
-    expect(
-      queryClient.getQueryData(["library", activeIp!.recordId]),
-    ).toBeUndefined();
+      screen.getByRole("button", { name: "settings.addDevice", hidden: true }),
+    ).toHaveAttribute("aria-expanded", "true");
   });
 
-  it("should keep the paired indicator after moving source credentials", async () => {
+  it("should open the shared device sheet instead of its own when one is provided", async () => {
     const user = userEvent.setup();
+    await seedRecords([{ address: "192.168.1.10", name: "Alpha" }], 0);
+    const setOpen = vi.fn();
+    const Devices = getDevices();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <DeviceSheetContext.Provider value={{ isOpen: false, setOpen }}>
+          <Devices />
+        </DeviceSheetContext.Provider>
+      </QueryClientProvider>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "settings.addDevice" }),
+    );
+
+    expect(setOpen).toHaveBeenCalledExactlyOnceWith(true);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("settings.deviceSetup.addDeviceManually"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("should show the pairing a combine moved onto the surviving record", async () => {
     const [activeTarget, pairedSource] = await seedRecords(
       [
         { address: "steamdeck.local", name: "Steamdeck" },
@@ -435,115 +519,58 @@ describe("Settings Devices Route", () => {
       credentialKeyForRecord(pairedSource!.recordId),
       credentials,
     );
+    await deviceRegistry.mergeRecords(
+      activeTarget!.recordId,
+      pairedSource!.recordId,
+    );
+
     renderRoute();
+
     expect(
-      await screen.findByLabelText("connection.encrypted"),
+      await within(savedList()).findByLabelText("connection.encrypted"),
     ).toBeInTheDocument();
-
-    await user.click(
-      screen.getByRole("button", { name: "settings.deviceCombine.edit" }),
-    );
-    for (const checkbox of screen.getAllByRole("checkbox")) {
-      await user.click(checkbox);
-    }
-    await user.click(
-      screen.getByRole("button", { name: "settings.deviceCombine.action" }),
-    );
-    await user.click(
-      screen.getByRole("button", { name: "settings.deviceCombine.confirm" }),
-    );
-
-    await waitFor(() => {
-      expect(Object.keys(deviceRegistry.getSnapshot().records)).toEqual([
-        activeTarget!.recordId,
-      ]);
-    });
-    expect(screen.getByLabelText("connection.encrypted")).toBeInTheDocument();
+    expect(savedRowTexts()).toEqual(["Steamdeck"]);
   });
 
-  it("should keep shared legacy pairing visible on an unmerged record", async () => {
-    const user = userEvent.setup();
+  it("should keep shared legacy pairing visible on a record a combine left alone", async () => {
     const sharedLegacyKey = "shared-device-key";
-    const [activeTarget, , sharedOwner] = await seedRecords(
+    const [activeTarget, source, sharedOwner] = await seedRecords(
       [
-        { address: "steamdeck.local", name: "A target" },
+        { address: "steamdeck.local", name: "A target", lastConnectedAt: 3 },
         {
           address: "10.0.0.206",
           name: "B source",
           legacyCredentialKey: sharedLegacyKey,
+          lastConnectedAt: 2,
         },
         {
           address: "10.0.0.207",
           name: "C shared owner",
           legacyCredentialKey: sharedLegacyKey,
+          lastConnectedAt: 1,
         },
       ],
       0,
     );
     await credentialStore.set(sharedLegacyKey, credentials);
+    await deviceRegistry.mergeRecords(activeTarget!.recordId, source!.recordId);
+
     renderRoute();
 
-    expect(
-      await screen.findAllByLabelText("connection.encrypted"),
-    ).toHaveLength(2);
-    await user.click(
-      screen.getByRole("button", { name: "settings.deviceCombine.edit" }),
-    );
-    const selections = screen.getAllByRole("checkbox", {
-      name: "settings.deviceCombine.select",
-    });
-    await user.click(selections[0]!);
-    await user.click(selections[1]!);
-    await user.click(
-      screen.getByRole("button", { name: "settings.deviceCombine.action" }),
-    );
-    await user.click(
-      screen.getByRole("button", { name: "settings.deviceCombine.confirm" }),
-    );
-
     await waitFor(() => {
-      expect(Object.keys(deviceRegistry.getSnapshot().records)).toEqual([
-        activeTarget!.recordId,
-        sharedOwner!.recordId,
-      ]);
+      expect(
+        within(savedList()).getAllByLabelText("connection.encrypted"),
+      ).toHaveLength(2);
     });
+    expect(savedRowTexts()).toEqual(["A target", "C shared owner"]);
+    expect(Object.keys(deviceRegistry.getSnapshot().records)).toEqual([
+      activeTarget!.recordId,
+      sharedOwner!.recordId,
+    ]);
     expect(await credentialStore.get(sharedLegacyKey)).toEqual(credentials);
     expect(
       await credentialStore.get(credentialKeyForRecord(activeTarget!.recordId)),
     ).toEqual(credentials);
-    expect(screen.getAllByLabelText("connection.encrypted")).toHaveLength(2);
-  });
-
-  it("should retain both selected records when combining fails", async () => {
-    const user = userEvent.setup();
-    const records = await seedRecords([
-      { address: "steamdeck.local", name: "Steamdeck" },
-      { address: "10.0.0.206", name: "Steamdeck" },
-    ]);
-    vi.spyOn(deviceRegistry, "mergeRecords").mockRejectedValueOnce(
-      new Error("keychain locked"),
-    );
-    renderRoute();
-
-    await user.click(
-      screen.getByRole("button", { name: "settings.deviceCombine.edit" }),
-    );
-    for (const checkbox of screen.getAllByRole("checkbox")) {
-      await user.click(checkbox);
-    }
-    await user.click(
-      screen.getByRole("button", { name: "settings.deviceCombine.action" }),
-    );
-    await user.click(
-      screen.getByRole("button", { name: "settings.deviceCombine.confirm" }),
-    );
-
-    expect(
-      await screen.findByText("settings.deviceCombine.failed"),
-    ).toHaveAttribute("role", "alert");
-    expect(Object.keys(deviceRegistry.getSnapshot().records)).toEqual(
-      records.map((record) => record.recordId),
-    );
   });
 
   it("should navigate to Settings without resetting scroll", async () => {

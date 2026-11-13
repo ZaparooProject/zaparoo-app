@@ -1350,13 +1350,9 @@
       },
       "deviceHistory": "更改设备",
       "networkScan": {
-        "title": "查找设备",
         "searching": "正在搜索设备...",
         "refresh": "重新搜索",
         "noOtherDevices": "未找到其他设备",
-        "addresses_one": "IP 地址：{{addresses}}",
-        "addresses_other": "IP 地址：{{addresses}}",
-        "version": "v{{version}}",
         "scanFailed": "无法搜索设备"
       },
       "connectionFailed": "无法连接到设备",
@@ -1388,10 +1384,6 @@
         "forgetFailed": "无法移除设备。请重试。"
       },
       "deviceCombine": {
-        "edit": "合并设备",
-        "cancelEdit": "取消选择",
-        "select": "选择 {{device}}",
-        "action": "合并所选设备",
         "title": "合并设备？",
         "body": "要合并 {{first}} 和 {{second}} 吗？已保存的地址和配对信息将会保留。",
         "cancel": "取消",
@@ -1641,7 +1633,6 @@
         "reportIssue": "在 GitHub 上报告问题",
         "emailLabel": "支持邮箱："
       },
-      "connectDevice": "连接到{{device}}",
       "savedDevices": "已保存的设备"
     },
     "systemSelector": {

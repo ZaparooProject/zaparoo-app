@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { ListChecksIcon, MonitorIcon, XIcon } from "lucide-react";
-import { DeviceConnectionPanel } from "@/components/home/DeviceConnectionPanel";
-import { useSelectDevice } from "@/hooks/useSelectDevice";
+import { PlusIcon } from "lucide-react";
+import { DeviceSheet } from "@/components/home/DeviceSheet";
 import { useConnection } from "@/hooks/useConnection";
+import { useDeviceSheetController } from "@/hooks/useDeviceSheetController";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import {
   credentialKeyForRecord,
@@ -17,17 +16,12 @@ import {
   useDeviceRegistry,
   type DeviceRecord,
 } from "@/lib/devices/deviceRegistry";
-import type { ParsedDeviceEndpoint } from "@/lib/devices/endpoint";
-import { invalidateLibraryImageCache } from "@/lib/libraryImageCache";
 import { logger } from "@/lib/logger";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 import { PageFrame } from "@/components/PageFrame";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
-import { ModalActionBar } from "@/components/wui/ModalActionBar";
-import { SlideModal } from "@/components/SlideModal";
-import { Checkbox } from "@/components/ui/checkbox";
 import { DelayedLoading } from "@/components/DelayedLoading";
 import { InlineLoading } from "@/components/InlineLoading";
 import { useStatusStore } from "@/lib/store";
@@ -36,7 +30,8 @@ import { DeviceRow } from "@/components/DeviceRow";
 
 interface DeviceListEntry {
   record: DeviceRecord;
-  endpoint: ParsedDeviceEndpoint;
+  /** The network address; absent for a device known only over Bluetooth. */
+  address?: string;
 }
 
 const selectRecords = (state: { records: Record<string, DeviceRecord> }) =>
@@ -61,7 +56,6 @@ export function Devices() {
     t("scan.deviceSheetAllDevices"),
   );
   const router = useRouter();
-  const queryClient = useQueryClient();
   const goBack = () =>
     void router.navigate(appBackNavigationOptions("/settings"));
 
@@ -76,19 +70,16 @@ export function Devices() {
   // same misleading empty state, just from a different cause.
   const registrySettled = useDeviceRegistry(selectRegistrySettled);
   const { isConnected } = useConnection();
-  const { selectRecord } = useSelectDevice();
+  const {
+    isOpen: sheetOpen,
+    setOpen: setSheetOpen,
+    shared: sharedSheet,
+  } = useDeviceSheetController();
 
   const [pairedKeys, setPairedKeys] = useState<Set<string>>(new Set());
-  const [isEditing, setIsEditing] = useState(false);
-  const [selectedRecordIds, setSelectedRecordIds] = useState<Set<string>>(
-    new Set(),
-  );
-  const [combineOpen, setCombineOpen] = useState(false);
-  const [combineFailed, setCombineFailed] = useState(false);
-  const [isCombining, setIsCombining] = useState(false);
 
-  // Pairing from this page stores a credential and restarts the connection, so
-  // the lock icons are re-read whenever the encryption state settles again.
+  // Pairing stores a credential and restarts the connection, so the lock
+  // icons are re-read whenever the encryption state settles again.
   const encryptionState = useStatusStore((state) => state.encryptionState);
 
   useEffect(() => {
@@ -115,27 +106,26 @@ export function Devices() {
 
   const sortedRecords = useMemo(() => {
     return Object.values(records)
-      .flatMap((record) => {
+      .flatMap((record): DeviceListEntry[] => {
         const endpoint = parsedEndpointForRecord(record);
-        if (!endpoint) {
-          // A record with no parseable endpoint is unreachable and cannot be
-          // rendered, so it is dropped — but silently vanishing from the list
-          // looks to the user like the app forgot their device. Name it so the
-          // stored value can be recovered from a report.
-          logger.warn("Device record has no usable endpoint", {
-            category: "storage",
-            action: "listDeviceRecords",
-            recordId: record.recordId,
-            preferredEndpointId: record.preferredEndpointId,
-          });
-          return [];
-        }
-        return [{ record, endpoint } satisfies DeviceListEntry];
+        if (endpoint) return [{ record, address: endpoint.address }];
+        if (record.ble) return [{ record }];
+        // A record with no parseable endpoint is unreachable and cannot be
+        // rendered, so it is dropped — but silently vanishing from the list
+        // looks to the user like the app forgot their device. Name it so the
+        // stored value can be recovered from a report.
+        logger.warn("Device record has no usable endpoint", {
+          category: "storage",
+          action: "listDeviceRecords",
+          recordId: record.recordId,
+          preferredEndpointId: record.preferredEndpointId,
+        });
+        return [];
       })
-      .sort((left, right) =>
-        (left.record.name || left.endpoint.address).localeCompare(
-          right.record.name || right.endpoint.address,
-        ),
+      .sort(
+        (left, right) =>
+          (right.record.lastConnectedAt ?? 0) -
+          (left.record.lastConnectedAt ?? 0),
       );
   }, [records]);
 
@@ -144,115 +134,11 @@ export function Devices() {
     (record.legacyCredentialKey !== undefined &&
       pairedKeys.has(record.legacyCredentialKey));
 
-  const toggleSelected = (recordId: string) => {
-    setSelectedRecordIds((current) => {
-      const next = new Set(current);
-      if (next.has(recordId)) {
-        next.delete(recordId);
-      } else if (next.size < 2) {
-        next.add(recordId);
-      }
-      return next;
-    });
-  };
-
-  const handleSelect = (recordId: string) => {
-    if (isEditing) {
-      toggleSelected(recordId);
-      return;
-    }
-    void router.navigate({
-      to: "/settings/devices/$recordId",
-      params: { recordId },
-    });
-  };
-
-  const closeEditMode = () => {
-    if (isCombining) return;
-    setIsEditing(false);
-    setSelectedRecordIds(new Set());
-    setCombineOpen(false);
-    setCombineFailed(false);
-  };
-
-  const selectedRecords = [...selectedRecordIds]
-    .map((recordId) => records[recordId])
-    .filter((record): record is DeviceRecord => record !== undefined);
-  const combineTarget =
-    selectedRecords.find((record) => record.recordId === activeRecordId) ??
-    selectedRecords.find(hasCredentials) ??
-    selectedRecords[0];
-  const combineSource = selectedRecords.find(
-    (record) => record.recordId !== combineTarget?.recordId,
-  );
-
-  const handleConfirmCombine = async () => {
-    if (!combineTarget || !combineSource || isCombining) return;
-    setIsCombining(true);
-    setCombineFailed(false);
-    const mergedPairing =
-      hasCredentials(combineTarget) || hasCredentials(combineSource);
-    try {
-      await deviceRegistry.mergeRecords(
-        combineTarget.recordId,
-        combineSource.recordId,
-      );
-      for (const recordId of [combineTarget.recordId, combineSource.recordId]) {
-        invalidateLibraryImageCache(recordId);
-        queryClient.removeQueries({
-          predicate: (query) => query.queryKey.includes(recordId),
-        });
-      }
-      const referencedLegacyKeys = new Set(
-        Object.values(deviceRegistry.getSnapshot().records)
-          .map((record) => record.legacyCredentialKey)
-          .filter((key): key is string => key !== undefined),
-      );
-      setPairedKeys((current) => {
-        const next = new Set(current);
-        next.delete(credentialKeyForRecord(combineTarget.recordId));
-        next.delete(credentialKeyForRecord(combineSource.recordId));
-        if (
-          combineTarget.legacyCredentialKey &&
-          !referencedLegacyKeys.has(combineTarget.legacyCredentialKey)
-        ) {
-          next.delete(combineTarget.legacyCredentialKey);
-        }
-        if (
-          combineSource.legacyCredentialKey &&
-          !referencedLegacyKeys.has(combineSource.legacyCredentialKey)
-        ) {
-          next.delete(combineSource.legacyCredentialKey);
-        }
-        if (mergedPairing) {
-          next.add(credentialKeyForRecord(combineTarget.recordId));
-        }
-        return next;
-      });
-      setIsEditing(false);
-      setSelectedRecordIds(new Set());
-      setCombineOpen(false);
-      setCombineFailed(false);
-    } catch (error) {
-      logger.error("Failed to combine device records", error, {
-        category: "storage",
-        action: "combineDeviceRecords",
-        severity: "error",
-        targetRecordId: combineTarget.recordId,
-        sourceRecordId: combineSource.recordId,
-      });
-      setCombineFailed(true);
-    } finally {
-      setIsCombining(false);
-    }
-  };
-
   return (
     <PageFrame
       className="wrap-anywhere"
       headerMode="content-wide"
       breadcrumbs={[{ to: "/settings", label: t("settings.title") }]}
-      layout="workspace"
       onSwipeBack={goBack}
       headerLeft={
         <HeaderButton
@@ -262,173 +148,73 @@ export function Devices() {
         />
       }
       headerCenter={<h1 ref={headingRef}>{t("scan.deviceSheetAllDevices")}</h1>}
-      headerRight={
-        sortedRecords.length >= 2 ? (
-          <HeaderButton
-            onClick={() => {
-              if (isEditing) {
-                closeEditMode();
-              } else {
-                setIsEditing(true);
-              }
-            }}
-            icon={
-              isEditing ? <XIcon size={24} /> : <ListChecksIcon size={24} />
-            }
-            aria-label={t(
-              isEditing
-                ? "settings.deviceCombine.cancelEdit"
-                : "settings.deviceCombine.edit",
-            )}
-            active={isEditing}
-            disabled={isCombining}
-          />
-        ) : undefined
-      }
     >
-      <div className="settings-panel-layout">
-        <DeviceConnectionPanel isOpen={registrySettled} />
-        <section
-          aria-labelledby="saved-devices-heading"
-          className="flex min-w-0 flex-col gap-3"
-        >
-          <h2 id="saved-devices-heading" className="text-lg font-semibold">
-            {t("settings.savedDevices")}
-          </h2>
-          {!registrySettled ? (
-            <DelayedLoading>
-              <InlineLoading label={t("settings.deviceHistoryLoading")} />
-            </DelayedLoading>
-          ) : sortedRecords.length === 0 ? (
-            <EmptyState
-              size="compact"
-              title={t(
-                hydrationError
-                  ? "settings.deviceHistoryError"
-                  : "settings.deviceHistoryEmpty",
-              )}
-              action={
-                hydrationError ? (
-                  <Button
-                    variant="outline"
-                    label={t("scan.retry")}
-                    onClick={() => void deviceRegistry.hydrate()}
-                  />
-                ) : undefined
-              }
-            />
-          ) : (
-            sortedRecords.map(({ record, endpoint }) => (
-              <DeviceRow
-                key={record.recordId}
-                entry={{
-                  address: endpoint.address,
-                  name: record.name,
-                  platform: record.platform,
-                  version: record.version,
-                }}
-                isActive={isConnected && activeRecordId === record.recordId}
-                // A record migrated from an older build still holds its pairing
-                // under the pre-V2 address key until its first encrypted connect,
-                // so the lock icon has to accept either key.
-                isPaired={hasCredentials(record)}
-                onSelect={() => handleSelect(record.recordId)}
-                rightSlot={
-                  isEditing ? (
-                    <Checkbox
-                      checked={selectedRecordIds.has(record.recordId)}
-                      onCheckedChange={() => toggleSelected(record.recordId)}
-                      aria-label={t("settings.deviceCombine.select", {
-                        device: record.name || endpoint.address,
-                      })}
-                      disabled={
-                        selectedRecordIds.size >= 2 &&
-                        !selectedRecordIds.has(record.recordId)
-                      }
-                    />
-                  ) : (
-                    <Button
-                      icon={<MonitorIcon size={20} />}
-                      variant="ghost"
-                      shape="square"
-                      aria-label={t("settings.connectDevice", {
-                        device: record.name || endpoint.address,
-                      })}
-                      disabled={
-                        isConnected && activeRecordId === record.recordId
-                      }
-                      onClick={() => void selectRecord(record.recordId)}
-                    />
-                  )
-                }
-              />
-            ))
-          )}
-          {isEditing && sortedRecords.length > 0 && (
-            <Button
-              label={t("settings.deviceCombine.action")}
-              intent="primary"
-              onClick={() => {
-                setCombineFailed(false);
-                setCombineOpen(true);
-              }}
-              disabled={selectedRecordIds.size !== 2}
-              className="mt-3 w-full"
-            />
-          )}
-        </section>
-      </div>
-
-      <SlideModal
-        isOpen={combineOpen}
-        close={() => {
-          if (!isCombining) setCombineOpen(false);
-        }}
-        dismissible={!isCombining}
-        title={t("settings.deviceCombine.title")}
-        footer={
-          <ModalActionBar
-            secondaryAction={
-              <Button
-                variant="secondary"
-                label={t("settings.deviceCombine.cancel")}
-                onClick={() => setCombineOpen(false)}
-                disabled={isCombining}
-                disabledAppearance="busy"
-              />
-            }
-            primaryAction={
-              <Button
-                intent="primary"
-                label={t("settings.deviceCombine.confirm")}
-                onClick={() => void handleConfirmCombine()}
-                disabled={isCombining}
-                disabledAppearance="busy"
-              />
+      <section
+        aria-labelledby="saved-devices-heading"
+        className="flex min-w-0 flex-col gap-3"
+      >
+        <h2 id="saved-devices-heading" className="text-lg font-semibold">
+          {t("settings.savedDevices")}
+        </h2>
+        {!registrySettled ? (
+          <DelayedLoading>
+            <InlineLoading label={t("settings.deviceHistoryLoading")} />
+          </DelayedLoading>
+        ) : sortedRecords.length === 0 ? (
+          <EmptyState
+            size="compact"
+            title={t(
+              hydrationError
+                ? "settings.deviceHistoryError"
+                : "settings.deviceHistoryEmpty",
+            )}
+            action={
+              hydrationError ? (
+                <Button
+                  variant="outline"
+                  label={t("scan.retry")}
+                  onClick={() => void deviceRegistry.hydrate()}
+                />
+              ) : undefined
             }
           />
-        }
-      >
-        <div className="flex flex-col gap-4 py-4 text-center">
-          <p>
-            {t("settings.deviceCombine.body", {
-              first:
-                combineTarget?.name ||
-                parsedEndpointForRecord(combineTarget)?.address ||
-                "",
-              second:
-                combineSource?.name ||
-                parsedEndpointForRecord(combineSource)?.address ||
-                "",
-            })}
-          </p>
-          {combineFailed && (
-            <p className="text-error text-sm" role="alert">
-              {t("settings.deviceCombine.failed")}
-            </p>
-          )}
-        </div>
-      </SlideModal>
+        ) : (
+          sortedRecords.map(({ record, address }) => (
+            <DeviceRow
+              key={record.recordId}
+              entry={{
+                name:
+                  record.name || address || t("settings.bluetoothScan.unnamed"),
+                ...(record.platform ? { detail: record.platform } : {}),
+              }}
+              isActive={isConnected && activeRecordId === record.recordId}
+              // A record migrated from an older build still holds its pairing
+              // under the pre-V2 address key until its first encrypted connect,
+              // so the lock icon has to accept either key.
+              isPaired={hasCredentials(record)}
+              onSelect={() =>
+                void router.navigate({
+                  to: "/settings/devices/$recordId",
+                  params: { recordId: record.recordId },
+                })
+              }
+            />
+          ))
+        )}
+        {registrySettled && (
+          <Button
+            label={t("settings.addDevice")}
+            variant="secondary"
+            icon={<PlusIcon size={20} />}
+            className="w-full"
+            aria-expanded={sheetOpen}
+            onClick={() => setSheetOpen(true)}
+          />
+        )}
+      </section>
+      {!sharedSheet && (
+        <DeviceSheet isOpen={sheetOpen} close={() => setSheetOpen(false)} />
+      )}
     </PageFrame>
   );
 }

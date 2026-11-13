@@ -205,3 +205,108 @@ describe("EncryptedSession", () => {
     expect(base64Encode(s1.sessionSalt)).not.toBe(base64Encode(s2.sessionSalt));
   });
 });
+
+describe("EncryptedSession over Bluetooth LE", () => {
+  const pairingKey = randomBytes(32);
+  const authToken = "550e8400-e29b-41d4-a716-446655440000";
+
+  function serverEncrypt(
+    salt: Uint8Array,
+    aadLabel: string,
+    plaintext: string,
+    counter = 0n,
+  ): Uint8Array {
+    const raw = deriveSessionKeyBytes(pairingKey, salt);
+    const cipher = createCipheriv(
+      "aes-256-gcm",
+      raw.s2cKey,
+      buildNonce(raw.s2cBase, counter),
+      { authTagLength: 16 },
+    );
+    cipher.setAAD(Buffer.from(`${authToken}:${aadLabel}`));
+    const ct = cipher.update(Buffer.from(plaintext, "utf8"));
+    cipher.final();
+    return new Uint8Array([...ct, ...cipher.getAuthTag()]);
+  }
+
+  function serverDecrypt(
+    salt: Uint8Array,
+    aadLabel: string,
+    data: Uint8Array,
+    counter = 0n,
+  ): string {
+    const raw = deriveSessionKeyBytes(pairingKey, salt);
+    const decipher = createDecipheriv(
+      "aes-256-gcm",
+      raw.c2sKey,
+      buildNonce(raw.c2sBase, counter),
+      { authTagLength: 16 },
+    );
+    decipher.setAAD(Buffer.from(`${authToken}:${aadLabel}`));
+    decipher.setAuthTag(Buffer.from(data.subarray(data.length - 16)));
+    return Buffer.concat([
+      decipher.update(Buffer.from(data.subarray(0, data.length - 16))),
+      decipher.final(),
+    ]).toString("utf8");
+  }
+
+  it("defaults to the ws label", async () => {
+    const session = await EncryptedSession.create(authToken, pairingKey);
+    expect(session.transport).toBe("ws");
+  });
+
+  it("binds the ble label into the AAD", async () => {
+    const session = await EncryptedSession.create(authToken, pairingKey, "ble");
+    const ct = await session.encryptBytes("hello");
+    expect(serverDecrypt(session.sessionSalt, "ble", ct)).toBe("hello");
+    expect(() => serverDecrypt(session.sessionSalt, "ws", ct)).toThrow();
+  });
+
+  it("rejects a frame encrypted for the other transport", async () => {
+    const session = await EncryptedSession.create(authToken, pairingKey, "ble");
+    const wsFrame = serverEncrypt(session.sessionSalt, "ws", "pong");
+    await expect(session.decryptBytes(wsFrame)).rejects.toThrow();
+  });
+
+  it("decrypts raw server ciphertext", async () => {
+    const session = await EncryptedSession.create(authToken, pairingKey, "ble");
+    const frame = serverEncrypt(session.sessionSalt, "ble", "pong");
+    await expect(session.decryptBytes(frame)).resolves.toBe("pong");
+  });
+
+  it("builds the binary first frame header", async () => {
+    const session = await EncryptedSession.create(authToken, pairingKey, "ble");
+    const plaintext = '{"jsonrpc":"2.0","method":"version","id":1}';
+    const frame = await session.encryptAndFrameBinary(plaintext);
+    const token = new TextEncoder().encode(authToken);
+
+    expect(frame[0]).toBe(1);
+    expect(frame.subarray(1, 17)).toEqual(session.sessionSalt);
+    expect(frame[17]).toBe(token.length);
+    expect(frame.subarray(18, 18 + token.length)).toEqual(token);
+    const ct = frame.subarray(18 + token.length);
+    expect(ct.length).toBe(plaintext.length + 16);
+    expect(serverDecrypt(session.sessionSalt, "ble", ct)).toBe(plaintext);
+  });
+
+  it("sends later frames as bare ciphertext with advancing counters", async () => {
+    const session = await EncryptedSession.create(authToken, pairingKey, "ble");
+    await session.encryptAndFrameBinary("first");
+    const second = await session.encryptAndFrameBinary("second");
+    expect(second.length).toBe("second".length + 16);
+    expect(serverDecrypt(session.sessionSalt, "ble", second, 1n)).toBe(
+      "second",
+    );
+  });
+
+  it("refuses an auth token too long for the length byte", async () => {
+    const session = await EncryptedSession.create(
+      "x".repeat(256),
+      pairingKey,
+      "ble",
+    );
+    await expect(session.encryptAndFrameBinary("hi")).rejects.toThrow(
+      "Auth token length",
+    );
+  });
+});

@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
 import { useConnection } from "@/hooks/useConnection";
+import {
+  recordHasNetworkRoute,
+  useDeviceRegistry,
+  type DeviceRegistrySnapshot,
+} from "@/lib/devices/deviceRegistry";
 import { useStatusStore } from "@/lib/store";
 
 export const CONNECTION_STATUS_REVEAL_MS = 1_000;
@@ -12,6 +17,14 @@ export type ConnectionPresentationKind =
   | "reconnecting"
   | "unavailable"
   | "networkUnavailable";
+
+/** True when the active device has no network address to be reached at. */
+function activeLacksNetworkRoute(snapshot: DeviceRegistrySnapshot): boolean {
+  const record = snapshot.activeRecordId
+    ? snapshot.records[snapshot.activeRecordId]
+    : undefined;
+  return record !== undefined && !recordHasNetworkRoute(record);
+}
 
 interface ConnectionPresentation {
   kind: ConnectionPresentationKind;
@@ -27,6 +40,7 @@ export function useConnectionPresentation(options?: {
   );
   const networkAvailable = useStatusStore((state) => state.networkAvailable);
   const pairingRequired = useStatusStore((state) => state.pairingRequired);
+  const bluetoothOnly = useDeviceRegistry(activeLacksNetworkRoute);
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -49,7 +63,9 @@ export function useConnectionPresentation(options?: {
     return { kind: "hidden", visible: false };
   }
 
-  if (networkAvailable === false) {
+  // A device reached over Bluetooth alone never used the phone's network, so
+  // losing it explains nothing: its connection dropped like any other.
+  if (networkAvailable === false && !bluetoothOnly) {
     return { kind: "networkUnavailable", visible: true };
   }
 
