@@ -490,7 +490,8 @@ describe("HybridTransport", () => {
       await vi.advanceTimersByTimeAsync(60000);
       const probe = ws()[0]!;
 
-      await vi.advanceTimersByTimeAsync(6000);
+      // 5 s for the one address, then 5 s more for it to be verified.
+      await vi.advanceTimersByTimeAsync(10000);
 
       expect(probe.destroyed).toBe(true);
       expect(transport.link).toBe("bluetooth");
@@ -520,10 +521,27 @@ describe("HybridTransport", () => {
       await vi.advanceTimersByTimeAsync(60000);
       const probe = ws()[0]!;
 
-      await vi.advanceTimersByTimeAsync(20000);
+      await vi.advanceTimersByTimeAsync(24000);
 
       expect(probe.destroyed).toBe(true);
       expect(transport.link).toBe("bluetooth");
+    });
+
+    it("gives the last address time to be verified after it opens", async () => {
+      const urls = [URL_A, URL_B, URL_C];
+      const { transport, ws } = await onBluetooth({ wsUrls: urls });
+      await vi.advanceTimersByTimeAsync(60000);
+      const probe = ws()[0]!;
+
+      // The third address opens at the very end of its own 5 s, and Core
+      // then takes a few seconds to answer.
+      await vi.advanceTimersByTimeAsync(18900);
+      probe.open(URL_C);
+      await vi.advanceTimersByTimeAsync(3000);
+
+      expect(probe.destroyed).toBe(false);
+      probe.handlers.onEncryptedHandshakeOk?.();
+      expect(transport.link).toBe("wifi");
     });
 
     it("drops a probe Core refuses", async () => {

@@ -1364,6 +1364,9 @@ class DeviceRegistryRepository {
         ? {
             ...existing,
             ...(existing.discoveryId ? {} : { discoveryId: deviceId }),
+            // A record with no name of its own takes the advertised one,
+            // as a new record does; a name it already has is kept.
+            ...(!existing.name && name ? { name } : {}),
             ble,
           }
         : {

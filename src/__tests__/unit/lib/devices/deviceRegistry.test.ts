@@ -1267,6 +1267,42 @@ describe("Bluetooth devices", () => {
     expect(parsed?.records).toEqual({});
   });
 
+  it("should name an unnamed record that already knows the Core", async () => {
+    const record = await deviceRegistry.selectAddress("10.0.0.206");
+    await deviceRegistry.applyDeviceEndpoints(record!.recordId, {
+      deviceId: "core-1",
+      addresses: ["10.0.0.206"],
+      port: 7497,
+      ble: false,
+    });
+
+    const selected = await deviceRegistry.selectBluetooth(nearby);
+
+    expect(selected).toMatchObject({
+      recordId: record!.recordId,
+      name: "Den",
+    });
+  });
+
+  it("should keep the name of a record that already knows the Core", async () => {
+    const record = await deviceRegistry.selectAddress("10.0.0.206");
+    await deviceRegistry.applyDeviceEndpoints(record!.recordId, {
+      deviceId: "core-1",
+      name: "Living Room",
+      addresses: ["10.0.0.206"],
+      port: 7497,
+      ble: false,
+    });
+
+    const selected = await deviceRegistry.selectBluetooth(nearby);
+
+    expect(selected).toMatchObject({
+      recordId: record!.recordId,
+      name: "Living Room",
+      ble: { name: "Den" },
+    });
+  });
+
   it("should add Bluetooth to the record that already knows the Core", async () => {
     const record = await deviceRegistry.selectAddress("10.0.0.206");
     await deviceRegistry.applyDeviceEndpoints(record!.recordId, {

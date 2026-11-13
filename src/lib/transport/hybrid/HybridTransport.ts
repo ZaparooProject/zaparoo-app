@@ -76,6 +76,8 @@ const ENDPOINTS_ID_PREFIX = "hybrid-endpoints-";
 
 /** How long a socket waits after one address fails before trying the next. */
 const WS_RECONNECT_INTERVAL_MS = 2000;
+/** How long a probe's last address gets for Core to answer once it opens. */
+const PROBE_HANDSHAKE_ALLOWANCE_MS = 5000;
 
 function defaultWebSocket(
   deviceId: string,
@@ -756,12 +758,13 @@ export class HybridTransport implements Transport {
       onUnsupportedVersion: () => finish(false),
     });
     // The socket rests between addresses, so a probe that left that out
-    // would end before it reached the later ones.
+    // would end before it reached the later ones. The last address can
+    // connect at the very end of its time and still has to be verified.
     this.probeDeadline = setTimeout(
       () => finish(false),
       this.settings.probeTimeoutPerUrlMs * urls.length +
         WS_RECONNECT_INTERVAL_MS * (urls.length - 1) +
-        1000,
+        PROBE_HANDSHAKE_ALLOWANCE_MS,
     );
     probe.connect();
   }
