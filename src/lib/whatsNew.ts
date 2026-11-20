@@ -22,7 +22,35 @@ export type WhatsNewAnnouncement = {
 export const WHATS_NEW_ANNOUNCEMENTS: WhatsNewAnnouncement[] = [
   {
     // Live update on every native build that runs 2.0: 1.14.1 build 30,
-    // 2.0.0 build 31, 2.0.1 build 32 and 2.0.2 build 33.
+    // 2.0.0 build 31, 2.0.1 build 32 and 2.0.2 build 33. None of them has the
+    // Bluetooth plugin, so Bluetooth stays off there.
+    id: "release-2.1.0",
+    version: "2.1.0",
+    releaseKeys: [
+      "live:1.14.1-ota.6",
+      "live:2.0.0-ota.4",
+      "live:2.0.1-ota.4",
+      "live:2.0.2-ota.4",
+    ],
+    title: "What's new in v2.1.0",
+    items: [
+      "A failed scan now shows the reason on the scan button, with Retry. No more pop-ups to miss.",
+      "A tag or code that isn't set up yet says so. Press Map it to set it up on the spot.",
+      "Scan a code opens a new full-screen camera that shows what it found. Turn on Continuous camera (Settings > Readers) to launch one code after another.",
+      "Shake to launch works from any screen and shows what it's launching.",
+      "The phone buzzes when a tag is read and again when the game starts. On iPhone the scan sheet stays open until the game launches.",
+      "New Pro owners get a short guide, including where to hold a tag on their phone.",
+      "Tap a tag is always the top button on the Zap page. Customize is at the bottom of the Zap page.",
+      'A "Last scanned" widget can be added to the Zap page to show a tag\'s ID.',
+      "Fixed a crash in the Library after reconnecting, an error when deleting inbox messages, and deck items that failed without saying so.",
+      "The App now sends anonymous counts of how often the Pro screen is shown and bought. They contain no account or device details. Turn it off in Settings > Advanced.",
+    ],
+  },
+  {
+    // Live update on every native build that runs 2.0: 1.14.1 build 30,
+    // 2.0.0 build 31, 2.0.1 build 32 and 2.0.2 build 33. The second set of
+    // keys is a follow-up live update with no user-facing changes; it keeps
+    // the 2.0.3 version and announcement so nothing new is shown.
     id: "release-2.0.3",
     version: "2.0.3",
     releaseKeys: [
@@ -30,6 +58,10 @@ export const WHATS_NEW_ANNOUNCEMENTS: WhatsNewAnnouncement[] = [
       "live:2.0.0-ota.2",
       "live:2.0.1-ota.2",
       "live:2.0.2-ota.2",
+      "live:1.14.1-ota.5",
+      "live:2.0.0-ota.3",
+      "live:2.0.1-ota.3",
+      "live:2.0.2-ota.3",
     ],
     title: "What's new in v2.0.3",
     items: [
