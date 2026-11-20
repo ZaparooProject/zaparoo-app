@@ -9,8 +9,14 @@ import {
   openBluetoothFixSettings,
 } from "@/lib/transport/ble/bluetooth";
 
+const bluetoothPluginBuiltIn = (pluginName: string) =>
+  pluginName === "BluetoothLowEnergy" || pluginName === "Preferences";
+
 function native(platform: "android" | "ios", sdk = 33): void {
   vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+  vi.mocked(Capacitor.isPluginAvailable).mockImplementation(
+    bluetoothPluginBuiltIn,
+  );
   vi.mocked(Capacitor.getPlatform).mockReturnValue(platform);
   vi.mocked(Device.getInfo).mockResolvedValue({
     androidSDKVersion: sdk,
@@ -29,9 +35,24 @@ describe("getBluetoothReadiness", () => {
   afterEach(() => {
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
     vi.mocked(Capacitor.getPlatform).mockReturnValue("web");
+    vi.mocked(Capacitor.isPluginAvailable).mockImplementation(
+      (pluginName: string) => pluginName === "Preferences",
+    );
   });
 
   it("is unsupported on the web", async () => {
+    expect(isBluetoothTransportSupported()).toBe(false);
+    await expect(getBluetoothReadiness()).resolves.toBe("unsupported");
+    expect(BluetoothLowEnergy.initialize).not.toHaveBeenCalled();
+  });
+
+  it("is unsupported on a native build without the Bluetooth plugin", async () => {
+    // A live update can run on an app binary that predates the plugin.
+    native("ios");
+    vi.mocked(Capacitor.isPluginAvailable).mockImplementation(
+      (pluginName: string) => pluginName === "Preferences",
+    );
+
     expect(isBluetoothTransportSupported()).toBe(false);
     await expect(getBluetoothReadiness()).resolves.toBe("unsupported");
     expect(BluetoothLowEnergy.initialize).not.toHaveBeenCalled();

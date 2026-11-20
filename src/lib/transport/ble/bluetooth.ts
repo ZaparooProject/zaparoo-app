@@ -10,6 +10,7 @@ import {
   BluetoothLowEnergy,
   type BluetoothLowEnergyPermissionType,
 } from "@capawesome-team/capacitor-bluetooth-low-energy";
+import { isNativePluginAvailable } from "@/lib/capacitorBridge";
 import { logger } from "@/lib/logger";
 
 export type BluetoothReadiness =
@@ -26,8 +27,16 @@ export type BluetoothReadiness =
 
 let initialized: Promise<void> | null = null;
 
+// The name the plugin registers with the native bridge.
+const BLUETOOTH_PLUGIN = "BluetoothLowEnergy";
+
+/**
+ * True only where the native Bluetooth plugin is built into the app. A live
+ * update can run this code on an app binary that predates the plugin; there
+ * Bluetooth stays off and connections use the network as before.
+ */
 export function isBluetoothTransportSupported(): boolean {
-  return Capacitor.isNativePlatform();
+  return isNativePluginAvailable(BLUETOOTH_PLUGIN);
 }
 
 function initialize(): Promise<void> {

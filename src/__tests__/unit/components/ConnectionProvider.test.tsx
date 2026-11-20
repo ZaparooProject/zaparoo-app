@@ -573,8 +573,10 @@ describe("ConnectionProvider", () => {
       expect(connectionManager.setEventHandlers).toHaveBeenCalled();
     });
 
-    it("should add device with correct config", () => {
+    it("should add device with correct config", async () => {
+      const bridge = await import("@/lib/capacitorBridge");
       vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
+      vi.mocked(bridge.isNativePluginAvailable).mockReturnValue(false);
       render(
         <ConnectionProvider>
           <div>Test</div>
@@ -617,6 +619,34 @@ describe("ConnectionProvider", () => {
             bluetooth: { coreDeviceId: "core-1", peripheralId: "AA:BB" },
           }),
         ),
+      );
+    });
+
+    it("should stay on the network transport on a native build without the Bluetooth plugin", async () => {
+      // A live update can run on an app binary that predates the plugin.
+      const bridge = await import("@/lib/capacitorBridge");
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+      vi.mocked(bridge.isNativePluginAvailable).mockImplementation(
+        (pluginName: string) => pluginName !== "BluetoothLowEnergy",
+      );
+      await deviceRegistry.noteBluetoothIdentity(RECORD_ID, {
+        coreDeviceId: "core-1",
+        peripheralId: "AA:BB",
+      });
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await waitFor(() =>
+        expect(connectionManager.addDevice).toHaveBeenCalledWith(
+          expect.objectContaining({ deviceId: RECORD_ID, type: "websocket" }),
+        ),
+      );
+      expect(connectionManager.addDevice).not.toHaveBeenCalledWith(
+        expect.objectContaining({ type: "hybrid" }),
       );
     });
 
