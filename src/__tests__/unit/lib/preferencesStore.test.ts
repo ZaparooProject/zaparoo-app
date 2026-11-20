@@ -15,6 +15,7 @@ import { logger } from "@/lib/logger";
 vi.mock("@capacitor/core", () => ({
   Capacitor: {
     isNativePlatform: vi.fn(() => false),
+    getPlatform: vi.fn(() => "web"),
   },
 }));
 
@@ -777,6 +778,27 @@ describe("usePreferencesStore", () => {
    * - shakeEnabled defaults to false (explicit opt-in for Pro feature)
    * - preferRemoteWriter defaults to false (explicit opt-in)
    */
+  describe("continuous scanning defaults", () => {
+    async function freshStore(platform: string) {
+      vi.mocked(Capacitor.getPlatform).mockReturnValue(platform);
+      vi.resetModules();
+      const mod = await import("@/lib/preferencesStore");
+      return mod.usePreferencesStore.getState();
+    }
+
+    it("keeps NFC scanning open by default on Android", async () => {
+      expect((await freshStore("android")).restartScan).toBe(true);
+    });
+
+    it("scans one tag at a time by default on iOS", async () => {
+      expect((await freshStore("ios")).restartScan).toBe(false);
+    });
+
+    it("leaves the continuous camera off by default", async () => {
+      expect((await freshStore("android")).continuousCamera).toBe(false);
+    });
+  });
+
   describe("Pro feature defaults (REGRESSION)", () => {
     it("launchOnScan MUST default to true for free trial experience", () => {
       // Reset to defaults by creating new store state without override

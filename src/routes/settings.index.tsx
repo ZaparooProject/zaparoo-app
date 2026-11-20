@@ -8,7 +8,6 @@ import {
   DatabaseIcon,
   HelpCircleIcon,
   InfoIcon,
-  PencilIcon,
   LanguagesIcon,
   RadioIcon,
   SlidersHorizontalIcon,
@@ -99,13 +98,6 @@ export function Settings() {
           to: "/settings/accessibility",
           label: t("settings.accessibility.title"),
           icon: PersonStandingIcon,
-        },
-        {
-          to: "/",
-          search: { customise: true },
-          label: t("zapLayout.title"),
-          icon: PencilIcon,
-          full: true,
         },
         {
           to: "/settings/online",
@@ -324,13 +316,8 @@ export function Settings() {
                       <Link
                         key={destination.label}
                         to={destination.to}
-                        search={
-                          "search" in destination
-                            ? destination.search
-                            : undefined
-                        }
                         onPointerUp={handleHapticPress}
-                        className={`site-button site-button-outline flex min-h-14 min-w-0 touch-manipulation items-center gap-2 px-3 py-2 text-left text-sm tracking-normal ${"status" in destination ? "col-span-full flex-wrap" : "full" in destination ? "col-span-full" : ""}`}
+                        className={`site-button site-button-outline flex min-h-14 min-w-0 touch-manipulation items-center gap-2 px-3 py-2 text-left text-sm tracking-normal ${"status" in destination ? "col-span-full flex-wrap" : ""}`}
                       >
                         <destination.icon
                           size={20}

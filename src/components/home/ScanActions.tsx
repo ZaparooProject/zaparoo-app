@@ -1,5 +1,7 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "@tanstack/react-router";
+import type { ScanError } from "@/hooks/useScanOperations";
 import { CameraIcon, NfcIcon } from "@/lib/images";
 import { Button } from "@/components/wui/Button";
 import { Card } from "@/components/wui/Card";
@@ -41,6 +43,14 @@ interface ScanActionsProps {
   /** Starts a scan, and stops one already running. */
   onTapScan: () => void;
   onCameraScan: () => void;
+  /** The last NFC scan's failure, shown on the scan control. */
+  scanError?: ScanError | null;
+  /** Clears `scanError`. */
+  onDismissScanError?: () => void;
+  /** A one-shot camera scan is waiting for Core to answer. */
+  cameraLaunching?: boolean;
+  /** A tag was read and Core has not answered yet. */
+  nfcLaunching?: boolean;
   nfcEnabled: boolean;
   onOpenNfcSettings: () => void;
   writeActivity?: ReactNode;
@@ -53,11 +63,16 @@ export function ScanActions({
   scanStatus,
   onTapScan,
   onCameraScan,
+  scanError = null,
+  onDismissScanError,
+  cameraLaunching = false,
+  nfcLaunching = false,
   nfcEnabled,
   onOpenNfcSettings,
   writeActivity,
 }: ScanActionsProps) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const appUi = useAppUi();
   const [stopped, setStopped] = useState(false);
   const wasScanning = useRef(scanSession);
@@ -74,34 +89,65 @@ export function ScanActions({
     wasScanning.current = scanSession;
   }, [scanSession, scanStatus]);
 
-  const statusAnnouncement = getScanStatusAnnouncement(
-    scanSession,
-    scanStatus,
-    stopped,
-    t,
-  );
+  const showScanError = scanError !== null && !scanSession;
+  const statusAnnouncement = showScanError
+    ? scanError.message
+    : getScanStatusAnnouncement(scanSession, scanStatus, stopped, t);
+  const scanErrorPrefill = scanError?.prefill ?? null;
+  // The error belongs to the control that was used.
+  const nfcError = showScanError && scanError.source === "nfc";
+  const cameraError = showScanError && scanError.source === "camera";
+  const dismissScanError = onDismissScanError ?? (() => undefined);
+  // The read is over and Core has not answered; a live session wins.
+  const tagLaunching = nfcLaunching && !scanSession;
+  const mapItAction = scanErrorPrefill
+    ? {
+        label: t("scan.mapIt"),
+        onClick: () =>
+          void navigate({
+            to: "/create/mappings/new",
+            search: {
+              type: scanErrorPrefill.type,
+              pattern: scanErrorPrefill.pattern,
+            },
+          }),
+      }
+    : undefined;
 
   const renderAction = (mode: ScanMode) => {
     if (mode === "camera") {
-      return (
-        <Button
+      const cameraButton = (
+        <ReaderActivityControl
           key="camera"
+          state={cameraLaunching ? "waiting" : cameraError ? "error" : "idle"}
+          errorText={scanError?.message}
+          errorAction={cameraError ? mapItAction : undefined}
+          idleLabel={t("scan.scanCode")}
+          activeLabel={t("scan.launching")}
+          activeAriaLabel={t("scan.launching")}
+          icon={<CameraIcon size={24} />}
+          activeIcon={<CameraIcon size={24} />}
+          onStart={onCameraScan}
+          // Nothing to cancel while Core answers; Cancel dismisses an error.
+          onCancel={cameraError ? dismissScanError : () => undefined}
           variant="secondary"
+          intent="default"
           size={compact ? "default" : "lg"}
           layout="stacked"
-          className={
+          className="w-full"
+          buttonClassName={
             compact
               ? "zap-scan-tile w-full max-w-none"
               : "min-h-[4.5rem] w-full"
           }
-          icon={<CameraIcon size={24} />}
-          label={t("scan.scanCode")}
-          aria-label={t("scan.scanCode")}
+          showCancelHint={false}
           // A camera sheet over a live NFC session would fight it for the tag.
           disabled={scanSession}
-          onClick={onCameraScan}
+          readerIconSize={24}
+          announceStateChanges={false}
         />
       );
+      return cameraButton;
     }
 
     if (!nfcEnabled) {
@@ -128,13 +174,29 @@ export function ScanActions({
     return (
       <ReaderActivityControl
         key="nfc"
-        state={scanSession ? "waiting" : "idle"}
+        state={
+          scanSession || tagLaunching ? "waiting" : nfcError ? "error" : "idle"
+        }
+        errorText={scanError?.message}
+        errorAction={nfcError ? mapItAction : undefined}
         idleLabel={t("scan.tapTag")}
-        activeLabel={t("scan.tapTagScanning")}
-        activeAriaLabel={t("scan.tapTagStop")}
+        activeLabel={
+          tagLaunching ? t("scan.launching") : t("scan.tapTagScanning")
+        }
+        activeAriaLabel={
+          tagLaunching ? t("scan.launching") : t("scan.tapTagStop")
+        }
+        showCancelHint={!tagLaunching}
         icon={<NfcIcon size={compact ? 24 : 28} />}
         onStart={onTapScan}
-        onCancel={onTapScan}
+        // Nothing to cancel while Core answers.
+        onCancel={
+          tagLaunching
+            ? () => undefined
+            : nfcError
+              ? (onDismissScanError ?? onTapScan)
+              : onTapScan
+        }
         size={compact ? "default" : "lg"}
         layout="stacked"
         className="w-full"

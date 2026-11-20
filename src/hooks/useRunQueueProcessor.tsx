@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { ConnectionState, RunQueueItem, useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
-import { runToken } from "@/lib/tokenOperations.tsx";
+import { runToken, type RunTokenOptions } from "@/lib/tokenOperations.tsx";
+import { useShakeSheetStore } from "@/lib/shakeSheetStore";
 import { logger } from "@/lib/logger";
 import { useHaptics } from "@/hooks/useHaptics";
 
@@ -67,8 +68,24 @@ export function useRunQueueProcessor(): UseRunQueueProcessorReturn {
         }
       };
 
+      const fromShake = item.source === "shake";
+
       const run = () => {
         logger.log("Processing run queue:", item.value.slice(0, 50));
+        const options: RunTokenOptions = fromShake
+          ? {
+              source: "shake",
+              // The shake sheet shows the failure; toast only if it is gone.
+              onError: (error) => {
+                const sheet = useShakeSheetStore.getState();
+                if (sheet.phase === "launching") {
+                  sheet.fail(error.message);
+                } else if (sheet.phase !== "failed") {
+                  toast.error(error.message);
+                }
+              },
+            }
+          : { source: "queue" };
         runToken(
           "",
           item.value,
@@ -86,8 +103,14 @@ export function useRunQueueProcessor(): UseRunQueueProcessorReturn {
           false, // override
           true, // canQueueCommands
           true, // requiresLaunch - queue items are deliberate launch actions
+          options,
         )
           .then((success: boolean) => {
+            // A failed run already moved the sheet on; anything still
+            // launching was blocked before reaching Core.
+            if (!success && fromShake) {
+              useShakeSheetStore.getState().abandon();
+            }
             // false means the launch was blocked (e.g. Pro purchase modal
             // opened) or failed with its own user feedback - not a success
             logger.log(
@@ -129,7 +152,12 @@ export function useRunQueueProcessor(): UseRunQueueProcessorReturn {
           action: "runQueue",
         });
         notification("error");
-        toast.error(t("create.custom.failMsg"));
+        const sheet = useShakeSheetStore.getState();
+        if (fromShake && sheet.phase === "launching") {
+          sheet.fail(t("create.custom.failMsg"));
+        } else {
+          toast.error(t("create.custom.failMsg"));
+        }
         finish();
       }, CONNECT_DEADLINE_MS);
     },

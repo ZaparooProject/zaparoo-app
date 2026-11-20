@@ -297,7 +297,6 @@ describe("Settings Index Route", () => {
       ).toEqual([
         "/settings/language-region",
         "/settings/accessibility",
-        "/",
         "/settings/online",
       ]);
       expect(

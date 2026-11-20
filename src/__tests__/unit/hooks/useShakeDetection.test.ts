@@ -4,9 +4,10 @@
  * Tests the shake detection functionality including:
  * - Platform detection (only enabled on native)
  * - Connection and enabled state requirements
- * - Multi-shake detection within time window
+ * - Shake works on any route, but is blocked while another task owns the screen
+ * - Multi-shake detection within time window, and the charge it reports
  * - Cooldown period after trigger
- * - Haptic feedback for intermediate and confirmed shakes
+ * - Haptic feedback through the haptics preference
  * - Zapscript queueing on successful trigger
  * - Native detector start/stop tied to the listener lifetime
  * - Listener cleanup on unmount
@@ -14,14 +15,20 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
+import { createElement, type ReactNode } from "react";
 import { useShakeDetection } from "@/hooks/useShakeDetection";
-import { useStatusStore } from "@/lib/store";
+import { useSlideModalManager } from "@/hooks/useSlideModalManager";
+import { SlideModalProvider } from "@/components/SlideModalProvider";
+import { useStatusStore, type RunQueueItem } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
+import { useShakeSheetStore } from "@/lib/shakeSheetStore";
+import { sessionManager } from "@/lib/nfc";
 
 // Mock Capacitor
 vi.mock("@capacitor/core", () => ({
   Capacitor: {
     isNativePlatform: vi.fn(() => false),
+    getPlatform: vi.fn(() => "ios"),
   },
 }));
 
@@ -47,7 +54,13 @@ vi.mock("@capacitor/haptics", () => ({
   },
   ImpactStyle: {
     Light: "LIGHT",
+    Medium: "MEDIUM",
     Heavy: "HEAVY",
+  },
+  NotificationType: {
+    Success: "SUCCESS",
+    Warning: "WARNING",
+    Error: "ERROR",
   },
 }));
 
@@ -55,6 +68,8 @@ vi.mock("@capacitor/haptics", () => ({
 import { Capacitor } from "@capacitor/core";
 import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import { ShakeDetector } from "@/lib/shakeDetector";
+
+const PROPS = { shakeEnabled: true, connected: true };
 
 // Helper to trigger a shake event and flush microtasks
 async function triggerShake() {
@@ -67,6 +82,14 @@ async function triggerShake() {
   }
 }
 
+async function triggerConfirmedShake() {
+  await triggerShake();
+  await act(async () => {
+    vi.advanceTimersByTime(100);
+  });
+  await triggerShake();
+}
+
 // Helper to wait for async effect setup
 async function flushAsyncSetup() {
   await act(async () => {
@@ -75,7 +98,15 @@ async function flushAsyncSetup() {
   });
 }
 
+function withModalProvider({ children }: { children: ReactNode }) {
+  return createElement(SlideModalProvider, null, children);
+}
+
 describe("useShakeDetection", () => {
+  let setRunQueue: ReturnType<
+    typeof vi.fn<(item: RunQueueItem | null) => void>
+  >;
+
   beforeEach(() => {
     vi.useFakeTimers();
     // Reset stores
@@ -86,6 +117,10 @@ describe("useShakeDetection", () => {
       hapticsEnabled: true,
       shakeZapscript: "**launch.random",
     });
+    useShakeSheetStore.getState().dismiss();
+    sessionManager.setIsScanning(false);
+    setRunQueue = vi.fn<(item: RunQueueItem | null) => void>();
+    useStatusStore.setState({ setRunQueue });
 
     // Clear mock state
     mockShakeCallback = null;
@@ -102,37 +137,17 @@ describe("useShakeDetection", () => {
 
   describe("platform detection", () => {
     it("should not setup listener on web platform", () => {
-      // Arrange
       vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
 
-      // Act
-      renderHook(() =>
-        useShakeDetection({
-          shakeEnabled: true,
-          connected: true,
-          pathname: "/",
-        }),
-      );
+      renderHook(() => useShakeDetection(PROPS));
 
-      // Assert
       expect(ShakeDetector.addListener).not.toHaveBeenCalled();
     });
 
     it("should setup listener on native platform when enabled and connected", async () => {
-      // Arrange
-      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
-
-      // Act
-      renderHook(() =>
-        useShakeDetection({
-          shakeEnabled: true,
-          connected: true,
-          pathname: "/",
-        }),
-      );
+      renderHook(() => useShakeDetection(PROPS));
       await flushAsyncSetup();
 
-      // Assert
       expect(ShakeDetector.addListener).toHaveBeenCalledWith(
         "shake",
         expect.any(Function),
@@ -142,13 +157,7 @@ describe("useShakeDetection", () => {
 
   describe("native detector lifetime", () => {
     it("should start the detector after subscribing", async () => {
-      renderHook(() =>
-        useShakeDetection({
-          shakeEnabled: true,
-          connected: true,
-          pathname: "/",
-        }),
-      );
+      renderHook(() => useShakeDetection(PROPS));
       await flushAsyncSetup();
 
       expect(ShakeDetector.start).toHaveBeenCalledTimes(1);
@@ -160,13 +169,7 @@ describe("useShakeDetection", () => {
     });
 
     it("should not start the detector while shake is disabled", async () => {
-      renderHook(() =>
-        useShakeDetection({
-          shakeEnabled: false,
-          connected: true,
-          pathname: "/",
-        }),
-      );
+      renderHook(() => useShakeDetection({ ...PROPS, shakeEnabled: false }));
       await flushAsyncSetup();
 
       expect(ShakeDetector.start).not.toHaveBeenCalled();
@@ -174,12 +177,7 @@ describe("useShakeDetection", () => {
 
     it("should stop the detector when the connection drops", async () => {
       const { rerender } = renderHook(
-        ({ connected }) =>
-          useShakeDetection({
-            shakeEnabled: true,
-            connected,
-            pathname: "/",
-          }),
+        ({ connected }) => useShakeDetection({ ...PROPS, connected }),
         { initialProps: { connected: true } },
       );
       await flushAsyncSetup();
@@ -190,128 +188,136 @@ describe("useShakeDetection", () => {
     });
 
     it("should stop the detector on unmount", async () => {
-      const { unmount } = renderHook(() =>
-        useShakeDetection({
-          shakeEnabled: true,
-          connected: true,
-          pathname: "/",
-        }),
-      );
+      const { unmount } = renderHook(() => useShakeDetection(PROPS));
       await flushAsyncSetup();
 
       unmount();
 
       expect(ShakeDetector.stop).toHaveBeenCalledTimes(1);
     });
-
-    it("should keep the detector running across navigation", async () => {
-      const setRunQueue = vi.fn();
-      useStatusStore.setState({ setRunQueue });
-
-      const { rerender } = renderHook(
-        ({ pathname }) =>
-          useShakeDetection({
-            shakeEnabled: true,
-            connected: true,
-            pathname,
-          }),
-        { initialProps: { pathname: "/settings" } },
-      );
-      await flushAsyncSetup();
-
-      rerender({ pathname: "/" });
-      await flushAsyncSetup();
-
-      expect(ShakeDetector.start).toHaveBeenCalledTimes(1);
-      expect(ShakeDetector.stop).not.toHaveBeenCalled();
-
-      // The listener still sees the current page after navigating home
-      await triggerShake();
-      vi.advanceTimersByTime(100);
-      await triggerShake();
-      expect(setRunQueue).toHaveBeenCalledTimes(1);
-    });
   });
 
   describe("state requirements", () => {
     it("should not setup listener when shake is disabled", () => {
-      // Arrange & Act
-      renderHook(() =>
-        useShakeDetection({
-          shakeEnabled: false,
-          connected: true,
-          pathname: "/",
-        }),
-      );
+      renderHook(() => useShakeDetection({ ...PROPS, shakeEnabled: false }));
 
-      // Assert
       expect(ShakeDetector.addListener).not.toHaveBeenCalled();
     });
 
     it("should not setup listener when disconnected", () => {
-      // Arrange & Act
-      renderHook(() =>
-        useShakeDetection({
-          shakeEnabled: true,
-          connected: false,
-          pathname: "/",
-        }),
-      );
+      renderHook(() => useShakeDetection({ ...PROPS, connected: false }));
 
-      // Assert
       expect(ShakeDetector.addListener).not.toHaveBeenCalled();
     });
   });
 
-  describe("pathname requirement", () => {
-    it("should ignore shake when not on home page", async () => {
-      // Arrange
-      const setRunQueue = vi.fn();
-      useStatusStore.setState({ setRunQueue });
+  describe("blocking", () => {
+    it("should trigger without any route requirement", async () => {
+      renderHook(() => useShakeDetection(PROPS), {
+        wrapper: withModalProvider,
+      });
+      await flushAsyncSetup();
 
-      renderHook(() =>
-        useShakeDetection({
-          shakeEnabled: true,
-          connected: true,
-          pathname: "/settings",
-        }),
+      await triggerConfirmedShake();
+
+      expect(setRunQueue).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      ["an input", () => document.createElement("input")],
+      ["a textarea", () => document.createElement("textarea")],
+      [
+        "a contentEditable element",
+        () => {
+          const element = document.createElement("div");
+          element.contentEditable = "true";
+          element.tabIndex = 0;
+          return element;
+        },
+      ],
+    ])("should ignore shakes while %s is focused", async (_name, create) => {
+      const field = create();
+      document.body.appendChild(field);
+      field.focus();
+      renderHook(() => useShakeDetection(PROPS));
+      await flushAsyncSetup();
+
+      await triggerConfirmedShake();
+
+      expect(setRunQueue).not.toHaveBeenCalled();
+      expect(Haptics.impact).not.toHaveBeenCalled();
+      expect(useShakeSheetStore.getState().phase).toBe("idle");
+      field.remove();
+    });
+
+    it("should ignore shakes while a slide modal is open", async () => {
+      const { result } = renderHook(
+        () => {
+          useShakeDetection(PROPS);
+          return useSlideModalManager();
+        },
+        { wrapper: withModalProvider },
       );
       await flushAsyncSetup();
 
-      // Act - trigger 2 shakes (normally enough to trigger)
-      await triggerShake();
-      vi.advanceTimersByTime(100);
-      await triggerShake();
+      act(() => {
+        result.current.registerModal("settings-modal", () => {});
+      });
+      await triggerConfirmedShake();
+      expect(setRunQueue).not.toHaveBeenCalled();
 
-      // Assert - should not queue because not on home page
+      // Closing the modal lets shake through again
+      act(() => {
+        result.current.unregisterModal("settings-modal");
+      });
+      await triggerConfirmedShake();
+      expect(setRunQueue).toHaveBeenCalledTimes(1);
+    });
+
+    it("should ignore shakes while the Pro purchase sheet is open", async () => {
+      useStatusStore.setState({ proPurchaseModalOpen: true });
+      renderHook(() => useShakeDetection(PROPS));
+      await flushAsyncSetup();
+
+      await triggerConfirmedShake();
+
+      expect(setRunQueue).not.toHaveBeenCalled();
+    });
+
+    it("should ignore shakes while a tag write is open", async () => {
+      useStatusStore.setState({ writeOpen: true });
+      renderHook(() => useShakeDetection(PROPS));
+      await flushAsyncSetup();
+
+      await triggerConfirmedShake();
+
+      expect(setRunQueue).not.toHaveBeenCalled();
+    });
+
+    it("should ignore shakes while an NFC scan is running", async () => {
+      sessionManager.setIsScanning(true);
+      renderHook(() => useShakeDetection(PROPS));
+      await flushAsyncSetup();
+
+      await triggerConfirmedShake();
+
       expect(setRunQueue).not.toHaveBeenCalled();
     });
   });
 
   describe("multi-shake detection", () => {
     it("should require 2 shakes within 1.5s window to trigger", async () => {
-      // Arrange
-      const setRunQueue = vi.fn();
-      useStatusStore.setState({ setRunQueue });
-
-      renderHook(() =>
-        useShakeDetection({
-          shakeEnabled: true,
-          connected: true,
-          pathname: "/",
-        }),
-      );
+      renderHook(() => useShakeDetection(PROPS));
       await flushAsyncSetup();
 
-      // Act - single shake should not trigger
+      // Single shake should not trigger
       await triggerShake();
       expect(setRunQueue).not.toHaveBeenCalled();
 
-      // Act - second shake within window should trigger
+      // Second shake within window should trigger
       vi.advanceTimersByTime(500);
       await triggerShake();
 
-      // Assert
       expect(setRunQueue).toHaveBeenCalledWith({
         value: "**launch.random",
         unsafe: true,
@@ -320,223 +326,171 @@ describe("useShakeDetection", () => {
     });
 
     it("should not trigger if shakes are outside the 1.5s window", async () => {
-      // Arrange
-      const setRunQueue = vi.fn();
-      useStatusStore.setState({ setRunQueue });
-
-      renderHook(() =>
-        useShakeDetection({
-          shakeEnabled: true,
-          connected: true,
-          pathname: "/",
-        }),
-      );
+      renderHook(() => useShakeDetection(PROPS));
       await flushAsyncSetup();
 
-      // Act - first shake
+      await triggerShake();
+      await act(async () => {
+        vi.advanceTimersByTime(2000);
+      });
       await triggerShake();
 
-      // Wait beyond the shake window
-      vi.advanceTimersByTime(2000);
-
-      // Second shake after window expired
-      await triggerShake();
-
-      // Assert - should not trigger because first shake expired
       expect(setRunQueue).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("shake sheet charge", () => {
+    it("should charge halfway on the first shake of a random command", async () => {
+      renderHook(() => useShakeDetection(PROPS));
+      await flushAsyncSetup();
+
+      await triggerShake();
+
+      expect(useShakeSheetStore.getState()).toMatchObject({
+        phase: "charging",
+        progress: 0.5,
+        random: true,
+      });
+    });
+
+    it("should drain the charge when the window passes", async () => {
+      renderHook(() => useShakeDetection(PROPS));
+      await flushAsyncSetup();
+
+      await triggerShake();
+      await act(async () => {
+        vi.advanceTimersByTime(1500);
+      });
+
+      expect(useShakeSheetStore.getState().phase).toBe("idle");
+    });
+
+    it("should move to launching when the shake is confirmed", async () => {
+      usePreferencesStore.setState({ shakeZapscript: "**launch.search:mario" });
+      renderHook(() => useShakeDetection(PROPS));
+      await flushAsyncSetup();
+
+      await triggerConfirmedShake();
+
+      expect(useShakeSheetStore.getState()).toMatchObject({
+        phase: "launching",
+        progress: 1,
+        random: false,
+      });
     });
   });
 
   describe("cooldown period", () => {
     it("should ignore shakes during 2s cooldown after trigger", async () => {
-      // Arrange
-      const setRunQueue = vi.fn();
-      useStatusStore.setState({ setRunQueue });
-
-      renderHook(() =>
-        useShakeDetection({
-          shakeEnabled: true,
-          connected: true,
-          pathname: "/",
-        }),
-      );
+      renderHook(() => useShakeDetection(PROPS));
       await flushAsyncSetup();
 
-      // Act - trigger first time
-      await triggerShake();
-      vi.advanceTimersByTime(100);
-      await triggerShake();
-
+      await triggerConfirmedShake();
       expect(setRunQueue).toHaveBeenCalledTimes(1);
 
-      // Act - try to trigger again within cooldown
-      vi.advanceTimersByTime(1000); // 1s into cooldown
-      await triggerShake();
-      vi.advanceTimersByTime(100);
-      await triggerShake();
+      // Try to trigger again within cooldown
+      vi.advanceTimersByTime(1000);
+      await triggerConfirmedShake();
 
-      // Assert - should still only have been called once
       expect(setRunQueue).toHaveBeenCalledTimes(1);
     });
 
     it("should allow new trigger after cooldown expires", async () => {
-      // Arrange
-      const setRunQueue = vi.fn();
-      useStatusStore.setState({ setRunQueue });
-
-      renderHook(() =>
-        useShakeDetection({
-          shakeEnabled: true,
-          connected: true,
-          pathname: "/",
-        }),
-      );
+      renderHook(() => useShakeDetection(PROPS));
       await flushAsyncSetup();
 
-      // First trigger
-      await triggerShake();
-      vi.advanceTimersByTime(100);
-      await triggerShake();
+      await triggerConfirmedShake();
+      expect(setRunQueue).toHaveBeenCalledTimes(1);
+      // The first launch has finished and its sheet has gone.
+      act(() => {
+        useShakeSheetStore.getState().dismiss();
+      });
+
+      vi.advanceTimersByTime(2500);
+      await triggerConfirmedShake();
+
+      expect(setRunQueue).toHaveBeenCalledTimes(2);
+    });
+
+    it("ignores a shake while the previous shake is still launching", async () => {
+      renderHook(() => useShakeDetection(PROPS));
+      await flushAsyncSetup();
+
+      await triggerConfirmedShake();
+      expect(useShakeSheetStore.getState().phase).toBe("launching");
+
+      vi.advanceTimersByTime(2500);
+      await triggerConfirmedShake();
 
       expect(setRunQueue).toHaveBeenCalledTimes(1);
-
-      // Wait for cooldown to expire
-      vi.advanceTimersByTime(2500);
-
-      // Trigger again
-      await triggerShake();
-      vi.advanceTimersByTime(100);
-      await triggerShake();
-
-      // Assert - should have been called twice now
-      expect(setRunQueue).toHaveBeenCalledTimes(2);
     });
   });
 
   describe("haptic feedback", () => {
     it("should provide light haptic for intermediate shakes", async () => {
-      // Arrange
-      renderHook(() =>
-        useShakeDetection({
-          shakeEnabled: true,
-          connected: true,
-          pathname: "/",
-        }),
-      );
+      renderHook(() => useShakeDetection(PROPS));
       await flushAsyncSetup();
 
-      // Act - single shake (intermediate)
       await triggerShake();
 
-      // Assert - light haptic feedback
       expect(Haptics.impact).toHaveBeenCalledWith({ style: ImpactStyle.Light });
     });
 
     it("should provide heavy haptic when shake triggers", async () => {
-      // Arrange
-      renderHook(() =>
-        useShakeDetection({
-          shakeEnabled: true,
-          connected: true,
-          pathname: "/",
-        }),
-      );
+      renderHook(() => useShakeDetection(PROPS));
       await flushAsyncSetup();
 
-      // Act - two shakes to trigger
-      await triggerShake();
-      vi.advanceTimersByTime(100);
-      await triggerShake();
+      await triggerConfirmedShake();
 
-      // Assert - heavy haptic feedback on trigger
       expect(Haptics.impact).toHaveBeenCalledWith({ style: ImpactStyle.Heavy });
     });
 
-    it("should not provide haptic when haptics disabled", async () => {
-      // Arrange
-      usePreferencesStore.setState({ hapticsEnabled: false });
-
-      renderHook(() =>
-        useShakeDetection({
-          shakeEnabled: true,
-          connected: true,
-          pathname: "/",
-        }),
-      );
+    it("should follow the haptics preference when it changes", async () => {
+      renderHook(() => useShakeDetection(PROPS));
       await flushAsyncSetup();
 
-      // Act - two shakes to trigger
-      await triggerShake();
-      vi.advanceTimersByTime(100);
-      await triggerShake();
+      act(() => {
+        usePreferencesStore.setState({ hapticsEnabled: false });
+      });
+      await triggerConfirmedShake();
 
-      // Assert - no haptic feedback
       expect(Haptics.impact).not.toHaveBeenCalled();
+      expect(setRunQueue).toHaveBeenCalledTimes(1);
     });
   });
 
   describe("zapscript configuration", () => {
     it("should not trigger when no zapscript configured", async () => {
-      // Arrange
-      const setRunQueue = vi.fn();
-      useStatusStore.setState({ setRunQueue });
       usePreferencesStore.setState({ shakeZapscript: "" });
-
-      renderHook(() =>
-        useShakeDetection({
-          shakeEnabled: true,
-          connected: true,
-          pathname: "/",
-        }),
-      );
+      renderHook(() => useShakeDetection(PROPS));
       await flushAsyncSetup();
 
-      // Act - trigger two shakes
-      await triggerShake();
-      vi.advanceTimersByTime(100);
-      await triggerShake();
+      await triggerConfirmedShake();
 
-      // Assert - should not queue because no zapscript
       expect(setRunQueue).not.toHaveBeenCalled();
+      expect(useShakeSheetStore.getState().phase).toBe("idle");
     });
   });
 
   describe("cleanup", () => {
     it("should cleanup listener on unmount", async () => {
-      // Arrange
-      const { unmount } = renderHook(() =>
-        useShakeDetection({
-          shakeEnabled: true,
-          connected: true,
-          pathname: "/",
-        }),
-      );
+      const { unmount } = renderHook(() => useShakeDetection(PROPS));
       await flushAsyncSetup();
 
-      // Act
       unmount();
 
-      // Assert
       expect(mockRemove).toHaveBeenCalled();
     });
 
     it("should cleanup listener when shakeEnabled changes to false", async () => {
-      // Arrange
       const { rerender } = renderHook(
-        ({ shakeEnabled }) =>
-          useShakeDetection({
-            shakeEnabled,
-            connected: true,
-            pathname: "/",
-          }),
+        ({ shakeEnabled }) => useShakeDetection({ ...PROPS, shakeEnabled }),
         { initialProps: { shakeEnabled: true } },
       );
       await flushAsyncSetup();
 
-      // Act
       rerender({ shakeEnabled: false });
 
-      // Assert
       expect(mockRemove).toHaveBeenCalled();
     });
   });

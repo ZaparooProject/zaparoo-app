@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { useEffect, useRef } from "react";
 import classNames from "classnames";
 import { useTranslation } from "react-i18next";
+import { TriangleAlertIcon } from "lucide-react";
 import { NfcIcon } from "@/lib/images";
 import { useAnnouncer } from "@/components/A11yAnnouncer";
 import {
@@ -21,7 +22,14 @@ interface ReaderActivityControlProps {
   onStart: () => void;
   onCancel: () => void;
   onRetry?: () => void;
+  /** Announced when the control enters the error state. */
   errorMessage?: string;
+  /** Visible status inside the Retry face. Defaults to the verify failure. */
+  errorText?: string;
+  /** Replaces Retry, for an error with a better way forward. Cancel stays. */
+  errorAction?: { label: string; onClick: () => void };
+  /** Icon while waiting. Defaults to the NFC reader icon. */
+  activeIcon?: ReactElement;
   variant?: "fill" | "secondary" | "outline";
   intent?: "default" | "primary" | "destructive";
   size?: "default" | "sm" | "lg";
@@ -44,6 +52,9 @@ export function ReaderActivityControl({
   onCancel,
   onRetry,
   errorMessage,
+  errorText,
+  errorAction,
+  activeIcon,
   variant = "fill",
   intent = "primary",
   size = "default",
@@ -70,11 +81,11 @@ export function ReaderActivityControl({
     }
   }, [activeLabel, announce, announceStateChanges, errorMessage, state]);
 
-  const readerIcon = <NfcIcon size={readerIconSize} />;
+  const readerIcon = activeIcon ?? <NfcIcon size={readerIconSize} />;
   const active = state === "waiting" || state === "attention";
   const statusText =
     state === "error"
-      ? t("spinner.verifyFailed")
+      ? (errorText ?? t("spinner.verifyFailed"))
       : active && showCancelHint
         ? t("reader.pressAgainToCancel")
         : "";
@@ -87,21 +98,25 @@ export function ReaderActivityControl({
             className="wui-reader-button-shell min-w-0"
             data-reader-state="error"
           >
+            {/* The way forward keeps the colour of the button it replaces.
+                The icon and the reason carry the error; red would read as
+                the way out. */}
             <Button
-              label={t("scan.retry")}
-              icon={readerIcon}
+              label={errorAction?.label ?? t("scan.retry")}
+              icon={<TriangleAlertIcon size={readerIconSize} aria-hidden />}
               readerState="error"
               readerStatus={statusText}
-              intent="destructive"
+              variant={variant}
+              intent={intent}
               size={size}
               layout={layout}
               className={classNames("min-h-18 w-full", buttonClassName)}
-              onClick={onRetry ?? onStart}
+              onClick={errorAction?.onClick ?? onRetry ?? onStart}
             />
           </div>
           <Button
             label={t("nav.cancel")}
-            variant="outline"
+            variant="secondary"
             className="min-h-18 w-full min-w-0"
             onClick={onCancel}
           />

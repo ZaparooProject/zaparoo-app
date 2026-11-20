@@ -43,6 +43,17 @@ const mockScanOperationsState = {
   handleCameraScan: vi.fn(),
   handleStopConfirm: vi.fn(),
   runToken: vi.fn(),
+  continuousCamera: {
+    active: false,
+    result: null,
+    outline: null,
+    torchAvailable: false,
+    torchOn: false,
+    idleStopped: false,
+    start: vi.fn(),
+    stop: vi.fn(),
+    toggleTorch: vi.fn(),
+  },
 };
 
 // Captures the props Index passes to useScanOperations so tests can drive

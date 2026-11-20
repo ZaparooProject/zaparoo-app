@@ -95,6 +95,7 @@ import {
   type DeviceConnectionActionsContextValue,
 } from "@/hooks/useConnection";
 import { useNetworkScan } from "@/hooks/useNetworkScan";
+import { launchFeedback } from "@/lib/launchFeedback";
 import { useAnnouncer } from "./A11yAnnouncer";
 import { PairingModal } from "./PairingModal";
 
@@ -740,6 +741,13 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
               cancelMediaStopReconciliation(slot);
               if (slot === "primary") {
                 clearStagedToken();
+                const str = (v: unknown) => (typeof v === "string" ? v : "");
+                launchFeedback.mediaStarted({
+                  name: str(params.mediaName),
+                  systemId: str(params.systemId),
+                  systemName: str(params.systemName),
+                  path: str(params.mediaPath),
+                });
               }
               refreshMediaState();
             }

@@ -805,8 +805,18 @@
       "tapTag": "Tap a tag",
       "tapTagScanning": "Scanning",
       "tapTagStop": "Stop scanning",
+      "launching": "Launching...",
+      "notSetUp": "Not set up yet",
+      "mapIt": "Map it",
       "scanCode": "Scan a code",
       "statusStopped": "Scanning stopped",
+      "cameraHeading": "Point at a code",
+      "cameraTorch": "Torch",
+      "cameraLaunched": "Launched",
+      "cameraScanned": "Scanned",
+      "cameraNotMapped": "This code has no game mapped",
+      "cameraFailed": "Couldn't launch",
+      "cameraDone": "Done",
       "noReaderTitle": "No reader on this phone",
       "noReaderSub": "This phone has no NFC or camera available, so it cannot scan. You can still use it to manage your device.",
       "devicePill": "{{device}}, {{status}}",
@@ -1427,6 +1437,10 @@
         "scanModeHelp": "**Tap:** Default mode. Media will launch on scan and token removals are not tracked.\n\n**Hold:** Media will launch on scan and exit when the token is removed from the reader. Only works with external readers, not in-app scanning.",
         "continuousScan": "Continuous scanning",
         "continuousScanHelp": "When enabled, the in-app reader on the Zap page will keep scanning for tokens even after reading one.",
+        "continuousScanHelpAndroid": "When enabled, the in-app reader on the Zap page keeps reading tags until you stop it.",
+        "continuousScanHelpIos": "When enabled, the in-app reader on the Zap page reopens the scan sheet after each scan.",
+        "continuousCamera": "Continuous camera",
+        "continuousCameraHelp": "When enabled, the camera on the Zap page stays open and launches each code you point it at, until you press Done. A code launches once while it stays in view.",
         "keepScreenAwake": "Keep screen on",
         "keepScreenAwakeHelp": "When enabled, the screen stays on while the Zap page is open and a device is connected, so the in-app reader is always ready to scan. Turn this off to let your phone sleep normally.",
         "launchOnScan": "Launch on scan",
@@ -1475,6 +1489,15 @@
         "purchasePreviewWarp": "Warp active",
         "purchasePreviewLoading": "Loading",
         "purchasePreviewError": "Error",
+        "proPreviewSource": "Pro screen opened from",
+        "proPreviewSources": {
+          "nfc": "Tag scan",
+          "camera": "Camera scan",
+          "shake": "Shake",
+          "settings": "Settings"
+        },
+        "proPreviewShowScreen": "Show Pro screen",
+        "proPreviewShowGuide": "Show Pro guide",
         "viewLogs": "View logs"
       },
       "core": {
@@ -1840,6 +1863,14 @@
       "confirmRun": "Run",
       "notDelivered": "Launch was not delivered to the device"
     },
+    "shakeSheet": {
+      "charge": "Shake charge",
+      "charging": "Keep shaking",
+      "launching": "Launching...",
+      "launched": "Launched",
+      "launchedMedia": "Launched {{media}}",
+      "failed": "Couldn't launch"
+    },
     "remoteKeyboard": {
       "title": "Controls",
       "mode": "Input mode",
@@ -1903,6 +1934,42 @@
         "unknown": "Pairing failed, try again"
       },
       "overBluetooth": "Pairing over Bluetooth"
+    },
+    "proGuide": {
+      "stepCount": "Step {{current}} of {{total}}",
+      "skip": "Skip",
+      "next": "Next",
+      "done": "Done",
+      "unlockTitle": "Pro is on",
+      "unlockIntro": "This phone now works as a reader for your Zaparoo device:",
+      "unlockNfc": "Tap an NFC tag to launch it",
+      "unlockCamera": "Scan a QR code or barcode with the camera",
+      "unlockShake": "Shake the phone to launch",
+      "launchTitle": "Tap or scan",
+      "launchNfc": "On the Zap page, press Tap a tag, then hold a tag against the phone.",
+      "launchCamera": "Press Scan a code to launch from a QR code or barcode.",
+      "antennaTitle": "Where to hold a tag",
+      "antennaLoading": "Finding the NFC reader on this phone...",
+      "antennaPlaced": "Hold your card here, on the back of the phone.",
+      "antennaTopEdge": "Hold your card here, at the top edge of the phone.",
+      "antennaBroad": "Usually near the camera on the back. Move the card slowly until it reads.",
+      "antennaSpotTop": "The NFC reader is near the top of the back of the phone.",
+      "antennaSpotMiddle": "The NFC reader is near the middle of the back of the phone.",
+      "antennaSpotBottom": "The NFC reader is near the bottom of the back of the phone.",
+      "tryTag": "Try a tag",
+      "tryAnotherTag": "Try another tag",
+      "holdTag": "Hold a tag to the phone",
+      "tagRead": "Tag read",
+      "shakeTitle": "Shake to launch",
+      "shakeBody": "Shake the phone to launch a random game or your own ZapScript. Turn it on in Readers settings.",
+      "shakeSettings": "Shake settings",
+      "preview": {
+        "antenna": "Pro guide antenna",
+        "placed": "Android with antenna info",
+        "topEdge": "iPhone",
+        "broad": "Other phones",
+        "show": "Show Pro guide"
+      }
     },
     "tour": {
       "stepIndicator": "{{current}}/{{total}}",

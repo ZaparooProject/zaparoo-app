@@ -63,6 +63,10 @@ export const sessionManager = {
 export interface Tag {
   uid: string;
   text: string;
+  /** Toy type Core matches mappings on, e.g. "Amiibo". */
+  type?: string;
+  /** Lowercase hex of the toy memory Core matches mappings on. */
+  data?: string;
 }
 
 const createNdefTextRecord = (text: string) => {
@@ -141,12 +145,28 @@ interface NfcSessionContext {
   captureNextTag(): (timeoutMs: number) => Promise<NfcTagScannedEvent | null>;
 }
 
-interface WithNfcSessionOptions {
+interface WithNfcSessionOptions<T> {
   /**
    * When the handler rejects, a returned message stops the iOS scan sheet
    * with that error text instead of dismissing it silently.
    */
   iosErrorMessageFor?: (error: unknown) => string | undefined;
+  /**
+   * When the handler resolves, a returned message still stops the iOS scan
+   * sheet with that error text, for an operation that read the tag but then
+   * failed on its own terms.
+   */
+  iosErrorMessageForResult?: (result: T) => string | undefined;
+  /** Text the iOS scan sheet shows while it waits for a tag. */
+  alertMessage?: string;
+}
+
+async function stopScanSessionWithError(errorMessage: string): Promise<void> {
+  try {
+    await Nfc.stopScanSession({ errorMessage });
+  } catch (error) {
+    logger.debug("Failed to stop NFC scan session:", error);
+  }
 }
 
 /**
@@ -159,7 +179,7 @@ async function withNfcSession<T>(
     event: NfcTagScannedEvent,
     session: NfcSessionContext,
   ) => Promise<T>,
-  options?: WithNfcSessionOptions,
+  options?: WithNfcSessionOptions<T>,
 ): Promise<T> {
   if (activeSessionToken !== null) {
     throw new NfcSessionBusyError();
@@ -310,8 +330,13 @@ async function withNfcSession<T>(
             handlerStarted = true;
             try {
               const result = await handler(event, sessionContext);
-              await settleFromHandler(stopScanSessionSafely, () =>
-                resolve(result),
+              const resultErrorMessage =
+                options?.iosErrorMessageForResult?.(result);
+              await settleFromHandler(
+                resultErrorMessage !== undefined
+                  ? () => stopScanSessionWithError(resultErrorMessage)
+                  : stopScanSessionSafely,
+                () => resolve(result),
               );
             } catch (error) {
               const wrappedError = wrapNfcError(error);
@@ -331,18 +356,7 @@ async function withNfcSession<T>(
                 options?.iosErrorMessageFor?.(wrappedError);
               const stop =
                 iosErrorMessage !== undefined
-                  ? async () => {
-                      try {
-                        await Nfc.stopScanSession({
-                          errorMessage: iosErrorMessage,
-                        });
-                      } catch (stopError) {
-                        logger.debug(
-                          "Failed to stop NFC scan session:",
-                          stopError,
-                        );
-                      }
-                    }
+                  ? () => stopScanSessionWithError(iosErrorMessage)
                   : stopScanSessionSafely;
               await settleFromHandler(stop, () => reject(wrappedError));
             }
@@ -390,7 +404,11 @@ async function withNfcSession<T>(
 
         sessionManager.setIsScanning(true);
         // Now it's safe to start the scan session
-        await Nfc.startScanSession();
+        if (options?.alertMessage) {
+          await Nfc.startScanSession({ alertMessage: options.alertMessage });
+        } else {
+          await Nfc.startScanSession();
+        }
 
         if (Capacitor.getPlatform() === "android") {
           timeoutId = setTimeout(() => {
@@ -477,6 +495,115 @@ async function previewReadSession(): Promise<Result> {
   }
 }
 
+// Toy tags, matched the way Core's nfctag package does. Bytes 9-15 of an
+// Amiibo are an internal byte, the static lock bytes and its capability
+// container.
+const AMIIBO_HEADER = [0x48, 0x0f, 0xe0, 0xf1, 0x10, 0xff, 0xee];
+const AMIIBO_HEADER_OFFSET = 9;
+const AMIIBO_ID_PAGE = 21;
+const AMIIBO_ID_BYTES = 8;
+// The start of user memory on a Lego Dimensions tag. Its NDEF TLV length is
+// part of the match, so the data Core expects (page 4 through the end of the
+// NDEF TLV, in 16-byte blocks) is always two blocks.
+const LEGO_DIMENSIONS_HEADER = [
+  0x01, 0x03, 0xa0, 0x0c, 0x34, 0x03, 0x13, 0xd1, 0x01, 0x0f, 0x54, 0x02, 0x65,
+  0x6e,
+];
+const LEGO_DIMENSIONS_DATA_BYTES = 32;
+
+function startsWith(bytes: number[], prefix: number[], offset = 0): boolean {
+  return prefix.every((value, i) => bytes[offset + i] === value);
+}
+
+function toHex(bytes: number[]): string {
+  return bytes.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+interface ToyTag {
+  type: string;
+  data: string;
+}
+
+async function readToyFromPages(
+  readPage: (page: number) => Promise<number[]>,
+): Promise<ToyTag | null> {
+  const header = await readPage(0);
+  if (header.length < T2_READ_RESPONSE_BYTES) return null;
+
+  if (startsWith(header, AMIIBO_HEADER, AMIIBO_HEADER_OFFSET)) {
+    const id = await readPage(AMIIBO_ID_PAGE);
+    if (id.length < AMIIBO_ID_BYTES) return null;
+    return { type: "Amiibo", data: toHex(id.slice(0, AMIIBO_ID_BYTES)) };
+  }
+
+  const memory = [...(await readPage(T2_FIRST_DATA_PAGE))];
+  if (!startsWith(memory, LEGO_DIMENSIONS_HEADER)) return null;
+  while (memory.length < LEGO_DIMENSIONS_DATA_BYTES) {
+    const page =
+      T2_FIRST_DATA_PAGE + Math.floor(memory.length / T2_BYTES_PER_PAGE);
+    const block = await readPage(page);
+    if (block.length < T2_READ_RESPONSE_BYTES) return null;
+    memory.push(...block);
+  }
+  return {
+    type: "LegoDimensions",
+    data: toHex(memory.slice(0, LEGO_DIMENSIONS_DATA_BYTES)),
+  };
+}
+
+/**
+ * Read an Amiibo or Lego Dimensions toy over raw Type 2 READ commands. Core
+ * matches toys by type and memory, not by NDEF text. Any failure, including a
+ * tag that rejects the READ command, means the tag is not a toy. On iOS this
+ * must run inside the nfcTagScanned handler, while the tag is connected.
+ */
+async function readToyTag(nfcTag: NfcTag): Promise<ToyTag | null> {
+  const techTypes = nfcTag.techTypes ?? [];
+  const platform = Capacitor.getPlatform();
+  try {
+    if (platform === "ios") {
+      if (!techTypes.includes(NfcTagTechType.MifareUltralight)) return null;
+      return await readToyFromPages(async (page) => {
+        const { response } = await Nfc.transceive({
+          techType: NfcTagTechType.MifareUltralight,
+          data: [T2_READ_COMMAND, page],
+        });
+        return response;
+      });
+    }
+    if (platform === "android") {
+      if (!techTypes.includes(NfcTagTechType.NfcA)) return null;
+      await Nfc.connect({ techType: NfcTagTechType.NfcA });
+      try {
+        return await readToyFromPages(async (page) => {
+          const { response } = await Nfc.transceive({
+            data: [T2_READ_COMMAND, page],
+          });
+          return response;
+        });
+      } finally {
+        try {
+          await Nfc.close();
+        } catch {
+          // The tag may already have left the field.
+        }
+      }
+    }
+  } catch (error) {
+    logger.debug("Toy tag read skipped:", error);
+  }
+  return null;
+}
+
+/** The tag from a scan event, with toy type and data when it is a toy. */
+async function readScannedTag(event: NfcTagScannedEvent): Promise<Tag | null> {
+  const tag = readNfcEvent(event);
+  if (!tag) return null;
+  const toy = await readToyTag(event.nfcTag);
+  // A toy's NDEF text (Lego Dimensions has some) is not ZapScript.
+  return toy ? { uid: tag.uid, text: "", ...toy } : tag;
+}
+
 export async function readTag(): Promise<Result> {
   if (isAppPreviewEnabled()) {
     return previewReadSession();
@@ -488,11 +615,150 @@ export async function readTag(): Promise<Result> {
         status: Status.Success,
         info: {
           rawTag: event.nfcTag,
-          tag: readNfcEvent(event),
+          tag: await readScannedTag(event),
         },
       };
     });
   } catch (error) {
+    // Handle cancellation as a successful result with Cancelled status
+    if (error instanceof NfcCancelledError) {
+      return {
+        status: Status.Cancelled,
+        info: {
+          rawTag: null,
+          tag: null,
+        },
+      };
+    }
+    throw error;
+  }
+}
+
+export type TagLaunchOutcome =
+  | { ok: true }
+  | {
+      ok: false;
+      /** Shown on the iOS scan sheet as it closes. */ errorMessage: string;
+    };
+
+export interface ReadTagAndLaunchOptions {
+  /** Shown on the iOS scan sheet while it waits for a tag. */
+  alertMessage?: string;
+  /** Shown on the iOS scan sheet while the launch runs. */
+  launchingMessage: string;
+}
+
+// After the app ends an iOS session, the sheet shows its result and only then
+// reports the session invalidated. Never wait longer than this for that.
+export const IOS_SHEET_SETTLE_TIMEOUT_MS = 4000;
+
+/**
+ * Wait for iOS to report the scan sheet gone after the app ended the session.
+ * The listeners are attached before the session is stopped so the report
+ * cannot be missed.
+ */
+function watchSheetSettled(): {
+  settled: () => Promise<void>;
+} {
+  let done: () => void = () => {};
+  const closed = new Promise<void>((resolve) => {
+    done = resolve;
+  });
+  // Settled one by one, so a listener that did register is still removed
+  // when the other one failed to.
+  const handles = Promise.allSettled([
+    Nfc.addListener("scanSessionCanceled", () => done()),
+    Nfc.addListener("scanSessionError", () => done()),
+  ]).then((results) => {
+    const registered: PluginListenerHandle[] = [];
+    for (const result of results) {
+      if (result.status === "fulfilled") {
+        registered.push(result.value);
+      } else {
+        logger.debug("Failed to watch NFC sheet dismissal:", result.reason);
+        done();
+      }
+    }
+    return registered;
+  });
+  return {
+    settled: async () => {
+      const timer = setTimeout(done, IOS_SHEET_SETTLE_TIMEOUT_MS);
+      try {
+        await closed;
+      } finally {
+        clearTimeout(timer);
+        const registered = await handles;
+        await Promise.allSettled(registered.map((h) => h.remove()));
+      }
+    },
+  };
+}
+
+/**
+ * Read a tag and run `launch` while the session is still open, so the iOS
+ * scan sheet says it is launching and closes with the launch's outcome
+ * instead of closing the moment the tag is read. Resolves once the session
+ * has ended and, on iOS, the sheet has settled. Cancelled sessions resolve
+ * with `Status.Cancelled` and never launch.
+ */
+export async function readTagAndLaunch(
+  launch: (tag: Tag) => Promise<TagLaunchOutcome>,
+  options: ReadTagAndLaunchOptions,
+): Promise<Result> {
+  if (isAppPreviewEnabled()) {
+    const result = await previewReadSession();
+    if (result.status === Status.Success && result.info.tag) {
+      await launch(result.info.tag);
+    }
+    return result;
+  }
+
+  let outcome: TagLaunchOutcome | null = null;
+  let sheet: ReturnType<typeof watchSheetSettled> | null = null;
+  // Set once the session is over. The handler can still be between awaits
+  // then (a cancelled sheet), and must not launch or watch a sheet that has
+  // already gone.
+  let ended = false;
+  try {
+    const result = await withNfcSession<Result>(
+      async (event) => {
+        const tag = await readScannedTag(event);
+        if (tag && !ended) {
+          try {
+            await Nfc.setAlertMessage({ message: options.launchingMessage });
+          } catch (error) {
+            logger.debug("Failed to set NFC alert message:", error);
+          }
+          if (!ended) {
+            try {
+              outcome = await launch(tag);
+            } catch (error) {
+              logger.debug("Tag launch callback failed:", error);
+              outcome = { ok: false, errorMessage: "" };
+            }
+          }
+        }
+        if (Capacitor.getPlatform() === "ios" && !ended) {
+          sheet = watchSheetSettled();
+        }
+        return {
+          status: Status.Success,
+          info: { rawTag: event.nfcTag, tag },
+        };
+      },
+      {
+        alertMessage: options.alertMessage,
+        iosErrorMessageForResult: () =>
+          outcome && !outcome.ok && outcome.errorMessage !== ""
+            ? outcome.errorMessage
+            : undefined,
+      },
+    );
+    await (sheet as ReturnType<typeof watchSheetSettled> | null)?.settled();
+    return result;
+  } catch (error) {
+    ended = true;
     // Handle cancellation as a successful result with Cancelled status
     if (error instanceof NfcCancelledError) {
       return {

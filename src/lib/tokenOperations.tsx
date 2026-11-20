@@ -1,9 +1,45 @@
 import toast from "react-hot-toast";
 import i18n from "@/i18n";
-import { CoreAPI, isRequestCancelledError, logRunFailure } from "./coreApi";
+import {
+  CoreAPI,
+  getRunErrorCategory,
+  isRequestCancelledError,
+  logRunFailure,
+} from "./coreApi";
 import { TokenResponse } from "./models";
 import { sessionManager } from "./nfc";
 import { logger } from "./logger";
+import {
+  launchFeedback,
+  type LaunchError,
+  type LaunchSource,
+} from "./launchFeedback";
+
+export interface RunTokenOptions {
+  /** Token type for toy tags, e.g. "Amiibo". Sent to Core with `data`. */
+  type?: string;
+  /** Lowercase hex of the tag memory Core matches mappings against. */
+  data?: string;
+  /** Where the launch came from, for launch feedback. */
+  source?: LaunchSource;
+  /** Show a failure on the caller's own surface instead of a toast. */
+  onError?: (error: LaunchError) => void;
+}
+
+export function toLaunchError(e: unknown): LaunchError {
+  if (isRequestCancelledError(e)) {
+    return {
+      message: i18n.t("deepLinks.notDelivered"),
+      category: null,
+      cancelled: true,
+    };
+  }
+  return {
+    message: e instanceof Error ? e.message : String(e),
+    category: getRunErrorCategory(e),
+    cancelled: false,
+  };
+}
 
 const zapUrls = [
   "https://zpr.au",
@@ -36,9 +72,11 @@ export const runToken = async (
    * - false: Respect launchOnScan setting, can be used as read-only (e.g., NFC/camera scan)
    */
   requiresLaunch = false,
+  options: RunTokenOptions = {},
 ): Promise<boolean> => {
+  const { type = "", data = "", source = "nfc", onError } = options;
   return new Promise((resolve) => {
-    if (uid === "" && text === "") {
+    if (uid === "" && text === "" && data === "") {
       return resolve(false);
     }
 
@@ -46,8 +84,8 @@ export const runToken = async (
       uid: uid,
       text: text,
       scanTime: new Date().toISOString(),
-      type: "",
-      data: "",
+      type,
+      data,
     };
     setLastToken(token);
 
@@ -78,32 +116,78 @@ export const runToken = async (
 
     // When disconnected (and queueing allowed), CoreAPI queues the request
     // and flushes it on reconnect with its own expiry - no extra delay needed.
+    const launchId = launchFeedback.begin(source);
     CoreAPI.run({
       uid: uid,
       text: text,
       unsafe: unsafe,
+      ...(type ? { type } : {}),
+      ...(data ? { data } : {}),
     })
       .then(() => {
+        launchFeedback.resolved(launchId);
         resolve(true);
       })
       .catch((e) => {
-        if (isRequestCancelledError(e)) {
-          // The request was dropped or cancelled before reaching the
-          // device - show a clear message instead of internal error text.
-          toast.error(i18n.t("deepLinks.notDelivered"));
+        // A cancelled request never reached the device; its message says so
+        // instead of showing internal error text.
+        const launchError = toLaunchError(e);
+        launchFeedback.failed(launchId, launchError);
+        if (launchError.cancelled) {
           logger.warn("launch request cancelled", e, {
             category: "api",
             action: "runToken",
           });
         } else {
-          toast.error(e.message);
           logRunFailure("launch error", e, {
             action: "runToken",
             hasUid: !!uid,
             textPrefix: text.slice(0, 20),
           });
         }
+        if (onError) {
+          onError(launchError);
+        } else {
+          toast.error(launchError.message);
+        }
         resolve(false);
       });
   });
 };
+
+export type MappingPrefillType = "id" | "value" | "data";
+
+export interface MappingPrefill {
+  type: MappingPrefillType;
+  pattern: string;
+}
+
+/**
+ * When a scan failed because the token has nothing for Core to run, return
+ * the mapping that would set it up, for the "Map it" action. Tags with no text
+ * map by toy data when it was read, otherwise by UID. Camera codes map by
+ * their value, which also covers product barcodes Core can't resolve.
+ */
+export function mappingPrefillFor(
+  error: LaunchError,
+  token: { uid: string; text: string; data?: string },
+  source: LaunchSource,
+): MappingPrefill | null {
+  if (error.cancelled) return null;
+  if (source === "camera") {
+    if (
+      token.text !== "" &&
+      (error.category === "invalid_script" ||
+        error.category === "media_not_found")
+    ) {
+      return { type: "value", pattern: token.text };
+    }
+    return null;
+  }
+  if (error.category !== "invalid_script" || token.text.trim() !== "") {
+    return null;
+  }
+  if (token.data) return { type: "data", pattern: token.data };
+  if (token.uid) return { type: "id", pattern: token.uid };
+  return null;
+}

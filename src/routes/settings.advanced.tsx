@@ -37,6 +37,8 @@ import {
 } from "@/lib/appPreviewStore";
 import { useAppUi } from "@/hooks/useAppUi";
 import { Select } from "@/components/wui/Select";
+import { ProGuidePreviewControls } from "@/components/ProGuidePreviewControls";
+import { ProScreenPreviewControls } from "@/components/ProScreenPreviewControls";
 
 export const Route = createFileRoute("/settings/advanced")({
   component: AdvancedSettings,
@@ -244,8 +246,12 @@ export function AdvancedSettings() {
                 </option>
               </Select>
             )}
+
+            {appPreviewEnabled && <ProGuidePreviewControls />}
           </>
         )}
+
+        {isPurchasePreviewEnabled() && <ProScreenPreviewControls />}
 
         {isPurchasePreviewEnabled() && (
           <Select

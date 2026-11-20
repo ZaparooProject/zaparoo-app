@@ -40,6 +40,7 @@ import {
   wrapPurchaseError,
 } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { requestProGuide } from "@/lib/proGuideStore";
 import {
   cachePurchaseErrorDiagnostics,
   clearCachedPurchaseErrorDiagnostics,
@@ -508,7 +509,14 @@ export function useWarpSubscription(appUserID: string) {
         warpEntitlementActive: access.warp,
       });
 
-      if (await pollForActivation(controller.signal)) return "active";
+      if (await pollForActivation(controller.signal)) {
+        // Warp includes Pro, so a first subscription gets the Pro guide.
+        // TODO: an activation confirmed only after this poll times out (a
+        // later refresh through loadAccount/applySubscription) never requests
+        // the guide. Move the request to a shared confirmed-activation path.
+        requestProGuide();
+        return "active";
+      }
       logger.error(
         "Warp activation confirmation timed out",
         new Error("Public subscription status remained inactive"),

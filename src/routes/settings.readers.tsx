@@ -2,6 +2,7 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
+import { Capacitor } from "@capacitor/core";
 import { useShallow } from "zustand/react/shallow";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
 import { SettingHelp } from "@/components/wui/SettingHelp";
@@ -42,6 +43,18 @@ import { GatedFeature } from "@/components/GatedFeature";
 export const Route = createFileRoute("/settings/readers")({
   component: ReadersSettings,
 });
+
+// Android keeps one reader session reading; iOS has to reopen its scan sheet.
+function continuousScanHelpKey(): string {
+  switch (Capacitor.getPlatform()) {
+    case "android":
+      return "settings.readers.continuousScanHelpAndroid";
+    case "ios":
+      return "settings.readers.continuousScanHelpIos";
+    default:
+      return "settings.readers.continuousScanHelp";
+  }
+}
 
 export function ReadersSettings() {
   const { t } = useTranslation();
@@ -94,6 +107,12 @@ export function ReadersSettings() {
     setPreferRemoteWriter,
     setKeepScreenAwake,
   } = usePreferencesStore(useShallow(selectAppSettings));
+  const continuousCamera = usePreferencesStore(
+    (state) => state.continuousCamera,
+  );
+  const setContinuousCamera = usePreferencesStore(
+    (state) => state.setContinuousCamera,
+  );
 
   // Get shake settings from store
   const {
@@ -222,12 +241,28 @@ export function ReadersSettings() {
             help={
               <SettingHelp
                 title={t("settings.readers.continuousScan")}
-                description={t("settings.readers.continuousScanHelp")}
+                description={t(continuousScanHelpKey())}
               />
             }
             value={restartScan}
             setValue={setRestartScan}
           />
+
+          {/* Continuous Camera - from App (only where a camera can scan) */}
+          {appUi.camera && (
+            <ToggleSwitch
+              reflow
+              label={t("settings.readers.continuousCamera")}
+              help={
+                <SettingHelp
+                  title={t("settings.readers.continuousCamera")}
+                  description={t("settings.readers.continuousCameraHelp")}
+                />
+              }
+              value={continuousCamera}
+              setValue={setContinuousCamera}
+            />
+          )}
 
           {/* Keep Screen On - from App (native only) */}
           {appUi.enabled && (

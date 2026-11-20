@@ -131,3 +131,16 @@
     background: #0a0f18;
   }
 }
+
+/* The continuous camera's native preview sits behind the WebView. Clear every
+   page background and hide the app frame (its inline background included) so
+   the preview shows through; the scanner overlay is portalled outside it. */
+:root body.barcode-scanner-active,
+:root:not(.light):not(.dark) body.barcode-scanner-active {
+  background: transparent;
+}
+
+body.barcode-scanner-active .app-frame {
+  visibility: hidden;
+  background: transparent !important;
+}

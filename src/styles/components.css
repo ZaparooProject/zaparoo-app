@@ -209,7 +209,6 @@
       0 0 10px 3px color-mix(in srgb, var(--status-yellow) 55%, transparent);
     animation: reader-button-attention 1.65s ease-out infinite;
   }
-  .wui-reader-button-shell > .wui-button[data-reader-state="error"]::before,
   .wui-reader-action[data-reader-state="error"]::before {
     box-shadow:
       0 0 6px 2px color-mix(in srgb, var(--status-red) 75%, transparent),
@@ -220,8 +219,13 @@
     position: relative;
     z-index: 1;
   }
+  /* Retry after a failure is a button to press, so it stays raised. */
   .wui-button[data-reader-state]:not(
-      :where([data-variant="text"], [data-variant="ghost"])
+      :where(
+        [data-variant="text"],
+        [data-variant="ghost"],
+        [data-reader-state="error"]:not(.wui-reader-action)
+      )
     ) {
     transform: translateY(var(--button-depth));
     box-shadow: var(--button-pressed-shadow);

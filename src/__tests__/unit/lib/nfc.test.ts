@@ -140,6 +140,9 @@ import {
   int2hex,
   int2char,
   readTag,
+  readTagAndLaunch,
+  IOS_SHEET_SETTLE_TIMEOUT_MS,
+  type TagLaunchOutcome,
   writeTag,
   formatTag,
   eraseTag,
@@ -542,6 +545,247 @@ describe("nfc", () => {
       await readPromise;
 
       expect(mockStopScanSession).toHaveBeenCalled();
+    });
+  });
+
+  describe("toy tags", () => {
+    const AMIIBO_PAGE_0 = [
+      0x04, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x48, 0x0f, 0xe0,
+      0xf1, 0x10, 0xff, 0xee,
+    ];
+    const AMIIBO_PAGE_21 = [
+      0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c,
+      0x0d, 0x0e, 0x0f, 0x10,
+    ];
+    const PLAIN_PAGE_0 = [
+      0x04, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x48, 0x00, 0x00,
+      0xe1, 0x10, 0x3e, 0x00,
+    ];
+    const LEGO_PAGE_4 = [
+      0x01, 0x03, 0xa0, 0x0c, 0x34, 0x03, 0x13, 0xd1, 0x01, 0x0f, 0x54, 0x02,
+      0x65, 0x6e, 0x31, 0x32,
+    ];
+    const LEGO_PAGE_8 = [
+      0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x30, 0x41, 0x42, 0x43, 0xfe,
+      0x00, 0x00, 0x00, 0x00,
+    ];
+
+    function memory(pages: Record<number, number[]>) {
+      return async ({ data }: { data: number[] }) => {
+        const page = pages[data[1]!];
+        if (!page) throw new Error("no such page");
+        return { response: page };
+      };
+    }
+
+    async function scan(techTypes: string[]) {
+      const readPromise = readTag();
+      await vi.waitFor(() => {
+        expect(mockState.nfcTagScannedCallback).not.toBeNull();
+      });
+      mockState.nfcTagScannedCallback?.({
+        nfcTag: { id: [4, 0x11, 0x22], techTypes },
+      } as NfcTagScannedEvent);
+      return readPromise;
+    }
+
+    it("reads an Amiibo's identity on Android", async () => {
+      mockTransceive.mockImplementation(
+        memory({ 0: AMIIBO_PAGE_0, 21: AMIIBO_PAGE_21 }),
+      );
+
+      const result = await scan(["NFC_A", "MIFARE_ULTRALIGHT"]);
+
+      expect(mockConnect).toHaveBeenCalledWith({ techType: "NFC_A" });
+      expect(mockClose).toHaveBeenCalled();
+      expect(result.info.tag).toEqual({
+        uid: "041122",
+        text: "",
+        type: "Amiibo",
+        data: "0102030405060708",
+      });
+    });
+
+    it("reads a Lego Dimensions toy's memory on iOS", async () => {
+      mockGetPlatform.mockReturnValue("ios");
+      mockTransceive.mockImplementation(
+        memory({ 0: PLAIN_PAGE_0, 4: LEGO_PAGE_4, 8: LEGO_PAGE_8 }),
+      );
+
+      const result = await scan(["MIFARE_ULTRALIGHT"]);
+
+      expect(mockTransceive).toHaveBeenCalledWith({
+        techType: "MIFARE_ULTRALIGHT",
+        data: [0x30, 4],
+      });
+      expect(mockConnect).not.toHaveBeenCalled();
+      expect(result.info.tag).toEqual({
+        uid: "041122",
+        text: "",
+        type: "LegoDimensions",
+        data: [...LEGO_PAGE_4, ...LEGO_PAGE_8]
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join(""),
+      });
+    });
+
+    it("reads an ordinary tag as plain when its memory is not a toy's", async () => {
+      mockTransceive.mockImplementation(
+        memory({ 0: PLAIN_PAGE_0, 4: new Array(16).fill(0) }),
+      );
+
+      const result = await scan(["NFC_A", "NDEF"]);
+
+      expect(result.info.tag).toEqual({ uid: "041122", text: "" });
+    });
+
+    it("reads a tag as plain when it rejects raw reads", async () => {
+      const result = await scan(["NFC_A", "NDEF"]);
+
+      expect(result.status).toBe(Status.Success);
+      expect(result.info.tag).toEqual({ uid: "041122", text: "" });
+      expect(mockClose).toHaveBeenCalled();
+    });
+
+    it("does not try raw reads on tags that are not Type 2", async () => {
+      const result = await scan(["ISO_DEP"]);
+
+      expect(mockConnect).not.toHaveBeenCalled();
+      expect(mockTransceive).not.toHaveBeenCalled();
+      expect(result.info.tag).toEqual({ uid: "041122", text: "" });
+    });
+  });
+
+  describe("readTagAndLaunch", () => {
+    const OPTIONS = { launchingMessage: "launching" };
+
+    beforeEach(() => {
+      mockGetPlatform.mockReturnValue("ios");
+    });
+
+    async function tapTag() {
+      await vi.waitFor(() => {
+        expect(mockState.nfcTagScannedCallback).not.toBeNull();
+      });
+      mockState.nfcTagScannedCallback?.({
+        nfcTag: { id: [1, 2, 3, 4] },
+      } as NfcTagScannedEvent);
+    }
+
+    it("keeps the session open until the launch answers", async () => {
+      let answer: (outcome: TagLaunchOutcome) => void = () => {};
+      const launch = vi.fn(
+        () =>
+          new Promise<TagLaunchOutcome>((resolve) => {
+            answer = resolve;
+          }),
+      );
+
+      const readPromise = readTagAndLaunch(launch, OPTIONS);
+      await tapTag();
+
+      await vi.waitFor(() => {
+        expect(launch).toHaveBeenCalledWith({ uid: "01020304", text: "" });
+      });
+      expect(mockSetAlertMessage).toHaveBeenCalledWith({
+        message: "launching",
+      });
+      expect(mockStopScanSession).not.toHaveBeenCalled();
+
+      answer({ ok: true });
+      await vi.waitFor(() => {
+        expect(mockStopScanSession).toHaveBeenCalledWith();
+      });
+      mockState.scanSessionCanceledCallback?.();
+
+      const result = await readPromise;
+      expect(result.status).toBe(Status.Success);
+    });
+
+    it("closes the sheet with the launch's error", async () => {
+      const readPromise = readTagAndLaunch(
+        async () => ({ ok: false, errorMessage: "Not set up yet" }),
+        OPTIONS,
+      );
+      await tapTag();
+
+      await vi.waitFor(() => {
+        expect(mockStopScanSession).toHaveBeenCalledWith({
+          errorMessage: "Not set up yet",
+        });
+      });
+      mockState.scanSessionCanceledCallback?.();
+      await readPromise;
+    });
+
+    it("passes the waiting message to the sheet", async () => {
+      const readPromise = readTagAndLaunch(async () => ({ ok: true }), {
+        ...OPTIONS,
+        alertMessage: "hold a tag",
+      });
+      await tapTag();
+      await vi.waitFor(() => {
+        expect(mockStopScanSession).toHaveBeenCalled();
+      });
+      mockState.scanSessionCanceledCallback?.();
+      await readPromise;
+
+      expect(mockStartScanSession).toHaveBeenCalledWith({
+        alertMessage: "hold a tag",
+      });
+    });
+
+    it("does not launch when the session is cancelled", async () => {
+      const launch = vi.fn(async () => ({ ok: true }) as const);
+      const readPromise = readTagAndLaunch(launch, OPTIONS);
+      await vi.waitFor(() => {
+        expect(mockState.scanSessionCanceledCallback).not.toBeNull();
+      });
+      mockState.scanSessionCanceledCallback?.();
+
+      const result = await readPromise;
+      expect(result.status).toBe(Status.Cancelled);
+      expect(launch).not.toHaveBeenCalled();
+    });
+
+    it("stops waiting for the sheet after a timeout", async () => {
+      vi.useFakeTimers();
+      try {
+        let settled = false;
+        const readPromise = readTagAndLaunch(
+          async () => ({ ok: true }),
+          OPTIONS,
+        ).then((result) => {
+          settled = true;
+          return result;
+        });
+        // vi.waitFor would advance the fake clock, so flush by hand.
+        await vi.advanceTimersByTimeAsync(0);
+        mockState.nfcTagScannedCallback?.({
+          nfcTag: { id: [1, 2, 3, 4] },
+        } as NfcTagScannedEvent);
+        await vi.advanceTimersByTimeAsync(0);
+        expect(mockStopScanSession).toHaveBeenCalled();
+
+        await vi.advanceTimersByTimeAsync(IOS_SHEET_SETTLE_TIMEOUT_MS - 1);
+        expect(settled).toBe(false);
+
+        await vi.advanceTimersByTimeAsync(1);
+        expect((await readPromise).status).toBe(Status.Success);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("does not wait for a sheet on Android", async () => {
+      mockGetPlatform.mockReturnValue("android");
+      const launch = vi.fn(async () => ({ ok: true }) as const);
+      const readPromise = readTagAndLaunch(launch, OPTIONS);
+      await tapTag();
+
+      const result = await readPromise;
+      expect(result.status).toBe(Status.Success);
+      expect(launch).toHaveBeenCalled();
     });
   });
 
