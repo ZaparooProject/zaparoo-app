@@ -271,6 +271,10 @@ export interface PreferencesState {
 
   // Accessibility settings
   hapticsEnabled: boolean;
+
+  // Anonymous usage counts (see docs/usage-counts.md). On unless turned off.
+  shareUsageCounts: boolean;
+
   textZoomLevel: number;
   accessibleLists: boolean;
   /** The desktop sidebar is collapsed to its icon rail. */
@@ -353,6 +357,7 @@ export interface PreferencesActions {
   setSystemNameRegion: (value: SystemNameRegionPreference) => void;
   setAppBadgeEnabled: (value: boolean) => void;
   setHapticsEnabled: (value: boolean) => void;
+  setShareUsageCounts: (value: boolean) => void;
   setTextZoomLevel: (value: number) => void;
   setAccessibleLists: (value: boolean) => void;
   setSidebarCollapsed: (value: boolean) => void;
@@ -418,6 +423,7 @@ const DEFAULT_PREFERENCES: Omit<
   systemNameRegion: "auto",
   appBadgeEnabled: true,
   hapticsEnabled: true,
+  shareUsageCounts: true,
   textZoomLevel: 1.0,
   accessibleLists: false,
   sidebarCollapsed: false,
@@ -453,6 +459,7 @@ function persistedPreferences(state: PreferencesStore) {
     systemNameRegion: state.systemNameRegion,
     appBadgeEnabled: state.appBadgeEnabled,
     hapticsEnabled: state.hapticsEnabled,
+    shareUsageCounts: state.shareUsageCounts,
     textZoomLevel: state.textZoomLevel,
     accessibleLists: state.accessibleLists,
     sidebarCollapsed: state.sidebarCollapsed,
@@ -619,6 +626,7 @@ export const usePreferencesStore = create<PreferencesStore>()(
       setSystemNameRegion: (value) => set({ systemNameRegion: value }),
       setAppBadgeEnabled: (value) => set({ appBadgeEnabled: value }),
       setHapticsEnabled: (value) => set({ hapticsEnabled: value }),
+      setShareUsageCounts: (value) => set({ shareUsageCounts: value }),
       setTextZoomLevel: (value) => set({ textZoomLevel: value }),
       setAccessibleLists: (value) => set({ accessibleLists: value }),
       setSidebarCollapsed: (value) => set({ sidebarCollapsed: value }),

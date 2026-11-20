@@ -118,6 +118,8 @@ describe("Settings Advanced Route", () => {
     setShowFilenames: vi.fn(),
     appBadgeEnabled: true,
     setAppBadgeEnabled: vi.fn(),
+    shareUsageCounts: true,
+    setShareUsageCounts: vi.fn(),
   };
 
   beforeEach(() => {
@@ -353,6 +355,40 @@ describe("Settings Advanced Route", () => {
       await user.click(appBadgeToggle);
 
       expect(setAppBadgeEnabled).toHaveBeenCalledWith(false);
+    });
+
+    it("should turn off anonymous usage counts in the native app", async () => {
+      const user = userEvent.setup();
+      const setShareUsageCounts = vi.fn();
+      mockIsNativePlatform.mockReturnValue(true);
+      mockUsePreferencesStore.mockImplementation((selector) =>
+        selector({
+          ...defaultPreferencesState,
+          setShareUsageCounts,
+        }),
+      );
+
+      renderComponent();
+
+      const toggle = await screen.findByRole("checkbox", {
+        name: /settings.advanced.shareUsageCounts/i,
+      });
+      expect(toggle).toBeChecked();
+      await user.click(toggle);
+
+      expect(setShareUsageCounts).toHaveBeenCalledWith(false);
+    });
+
+    it("should hide the usage counts switch on web, where nothing is sent", () => {
+      mockIsNativePlatform.mockReturnValue(false);
+
+      renderComponent();
+
+      expect(
+        screen.queryByRole("checkbox", {
+          name: /settings.advanced.shareUsageCounts/i,
+        }),
+      ).not.toBeInTheDocument();
     });
 
     it("should hide the app icon badge preference on Android", () => {

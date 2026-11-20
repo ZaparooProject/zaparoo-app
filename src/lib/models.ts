@@ -245,7 +245,6 @@ export type RemoteControlState =
   | "unlinked"
   | "connecting"
   | "waiting"
-  | "not_remote_device"
   | "unavailable"
   | "credential_rejected"
   | "error";

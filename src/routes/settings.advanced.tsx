@@ -54,6 +54,8 @@ export function AdvancedSettings() {
   );
   const showFilenames = usePreferencesStore((s) => s.showFilenames);
   const setShowFilenames = usePreferencesStore((s) => s.setShowFilenames);
+  const shareUsageCounts = usePreferencesStore((s) => s.shareUsageCounts);
+  const setShareUsageCounts = usePreferencesStore((s) => s.setShareUsageCounts);
   const appBadgeEnabled = usePreferencesStore((s) => s.appBadgeEnabled);
   const setAppBadgeEnabled = usePreferencesStore((s) => s.setAppBadgeEnabled);
   const purchasePreviewState = usePurchasePreviewStore((state) => state.state);
@@ -166,6 +168,22 @@ export function AdvancedSettings() {
           value={showFilenames}
           setValue={setShowFilenames}
         />
+
+        {/* Counts are only sent by the iOS and Android apps. */}
+        {Capacitor.isNativePlatform() && (
+          <ToggleSwitch
+            reflow
+            label={t("settings.advanced.shareUsageCounts")}
+            help={
+              <SettingHelp
+                title={t("settings.advanced.shareUsageCounts")}
+                description={t("settings.advanced.shareUsageCountsHelp")}
+              />
+            }
+            value={shareUsageCounts}
+            setValue={setShareUsageCounts}
+          />
+        )}
 
         {Capacitor.getPlatform() === "ios" &&
           isNativePluginAvailable("Badge") && (

@@ -110,11 +110,13 @@ describe("WarpSubscription", () => {
     expect(
       screen.getByText("online.warp.autoRenewDisclosure"),
     ).toBeInTheDocument();
-    expect(screen.getByText("online.warp.benefitBackup")).toBeInTheDocument();
-    expect(screen.getByText("online.warp.benefitPro")).toBeInTheDocument();
     expect(
-      screen.getByText("online.warp.benefitDevelopment"),
-    ).toBeInTheDocument();
+      screen.getAllByRole("listitem").map((item) => item.textContent),
+    ).toEqual([
+      "online.warp.benefitDevelopment",
+      "online.warp.benefitBackup",
+      "online.warp.benefitPro",
+    ]);
   });
 
   it("should block dismissal while a purchase is pending", async () => {

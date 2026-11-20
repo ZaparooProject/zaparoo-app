@@ -39,6 +39,7 @@ vi.mock("@capacitor/core", () => ({
 }));
 
 const {
+  mockRecordUsageCount,
   mockCopyDiagnostics,
   mockGetBillingDiagnostics,
   mockGetSubscriptionStatus,
@@ -46,6 +47,7 @@ const {
   mockReconcileStorePurchases,
   mockRestorePurchasesForUser,
 } = vi.hoisted(() => ({
+  mockRecordUsageCount: vi.fn(),
   mockCopyDiagnostics: vi.fn(),
   mockGetBillingDiagnostics: vi.fn(),
   mockGetSubscriptionStatus: vi.fn(),
@@ -57,6 +59,11 @@ const {
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
   useRouter: () => ({ navigate: mockNavigate }),
+}));
+
+// The request itself is covered in usageCounts.test.ts.
+vi.mock("@/lib/usageCounts", () => ({
+  recordUsageCount: mockRecordUsageCount,
 }));
 
 vi.mock("@capacitor/clipboard", () => ({
@@ -129,7 +136,7 @@ const mockSetLaunchOnScan = vi.fn();
 
 const { mockT } = vi.hoisted(() => ({
   mockT: (key: string, options?: Record<string, string>) => {
-    if (key === "scan.purchaseProP1" && options?.price) {
+    if (key === "scan.purchaseProActionPrice" && options?.price) {
       return `${key} ${options.price}`;
     }
 
@@ -228,6 +235,15 @@ function ProPurchaseHarness() {
       <button type="button" onClick={() => setProPurchaseModalOpen(true)}>
         Open Pro purchase
       </button>
+      {(["nfc", "camera", "shake", "settings"] as const).map((source) => (
+        <button
+          key={source}
+          type="button"
+          onClick={() => setProPurchaseModalOpen(true, source)}
+        >
+          Open from {source}
+        </button>
+      ))}
       {purchaseModal}
     </>
   );
@@ -255,6 +271,8 @@ describe("useProPurchase", () => {
     useStatusStore.setState({
       loggedInUser: null,
       proPurchaseModalOpen: false,
+      proPurchaseSource: "settings",
+      proPurchaseViewCounted: false,
     });
     mockCopyDiagnostics.mockResolvedValue(undefined);
     mockGetBillingDiagnostics.mockResolvedValue({
@@ -306,7 +324,7 @@ describe("useProPurchase", () => {
     const user = userEvent.setup();
     render(<ProPurchaseHarness />);
     const dialog = screen
-      .getByText("scan.purchaseProTitle")
+      .getByText("scan.purchaseProTitleNfc")
       .closest('[role="dialog"]')!;
 
     expect(dialog).toHaveStyle({ transform: "translate3d(0, 100%, 0)" });
@@ -426,9 +444,6 @@ describe("useProPurchase", () => {
     await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
 
     expect(screen.getByText("scan.purchaseProUnavailable")).toBeInTheDocument();
-    expect(
-      screen.queryByText("scan.purchaseProWarpNote"),
-    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "scan.purchaseProUnavailableAction" }),
     ).toBeDisabled();
@@ -562,10 +577,10 @@ describe("useProPurchase", () => {
     await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
 
     expect(
-      await screen.findByText("scan.purchaseProP1 $6.99"),
+      await screen.findByText("scan.purchaseProBodyNfc"),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "scan.purchaseProAction" }),
+      screen.getByRole("button", { name: "scan.purchaseProActionPrice $6.99" }),
     ).toBeEnabled();
     expect(
       screen.queryByRole("button", { name: "settings.app.restorePurchases" }),
@@ -592,7 +607,9 @@ describe("useProPurchase", () => {
     await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
 
     expect(
-      await screen.findByRole("button", { name: "scan.purchaseProAction" }),
+      await screen.findByRole("button", {
+        name: "scan.purchaseProActionPrice $6.99",
+      }),
     ).toBeEnabled();
     expect(Purchases.getOfferings).toHaveBeenCalledTimes(1);
   });
@@ -680,10 +697,10 @@ describe("useProPurchase", () => {
     await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
 
     expect(
-      await screen.findByText("scan.purchaseProP1 $6.99"),
+      await screen.findByText("scan.purchaseProBodyNfc"),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "scan.purchaseProAction" }),
+      screen.getByRole("button", { name: "scan.purchaseProActionPrice $6.99" }),
     ).toBeEnabled();
     expect(Purchases.getOfferings).toHaveBeenCalledTimes(2);
   });
@@ -700,7 +717,9 @@ describe("useProPurchase", () => {
 
     render(<ProPurchaseHarness />);
     await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
-    await screen.findByRole("button", { name: "scan.purchaseProAction" });
+    await screen.findByRole("button", {
+      name: "scan.purchaseProActionPrice $6.99",
+    });
 
     expect(getCachedPurchaseErrorDiagnostics()).toEqual({ code: "3" });
   });
@@ -742,10 +761,10 @@ describe("useProPurchase", () => {
     render(<ProPurchaseHarness />);
     await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
     const purchaseButton = await screen.findByRole("button", {
-      name: "scan.purchaseProAction",
+      name: "scan.purchaseProActionPrice $6.99",
     });
     const dialog = screen.getByRole("dialog", {
-      name: "scan.purchaseProTitle",
+      name: "scan.purchaseProTitleNfc",
     });
 
     await user.dblClick(purchaseButton);
@@ -755,15 +774,12 @@ describe("useProPurchase", () => {
       within(dialog).getByRole("button", { name: "loading" }),
     ).toBeDisabled();
     expect(
-      within(dialog).getByRole("button", { name: "scan.purchaseProWarpLink" }),
-    ).toBeDisabled();
-    expect(
       within(dialog).queryByRole("button", { name: "nav.close" }),
     ).not.toBeInTheDocument();
     await user.keyboard("{Escape}");
-    expect(screen.getByRole("dialog", { name: "scan.purchaseProTitle" })).toBe(
-      dialog,
-    );
+    expect(
+      screen.getByRole("dialog", { name: "scan.purchaseProTitleNfc" }),
+    ).toBe(dialog);
 
     act(() => {
       resolvePurchase?.({
@@ -807,12 +823,14 @@ describe("useProPurchase", () => {
 
     render(<ProPurchaseHarness />);
     const dialog = screen
-      .getByText("scan.purchaseProTitle")
+      .getByText("scan.purchaseProTitleNfc")
       .closest('[role="dialog"]')!;
     await waitFor(() => expect(Purchases.getOfferings).toHaveBeenCalled());
     await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
     await user.click(
-      await screen.findByRole("button", { name: "scan.purchaseProAction" }),
+      await screen.findByRole("button", {
+        name: "scan.purchaseProActionPrice $6.99",
+      }),
     );
 
     const { usePreferencesStore } = await import("@/lib/preferencesStore");
@@ -825,7 +843,7 @@ describe("useProPurchase", () => {
       expect(dialog).toHaveStyle({ transform: "translate3d(0, 100%, 0)" });
     });
     expect(
-      screen.queryByRole("dialog", { name: "scan.purchaseProTitle" }),
+      screen.queryByRole("dialog", { name: "scan.purchaseProTitleNfc" }),
     ).not.toBeInTheDocument();
   });
 
@@ -847,7 +865,9 @@ describe("useProPurchase", () => {
     await waitFor(() => expect(Purchases.getOfferings).toHaveBeenCalled());
     await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
     await user.click(
-      await screen.findByRole("button", { name: "scan.purchaseProAction" }),
+      await screen.findByRole("button", {
+        name: "scan.purchaseProActionPrice $6.99",
+      }),
     );
 
     const { usePreferencesStore } = await import("@/lib/preferencesStore");
@@ -876,7 +896,9 @@ describe("useProPurchase", () => {
     await waitFor(() => expect(Purchases.getOfferings).toHaveBeenCalled());
     await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
     await user.click(
-      await screen.findByRole("button", { name: "scan.purchaseProAction" }),
+      await screen.findByRole("button", {
+        name: "scan.purchaseProActionPrice $6.99",
+      }),
     );
 
     await waitFor(() => {
@@ -884,10 +906,10 @@ describe("useProPurchase", () => {
     });
     expect(mockSetLaunchOnScan).not.toHaveBeenCalled();
     expect(
-      screen.getByRole("dialog", { name: "scan.purchaseProTitle" }),
+      screen.getByRole("dialog", { name: "scan.purchaseProTitleNfc" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "scan.purchaseProAction" }),
+      screen.getByRole("button", { name: "scan.purchaseProActionPrice $6.99" }),
     ).toBeEnabled();
   });
 
@@ -914,13 +936,17 @@ describe("useProPurchase", () => {
     cachePurchaseErrorDiagnostics({ code: "3" }, "getOfferings");
     await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
     await user.click(
-      await screen.findByRole("button", { name: "scan.purchaseProAction" }),
+      await screen.findByRole("button", {
+        name: "scan.purchaseProActionPrice $6.99",
+      }),
     );
 
     await waitFor(() => {
       expect(Purchases.purchasePackage).toHaveBeenCalledTimes(1);
       expect(
-        screen.getByRole("button", { name: "scan.purchaseProAction" }),
+        screen.getByRole("button", {
+          name: "scan.purchaseProActionPrice $6.99",
+        }),
       ).toBeEnabled();
     });
     expect(getCachedPurchaseErrorDiagnostics()).toEqual({ code: "3" });
@@ -943,7 +969,9 @@ describe("useProPurchase", () => {
     await waitFor(() => expect(Purchases.getOfferings).toHaveBeenCalled());
     await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
     await user.click(
-      await screen.findByRole("button", { name: "scan.purchaseProAction" }),
+      await screen.findByRole("button", {
+        name: "scan.purchaseProActionPrice $6.99",
+      }),
     );
 
     const { usePreferencesStore } = await import("@/lib/preferencesStore");
@@ -958,7 +986,7 @@ describe("useProPurchase", () => {
       );
     });
     expect(
-      screen.queryByRole("dialog", { name: "scan.purchaseProTitle" }),
+      screen.queryByRole("dialog", { name: "scan.purchaseProTitleNfc" }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("dialog", { name: "scan.purchaseAccountTitle" }),
@@ -985,7 +1013,9 @@ describe("useProPurchase", () => {
     await waitFor(() => expect(Purchases.getOfferings).toHaveBeenCalled());
     await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
     await user.click(
-      await screen.findByRole("button", { name: "scan.purchaseProAction" }),
+      await screen.findByRole("button", {
+        name: "scan.purchaseProActionPrice $6.99",
+      }),
     );
 
     expect(
@@ -1012,7 +1042,9 @@ describe("useProPurchase", () => {
     await waitFor(() => expect(Purchases.getOfferings).toHaveBeenCalled());
     await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
     await user.click(
-      await screen.findByRole("button", { name: "scan.purchaseProAction" }),
+      await screen.findByRole("button", {
+        name: "scan.purchaseProActionPrice $6.99",
+      }),
     );
 
     const dialog = await screen.findByRole("dialog", {
@@ -1056,7 +1088,9 @@ describe("useProPurchase", () => {
     await waitFor(() => expect(Purchases.getOfferings).toHaveBeenCalled());
     await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
     await user.click(
-      await screen.findByRole("button", { name: "scan.purchaseProAction" }),
+      await screen.findByRole("button", {
+        name: "scan.purchaseProActionPrice $6.99",
+      }),
     );
     const dialog = await screen.findByRole("dialog", {
       name: "scan.purchaseAccountTitle",
@@ -1073,12 +1107,12 @@ describe("useProPurchase", () => {
 
     await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
 
-    expect(screen.getByRole("dialog", { name: "scan.purchaseProTitle" })).toBe(
-      dialog,
-    );
+    expect(
+      screen.getByRole("dialog", { name: "scan.purchaseProTitleNfc" }),
+    ).toBe(dialog);
   });
 
-  it("should link to Warp as a subscription that also includes Pro", async () => {
+  it("should not mention Warp on the checkout screen", async () => {
     const user = userEvent.setup();
     const { Purchases } = await import("@revenuecat/purchases-capacitor");
     vi.mocked(Purchases.getOfferings).mockResolvedValue(
@@ -1087,24 +1121,182 @@ describe("useProPurchase", () => {
 
     render(<ProPurchaseHarness />);
     await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
-    await screen.findByRole("button", { name: "scan.purchaseProAction" });
+    await screen.findByRole("button", {
+      name: "scan.purchaseProActionPrice $6.99",
+    });
     const dialog = screen.getByRole("dialog", {
-      name: "scan.purchaseProTitle",
+      name: "scan.purchaseProTitleNfc",
     });
 
-    expect(
-      within(dialog).getByText("scan.purchaseProWarpNote"),
-    ).toBeInTheDocument();
+    expect(within(dialog).getByText("scan.purchaseProP2")).toBeInTheDocument();
+    expect(within(dialog).getAllByRole("button")).toHaveLength(2);
+    expect(within(dialog).queryByText(/warp/i)).not.toBeInTheDocument();
+  });
 
-    await user.click(
-      within(dialog).getByRole("button", { name: "scan.purchaseProWarpLink" }),
+  it.each([
+    ["nfc", "scan.purchaseProTitleNfc", "scan.purchaseProBodyNfc"],
+    ["settings", "scan.purchaseProTitleNfc", "scan.purchaseProBodyNfc"],
+    ["camera", "scan.purchaseProTitleCamera", "scan.purchaseProBodyCamera"],
+    ["shake", "scan.purchaseProTitleShake", "scan.purchaseProBodyShake"],
+  ] as const)(
+    "should lead with the feature when opened from %s",
+    async (source, title, body) => {
+      const user = userEvent.setup();
+      const { Purchases } = await import("@revenuecat/purchases-capacitor");
+      vi.mocked(Purchases.getOfferings).mockResolvedValue(
+        createOfferings(createOffering([createPackage()])),
+      );
+
+      render(<ProPurchaseHarness />);
+      await user.click(
+        screen.getByRole("button", { name: `Open from ${source}` }),
+      );
+
+      const dialog = await screen.findByRole("dialog", { name: title });
+      expect(await within(dialog).findByText(body)).toBeInTheDocument();
+      expect(mockRecordUsageCount).toHaveBeenCalledTimes(1);
+      expect(mockRecordUsageCount).toHaveBeenCalledWith(
+        "pro_screen_viewed",
+        source,
+      );
+    },
+  );
+
+  it("should count one view when more than one purchase screen is mounted", async () => {
+    const user = userEvent.setup();
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    vi.mocked(Purchases.getOfferings).mockResolvedValue(
+      createOfferings(createOffering([createPackage()])),
     );
 
-    expect(mockNavigate).toHaveBeenCalledWith({ to: "/settings/online" });
-    expect(Purchases.purchasePackage).not.toHaveBeenCalled();
+    render(
+      <>
+        <ProPurchaseHarness />
+        <ProPurchaseHarness />
+      </>,
+    );
+    expect(mockRecordUsageCount).not.toHaveBeenCalled();
+
+    await user.click(
+      screen.getAllByRole("button", { name: "Open from camera" })[0]!,
+    );
+
+    await waitFor(() => expect(mockRecordUsageCount).toHaveBeenCalled());
+    expect(mockRecordUsageCount.mock.calls).toEqual([
+      ["pro_screen_viewed", "camera"],
+    ]);
+  });
+
+  it("should count each opening once and keep its entry point while open", async () => {
+    const user = userEvent.setup();
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    const { useStatusStore } = await import("@/lib/store");
+    vi.mocked(Purchases.getOfferings).mockResolvedValue(
+      createOfferings(createOffering([createPackage()])),
+    );
+
+    render(<ProPurchaseHarness />);
+    await user.click(screen.getByRole("button", { name: "Open from camera" }));
+    await screen.findByRole("dialog", { name: "scan.purchaseProTitleCamera" });
+
+    // A scan that arrives while the screen is up is the same viewing.
+    act(() => useStatusStore.getState().setProPurchaseModalOpen(true, "shake"));
+
+    expect(
+      screen.getByRole("dialog", { name: "scan.purchaseProTitleCamera" }),
+    ).toBeInTheDocument();
+    expect(mockRecordUsageCount.mock.calls).toEqual([
+      ["pro_screen_viewed", "camera"],
+    ]);
+
+    act(() => useStatusStore.getState().setProPurchaseModalOpen(false));
+    act(() => useStatusStore.getState().setProPurchaseModalOpen(true, "shake"));
+
+    await screen.findByRole("dialog", { name: "scan.purchaseProTitleShake" });
+    expect(mockRecordUsageCount.mock.calls).toEqual([
+      ["pro_screen_viewed", "camera"],
+      ["pro_screen_viewed", "shake"],
+    ]);
+  });
+
+  it("should count a successful purchase once with its entry point", async () => {
+    const user = userEvent.setup();
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    vi.mocked(Purchases.getOfferings).mockResolvedValue(
+      createOfferings(createOffering([createPackage()])),
+    );
+    vi.mocked(Purchases.purchasePackage).mockResolvedValue({
+      customerInfo: {
+        entitlements: { active: { tapto_launcher: {} } },
+      },
+    } as never);
+
+    render(<ProPurchaseHarness />);
+    await user.click(screen.getByRole("button", { name: "Open from camera" }));
+    await user.click(
+      await screen.findByRole("button", {
+        name: "scan.purchaseProActionPrice $6.99",
+      }),
+    );
+
     await waitFor(() => {
-      expect(dialog).toHaveStyle({ transform: "translate3d(0, 100%, 0)" });
+      expect(mockRecordUsageCount).toHaveBeenCalledWith(
+        "pro_purchased",
+        "camera",
+      );
     });
+    expect(mockRecordUsageCount.mock.calls).toEqual([
+      ["pro_screen_viewed", "camera"],
+      ["pro_purchased", "camera"],
+    ]);
+  });
+
+  it("should not count a failed, cancelled or recovered purchase", async () => {
+    const user = userEvent.setup();
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    vi.mocked(Purchases.getOfferings).mockResolvedValue(
+      createOfferings(createOffering([createPackage()])),
+    );
+    mockReconcileStorePurchases.mockResolvedValue({
+      entitlements: { active: { tapto_launcher: {} } },
+    });
+    const purchaseButton = async () =>
+      screen.findByRole("button", {
+        name: "scan.purchaseProActionPrice $6.99",
+      });
+
+    render(<ProPurchaseHarness />);
+    await user.click(screen.getByRole("button", { name: "Open from nfc" }));
+
+    vi.mocked(Purchases.purchasePackage).mockRejectedValueOnce(
+      new Error("billing unavailable"),
+    );
+    await user.click(await purchaseButton());
+    const toast = (await import("react-hot-toast")).default;
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+
+    vi.mocked(Purchases.purchasePackage).mockRejectedValueOnce({
+      code: "1",
+      userCancelled: true,
+    });
+    await user.click(await purchaseButton());
+    await waitFor(() =>
+      expect(Purchases.purchasePackage).toHaveBeenCalledTimes(2),
+    );
+    await waitFor(async () => expect(await purchaseButton()).toBeEnabled());
+
+    vi.mocked(Purchases.purchasePackage).mockRejectedValueOnce({
+      code: "6",
+      message: "This product is already active for the user.",
+    });
+    await user.click(await purchaseButton());
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith("scan.purchaseProRestored"),
+    );
+
+    expect(mockRecordUsageCount.mock.calls).toEqual([
+      ["pro_screen_viewed", "nfc"],
+    ]);
   });
 
   it("should restore Pro from the general purchase support controls", async () => {
@@ -1268,9 +1460,6 @@ describe("useProPurchase", () => {
 
     expect(screen.getByText("scan.purchaseProUnavailable")).toBeInTheDocument();
     expect(screen.queryByText(/\$6\.99/)).not.toBeInTheDocument();
-    expect(
-      screen.queryByText("scan.purchaseProWarpNote"),
-    ).not.toBeInTheDocument();
   });
 
   it("should keep purchase modal hidden until opened", () => {

@@ -52,7 +52,6 @@ const ONLINE_SETTINGS_PERMISSION_MESSAGES = [
 ] as const;
 
 const REMOTE_STATES_WITH_DETAILS: ReadonlySet<RemoteControlState> = new Set([
-  "not_remote_device",
   "credential_rejected",
 ]);
 

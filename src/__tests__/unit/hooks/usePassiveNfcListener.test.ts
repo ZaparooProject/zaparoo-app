@@ -286,12 +286,19 @@ describe("usePassiveNfcListener", () => {
       true,
       true,
       mockSetLastToken,
-      mockSetProPurchaseModalOpen,
+      expect.any(Function),
       false,
       false,
       true,
       false,
     );
+
+    // A blocked launch opens the Pro screen as an NFC entry.
+    const openProPurchase = mockRunToken.mock.calls[0]![5] as (
+      open: boolean,
+    ) => void;
+    openProPurchase(true);
+    expect(mockSetProPurchaseModalOpen).toHaveBeenCalledWith(true, "nfc");
   });
 
   it("should ignore tag when app was in foreground (no appStateChange)", async () => {
@@ -388,7 +395,7 @@ describe("usePassiveNfcListener", () => {
       true,
       false, // connected is false
       mockSetLastToken,
-      mockSetProPurchaseModalOpen,
+      expect.any(Function),
       false,
       false,
       true,
@@ -503,7 +510,7 @@ describe("usePassiveNfcListener", () => {
       false, // launcherAccess should be false
       true,
       mockSetLastToken,
-      mockSetProPurchaseModalOpen,
+      expect.any(Function),
       false,
       false,
       true,

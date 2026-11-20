@@ -759,7 +759,7 @@ describe("OnlineDeviceSetup", () => {
         backupStatus({ deviceName: "Living room", availability: "available" }),
       );
       mockRemoteActivity.mockResolvedValue({
-        status: { state: "not_remote_device" },
+        status: { state: "credential_rejected" },
       });
       render(<OnlineDeviceSetup connected warpActive={null} />);
 
@@ -769,12 +769,12 @@ describe("OnlineDeviceSetup", () => {
       ).toBeInTheDocument();
       expect(
         await screen.findByText(
-          "online.features.remoteStates.not_remote_device",
+          "online.features.remoteStates.credential_rejected",
         ),
       ).toBeInTheDocument();
       expect(
         screen.getByText(
-          "online.features.remoteStateDetails.not_remote_device",
+          "online.features.remoteStateDetails.credential_rejected",
         ),
       ).toBeInTheDocument();
     });

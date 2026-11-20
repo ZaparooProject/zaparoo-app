@@ -75,6 +75,7 @@ describe("usePreferencesStore", () => {
       shakeZapscript: "",
       systemNameRegion: "auto",
       appBadgeEnabled: true,
+      shareUsageCounts: true,
       accessibleLists: false,
       appReviewCadence: { ...DEFAULT_APP_REVIEW_CADENCE },
       _hasHydrated: true, // Pretend it's hydrated for tests
@@ -674,6 +675,33 @@ describe("usePreferencesStore", () => {
       await usePreferencesStore.persist.rehydrate();
 
       expect(usePreferencesStore.getState().appBadgeEnabled).toBe(true);
+    });
+  });
+
+  describe("usage count sharing persistence", () => {
+    it("should persist the usage count opt-out", async () => {
+      usePreferencesStore.getState().setShareUsageCounts(false);
+
+      expect(usePreferencesStore.getState().shareUsageCounts).toBe(false);
+
+      await waitFor(() => {
+        expect(Preferences.set).toHaveBeenCalled();
+      });
+      const persisted = vi.mocked(Preferences.set).mock.calls.at(-1)?.[0];
+      expect(persisted?.value).toContain('"shareUsageCounts":false');
+    });
+
+    it("should default to on for preferences saved before the switch", async () => {
+      vi.mocked(Preferences.get).mockResolvedValueOnce({
+        value: JSON.stringify({
+          state: { showFilenames: true },
+          version: 0,
+        }),
+      });
+
+      await usePreferencesStore.persist.rehydrate();
+
+      expect(usePreferencesStore.getState().shareUsageCounts).toBe(true);
     });
   });
 

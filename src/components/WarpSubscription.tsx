@@ -188,13 +188,13 @@ function WarpPurchaseModal({
         )}
 
         <ul className="text-muted-foreground list-inside list-disc space-y-1 text-sm">
+          <li>{t("online.warp.benefitDevelopment")}</li>
           <li>{t("online.warp.benefitBackup")}</li>
           <li>
             {lifetimeProOwned
               ? t("online.warp.proOwned")
               : t("online.warp.benefitPro")}
           </li>
-          <li>{t("online.warp.benefitDevelopment")}</li>
         </ul>
 
         <RadioGroup

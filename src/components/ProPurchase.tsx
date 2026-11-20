@@ -16,7 +16,8 @@ import {
   clearCachedPurchaseErrorDiagnostics,
 } from "@/lib/purchaseReportContext";
 import { usePreferencesStore } from "@/lib/preferencesStore";
-import { useStatusStore } from "@/lib/store";
+import { type ProPurchaseSource, useStatusStore } from "@/lib/store";
+import { recordUsageCount } from "@/lib/usageCounts";
 import {
   getPurchaseErrorDiagnostics,
   PurchaseAlreadyOwnedError,
@@ -49,14 +50,34 @@ type OfferingsStatus =
   | "error"
   | "unsupported";
 
+// The screen leads with the feature the person was reaching for. Settings has
+// no feature of its own, so it leads with NFC like a tap does.
+const PURCHASE_COPY: Record<
+  ProPurchaseSource,
+  { title: string; body: string }
+> = {
+  nfc: { title: "scan.purchaseProTitleNfc", body: "scan.purchaseProBodyNfc" },
+  settings: {
+    title: "scan.purchaseProTitleNfc",
+    body: "scan.purchaseProBodyNfc",
+  },
+  camera: {
+    title: "scan.purchaseProTitleCamera",
+    body: "scan.purchaseProBodyCamera",
+  },
+  shake: {
+    title: "scan.purchaseProTitleShake",
+    body: "scan.purchaseProBodyShake",
+  },
+};
+
 function getPurchaseBody(
   status: OfferingsStatus,
   purchasePackage: PurchasesPackage | null,
+  source: ProPurchaseSource,
 ) {
   if (purchasePackage) {
-    return t("scan.purchaseProP1", {
-      price: purchasePackage.product.priceString,
-    });
+    return t(PURCHASE_COPY[source].body);
   }
 
   if (status === "loading") {
@@ -74,13 +95,18 @@ function getPurchaseBody(
   return t("scan.purchaseProUnavailable");
 }
 
-function getPurchaseActionLabel(status: OfferingsStatus) {
+function getPurchaseActionLabel(
+  status: OfferingsStatus,
+  purchasePackage: PurchasesPackage | null,
+) {
   if (status === "loading") {
     return t("loading");
   }
 
-  if (status === "available") {
-    return t("scan.purchaseProAction");
+  if (status === "available" && purchasePackage) {
+    return t("scan.purchaseProActionPrice", {
+      price: purchasePackage.product.priceString,
+    });
   }
 
   return t("scan.purchaseProUnavailableAction");
@@ -88,6 +114,7 @@ function getPurchaseActionLabel(status: OfferingsStatus) {
 
 const ProPurchaseModal = (props: {
   proPurchaseModalOpen: boolean;
+  proPurchaseSource: ProPurchaseSource;
   setProPurchaseModalOpen: (open: boolean) => void;
   purchasePackage: PurchasesPackage | null;
   offeringsStatus: OfferingsStatus;
@@ -108,6 +135,16 @@ const ProPurchaseModal = (props: {
     setPreviousModalOpen(props.proPurchaseModalOpen);
     if (props.proPurchaseModalOpen) setStep("purchase");
   }
+
+  // One count per opening. The store flag keeps it to one when another page
+  // has this screen mounted too.
+  useEffect(() => {
+    if (!props.proPurchaseModalOpen) return;
+    const state = useStatusStore.getState();
+    if (state.proPurchaseViewCounted) return;
+    useStatusStore.setState({ proPurchaseViewCounted: true });
+    recordUsageCount("pro_screen_viewed", props.proPurchaseSource);
+  }, [props.proPurchaseModalOpen, props.proPurchaseSource]);
 
   // The checkout footer that held focus unmounts when the step changes.
   useEffect(() => {
@@ -197,6 +234,7 @@ const ProPurchaseModal = (props: {
 
         clearCachedPurchaseErrorDiagnostics();
         activatePro({ offerAccount: true });
+        recordUsageCount("pro_purchased", props.proPurchaseSource);
         logger.log("Pro purchase completed", {
           platform: Capacitor.getPlatform(),
           packageIdentifier: purchasePackage.identifier,
@@ -234,10 +272,6 @@ const ProPurchaseModal = (props: {
     props.offeringsStatus === "error"
       ? "diagnosticsOnly"
       : null;
-  const showWarpNote =
-    props.offeringsStatus === "loading" ||
-    props.offeringsStatus === "available";
-
   return (
     <SlideModal
       isOpen={props.proPurchaseModalOpen}
@@ -250,7 +284,7 @@ const ProPurchaseModal = (props: {
       title={
         step === "account"
           ? t("scan.purchaseAccountTitle")
-          : t("scan.purchaseProTitle")
+          : t(PURCHASE_COPY[props.proPurchaseSource].title)
       }
       footer={
         step === "account" ? (
@@ -275,7 +309,10 @@ const ProPurchaseModal = (props: {
             label={
               isPurchasing
                 ? t("loading")
-                : getPurchaseActionLabel(props.offeringsStatus)
+                : getPurchaseActionLabel(
+                    props.offeringsStatus,
+                    props.purchasePackage,
+                  )
             }
             icon={
               isPurchasing ? <LoadingSpinner size={20} decorative /> : undefined
@@ -302,21 +339,14 @@ const ProPurchaseModal = (props: {
         </div>
       ) : (
         <div className="text-muted-foreground flex flex-col gap-3 py-2">
-          <p>{getPurchaseBody(props.offeringsStatus, props.purchasePackage)}</p>
+          <p>
+            {getPurchaseBody(
+              props.offeringsStatus,
+              props.purchasePackage,
+              props.proPurchaseSource,
+            )}
+          </p>
           <p>{t("scan.purchaseProP2")}</p>
-          {showWarpNote && (
-            <>
-              <p>{t("scan.purchaseProWarpNote")}</p>
-              <Button
-                label={t("scan.purchaseProWarpLink")}
-                variant="text"
-                onClick={openOnlineSettings}
-                disabled={isPurchasing}
-                disabledAppearance="busy"
-                className="w-full"
-              />
-            </>
-          )}
           {supportActionsVariant && (
             <PurchaseSupportActions variant={supportActionsVariant} />
           )}
@@ -338,6 +368,7 @@ export const useProPurchase = () => {
   const proPurchaseModalOpen = useStatusStore(
     (state) => state.proPurchaseModalOpen,
   );
+  const proPurchaseSource = useStatusStore((state) => state.proPurchaseSource);
   const setProPurchaseModalOpen = useStatusStore(
     (state) => state.setProPurchaseModalOpen,
   );
@@ -467,6 +498,7 @@ export const useProPurchase = () => {
     purchaseModal: (
       <ProPurchaseModal
         proPurchaseModalOpen={proPurchaseModalOpen}
+        proPurchaseSource={proPurchaseSource}
         setProPurchaseModalOpen={setProPurchaseModalOpen}
         purchasePackage={launcherPackage}
         offeringsStatus={offeringsStatus}
