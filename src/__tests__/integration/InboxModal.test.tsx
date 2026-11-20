@@ -8,13 +8,25 @@ import { CoreAPI } from "@/lib/coreApi";
 import { InboxSeverity } from "@/lib/models";
 import { mockInboxMessage } from "../../test-utils/factories";
 
-vi.mock("@/lib/coreApi", () => ({
-  CoreAPI: {
-    reset: vi.fn(),
-    inboxDelete: vi.fn().mockResolvedValue(null),
-    inboxClear: vi.fn().mockResolvedValue(null),
-  },
-}));
+const { mockErrorToast } = vi.hoisted(() => ({ mockErrorToast: vi.fn() }));
+
+vi.mock("@/lib/coreApi", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/coreApi")>();
+  return {
+    ...actual,
+    CoreAPI: {
+      reset: vi.fn(),
+      inbox: vi.fn(),
+      inboxDelete: vi.fn().mockResolvedValue(null),
+      inboxClear: vi.fn().mockResolvedValue(null),
+    },
+  };
+});
+
+vi.mock("@/lib/toastUtils", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/toastUtils")>();
+  return { ...actual, showRateLimitedErrorToast: mockErrorToast };
+});
 
 describe("InboxModal", () => {
   beforeEach(() => {
@@ -122,6 +134,7 @@ describe("InboxModal", () => {
       new Error("Delete failed"),
     );
     const message = mockInboxMessage({ id: 43, title: "Still here" });
+    vi.mocked(CoreAPI.inbox).mockResolvedValueOnce({ messages: [message] });
     useStatusStore.setState({
       inboxModalOpen: true,
       inboxMessages: [message],
@@ -136,6 +149,86 @@ describe("InboxModal", () => {
     await waitFor(() => {
       expect(CoreAPI.inboxDelete).toHaveBeenCalledWith({ id: 43 });
     });
+    await waitFor(() => expect(mockErrorToast).toHaveBeenCalledTimes(1));
+    expect(useStatusStore.getState().inboxMessages).toEqual([message]);
+    expect(
+      screen.getAllByRole("button", { name: /inbox\.deleteOne/i })[0],
+    ).toBeEnabled();
+  });
+
+  // Rollbar #344: Core answered "inbox message not found" for a message the
+  // app still listed.
+  it("should send one delete when the trash button is tapped twice", async () => {
+    const user = userEvent.setup();
+    let finishDelete: () => void = () => undefined;
+    vi.mocked(CoreAPI.inboxDelete).mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        finishDelete = resolve;
+      }),
+    );
+    useStatusStore.setState({
+      inboxModalOpen: true,
+      inboxMessages: [mockInboxMessage({ id: 1, title: "Tapped twice" })],
+    });
+    render(<InboxModal />);
+
+    const deleteButton = screen.getAllByRole("button", {
+      name: /inbox\.deleteOne/i,
+    })[0]!;
+    await user.dblClick(deleteButton);
+
+    expect(CoreAPI.inboxDelete).toHaveBeenCalledTimes(1);
+    expect(deleteButton).toBeDisabled();
+
+    finishDelete();
+    await waitFor(() => {
+      expect(useStatusStore.getState().inboxMessages).toHaveLength(0);
+    });
+    expect(mockErrorToast).not.toHaveBeenCalled();
+  });
+
+  it("should drop a message Core no longer has instead of reporting an error", async () => {
+    const user = userEvent.setup();
+    vi.mocked(CoreAPI.inboxDelete).mockRejectedValueOnce(
+      new Error("failed to delete inbox message: inbox message not found: 1"),
+    );
+    const other = mockInboxMessage({ id: 2, title: "Still on Core" });
+    vi.mocked(CoreAPI.inbox).mockResolvedValueOnce({ messages: [other] });
+    useStatusStore.setState({
+      inboxModalOpen: true,
+      inboxMessages: [mockInboxMessage({ id: 1, title: "Gone" }), other],
+    });
+    render(<InboxModal />);
+
+    await user.click(
+      screen.getAllByRole("button", { name: /inbox\.deleteOne/i })[0]!,
+    );
+
+    await waitFor(() => {
+      expect(useStatusStore.getState().inboxMessages).toEqual([other]);
+    });
+    expect(screen.queryByText("Gone")).not.toBeInTheDocument();
+    expect(mockErrorToast).not.toHaveBeenCalled();
+  });
+
+  it("should report a failed delete when the inbox cannot be re-read", async () => {
+    const user = userEvent.setup();
+    vi.mocked(CoreAPI.inboxDelete).mockRejectedValueOnce(
+      new Error("Delete failed"),
+    );
+    vi.mocked(CoreAPI.inbox).mockRejectedValueOnce(new Error("Offline"));
+    const message = mockInboxMessage({ id: 44, title: "Unknown fate" });
+    useStatusStore.setState({
+      inboxModalOpen: true,
+      inboxMessages: [message],
+    });
+    render(<InboxModal />);
+
+    await user.click(
+      screen.getAllByRole("button", { name: /inbox\.deleteOne/i })[0]!,
+    );
+
+    await waitFor(() => expect(mockErrorToast).toHaveBeenCalledTimes(1));
     expect(useStatusStore.getState().inboxMessages).toEqual([message]);
   });
 

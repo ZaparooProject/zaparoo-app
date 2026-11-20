@@ -2906,11 +2906,9 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logApiFailure("Inbox delete API call failed:", error, {
-            category: "api",
-            action: "inbox.delete",
-            severity: "error",
-          });
+          // The caller decides whether this is a failure: a message that is
+          // already gone on Core is not one.
+          logger.debug("Inbox delete API call failed:", error);
           reject(error);
         });
     });
