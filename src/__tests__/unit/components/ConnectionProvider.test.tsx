@@ -46,6 +46,7 @@ import type { TransportState } from "../../../lib/transport/types";
 import type { NotificationRequest } from "@/lib/coreApi";
 import { ClientCapability, InboxSeverity, Notification } from "@/lib/models";
 import { logger } from "@/lib/logger";
+import { resetToastRateLimiter } from "@/lib/toastUtils";
 import { invalidateLibraryImageCache } from "@/lib/libraryImageCache";
 import { reconcileCredentialProvenAliases } from "@/lib/devices/credentialProof";
 
@@ -1159,6 +1160,82 @@ describe("notification processing", () => {
       expect(mockToastError).not.toHaveBeenCalled();
     },
   );
+
+  describe("run.failed", () => {
+    const receive = async (params: unknown) => {
+      resetToastRateLimiter();
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce({
+        method: Notification.RunFailed,
+        params,
+      } as NotificationRequest);
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+      await capturedEventHandlers.onMessage!("test-device", {});
+    };
+
+    it("should tell the user when a playlist item fails to launch", async () => {
+      await receive({
+        source: "Playlist",
+        script: "@Arcade/Metal Slug X (year:1999)",
+        command: "launch.title",
+        category: "media_not_found",
+        message: "media not found",
+        playlistId: "deck://lhm6n9t8",
+        playlistIndex: 0,
+      });
+
+      await waitFor(() => {
+        expect(mockToastError).toHaveBeenCalledWith(
+          "scan.playlistItemNotFound",
+        );
+      });
+      expect(mockToastError).toHaveBeenCalledTimes(1);
+    });
+
+    // The failed `run` call rejects with the same error, and the screen that
+    // made the call reports that.
+    it("should not report a failed run call a second time", async () => {
+      const debugSpy = vi.spyOn(logger, "debug").mockImplementation(() => {});
+      const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+
+      await receive({
+        source: "API",
+        category: "media_not_found",
+        message: "media not found",
+      });
+
+      await waitFor(() => {
+        expect(debugSpy).toHaveBeenCalledWith(
+          "run.failed",
+          expect.objectContaining({ source: "API" }),
+        );
+      });
+      expect(mockToastError).not.toHaveBeenCalled();
+      expect(warnSpy).not.toHaveBeenCalledWith(
+        "Unknown notification method:",
+        Notification.RunFailed,
+      );
+      debugSpy.mockRestore();
+      warnSpy.mockRestore();
+    });
+
+    it("should ignore a payload it cannot read", async () => {
+      const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+
+      await receive(undefined);
+
+      await waitFor(() => {
+        expect(warnSpy).toHaveBeenCalledWith(
+          "run.failed without a usable payload",
+        );
+      });
+      expect(mockToastError).not.toHaveBeenCalled();
+      warnSpy.mockRestore();
+    });
+  });
 
   describe("media.started", () => {
     it("should update playing state and clear staged token when media starts", async () => {

@@ -763,6 +763,8 @@
       "playlistPlay": "Afspeellijst afspelen",
       "playlistNext": "Volgend item",
       "playlistControlError": "Afspeellijst kon niet worden bediend",
+      "playlistItemError": "Item {{number}} kon niet worden afgespeeld",
+      "playlistItemNotFound": "Item {{number}} is niet gevonden op dit apparaat",
       "mediaControls": "Bediening voor {{section}}",
       "mediaPause": "Pauzeren",
       "mediaResume": "Hervatten",

@@ -763,6 +763,8 @@
       "playlistPlay": "播放该播放列表",
       "playlistNext": "下一项",
       "playlistControlError": "无法控制播放列表",
+      "playlistItemError": "无法播放第 {{number}} 项",
+      "playlistItemNotFound": "在此设备上找不到第 {{number}} 项",
       "mediaControls": "{{section}}控件",
       "mediaPause": "暂停",
       "mediaResume": "继续",

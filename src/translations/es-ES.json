@@ -763,6 +763,8 @@
       "playlistPlay": "Reproducir lista de reproducción",
       "playlistNext": "Elemento siguiente",
       "playlistControlError": "No se pudo controlar la lista de reproducción",
+      "playlistItemError": "No se pudo reproducir el elemento {{number}}",
+      "playlistItemNotFound": "No se encontró el elemento {{number}} en este dispositivo",
       "mediaControls": "Controles de {{section}}",
       "mediaPause": "Pausar",
       "mediaResume": "Reanudar",

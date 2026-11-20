@@ -763,6 +763,8 @@
       "playlistPlay": "Play playlist",
       "playlistNext": "Next item",
       "playlistControlError": "Could not control playlist",
+      "playlistItemError": "Could not play item {{number}}",
+      "playlistItemNotFound": "Item {{number}} was not found on this device",
       "mediaControls": "{{section}} controls",
       "mediaPause": "Pause",
       "mediaResume": "Resume",

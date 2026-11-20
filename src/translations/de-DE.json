@@ -763,6 +763,8 @@
       "playlistPlay": "Wiedergabeliste abspielen",
       "playlistNext": "Nächstes Element",
       "playlistControlError": "Wiedergabeliste konnte nicht gesteuert werden",
+      "playlistItemError": "Element {{number}} konnte nicht abgespielt werden",
+      "playlistItemNotFound": "Element {{number}} wurde auf diesem Gerät nicht gefunden",
       "mediaControls": "Steuerung für „{{section}}“",
       "mediaPause": "Pausieren",
       "mediaResume": "Fortsetzen",
