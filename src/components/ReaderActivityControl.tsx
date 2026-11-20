@@ -108,7 +108,7 @@ export function ReaderActivityControl({
           </div>
           <Button
             label={errorAction?.label ?? t("nav.cancel")}
-            variant="outline"
+            variant={errorAction ? "secondary" : "outline"}
             className="min-h-18 w-full min-w-0"
             onClick={errorAction?.onClick ?? onCancel}
           />
