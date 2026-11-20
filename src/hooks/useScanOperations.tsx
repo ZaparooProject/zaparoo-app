@@ -92,6 +92,9 @@ export function useScanOperations({
   const clearScanError = useCallback(() => setScanError(null), []);
   // A one-shot camera scan has closed its sheet by the time Core answers.
   const [cameraLaunching, setCameraLaunching] = useState(false);
+  // Android's reader session has ended by the time Core answers. iOS keeps
+  // its scan sheet open instead, and a restarting session stays "scanning".
+  const [nfcLaunching, setNfcLaunching] = useState(false);
   // The last tag a continuous NFC scan read, for the same-tag cooldown.
   const lastNfcReadRef = useRef<{ uid: string; at: number } | null>(null);
 
@@ -298,9 +301,12 @@ export function useScanOperations({
             return;
           }
         } else {
-          void launchNfcTag(tag, generation).then((outcome) => {
-            if (!outcome.ok) stopAfterFailure();
-          });
+          if (!sessionManager.shouldRestart) setNfcLaunching(true);
+          void launchNfcTag(tag, generation)
+            .then((outcome) => {
+              if (!outcome.ok) stopAfterFailure();
+            })
+            .finally(() => setNfcLaunching(false));
         }
 
         if (sessionManager.shouldRestart) {
@@ -505,6 +511,7 @@ export function useScanOperations({
       showScanError: setScanError,
       clearScanError,
       cameraLaunching,
+      nfcLaunching,
       handleScanButton,
       handleCameraScan,
       handleStopConfirm,
@@ -516,6 +523,7 @@ export function useScanOperations({
       scanError,
       clearScanError,
       cameraLaunching,
+      nfcLaunching,
       handleScanButton,
       handleCameraScan,
       handleStopConfirm,

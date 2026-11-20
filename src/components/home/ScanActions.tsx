@@ -49,6 +49,8 @@ interface ScanActionsProps {
   onDismissScanError?: () => void;
   /** A one-shot camera scan is waiting for Core to answer. */
   cameraLaunching?: boolean;
+  /** A tag was read and Core has not answered yet. */
+  nfcLaunching?: boolean;
   /** Why the camera last closed on its own, shown under its button. */
   cameraNotice?: string;
   nfcEnabled: boolean;
@@ -66,6 +68,7 @@ export function ScanActions({
   scanError = null,
   onDismissScanError,
   cameraLaunching = false,
+  nfcLaunching = false,
   cameraNotice,
   nfcEnabled,
   onOpenNfcSettings,
@@ -98,6 +101,8 @@ export function ScanActions({
   const nfcError = showScanError && scanError.source === "nfc";
   const cameraError = showScanError && scanError.source === "camera";
   const dismissScanError = onDismissScanError ?? (() => undefined);
+  // The read is over and Core has not answered; a live session wins.
+  const tagLaunching = nfcLaunching && !scanSession;
   const mapItAction = scanErrorPrefill
     ? {
         label: t("scan.mapIt"),
@@ -183,15 +188,29 @@ export function ScanActions({
     return (
       <ReaderActivityControl
         key="nfc"
-        state={scanSession ? "waiting" : nfcError ? "error" : "idle"}
+        state={
+          scanSession || tagLaunching ? "waiting" : nfcError ? "error" : "idle"
+        }
         errorText={scanError?.message}
         errorAction={nfcError ? mapItAction : undefined}
         idleLabel={t("scan.tapTag")}
-        activeLabel={t("scan.tapTagScanning")}
-        activeAriaLabel={t("scan.tapTagStop")}
+        activeLabel={
+          tagLaunching ? t("scan.launching") : t("scan.tapTagScanning")
+        }
+        activeAriaLabel={
+          tagLaunching ? t("scan.launching") : t("scan.tapTagStop")
+        }
+        showCancelHint={!tagLaunching}
         icon={<NfcIcon size={compact ? 24 : 28} />}
         onStart={onTapScan}
-        onCancel={nfcError ? (onDismissScanError ?? onTapScan) : onTapScan}
+        // Nothing to cancel while Core answers.
+        onCancel={
+          tagLaunching
+            ? () => undefined
+            : nfcError
+              ? (onDismissScanError ?? onTapScan)
+              : onTapScan
+        }
         size={compact ? "default" : "lg"}
         layout="stacked"
         className="w-full"

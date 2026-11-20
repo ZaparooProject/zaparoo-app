@@ -306,6 +306,17 @@ describe("Home Page Scan Flows", () => {
       expect(onDismissScanError).toHaveBeenCalledTimes(1);
     });
 
+    it("shows the tag control launching while Core answers", () => {
+      renderActions({ nfcLaunching: true });
+
+      expect(
+        screen.getByRole("button", { name: "scan.launching" }),
+      ).toHaveAttribute("aria-busy", "true");
+      expect(
+        screen.queryByText("reader.pressAgainToCancel"),
+      ).not.toBeInTheDocument();
+    });
+
     it("shows the camera control launching while Core answers", () => {
       renderActions({ cameraLaunching: true });
 
