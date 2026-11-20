@@ -125,7 +125,7 @@ describe("ReaderActivityControl", () => {
     expect(props.onCancel).toHaveBeenCalledOnce();
   });
 
-  it("shows the caller's error and its way forward in place of cancel", async () => {
+  it("shows the caller's error and its way forward in place of retry", async () => {
     const user = userEvent.setup();
     const onMap = vi.fn();
     render(
@@ -140,12 +140,14 @@ describe("ReaderActivityControl", () => {
     expect(screen.getByText("scan.notSetUp")).toBeVisible();
     expect(screen.queryByText("spinner.verifyFailed")).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "nav.cancel" }),
+      screen.queryByRole("button", { name: "scan.retry" }),
     ).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "scan.mapIt" }));
-
     expect(onMap).toHaveBeenCalledOnce();
     expect(props.onCancel).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "nav.cancel" }));
+    expect(props.onCancel).toHaveBeenCalledOnce();
   });
 });

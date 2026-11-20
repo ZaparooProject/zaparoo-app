@@ -36,6 +36,8 @@ import {
 /** A failed scan, shown on the scan control instead of a toast. */
 export interface ScanError {
   message: string;
+  /** Which scan control failed, so the error shows on that one. */
+  source: "nfc" | "camera";
   /** Set when the token is simply not set up yet; opens a new mapping. */
   prefill: MappingPrefill | null;
 }
@@ -53,6 +55,7 @@ export function scanErrorFor(
   const prefill = mappingPrefillFor(error, token, source);
   return {
     message: prefill ? t("scan.notSetUp") : error.message,
+    source: source === "camera" ? "camera" : "nfc",
     prefill,
   };
 }
@@ -87,6 +90,8 @@ export function useScanOperations({
   const [scanStatus, setScanStatus] = useState<ScanResult>(ScanResult.Default);
   const [scanError, setScanError] = useState<ScanError | null>(null);
   const clearScanError = useCallback(() => setScanError(null), []);
+  // A one-shot camera scan has closed its sheet by the time Core answers.
+  const [cameraLaunching, setCameraLaunching] = useState(false);
   // The last tag a continuous NFC scan read, for the same-tag cooldown.
   const lastNfcReadRef = useRef<{ uid: string; at: number } | null>(null);
 
@@ -320,6 +325,7 @@ export function useScanOperations({
         if (current()) {
           setScanError({
             message: t(nfcErrorMessageKey(error) ?? "scan.scanError"),
+            source: "nfc",
             prefill: null,
           });
         }
@@ -441,6 +447,7 @@ export function useScanOperations({
         }
 
         const code = barcode.rawValue;
+        setCameraLaunching(true);
         void runToken(
           code,
           code,
@@ -459,7 +466,7 @@ export function useScanOperations({
                 scanErrorFor(error, { uid: code, text: code }, "camera", t),
               ),
           },
-        );
+        ).finally(() => setCameraLaunching(false));
       })
       .catch(handleCameraError);
   }, [
@@ -497,6 +504,7 @@ export function useScanOperations({
       scanError,
       showScanError: setScanError,
       clearScanError,
+      cameraLaunching,
       handleScanButton,
       handleCameraScan,
       handleStopConfirm,
@@ -507,6 +515,7 @@ export function useScanOperations({
       scanStatus,
       scanError,
       clearScanError,
+      cameraLaunching,
       handleScanButton,
       handleCameraScan,
       handleStopConfirm,

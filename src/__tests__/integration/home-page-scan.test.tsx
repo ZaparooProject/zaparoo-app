@@ -239,7 +239,11 @@ describe("Home Page Scan Flows", () => {
       const user = userEvent.setup();
       const onDismissScanError = vi.fn();
       const { onTapScan } = renderActions({
-        scanError: { message: "launcher not found", prefill: null },
+        scanError: {
+          message: "launcher not found",
+          source: "nfc",
+          prefill: null,
+        },
         onDismissScanError,
       });
 
@@ -257,9 +261,15 @@ describe("Home Page Scan Flows", () => {
       renderActions({
         scanError: {
           message: "scan.notSetUp",
+          source: "nfc",
           prefill: { type: "id", pattern: "04abc123def456" },
         },
       });
+
+      // Map it takes Retry's place; Cancel is still offered.
+      expect(
+        screen.getByRole("button", { name: "nav.cancel" }),
+      ).toBeInTheDocument();
 
       await user.click(screen.getByRole("button", { name: "scan.mapIt" }));
 
@@ -269,10 +279,49 @@ describe("Home Page Scan Flows", () => {
       });
     });
 
+    it("shows a camera scan's error on the camera control", async () => {
+      const user = userEvent.setup();
+      const onDismissScanError = vi.fn();
+      renderActions({
+        scanError: {
+          message: "scan.notSetUp",
+          source: "camera",
+          prefill: { type: "value", pattern: "9780140449136" },
+        },
+        onDismissScanError,
+      });
+
+      // The tag control is untouched and still starts a scan.
+      expect(
+        screen.getByRole("button", { name: "scan.tapTag" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "scan.scanCode" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "scan.mapIt" }),
+      ).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "nav.cancel" }));
+      expect(onDismissScanError).toHaveBeenCalledTimes(1);
+    });
+
+    it("shows the camera control launching while Core answers", () => {
+      renderActions({ cameraLaunching: true });
+
+      expect(
+        screen.getByRole("button", { name: "scan.launching" }),
+      ).toHaveAttribute("aria-busy", "true");
+    });
+
     it("goes back to the scan control once a new scan starts", () => {
       renderActions({
         scanSession: true,
-        scanError: { message: "launcher not found", prefill: null },
+        scanError: {
+          message: "launcher not found",
+          source: "nfc",
+          prefill: null,
+        },
       });
 
       expect(screen.queryByText("launcher not found")).not.toBeInTheDocument();

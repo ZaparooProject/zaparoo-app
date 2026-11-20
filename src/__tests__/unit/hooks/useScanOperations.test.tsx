@@ -300,6 +300,7 @@ describe("useScanOperations", () => {
       await vi.waitFor(() => {
         expect(result.current.scanError).toEqual({
           message: "scan.notSetUp",
+          source: "camera",
           prefill: { type: "value", pattern: "9780140449136" },
         });
       });
@@ -806,6 +807,7 @@ describe("useScanOperations", () => {
       await vi.waitFor(() => {
         expect(result.current.scanError).toEqual({
           message: "launcher not found",
+          source: "nfc",
           prefill: null,
         });
       });
@@ -829,6 +831,7 @@ describe("useScanOperations", () => {
       await vi.waitFor(() => {
         expect(result.current.scanError).toEqual({
           message: "scan.notSetUp",
+          source: "nfc",
           prefill: { type: "id", pattern: "04abc123def456" },
         });
       });

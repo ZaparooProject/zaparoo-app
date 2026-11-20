@@ -176,6 +176,7 @@ export function Index({
     continuousCamera,
     scanError,
     clearScanError,
+    cameraLaunching,
   } = useScanOperations({
     connected,
     hasData,
@@ -395,6 +396,7 @@ export function Index({
         onCameraScan={handleCameraScan}
         scanError={scanError}
         onDismissScanError={clearScanError}
+        cameraLaunching={cameraLaunching}
         cameraNotice={
           continuousCamera.idleStopped ? t("scan.cameraStoppedIdle") : undefined
         }

@@ -47,6 +47,8 @@ interface ScanActionsProps {
   scanError?: ScanError | null;
   /** Clears `scanError`. */
   onDismissScanError?: () => void;
+  /** A one-shot camera scan is waiting for Core to answer. */
+  cameraLaunching?: boolean;
   /** Why the camera last closed on its own, shown under its button. */
   cameraNotice?: string;
   nfcEnabled: boolean;
@@ -63,6 +65,7 @@ export function ScanActions({
   onCameraScan,
   scanError = null,
   onDismissScanError,
+  cameraLaunching = false,
   cameraNotice,
   nfcEnabled,
   onOpenNfcSettings,
@@ -91,26 +94,55 @@ export function ScanActions({
     ? scanError.message
     : getScanStatusAnnouncement(scanSession, scanStatus, stopped, t);
   const scanErrorPrefill = scanError?.prefill ?? null;
+  // The error belongs to the control that was used.
+  const nfcError = showScanError && scanError.source === "nfc";
+  const cameraError = showScanError && scanError.source === "camera";
+  const dismissScanError = onDismissScanError ?? (() => undefined);
+  const mapItAction = scanErrorPrefill
+    ? {
+        label: t("scan.mapIt"),
+        onClick: () =>
+          void navigate({
+            to: "/create/mappings/new",
+            search: {
+              type: scanErrorPrefill.type,
+              pattern: scanErrorPrefill.pattern,
+            },
+          }),
+      }
+    : undefined;
 
   const renderAction = (mode: ScanMode) => {
     if (mode === "camera") {
       const cameraButton = (
-        <Button
+        <ReaderActivityControl
           key="camera"
+          state={cameraLaunching ? "waiting" : cameraError ? "error" : "idle"}
+          errorText={scanError?.message}
+          errorAction={cameraError ? mapItAction : undefined}
+          idleLabel={t("scan.scanCode")}
+          activeLabel={t("scan.launching")}
+          activeAriaLabel={t("scan.launching")}
+          icon={<CameraIcon size={24} />}
+          activeIcon={<CameraIcon size={24} />}
+          onStart={onCameraScan}
+          // Nothing to cancel while Core answers; Cancel dismisses an error.
+          onCancel={cameraError ? dismissScanError : () => undefined}
           variant="secondary"
+          intent="default"
           size={compact ? "default" : "lg"}
           layout="stacked"
-          className={
+          className="w-full"
+          buttonClassName={
             compact
               ? "zap-scan-tile w-full max-w-none"
               : "min-h-[4.5rem] w-full"
           }
-          icon={<CameraIcon size={24} />}
-          label={t("scan.scanCode")}
-          aria-label={t("scan.scanCode")}
+          showCancelHint={false}
           // A camera sheet over a live NFC session would fight it for the tag.
           disabled={scanSession}
-          onClick={onCameraScan}
+          readerIconSize={24}
+          announceStateChanges={false}
         />
       );
       if (!cameraNotice) return cameraButton;
@@ -151,29 +183,15 @@ export function ScanActions({
     return (
       <ReaderActivityControl
         key="nfc"
-        state={scanSession ? "waiting" : showScanError ? "error" : "idle"}
+        state={scanSession ? "waiting" : nfcError ? "error" : "idle"}
         errorText={scanError?.message}
-        errorAction={
-          scanErrorPrefill
-            ? {
-                label: t("scan.mapIt"),
-                onClick: () =>
-                  void navigate({
-                    to: "/create/mappings/new",
-                    search: {
-                      type: scanErrorPrefill.type,
-                      pattern: scanErrorPrefill.pattern,
-                    },
-                  }),
-              }
-            : undefined
-        }
+        errorAction={nfcError ? mapItAction : undefined}
         idleLabel={t("scan.tapTag")}
         activeLabel={t("scan.tapTagScanning")}
         activeAriaLabel={t("scan.tapTagStop")}
         icon={<NfcIcon size={compact ? 24 : 28} />}
         onStart={onTapScan}
-        onCancel={showScanError ? (onDismissScanError ?? onTapScan) : onTapScan}
+        onCancel={nfcError ? (onDismissScanError ?? onTapScan) : onTapScan}
         size={compact ? "default" : "lg"}
         layout="stacked"
         className="w-full"
