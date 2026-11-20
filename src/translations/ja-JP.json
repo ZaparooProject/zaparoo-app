@@ -769,6 +769,7 @@
       "mediaPause": "一時停止",
       "mediaResume": "再開",
       "mediaControlError": "メディアを操作できませんでした",
+      "lastScannedHeading": "最後にスキャン",
       "lastScannedUid": "ID: {{uid}}",
       "historyTitle": "履歴",
       "historyReplay": "スキャンを再実行",

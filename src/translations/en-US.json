@@ -769,6 +769,7 @@
       "mediaPause": "Pause",
       "mediaResume": "Resume",
       "mediaControlError": "Could not control media",
+      "lastScannedHeading": "Last scanned",
       "lastScannedUid": "ID: {{uid}}",
       "historyTitle": "History",
       "historyReplay": "Replay scan",

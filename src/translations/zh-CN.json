@@ -769,6 +769,7 @@
       "mediaPause": "暂停",
       "mediaResume": "继续",
       "mediaControlError": "无法控制媒体",
+      "lastScannedHeading": "上次扫描",
       "lastScannedUid": "ID：{{uid}}",
       "historyTitle": "历史记录",
       "historyReplay": "重新执行扫描",

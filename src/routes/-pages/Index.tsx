@@ -34,6 +34,7 @@ import { PageFrame } from "@/components/PageFrame";
 import { DeviceSheet } from "@/components/home/DeviceSheet";
 import { useDeviceSheetController } from "@/hooks/useDeviceSheetController";
 import { HomeDevicePill } from "@/components/home/HomeDevicePill";
+import { LastScanned } from "@/components/home/LastScanned";
 import { ScanActions } from "@/components/home/ScanActions";
 import { MediaCoverRow } from "@/components/home/MediaCoverRow";
 import { NowPlayingCard } from "@/components/home/NowPlayingCard";
@@ -430,6 +431,8 @@ export function Index({
       {!customLayout && !(remoteDocked && remoteFeature.available) && (
         <GatedFeature featureId="remoteInput">{launcherButton}</GatedFeature>
       )}
+
+      <LastScanned />
     </div>
   );
 

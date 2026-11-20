@@ -663,6 +663,44 @@ describe("Index Route Integration", () => {
     });
   });
 
+  // GitHub #302: the Zap page stopped showing a scanned tag's ID in v2.
+  describe("Last scanned", () => {
+    it("should show the ID of the last scanned tag", () => {
+      useStatusStore.setState({
+        lastToken: {
+          type: "ntag",
+          uid: "04a1b2c3d4e5f6",
+          text: "",
+          data: "",
+          scanTime: "2026-11-20T01:02:03Z",
+        },
+      });
+
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      expect(
+        screen.getByRole("heading", { name: "scan.lastScannedHeading" }),
+      ).toBeInTheDocument();
+      expect(screen.getByText("04a1b2c3d4e5f6")).toBeInTheDocument();
+    });
+
+    it("should stay hidden until a tag has been scanned", () => {
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      expect(
+        screen.queryByRole("heading", { name: "scan.lastScannedHeading" }),
+      ).not.toBeInTheDocument();
+    });
+  });
+
   describe("Now Playing Info", () => {
     it("should show heading and dash placeholders when nothing is playing", () => {
       render(

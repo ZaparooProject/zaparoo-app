@@ -769,6 +769,7 @@
       "mediaPause": "Pausieren",
       "mediaResume": "Fortsetzen",
       "mediaControlError": "Medium konnte nicht gesteuert werden",
+      "lastScannedHeading": "Zuletzt gescannt",
       "lastScannedUid": "ID: {{uid}}",
       "historyTitle": "Verlauf",
       "historyReplay": "Scan wiederholen",

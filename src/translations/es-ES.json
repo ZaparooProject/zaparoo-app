@@ -769,6 +769,7 @@
       "mediaPause": "Pausar",
       "mediaResume": "Reanudar",
       "mediaControlError": "No se pudo controlar el contenido multimedia",
+      "lastScannedHeading": "Último escaneo",
       "lastScannedUid": "ID: {{uid}}",
       "historyTitle": "Historial",
       "historyReplay": "Repetir escaneo",

@@ -769,6 +769,7 @@
       "mediaPause": "Pauzeren",
       "mediaResume": "Hervatten",
       "mediaControlError": "Media konden niet worden bediend",
+      "lastScannedHeading": "Laatst gescand",
       "lastScannedUid": "ID: {{uid}}",
       "historyTitle": "Geschiedenis",
       "historyReplay": "Scan herhalen",

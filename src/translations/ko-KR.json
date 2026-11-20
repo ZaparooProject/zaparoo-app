@@ -769,6 +769,7 @@
       "mediaPause": "일시 정지",
       "mediaResume": "재개",
       "mediaControlError": "미디어를 제어하지 못했습니다",
+      "lastScannedHeading": "마지막 스캔",
       "lastScannedUid": "ID: {{uid}}",
       "historyTitle": "기록",
       "historyReplay": "스캔 다시 실행",
