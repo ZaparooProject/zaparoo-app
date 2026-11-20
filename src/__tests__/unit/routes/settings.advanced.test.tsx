@@ -91,6 +91,12 @@ vi.mock("@/components/ProPurchase", () => ({
       Purchase support
     </div>
   ),
+  useProPurchase: () => ({
+    proAccess: false,
+    purchaseModal: null,
+    proPurchaseModalOpen: false,
+    setProPurchaseModalOpen: vi.fn(),
+  }),
 }));
 
 // Import the route module to trigger createFileRoute which captures the component

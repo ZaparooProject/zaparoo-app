@@ -1489,6 +1489,15 @@
         "purchasePreviewWarp": "Warp active",
         "purchasePreviewLoading": "Loading",
         "purchasePreviewError": "Error",
+        "proPreviewSource": "Pro screen opened from",
+        "proPreviewSources": {
+          "nfc": "Tag scan",
+          "camera": "Camera scan",
+          "shake": "Shake",
+          "settings": "Settings"
+        },
+        "proPreviewShowScreen": "Show Pro screen",
+        "proPreviewShowGuide": "Show Pro guide",
         "viewLogs": "View logs"
       },
       "core": {
