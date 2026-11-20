@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { useEffect, useRef } from "react";
 import classNames from "classnames";
 import { useTranslation } from "react-i18next";
+import { TriangleAlertIcon } from "lucide-react";
 import { NfcIcon } from "@/lib/images";
 import { useAnnouncer } from "@/components/A11yAnnouncer";
 import {
@@ -94,12 +95,16 @@ export function ReaderActivityControl({
             className="wui-reader-button-shell min-w-0"
             data-reader-state="error"
           >
+            {/* Retry is the same action as the button it replaces, so it
+                keeps that button's colour. The icon and the reason carry
+                the error; red would read as the way out. */}
             <Button
               label={t("scan.retry")}
-              icon={readerIcon}
+              icon={<TriangleAlertIcon size={readerIconSize} aria-hidden />}
               readerState="error"
               readerStatus={statusText}
-              intent="destructive"
+              variant={variant}
+              intent={intent}
               size={size}
               layout={layout}
               className={classNames("min-h-18 w-full", buttonClassName)}
@@ -108,7 +113,7 @@ export function ReaderActivityControl({
           </div>
           <Button
             label={errorAction?.label ?? t("nav.cancel")}
-            variant={errorAction ? "secondary" : "outline"}
+            variant="secondary"
             className="min-h-18 w-full min-w-0"
             onClick={errorAction?.onClick ?? onCancel}
           />
