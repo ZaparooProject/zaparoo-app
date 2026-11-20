@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { CoreAPI } from "../../../lib/coreApi";
+import { CoreAPI, isRequestCancelledError } from "../../../lib/coreApi";
 import { Method } from "../../../lib/models";
 
 describe("CoreAPI queuing", () => {
@@ -132,6 +132,34 @@ describe("CoreAPI queuing", () => {
       expect(result).toEqual({ cancelled: true });
     });
 
+    // Rollbar #348: the sentinel has no `results`, so a library list that
+    // cached it as a page crashed on `page.results.map`.
+    it("should reject a media search dropped as stale instead of resolving without results", async () => {
+      mockTransport.isConnected = false;
+
+      const promise = CoreAPI.mediaSearch({
+        query: "",
+        systems: [],
+        tags: ["user:favorite"],
+      });
+      const outcome = promise.then(
+        (value) => ({ value }),
+        (error: unknown) => ({ error }),
+      );
+
+      vi.advanceTimersByTime(11000);
+      mockTransport.isConnected = true;
+      CoreAPI.flushQueue();
+
+      expect(mockTransport.send).not.toHaveBeenCalled();
+      const settled = await outcome;
+      expect(settled).not.toHaveProperty("value");
+      expect(settled).toHaveProperty("error");
+      expect(
+        isRequestCancelledError((settled as { error: unknown }).error),
+      ).toBe(true);
+    });
+
     it("should send fresh requests but drop stale ones", async () => {
       mockTransport.isConnected = false;
 
@@ -202,24 +230,24 @@ describe("CoreAPI queuing", () => {
   describe("abort signal handling", () => {
     it("should return cancelled immediately if signal already aborted before request", async () => {
       // When signal is already aborted before making the request,
-      // the request should return cancelled immediately
+      // the request should be cancelled immediately
       mockTransport.isConnected = true;
 
       const controller = new AbortController();
       controller.abort(); // Abort before making request
 
-      const result = await CoreAPI.mediaSearch(
+      const error = await CoreAPI.mediaSearch(
         { query: "test", systems: [] },
         controller.signal,
-      );
+      ).catch((e: unknown) => e);
 
-      expect(result).toEqual({ cancelled: true });
+      expect(isRequestCancelledError(error)).toBe(true);
       expect(mockTransport.send).not.toHaveBeenCalled();
     });
 
     it("should respect abort signal for queued requests aborted before flush", async () => {
       // When a request is queued and then aborted before flush,
-      // it should resolve with cancelled when flushed
+      // it should be cancelled when flushed
       mockTransport.isConnected = false;
 
       const controller = new AbortController();
@@ -236,8 +264,8 @@ describe("CoreAPI queuing", () => {
       CoreAPI.flushQueue();
 
       // Request should not be sent because it was aborted
-      const result = await promise;
-      expect(result).toEqual({ cancelled: true });
+      const error = await promise.catch((e: unknown) => e);
+      expect(isRequestCancelledError(error)).toBe(true);
       expect(mockTransport.send).not.toHaveBeenCalled();
     });
   });

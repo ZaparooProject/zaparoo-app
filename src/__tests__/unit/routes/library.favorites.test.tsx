@@ -128,6 +128,30 @@ describe("Library Favorites route", () => {
     });
   });
 
+  // Rollbar #348: a search queued while the connection was down is dropped
+  // on reconnect once it is over ten seconds old. It used to resolve with
+  // `{ cancelled: true }`, which became a page with no `results`.
+  it("should not crash when a queued favorites search is dropped on reconnect", async () => {
+    const transport = { send: vi.fn(), isConnected: false };
+    CoreAPI.setWsInstance(transport as never);
+    const start = Date.now();
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(start);
+
+    render(<LibraryFavorites />);
+    expect(
+      await screen.findByRole("heading", { name: "library.favorites" }),
+    ).toBeInTheDocument();
+
+    nowSpy.mockReturnValue(start + 11_000);
+    transport.isConnected = true;
+    act(() => CoreAPI.flushQueue());
+
+    expect(
+      await screen.findByText("library.favoritesError"),
+    ).toBeInTheDocument();
+    expect(transport.send).not.toHaveBeenCalled();
+  });
+
   it("should list favorite media with the fixed user tag filter", async () => {
     const searchSpy = vi
       .spyOn(CoreAPI, "mediaSearch")

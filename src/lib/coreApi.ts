@@ -1731,7 +1731,11 @@ class CoreApi {
       this.call(Method.MediaSearch, params, signal)
         .then((result) => {
           if (isCancelled(result)) {
-            resolve(result as unknown as SearchResultsResponse);
+            // Never resolve with the sentinel: it has no `results`, and an
+            // infinite query would cache it as a page.
+            reject(
+              new RequestCancelledError("Media search request was cancelled"),
+            );
             return;
           }
           try {
