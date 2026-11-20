@@ -5,6 +5,7 @@ import { BarcodeScanner } from "@capacitor-mlkit/barcode-scanning";
 import toast from "react-hot-toast";
 import { cancelSession, readTag, sessionManager, Status } from "@/lib/nfc";
 import { ScanResult, TokenResponse } from "@/lib/models";
+import type { ProPurchaseSource } from "@/lib/store";
 import { WriteAction, WriteNfcHook } from "@/lib/writeNfcHook";
 import { runToken } from "@/lib/tokenOperations.tsx";
 import { logger } from "@/lib/logger";
@@ -22,7 +23,7 @@ interface UseScanOperationsProps {
   hasData: boolean;
   launcherAccess: boolean;
   setLastToken: (token: TokenResponse) => void;
-  setProPurchaseModalOpen: (open: boolean) => void;
+  setProPurchaseModalOpen: (open: boolean, source?: ProPurchaseSource) => void;
   setWriteOpen: (open: boolean) => void;
   nfcWriter: WriteNfcHook;
 }
@@ -133,7 +134,7 @@ export function useScanOperations({
             launchState.launcherAccess,
             launchState.connected,
             setLastToken,
-            setProPurchaseModalOpen,
+            (open) => setProPurchaseModalOpen(open, "nfc"),
             false, // unsafe
             false, // override
             launchState.hasData, // canQueueCommands - only queue if we had a prior connection
@@ -255,7 +256,7 @@ export function useScanOperations({
           launcherAccess,
           connected,
           setLastToken,
-          setProPurchaseModalOpen,
+          (open) => setProPurchaseModalOpen(open, "camera"),
           false, // unsafe
           false, // override
           hasData, // canQueueCommands - only queue if we had a prior connection

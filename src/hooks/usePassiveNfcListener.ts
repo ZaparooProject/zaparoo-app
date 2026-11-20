@@ -129,7 +129,7 @@ export function usePassiveNfcListener() {
         launcherAccess,
         connected,
         setLastToken,
-        setProPurchaseModalOpen,
+        (open) => setProPurchaseModalOpen(open, "nfc"),
         false, // unsafe
         false, // override
         true, // canQueueCommands - allow queuing if reconnecting

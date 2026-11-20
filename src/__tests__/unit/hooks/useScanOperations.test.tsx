@@ -473,7 +473,30 @@ describe("useScanOperations", () => {
 
       // Assert - Should show pro purchase modal
       await vi.waitFor(() => {
-        expect(setProPurchaseModalOpen).toHaveBeenCalledWith(true);
+        expect(setProPurchaseModalOpen).toHaveBeenCalledWith(true, "nfc");
+      });
+    });
+
+    it("should open the pro purchase modal from the camera for a camera scan", async () => {
+      sessionManager.launchOnScan = true;
+      vi.mocked(BarcodeScanner.scan).mockResolvedValue({
+        barcodes: [createMockBarcode("**launch.system:snes")],
+      });
+      const setProPurchaseModalOpen = vi.fn();
+      const { result } = renderHook(() =>
+        useScanOperations({
+          ...defaultProps,
+          launcherAccess: false,
+          setProPurchaseModalOpen,
+        }),
+      );
+
+      await act(async () => {
+        await result.current.handleCameraScan();
+      });
+
+      await vi.waitFor(() => {
+        expect(setProPurchaseModalOpen).toHaveBeenCalledWith(true, "camera");
       });
     });
 

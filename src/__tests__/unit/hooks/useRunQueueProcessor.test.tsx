@@ -57,6 +57,7 @@ describe("useRunQueueProcessor", () => {
     vi.useFakeTimers();
 
     useStatusStore.setState({
+      proPurchaseModalOpen: false,
       runQueue: null,
       connectionState: ConnectionState.CONNECTED,
       connected: true,
@@ -102,6 +103,35 @@ describe("useRunQueueProcessor", () => {
       true, // requiresLaunch
     );
   });
+
+  it.each([
+    ["shake", "shake"],
+    ["deepLink", "nfc"],
+  ] as const)(
+    "should open the Pro screen for a blocked %s launch as %s",
+    async (source, proSource) => {
+      const { result } = renderHook(() => useRunQueueProcessor());
+
+      act(() => {
+        useStatusStore
+          .getState()
+          .setRunQueue({ value: "test-token", unsafe: false, source });
+      });
+      await flush();
+      if (source === "deepLink") {
+        act(() => result.current.confirmRun());
+        await flush();
+      }
+
+      const openProPurchase = mockRunToken.mock.calls[0]![5] as (
+        open: boolean,
+      ) => void;
+      act(() => openProPurchase(true));
+
+      expect(useStatusStore.getState().proPurchaseModalOpen).toBe(true);
+      expect(useStatusStore.getState().proPurchaseSource).toBe(proSource);
+    },
+  );
 
   it("should pass unsafe flag correctly", async () => {
     renderHook(() => useRunQueueProcessor());

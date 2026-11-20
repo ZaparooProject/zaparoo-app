@@ -36,6 +36,8 @@ export interface StagedTokenState {
   ready: boolean;
 }
 
+export type ProPurchaseSource = "nfc" | "camera" | "shake" | "settings";
+
 export interface RunQueueItem {
   value: string;
   unsafe: boolean;
@@ -95,7 +97,16 @@ interface StatusState {
   setLoggedInUser: (loggedInUser: User | null) => void;
 
   proPurchaseModalOpen: boolean;
-  setProPurchaseModalOpen: (proPurchaseModalOpen: boolean) => void;
+  // The entry point that opened the Pro screen. It picks the screen's copy
+  // and is the `source` of the anonymous usage counts.
+  proPurchaseSource: ProPurchaseSource;
+  // Whether this opening has been counted, so one opening is one count even
+  // when more than one page has the screen mounted.
+  proPurchaseViewCounted: boolean;
+  setProPurchaseModalOpen: (
+    proPurchaseModalOpen: boolean,
+    source?: ProPurchaseSource,
+  ) => void;
 
   writeOpen: boolean;
   setWriteOpen: (writeOpen: boolean) => void;
@@ -239,8 +250,19 @@ export const useStatusStore = create<StatusState>()((set) => ({
     set({ loggedInUser: loggedInUser }),
 
   proPurchaseModalOpen: false,
-  setProPurchaseModalOpen: (proPurchaseModalOpen) =>
-    set({ proPurchaseModalOpen }),
+  proPurchaseSource: "settings",
+  proPurchaseViewCounted: false,
+  setProPurchaseModalOpen: (proPurchaseModalOpen, source = "settings") =>
+    set((state) => {
+      if (!proPurchaseModalOpen) return { proPurchaseModalOpen: false };
+      // A second opener while the screen is up is the same viewing.
+      if (state.proPurchaseModalOpen) return {};
+      return {
+        proPurchaseModalOpen: true,
+        proPurchaseSource: source,
+        proPurchaseViewCounted: false,
+      };
+    }),
 
   writeOpen: false,
   setWriteOpen: (writeOpen) => set({ writeOpen }),

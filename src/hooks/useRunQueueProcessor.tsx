@@ -75,7 +75,13 @@ export function useRunQueueProcessor(): UseRunQueueProcessorReturn {
           launcherAccess,
           true, // connected - we only run once CONNECTED
           setLastToken,
-          setProPurchaseModalOpen,
+          // The usage counter has no entry point for a deep link, so one
+          // is counted with tag taps.
+          (open) =>
+            setProPurchaseModalOpen(
+              open,
+              item.source === "shake" ? "shake" : "nfc",
+            ),
           item.unsafe,
           false, // override
           true, // canQueueCommands
