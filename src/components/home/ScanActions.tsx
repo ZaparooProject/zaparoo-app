@@ -1,5 +1,7 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "@tanstack/react-router";
+import type { ScanError } from "@/hooks/useScanOperations";
 import { CameraIcon, NfcIcon } from "@/lib/images";
 import { Button } from "@/components/wui/Button";
 import { Card } from "@/components/wui/Card";
@@ -41,6 +43,12 @@ interface ScanActionsProps {
   /** Starts a scan, and stops one already running. */
   onTapScan: () => void;
   onCameraScan: () => void;
+  /** The last NFC scan's failure, shown on the scan control. */
+  scanError?: ScanError | null;
+  /** Clears `scanError`. */
+  onDismissScanError?: () => void;
+  /** Why the camera last closed on its own, shown under its button. */
+  cameraNotice?: string;
   nfcEnabled: boolean;
   onOpenNfcSettings: () => void;
   writeActivity?: ReactNode;
@@ -53,11 +61,15 @@ export function ScanActions({
   scanStatus,
   onTapScan,
   onCameraScan,
+  scanError = null,
+  onDismissScanError,
+  cameraNotice,
   nfcEnabled,
   onOpenNfcSettings,
   writeActivity,
 }: ScanActionsProps) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const appUi = useAppUi();
   const [stopped, setStopped] = useState(false);
   const wasScanning = useRef(scanSession);
@@ -74,16 +86,15 @@ export function ScanActions({
     wasScanning.current = scanSession;
   }, [scanSession, scanStatus]);
 
-  const statusAnnouncement = getScanStatusAnnouncement(
-    scanSession,
-    scanStatus,
-    stopped,
-    t,
-  );
+  const showScanError = scanError !== null && !scanSession;
+  const statusAnnouncement = showScanError
+    ? scanError.message
+    : getScanStatusAnnouncement(scanSession, scanStatus, stopped, t);
+  const scanErrorPrefill = scanError?.prefill ?? null;
 
   const renderAction = (mode: ScanMode) => {
     if (mode === "camera") {
-      return (
+      const cameraButton = (
         <Button
           key="camera"
           variant="secondary"
@@ -101,6 +112,18 @@ export function ScanActions({
           disabled={scanSession}
           onClick={onCameraScan}
         />
+      );
+      if (!cameraNotice) return cameraButton;
+      return (
+        <div key="camera" className="flex flex-col gap-2">
+          {cameraButton}
+          <p
+            role="status"
+            className="text-muted-foreground text-center text-sm"
+          >
+            {cameraNotice}
+          </p>
+        </div>
       );
     }
 
@@ -128,13 +151,29 @@ export function ScanActions({
     return (
       <ReaderActivityControl
         key="nfc"
-        state={scanSession ? "waiting" : "idle"}
+        state={scanSession ? "waiting" : showScanError ? "error" : "idle"}
+        errorText={scanError?.message}
+        errorAction={
+          scanErrorPrefill
+            ? {
+                label: t("scan.mapIt"),
+                onClick: () =>
+                  void navigate({
+                    to: "/create/mappings/new",
+                    search: {
+                      type: scanErrorPrefill.type,
+                      pattern: scanErrorPrefill.pattern,
+                    },
+                  }),
+              }
+            : undefined
+        }
         idleLabel={t("scan.tapTag")}
         activeLabel={t("scan.tapTagScanning")}
         activeAriaLabel={t("scan.tapTagStop")}
         icon={<NfcIcon size={compact ? 24 : 28} />}
         onStart={onTapScan}
-        onCancel={onTapScan}
+        onCancel={showScanError ? (onDismissScanError ?? onTapScan) : onTapScan}
         size={compact ? "default" : "lg"}
         layout="stacked"
         className="w-full"

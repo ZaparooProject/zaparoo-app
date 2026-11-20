@@ -1,8 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act, waitFor } from "../../../test-utils";
-import { useScanOperations } from "@/hooks/useScanOperations";
+import toast from "react-hot-toast";
+import {
+  SAME_TAG_COOLDOWN_MS,
+  useScanOperations,
+} from "@/hooks/useScanOperations";
 import { ScanResult } from "@/lib/models";
-import { sessionManager } from "@/lib/nfc";
+import { IOS_SHEET_SETTLE_TIMEOUT_MS, sessionManager } from "@/lib/nfc";
+import { CoreAPI, CoreApiError } from "@/lib/coreApi";
 import { Capacitor } from "@capacitor/core";
 import {
   BarcodeScanner,
@@ -17,6 +22,7 @@ import {
   __simulateScanCanceled,
   __simulateScanError,
   __createMockNfcTag,
+  NfcTagTechType,
 } from "../../../../__mocks__/@capawesome-team/capacitor-nfc";
 
 // Helper to create mock barcode with all required properties
@@ -89,6 +95,8 @@ describe("useScanOperations", () => {
     // Clean up any pending timers before restoring real timers
     vi.runOnlyPendingTimers();
     vi.useRealTimers();
+    // CoreAPI.run spies would otherwise carry into later tests.
+    vi.restoreAllMocks();
   });
 
   describe("initial state", () => {
@@ -273,6 +281,29 @@ describe("useScanOperations", () => {
 
       // Assert
       expect(BarcodeScanner.scan).toHaveBeenCalled();
+    });
+
+    it("offers to map a code Core can't run, on the scan control", async () => {
+      const toastError = vi.spyOn(toast, "error");
+      vi.spyOn(CoreAPI, "run").mockRejectedValue(
+        new CoreApiError("no media", 1, { category: "media_not_found" }),
+      );
+      vi.mocked(BarcodeScanner.scan).mockResolvedValue({
+        barcodes: [createMockBarcode("9780140449136")],
+      });
+      const { result } = renderHook(() => useScanOperations(defaultProps));
+
+      await act(async () => {
+        await result.current.handleCameraScan();
+      });
+
+      await vi.waitFor(() => {
+        expect(result.current.scanError).toEqual({
+          message: "scan.notSetUp",
+          prefill: { type: "value", pattern: "9780140449136" },
+        });
+      });
+      expect(toastError).not.toHaveBeenCalled();
     });
 
     it("should not open the scanner outside the native app", async () => {
@@ -628,35 +659,55 @@ describe("useScanOperations", () => {
       expect(result.current.scanSession).toBe(true);
     });
 
-    it("should delay restart on iOS platform", async () => {
-      // Arrange
+    it("should restart on iOS once the scan sheet has closed", async () => {
+      vi.spyOn(CoreAPI, "run").mockResolvedValue(undefined as never);
       vi.mocked(Capacitor.getPlatform).mockReturnValue("ios");
       sessionManager.shouldRestart = true;
       const { result } = renderHook(() => useScanOperations(defaultProps));
 
-      // Act - Start scan
       await act(async () => {
         result.current.handleScanButton();
         await vi.advanceTimersByTimeAsync(10);
       });
-
       expect(Nfc.startScanSession).toHaveBeenCalledTimes(1);
 
-      // Simulate successful tag scan
       await act(async () => {
         __simulateTagScanned(__createMockNfcTag("04abc123def456", "game:test"));
         await vi.advanceTimersByTimeAsync(100);
       });
 
-      // Assert - Should NOT have restarted yet (iOS has 4s delay)
+      // The sheet is still closing, so a new session would fail to open.
+      expect(Nfc.stopScanSession).toHaveBeenCalledWith();
       expect(Nfc.startScanSession).toHaveBeenCalledTimes(1);
 
-      // Advance past iOS delay
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(4000);
+        __simulateScanCanceled();
+        await vi.advanceTimersByTimeAsync(10);
       });
 
-      // Now should have restarted
+      expect(Nfc.startScanSession).toHaveBeenCalledTimes(2);
+    });
+
+    it("should restart on iOS after a timeout if the sheet never reports closing", async () => {
+      vi.spyOn(CoreAPI, "run").mockResolvedValue(undefined as never);
+      vi.mocked(Capacitor.getPlatform).mockReturnValue("ios");
+      sessionManager.shouldRestart = true;
+      const { result } = renderHook(() => useScanOperations(defaultProps));
+
+      await act(async () => {
+        result.current.handleScanButton();
+        await vi.advanceTimersByTimeAsync(10);
+      });
+      await act(async () => {
+        __simulateTagScanned(__createMockNfcTag("04abc123def456", "game:test"));
+        await vi.advanceTimersByTimeAsync(100);
+      });
+      expect(Nfc.startScanSession).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(IOS_SHEET_SETTLE_TIMEOUT_MS);
+      });
+
       expect(Nfc.startScanSession).toHaveBeenCalledTimes(2);
     });
 
@@ -684,6 +735,162 @@ describe("useScanOperations", () => {
         expect(result.current.scanSession).toBe(false);
       });
       expect(Nfc.startScanSession).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("NFC launches", () => {
+    const startScan = async (result: {
+      current: ReturnType<typeof useScanOperations>;
+    }) => {
+      await act(async () => {
+        result.current.handleScanButton();
+        await vi.advanceTimersByTimeAsync(10);
+      });
+    };
+
+    const tapTag = async (uid: string, text: string) => {
+      await act(async () => {
+        __simulateTagScanned(__createMockNfcTag(uid, text));
+        await vi.advanceTimersByTimeAsync(10);
+      });
+    };
+
+    it("sends a toy tag's type and data to Core", async () => {
+      const run = vi
+        .spyOn(CoreAPI, "run")
+        .mockResolvedValue(undefined as never);
+      const amiiboHeader = [
+        0x04, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x48, 0x0f, 0xe0,
+        0xf1, 0x10, 0xff, 0xee,
+      ];
+      const amiiboId = [
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0, 0, 0, 0, 0, 0, 0, 0,
+      ];
+      vi.mocked(Nfc.connect).mockResolvedValue(undefined);
+      vi.mocked(Nfc.transceive).mockImplementation(async ({ data }) => ({
+        response: data[1] === 0 ? amiiboHeader : amiiboId,
+      }));
+      const { result } = renderHook(() => useScanOperations(defaultProps));
+
+      await startScan(result);
+      await act(async () => {
+        __simulateTagScanned({
+          ...__createMockNfcTag("04112233445566", ""),
+          techTypes: [NfcTagTechType.NfcA],
+        });
+        await vi.advanceTimersByTimeAsync(10);
+      });
+
+      await vi.waitFor(() => {
+        expect(run).toHaveBeenCalledWith(
+          expect.objectContaining({
+            uid: "04112233445566",
+            text: "",
+            type: "Amiibo",
+            data: "0102030405060708",
+          }),
+        );
+      });
+    });
+
+    it("shows a failed launch on the scan control instead of a toast", async () => {
+      const toastError = vi.spyOn(toast, "error");
+      vi.spyOn(CoreAPI, "run").mockRejectedValue(
+        new CoreApiError("launcher not found", 1),
+      );
+      const { result } = renderHook(() => useScanOperations(defaultProps));
+
+      await startScan(result);
+      await tapTag("04abc123def456", "**launch.system:nes");
+
+      await vi.waitFor(() => {
+        expect(result.current.scanError).toEqual({
+          message: "launcher not found",
+          prefill: null,
+        });
+      });
+      expect(toastError).not.toHaveBeenCalled();
+
+      act(() => {
+        result.current.clearScanError();
+      });
+      expect(result.current.scanError).toBeNull();
+    });
+
+    it("offers to map a tag Core has nothing to run for", async () => {
+      vi.spyOn(CoreAPI, "run").mockRejectedValue(
+        new CoreApiError("no script", 1, { category: "invalid_script" }),
+      );
+      const { result } = renderHook(() => useScanOperations(defaultProps));
+
+      await startScan(result);
+      await tapTag("04abc123def456", "");
+
+      await vi.waitFor(() => {
+        expect(result.current.scanError).toEqual({
+          message: "scan.notSetUp",
+          prefill: { type: "id", pattern: "04abc123def456" },
+        });
+      });
+    });
+
+    it("clears the last error when a new scan starts", async () => {
+      vi.spyOn(CoreAPI, "run").mockRejectedValue(
+        new CoreApiError("launcher not found", 1),
+      );
+      const { result } = renderHook(() => useScanOperations(defaultProps));
+
+      await startScan(result);
+      await tapTag("04abc123def456", "**launch.system:nes");
+      await vi.waitFor(() => {
+        expect(result.current.scanError).not.toBeNull();
+      });
+
+      await startScan(result);
+      expect(result.current.scanError).toBeNull();
+    });
+
+    it("waits out the cooldown when the same tag is read again", async () => {
+      const run = vi
+        .spyOn(CoreAPI, "run")
+        .mockResolvedValue(undefined as never);
+      sessionManager.shouldRestart = true;
+      const { result } = renderHook(() => useScanOperations(defaultProps));
+
+      await startScan(result);
+      await tapTag("04abc123def456", "**launch.system:nes");
+      expect(Nfc.startScanSession).toHaveBeenCalledTimes(2);
+
+      // The tag is still on the phone, so the new session reads it again.
+      await tapTag("04abc123def456", "**launch.system:nes");
+      expect(run).toHaveBeenCalledTimes(1);
+      expect(Nfc.startScanSession).toHaveBeenCalledTimes(2);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(SAME_TAG_COOLDOWN_MS);
+      });
+      expect(Nfc.startScanSession).toHaveBeenCalledTimes(3);
+
+      // Away from the phone for the full cooldown, it launches again.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(SAME_TAG_COOLDOWN_MS);
+      });
+      await tapTag("04abc123def456", "**launch.system:nes");
+      expect(run).toHaveBeenCalledTimes(2);
+    });
+
+    it("launches a different tag straight away", async () => {
+      const run = vi
+        .spyOn(CoreAPI, "run")
+        .mockResolvedValue(undefined as never);
+      sessionManager.shouldRestart = true;
+      const { result } = renderHook(() => useScanOperations(defaultProps));
+
+      await startScan(result);
+      await tapTag("04abc123def456", "**launch.system:nes");
+      await tapTag("04ffffffffffff", "**launch.system:snes");
+
+      expect(run).toHaveBeenCalledTimes(2);
     });
   });
 

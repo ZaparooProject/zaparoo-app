@@ -1,41 +1,64 @@
-import { useEffect, useRef } from "react";
+import { useContext, useEffect, useRef } from "react";
 import type { PluginListenerHandle } from "@capacitor/core";
 import { Capacitor } from "@capacitor/core";
-import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import { ShakeDetector } from "@/lib/shakeDetector";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { useStatusStore } from "@/lib/store";
+import { sessionManager } from "@/lib/nfc";
 import { logger } from "@/lib/logger";
+import { useHaptics } from "@/hooks/useHaptics";
+import { SlideModalContext } from "@/hooks/useSlideModalManager";
+import {
+  isRandomLaunchScript,
+  useShakeSheetStore,
+} from "@/lib/shakeSheetStore";
 
 interface UseShakeDetectionProps {
   shakeEnabled: boolean;
   connected: boolean;
-  pathname: string;
 }
 
 // Require 2 shakes within this window to trigger
-const SHAKE_WINDOW_MS = 1500;
+export const SHAKE_WINDOW_MS = 1500;
 // Cooldown after a successful trigger before accepting new shakes
 const TRIGGER_COOLDOWN_MS = 2000;
 // Required number of shakes to trigger
-const REQUIRED_SHAKES = 2;
+export const REQUIRED_SHAKES = 2;
+
+// The shake sheet is not a modal, so no registered modal is ever this id.
+const SHAKE_SHEET_ID = "shake-sheet";
+
+function isTextFieldFocused(): boolean {
+  const active = document.activeElement;
+  if (!(active instanceof HTMLElement)) return false;
+  return (
+    active instanceof HTMLInputElement ||
+    active instanceof HTMLTextAreaElement ||
+    active.isContentEditable
+  );
+}
 
 export function useShakeDetection({
   shakeEnabled,
   connected,
-  pathname,
 }: UseShakeDetectionProps) {
   const setRunQueue = useStatusStore((state) => state.setRunQueue);
+  const { impact } = useHaptics();
+  const modalManager = useContext(SlideModalContext);
   // Track timestamps of recent shakes for multi-shake detection
   const shakeTimestampsRef = useRef<number[]>([]);
   // Track when last trigger occurred for cooldown
   const lastTriggerTimeRef = useRef(0);
-  // Read at shake time so navigating does not restart the native detector
-  const pathnameRef = useRef(pathname);
+  // Empties the charge when the window passes without another shake
+  const drainTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Read at shake time so changes do not restart the native detector
+  const impactRef = useRef(impact);
+  const modalManagerRef = useRef(modalManager);
 
   useEffect(() => {
-    pathnameRef.current = pathname;
-  }, [pathname]);
+    impactRef.current = impact;
+    modalManagerRef.current = modalManager;
+  }, [impact, modalManager]);
 
   useEffect(() => {
     // Only enable shake detection on native platforms
@@ -52,6 +75,25 @@ export function useShakeDetection({
     let listener: PluginListenerHandle | null = null;
     let isMounted = true;
 
+    const clearDrainTimer = () => {
+      if (drainTimerRef.current) {
+        clearTimeout(drainTimerRef.current);
+        drainTimerRef.current = null;
+      }
+    };
+
+    const blockedReason = (): string | null => {
+      if (isTextFieldFocused()) return "a text field is focused";
+      if (modalManagerRef.current?.hasOpenModalExcept?.(SHAKE_SHEET_ID)) {
+        return "a modal is open";
+      }
+      const status = useStatusStore.getState();
+      if (status.proPurchaseModalOpen) return "the Pro purchase is open";
+      if (status.writeOpen) return "a tag write is in progress";
+      if (sessionManager.isScanning) return "an NFC scan is in progress";
+      return null;
+    };
+
     const setupListener = async () => {
       try {
         const newListener = await ShakeDetector.addListener(
@@ -59,15 +101,21 @@ export function useShakeDetection({
           async () => {
             const now = Date.now();
 
-            // Only trigger on home page
-            if (pathnameRef.current !== "/") {
-              logger.log("Shake detected but not on home page, ignoring");
+            const reason = blockedReason();
+            if (reason) {
+              logger.log(`Shake detected but ${reason}, ignoring`);
               return;
             }
 
             // Check cooldown after last successful trigger
             if (now - lastTriggerTimeRef.current < TRIGGER_COOLDOWN_MS) {
               logger.log("Shake detected but in cooldown period, ignoring");
+              return;
+            }
+
+            const zapscript = usePreferencesStore.getState().shakeZapscript;
+            if (!zapscript) {
+              logger.log("Shake detected, but no zapscript configured");
               return;
             }
 
@@ -84,17 +132,21 @@ export function useShakeDetection({
               `Shake ${shakeCount}/${REQUIRED_SHAKES} detected within window`,
             );
 
-            // Light haptic feedback to acknowledge shake was detected
-            const hapticsEnabled =
-              usePreferencesStore.getState().hapticsEnabled;
-            if (hapticsEnabled && shakeCount < REQUIRED_SHAKES) {
-              Haptics.impact({ style: ImpactStyle.Light }).catch(() => {
-                // Ignore haptics errors
-              });
-            }
+            const sheet = useShakeSheetStore.getState();
+            clearDrainTimer();
 
-            // Check if we have enough shakes to trigger
             if (shakeCount < REQUIRED_SHAKES) {
+              // Light haptic feedback to acknowledge shake was detected
+              void impactRef.current("light");
+              sheet.charge(
+                shakeCount / REQUIRED_SHAKES,
+                isRandomLaunchScript(zapscript),
+              );
+              drainTimerRef.current = setTimeout(() => {
+                drainTimerRef.current = null;
+                shakeTimestampsRef.current = [];
+                useShakeSheetStore.getState().drain();
+              }, SHAKE_WINDOW_MS);
               return;
             }
 
@@ -102,26 +154,13 @@ export function useShakeDetection({
             shakeTimestampsRef.current = [];
             lastTriggerTimeRef.current = now;
 
-            const zapscript = usePreferencesStore.getState().shakeZapscript;
-
-            if (!zapscript) {
-              logger.log("Shake triggered, but no zapscript configured");
-              return;
-            }
-
             logger.log("Shake triggered, queueing zapscript:", zapscript);
 
             // Heavy haptic feedback to confirm shake trigger was recognized
-            if (hapticsEnabled) {
-              Haptics.impact({ style: ImpactStyle.Heavy }).catch((error) => {
-                logger.debug("Haptics impact failed:", error, {
-                  category: "haptics",
-                  action: "shakeImpact",
-                  severity: "info",
-                });
-              });
-            }
+            void impactRef.current("heavy");
 
+            sheet.charge(1, isRandomLaunchScript(zapscript));
+            useShakeSheetStore.getState().confirm();
             setRunQueue({ value: zapscript, unsafe: true, source: "shake" });
           },
         );
@@ -148,6 +187,7 @@ export function useShakeDetection({
 
     return () => {
       isMounted = false;
+      clearDrainTimer();
       if (listener) {
         void listener.remove();
       }

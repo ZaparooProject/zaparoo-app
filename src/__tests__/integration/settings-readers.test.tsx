@@ -351,6 +351,35 @@ describe("Settings Readers Integration", () => {
         expect(usePreferencesStore.getState().preferRemoteWriter).toBe(true);
       });
     });
+
+    describe("Continuous Camera", () => {
+      it("should not show continuous camera without a camera", () => {
+        usePreferencesStore.setState({ cameraAvailable: false });
+        renderComponent();
+
+        expect(
+          screen.queryByText(/settings.readers.continuousCamera/i),
+        ).not.toBeInTheDocument();
+      });
+
+      it("should turn continuous camera on and keep it", async () => {
+        const user = userEvent.setup();
+        usePreferencesStore.setState({
+          cameraAvailable: true,
+          continuousCamera: false,
+        });
+        renderComponent();
+
+        const toggle = screen.getByRole("checkbox", {
+          name: /settings.readers.continuousCamera/i,
+        });
+        expect(toggle).not.toBeChecked();
+        await user.click(toggle);
+
+        expect(toggle).toBeChecked();
+        expect(usePreferencesStore.getState().continuousCamera).toBe(true);
+      });
+    });
   });
 
   describe("Shake to Launch", () => {
@@ -755,6 +784,24 @@ describe("Settings Readers Integration", () => {
         within(group.parentElement!).getByRole("button", {
           name: "settingHelp.label",
         }),
+      ).toBeInTheDocument();
+    });
+
+    it("should explain continuous scan the way this phone's reader works", async () => {
+      mockCapacitorState.isNative = true;
+      const user = userEvent.setup();
+      renderComponent();
+
+      const toggle = screen.getByRole("checkbox", {
+        name: /settings.readers.continuousScan/i,
+      });
+      const row = toggle.closest("label")?.parentElement ?? document.body;
+      await user.click(
+        within(row).getByRole("button", { name: "settingHelp.label" }),
+      );
+
+      expect(
+        await screen.findByText("settings.readers.continuousScanHelpIos"),
       ).toBeInTheDocument();
     });
   });

@@ -96,9 +96,11 @@ const normalizeMatch = (match: string): MatchType => {
 
 interface MappingEditorProps {
   id?: number;
+  /** Starting type and pattern for a new mapping, e.g. from a failed scan. */
+  prefill?: { type: string; pattern: string };
 }
 
-export function MappingEditor({ id }: MappingEditorProps) {
+export function MappingEditor({ id, prefill }: MappingEditorProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const editingId = id;
@@ -130,9 +132,12 @@ export function MappingEditor({ id }: MappingEditorProps) {
   }, [mappings.data, isEditing, editingId]);
 
   const [label, setLabel] = useState("");
-  const [type, setType] = useState<MappingType>("uid");
+  const initial = isEditing ? undefined : prefill;
+  const [type, setType] = useState<MappingType>(() =>
+    initial ? normalizeType(initial.type) : "uid",
+  );
   const [match, setMatch] = useState<MatchType>("exact");
-  const [pattern, setPattern] = useState("");
+  const [pattern, setPattern] = useState(initial?.pattern ?? "");
   const [override, setOverride] = useState("");
   const [enabled, setEnabled] = useState(true);
   const [hydrated, setHydrated] = useState(!isEditing);

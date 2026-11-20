@@ -18,6 +18,7 @@ vi.mock("react-hot-toast", () => ({ default: { error: vi.fn() } }));
 vi.mock("@capacitor/core", () => ({
   Capacitor: {
     isNativePlatform: vi.fn(),
+    getPlatform: vi.fn(() => "web"),
   },
 }));
 

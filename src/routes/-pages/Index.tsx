@@ -36,6 +36,7 @@ import { useDeviceSheetController } from "@/hooks/useDeviceSheetController";
 import { HomeDevicePill } from "@/components/home/HomeDevicePill";
 import { LastScanned } from "@/components/home/LastScanned";
 import { ScanActions } from "@/components/home/ScanActions";
+import { CameraScannerOverlay } from "@/components/home/CameraScannerOverlay";
 import { MediaCoverRow } from "@/components/home/MediaCoverRow";
 import { NowPlayingCard } from "@/components/home/NowPlayingCard";
 import { ReaderStrip } from "@/components/home/ReaderStrip";
@@ -172,6 +173,9 @@ export function Index({
     handleScanButton,
     handleCameraScan,
     handleStopConfirm,
+    continuousCamera,
+    scanError,
+    clearScanError,
   } = useScanOperations({
     connected,
     hasData,
@@ -389,6 +393,11 @@ export function Index({
         scanStatus={scanStatus}
         onTapScan={handleScanButton}
         onCameraScan={handleCameraScan}
+        scanError={scanError}
+        onDismissScanError={clearScanError}
+        cameraNotice={
+          continuousCamera.idleStopped ? t("scan.cameraStoppedIdle") : undefined
+        }
         nfcEnabled={nfcEnabled}
         onOpenNfcSettings={openNfcSettings}
         writeActivity={
@@ -650,6 +659,8 @@ export function Index({
           </>
         )}
       </PageFrame>
+
+      <CameraScannerOverlay camera={continuousCamera} />
 
       <LibraryMediaDetailsModal
         isOpen={selectedCoverEntry !== null}

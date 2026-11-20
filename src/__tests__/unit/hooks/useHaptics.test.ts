@@ -21,6 +21,7 @@ import { Haptics, ImpactStyle, NotificationType } from "@capacitor/haptics";
 vi.mock("@capacitor/core", () => ({
   Capacitor: {
     isNativePlatform: vi.fn(),
+    getPlatform: vi.fn(() => "web"),
   },
 }));
 

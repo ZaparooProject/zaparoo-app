@@ -11,6 +11,8 @@ import { renderHook, act } from "@/test-utils";
 import { useRunQueueProcessor } from "@/hooks/useRunQueueProcessor";
 import { ConnectionState, useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
+import { useShakeSheetStore } from "@/lib/shakeSheetStore";
+import type { RunTokenOptions } from "@/lib/tokenOperations";
 
 // Create hoisted mocks
 const { mockRunToken, mockToast, mockLogger } = vi.hoisted(() => ({
@@ -101,6 +103,7 @@ describe("useRunQueueProcessor", () => {
       false, // override
       true, // canQueueCommands
       true, // requiresLaunch
+      expect.objectContaining({ source: "shake" }),
     );
   });
 
@@ -154,6 +157,7 @@ describe("useRunQueueProcessor", () => {
       false,
       true,
       true,
+      expect.objectContaining({ source: "shake" }),
     );
   });
 
@@ -194,6 +198,7 @@ describe("useRunQueueProcessor", () => {
       false,
       true,
       true,
+      { source: "queue" },
     );
   });
 
@@ -313,6 +318,7 @@ describe("useRunQueueProcessor", () => {
       false,
       true,
       true,
+      expect.objectContaining({ source: "shake" }),
     );
   });
 
@@ -359,6 +365,109 @@ describe("useRunQueueProcessor", () => {
       false,
       true,
       true,
+      expect.objectContaining({ source: "shake" }),
     );
+  });
+
+  describe("shake sheet", () => {
+    const queueShake = async () => {
+      act(() => {
+        useShakeSheetStore.getState().charge(1, true);
+        useShakeSheetStore.getState().confirm();
+        useStatusStore.getState().setRunQueue({
+          value: "**launch.random",
+          unsafe: true,
+          source: "shake",
+        });
+      });
+      await flush();
+    };
+    const launchError = {
+      message: "no media found",
+      category: "media_not_found",
+      cancelled: false,
+    };
+
+    beforeEach(() => {
+      useShakeSheetStore.getState().dismiss();
+    });
+
+    it("should show a failed shake launch on the sheet instead of a toast", async () => {
+      mockRunToken.mockImplementation(async (...args: unknown[]) => {
+        const options = args[10] as RunTokenOptions;
+        options.onError?.(launchError);
+        return false;
+      });
+      renderHook(() => useRunQueueProcessor());
+
+      await queueShake();
+
+      expect(useShakeSheetStore.getState()).toMatchObject({
+        phase: "failed",
+        error: "no media found",
+      });
+      expect(mockToast.error).not.toHaveBeenCalled();
+    });
+
+    it("should toast a shake failure once the sheet is gone", async () => {
+      mockRunToken.mockImplementation(async (...args: unknown[]) => {
+        const options = args[10] as RunTokenOptions;
+        useShakeSheetStore.getState().dismiss();
+        options.onError?.(launchError);
+        return false;
+      });
+      renderHook(() => useRunQueueProcessor());
+
+      await queueShake();
+
+      expect(mockToast.error).toHaveBeenCalledWith("no media found");
+    });
+
+    it("should close the sheet when the launch is blocked before Core", async () => {
+      mockRunToken.mockResolvedValue(false);
+      renderHook(() => useRunQueueProcessor());
+
+      await queueShake();
+
+      expect(useShakeSheetStore.getState().phase).toBe("idle");
+    });
+
+    it("should show the connection deadline on the sheet", async () => {
+      useStatusStore.setState({
+        connectionState: ConnectionState.DISCONNECTED,
+        connected: false,
+      });
+      renderHook(() => useRunQueueProcessor());
+
+      await queueShake();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(30000);
+      });
+
+      expect(useShakeSheetStore.getState()).toMatchObject({
+        phase: "failed",
+        error: "create.custom.failMsg",
+      });
+      expect(mockToast.error).not.toHaveBeenCalled();
+    });
+
+    it("should tag confirmed deep links as queue launches", async () => {
+      const { result } = renderHook(() => useRunQueueProcessor());
+      act(() => {
+        useStatusStore
+          .getState()
+          .setRunQueue({ value: "link", unsafe: false, source: "deepLink" });
+      });
+      await flush();
+
+      act(() => {
+        result.current.confirmRun();
+      });
+      await flush();
+
+      const options = mockRunToken.mock.calls[0]?.[10] as RunTokenOptions;
+      expect(options.source).toBe("queue");
+      expect(options.onError).toBeUndefined();
+    });
   });
 });

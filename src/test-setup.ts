@@ -39,6 +39,7 @@ vi.mock("@aparajita/capacitor-secure-storage");
 // Tests that need specific logger behavior can mock it locally.
 
 import { CoreAPI } from "@/lib/coreApi";
+import { launchFeedback } from "@/lib/launchFeedback";
 import { __resetPreferencesStorage } from "../__mocks__/@capacitor/preferences";
 import { __resetZeroConfMock } from "../__mocks__/capacitor-zeroconf";
 import { __resetNfcMock } from "../__mocks__/@capawesome-team/capacitor-nfc";
@@ -93,6 +94,8 @@ afterEach(async () => {
   vi.useRealTimers();
   // Reset CoreAPI state to prevent accumulation across tests
   CoreAPI.reset();
+  // Drop pending launch feedback windows and listeners
+  launchFeedback.reset();
   // Reset Preferences storage between tests
   __resetPreferencesStorage();
   // Reset ZeroConf mock state between tests

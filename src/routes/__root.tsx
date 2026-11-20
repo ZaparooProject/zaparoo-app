@@ -15,27 +15,34 @@ import { DeviceSheetProvider } from "@/components/DeviceSheetProvider";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useNavigationMode } from "@/hooks/useNavigationMode";
 import { TourInitializer } from "@/components/TourInitializer";
+import { ProGuide } from "@/components/ProGuide";
 import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
 import { SkipLink } from "@/components/SkipLink";
 import { useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { useShakeDetection } from "@/hooks/useShakeDetection";
+import { ShakeSheet } from "@/components/ShakeSheet";
+import { useLaunchFeedbackHaptics } from "@/hooks/useLaunchFeedbackHaptics";
 import {
   appBackDestination,
   appBackNavigationOptions,
 } from "@/lib/tabSessionStore";
 
-// Shake detection component - must be inside router context to access location
 // Exported for testing
+export function LaunchFeedbackHaptics() {
+  useLaunchFeedbackHaptics();
+  return null;
+}
+
+// Shake works from any screen; the hook blocks it while another task owns
+// the screen. Exported for testing
 export function ShakeDetector() {
-  const { pathname } = useLocation();
   const shakeEnabled = usePreferencesStore((state) => state.shakeEnabled);
   const connected = useStatusStore((state) => state.connected);
 
   useShakeDetection({
     shakeEnabled,
     connected,
-    pathname,
   });
 
   return null;
@@ -157,7 +164,10 @@ function AdaptiveRootLayout() {
       <SafeAreaHandler />
       <BackHandler />
       <ShakeDetector />
+      <ShakeSheet />
+      <LaunchFeedbackHaptics />
       <TourInitializer />
+      <ProGuide />
       {/* Ahead of the page so tablet and desktop navigation leads reading and
           tab order; on phones it places the dock in the footer slot below. */}
       <BottomNav />

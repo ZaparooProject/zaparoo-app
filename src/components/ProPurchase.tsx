@@ -39,6 +39,7 @@ import {
   restorePurchasesForUser,
   runPurchasesOperation,
 } from "@/lib/purchasesSetup";
+import { requestProGuide } from "@/lib/proGuideStore";
 import { Button } from "./wui/Button";
 import { ModalActionBar } from "./wui/ModalActionBar";
 
@@ -161,6 +162,8 @@ const ProPurchaseModal = (props: {
   const activatePro = ({ offerAccount }: { offerAccount: boolean }) => {
     props.setLifetimeProAccess(true);
     usePreferencesStore.getState().setLaunchOnScan(true);
+    // Shown once this sheet closes.
+    requestProGuide();
     // Signing in links RevenueCat's record of the purchase to the account, so
     // only suggest it when RevenueCat actually has that record.
     if (offerAccount && !useStatusStore.getState().loggedInUser) {

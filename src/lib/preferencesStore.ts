@@ -218,6 +218,8 @@ const capacitorPreferencesStorage: StateStorage = {
 export interface PreferencesState {
   // App settings
   restartScan: boolean;
+  // Camera button keeps the live camera open and launches each new code
+  continuousCamera: boolean;
   launchOnScan: boolean;
   launcherAccess: boolean;
   lifetimeProAccess: boolean | null;
@@ -238,6 +240,9 @@ export interface PreferencesState {
 
   // Tour completion tracking
   tourCompleted: boolean;
+
+  // One-time Pro guide, shown at trial start or Pro purchase
+  proGuideCompleted: boolean;
 
   // Native app-review prompt cadence
   appReviewCadence: AppReviewCadenceState;
@@ -326,6 +331,8 @@ export interface PreferencesState {
 // Preferences actions interface
 export interface PreferencesActions {
   setRestartScan: (value: boolean) => void;
+  setContinuousCamera: (value: boolean) => void;
+  setProGuideCompleted: (value: boolean) => void;
   setLaunchOnScan: (value: boolean) => void;
   setLifetimeProAccess: (value: boolean) => void;
   setStoreVerifiedProAccess: (value: boolean) => void;
@@ -392,7 +399,10 @@ const DEFAULT_PREFERENCES: Omit<
   | "_accelerometerAvailabilityHydrated"
   | "setAccelerometerAvailabilityHydrated"
 > = {
-  restartScan: false,
+  // Android reads with no system sheet, so continuous reading is the natural
+  // default there. Only new installs get it; stored values win on merge.
+  restartScan: Capacitor.getPlatform() === "android",
+  continuousCamera: false,
   launchOnScan: true, // Default on - Pro check happens at launch time
   launcherAccess: false,
   lifetimeProAccess: null,
@@ -407,6 +417,7 @@ const DEFAULT_PREFERENCES: Omit<
   shakeZapscript: "",
   customText: "",
   tourCompleted: false,
+  proGuideCompleted: false,
   appReviewCadence: DEFAULT_APP_REVIEW_CADENCE,
   whatsNewInitialized: false,
   lastWhatsNewRuntimeKey: null,
@@ -434,6 +445,7 @@ const DEFAULT_PREFERENCES: Omit<
 function persistedPreferences(state: PreferencesStore) {
   return {
     restartScan: state.restartScan,
+    continuousCamera: state.continuousCamera,
     launchOnScan: state.launchOnScan,
     // Cloud trial access is session-bound; never hydrate it as lifetime Pro.
     launcherAccess:
@@ -448,6 +460,7 @@ function persistedPreferences(state: PreferencesStore) {
     shakeZapscript: state.shakeZapscript,
     customText: state.customText,
     tourCompleted: state.tourCompleted,
+    proGuideCompleted: state.proGuideCompleted,
     appReviewCadence: state.appReviewCadence,
     whatsNewInitialized: state.whatsNewInitialized,
     lastWhatsNewRuntimeKey: state.lastWhatsNewRuntimeKey,
@@ -584,6 +597,8 @@ export const usePreferencesStore = create<PreferencesStore>()(
         // Clear zapscript when mode changes
         set({ shakeMode: value, shakeZapscript: "" });
       },
+      setContinuousCamera: (value) => set({ continuousCamera: value }),
+      setProGuideCompleted: (value) => set({ proGuideCompleted: value }),
       setShakeZapscript: (value) => set({ shakeZapscript: value }),
       setCustomText: (value) => set({ customText: value }),
       setTourCompleted: (value) => set({ tourCompleted: value }),

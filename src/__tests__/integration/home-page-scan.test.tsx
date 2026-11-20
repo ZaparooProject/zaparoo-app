@@ -21,6 +21,13 @@ import {
 } from "@/hooks/useHomeScanLayout";
 import { ScanResult } from "@/lib/models";
 
+const mockNavigate = vi.hoisted(() => vi.fn());
+
+vi.mock("@tanstack/react-router", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@tanstack/react-router")>()),
+  useNavigate: () => mockNavigate,
+}));
+
 function renderActions(
   overrides: Partial<Parameters<typeof ScanActions>[0]> = {},
 ) {
@@ -224,6 +231,52 @@ describe("Home Page Scan Flows", () => {
       renderActions({ scanStatus: ScanResult.Error });
 
       expect(screen.getByText("scan.statusError")).toBeInTheDocument();
+    });
+  });
+
+  describe("Scan errors", () => {
+    it("shows why the launch failed on the scan control", async () => {
+      const user = userEvent.setup();
+      const onDismissScanError = vi.fn();
+      const { onTapScan } = renderActions({
+        scanError: { message: "launcher not found", prefill: null },
+        onDismissScanError,
+      });
+
+      expect(screen.getAllByText("launcher not found")).toHaveLength(2);
+
+      await user.click(screen.getByRole("button", { name: "scan.retry" }));
+      expect(onTapScan).toHaveBeenCalledTimes(1);
+
+      await user.click(screen.getByRole("button", { name: "nav.cancel" }));
+      expect(onDismissScanError).toHaveBeenCalledTimes(1);
+    });
+
+    it("offers to map a tag that is not set up yet", async () => {
+      const user = userEvent.setup();
+      renderActions({
+        scanError: {
+          message: "scan.notSetUp",
+          prefill: { type: "id", pattern: "04abc123def456" },
+        },
+      });
+
+      await user.click(screen.getByRole("button", { name: "scan.mapIt" }));
+
+      expect(mockNavigate).toHaveBeenCalledWith({
+        to: "/create/mappings/new",
+        search: { type: "id", pattern: "04abc123def456" },
+      });
+    });
+
+    it("goes back to the scan control once a new scan starts", () => {
+      renderActions({
+        scanSession: true,
+        scanError: { message: "launcher not found", prefill: null },
+      });
+
+      expect(screen.queryByText("launcher not found")).not.toBeInTheDocument();
+      expect(screen.getByText("scan.statusScanning")).toBeInTheDocument();
     });
   });
 

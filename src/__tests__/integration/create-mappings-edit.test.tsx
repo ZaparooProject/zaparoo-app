@@ -197,6 +197,7 @@ vi.mock("@/lib/errors", () => ({
 }));
 
 import { MappingEditor } from "@/routes/-pages/MappingEditor";
+import { Route as NewMappingRoute } from "@/routes/create.mappings_.new";
 
 const buildMapping = (overrides: Partial<any> = {}) => ({
   id: "1",
@@ -350,6 +351,56 @@ describe("Create Mappings Edit Route", () => {
           replace: true,
         });
       });
+    });
+
+    it("should start from the tag a failed scan offered to map", async () => {
+      const user = userEvent.setup();
+      render(
+        <MappingEditor
+          prefill={{ type: "data", pattern: "0102030405060708" }}
+        />,
+      );
+
+      expect(
+        screen.getByRole("radio", { name: "create.mappings.editor.typeData" }),
+      ).toHaveAttribute("aria-checked", "true");
+      expect(
+        screen.getByLabelText("create.mappings.editor.pattern"),
+      ).toHaveValue("0102030405060708");
+
+      await user.type(
+        screen.getByLabelText("create.custom.textareaLabel"),
+        "**launch.test",
+      );
+      await user.click(
+        screen.getByRole("button", {
+          name: /create\.mappings\.editor\.save/i,
+        }),
+      );
+
+      await waitFor(() => {
+        expect(mockNewMapping).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: "data",
+            pattern: "0102030405060708",
+          }),
+        );
+      });
+    });
+
+    it("should only accept a complete prefill from the URL", () => {
+      const validate = NewMappingRoute.options.validateSearch as (
+        search: Record<string, unknown>,
+      ) => unknown;
+
+      expect(validate({ type: "id", pattern: "04abc123" })).toEqual({
+        type: "id",
+        pattern: "04abc123",
+      });
+      expect(validate({ type: "uid", pattern: "04abc123" })).toEqual({});
+      expect(validate({ type: "id", pattern: "" })).toEqual({});
+      expect(validate({ type: "id", pattern: 42 })).toEqual({});
+      expect(validate({})).toEqual({});
     });
 
     it("should show a regex error and disable Save for invalid regex", async () => {

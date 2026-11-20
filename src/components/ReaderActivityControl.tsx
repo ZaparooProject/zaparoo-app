@@ -21,7 +21,12 @@ interface ReaderActivityControlProps {
   onStart: () => void;
   onCancel: () => void;
   onRetry?: () => void;
+  /** Announced when the control enters the error state. */
   errorMessage?: string;
+  /** Visible status inside the Retry face. Defaults to the verify failure. */
+  errorText?: string;
+  /** Replaces Cancel beside Retry, for an error with a way forward. */
+  errorAction?: { label: string; onClick: () => void };
   variant?: "fill" | "secondary" | "outline";
   intent?: "default" | "primary" | "destructive";
   size?: "default" | "sm" | "lg";
@@ -44,6 +49,8 @@ export function ReaderActivityControl({
   onCancel,
   onRetry,
   errorMessage,
+  errorText,
+  errorAction,
   variant = "fill",
   intent = "primary",
   size = "default",
@@ -74,7 +81,7 @@ export function ReaderActivityControl({
   const active = state === "waiting" || state === "attention";
   const statusText =
     state === "error"
-      ? t("spinner.verifyFailed")
+      ? (errorText ?? t("spinner.verifyFailed"))
       : active && showCancelHint
         ? t("reader.pressAgainToCancel")
         : "";
@@ -100,10 +107,10 @@ export function ReaderActivityControl({
             />
           </div>
           <Button
-            label={t("nav.cancel")}
+            label={errorAction?.label ?? t("nav.cancel")}
             variant="outline"
             className="min-h-18 w-full min-w-0"
-            onClick={onCancel}
+            onClick={errorAction?.onClick ?? onCancel}
           />
         </div>
       ) : (

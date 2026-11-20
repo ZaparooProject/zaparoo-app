@@ -49,6 +49,7 @@ vi.mock("@capacitor/app", () => ({
 vi.mock("@capacitor/core", () => ({
   Capacitor: {
     isNativePlatform: () => mockIsNativePlatform(),
+    getPlatform: () => "ios",
   },
 }));
 
@@ -234,7 +235,6 @@ describe("Root Layout Integration", () => {
       expect(mockUseShakeDetection).toHaveBeenCalledWith({
         shakeEnabled: true,
         connected: true,
-        pathname: "/",
       });
     });
 
@@ -261,18 +261,6 @@ describe("Root Layout Integration", () => {
       expect(mockUseShakeDetection).toHaveBeenCalledWith(
         expect.objectContaining({
           connected: false,
-        }),
-      );
-    });
-
-    it("should pass current pathname from location", () => {
-      mockPathname = "/settings";
-
-      render(<ShakeDetector />);
-
-      expect(mockUseShakeDetection).toHaveBeenCalledWith(
-        expect.objectContaining({
-          pathname: "/settings",
         }),
       );
     });

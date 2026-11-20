@@ -127,6 +127,10 @@ vi.mock("../../../lib/nfc", () => ({
 
 // Import after mocks are set up
 import { usePassiveNfcListener } from "../../../hooks/usePassiveNfcListener";
+import {
+  launchFeedback,
+  type LaunchFeedbackEvent,
+} from "../../../lib/launchFeedback";
 
 describe("usePassiveNfcListener", () => {
   beforeEach(() => {
@@ -251,6 +255,37 @@ describe("usePassiveNfcListener", () => {
     expect(mockRunToken).not.toHaveBeenCalled();
   });
 
+  it("reports a read the OS already gave feedback for", async () => {
+    const events: LaunchFeedbackEvent[] = [];
+    const unsubscribe = launchFeedback.subscribe((event) => events.push(event));
+
+    renderHook(() => usePassiveNfcListener());
+
+    await vi.waitFor(() => {
+      expect(nfcTagScannedCallback).not.toBeNull();
+      expect(appStateChangeCallback).not.toBeNull();
+    });
+
+    act(() => {
+      appStateChangeCallback!({ isActive: false });
+    });
+    act(() => {
+      appStateChangeCallback!({ isActive: true });
+    });
+    act(() => {
+      nfcTagScannedCallback!({
+        nfcTag: { id: [1, 2, 3] },
+      } as NfcTagScannedEvent);
+    });
+
+    unsubscribe();
+    expect(events).toContainEqual({
+      kind: "read",
+      source: "passive",
+      systemFeedback: true,
+    });
+  });
+
   it("should process tag when app was in background (cold start scenario)", async () => {
     mockSessionManager.isScanning = false;
     mockStoreState.connected = true;
@@ -291,6 +326,7 @@ describe("usePassiveNfcListener", () => {
       false,
       true,
       false,
+      { source: "passive" },
     );
 
     // A blocked launch opens the Pro screen as an NFC entry.
@@ -400,6 +436,7 @@ describe("usePassiveNfcListener", () => {
       false,
       true,
       false,
+      { source: "passive" },
     );
   });
 
@@ -515,6 +552,7 @@ describe("usePassiveNfcListener", () => {
       false,
       true,
       false,
+      { source: "passive" },
     );
   });
 

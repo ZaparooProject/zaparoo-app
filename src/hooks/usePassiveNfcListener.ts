@@ -7,6 +7,7 @@ import { usePreferencesStore } from "@/lib/preferencesStore";
 import { sessionManager, readNfcEvent } from "@/lib/nfc";
 import { runToken } from "@/lib/tokenOperations";
 import { logger } from "@/lib/logger";
+import { launchFeedback } from "@/lib/launchFeedback";
 
 /**
  * Passive NFC listener hook for Android.
@@ -116,6 +117,9 @@ export function usePassiveNfcListener() {
         return;
       }
 
+      // Android's tag dispatch already buzzed for this read.
+      launchFeedback.read("passive", true);
+
       // Get current connection state
       const connected = useStatusStore.getState().connected;
 
@@ -134,6 +138,7 @@ export function usePassiveNfcListener() {
         false, // override
         true, // canQueueCommands - allow queuing if reconnecting
         false, // requiresLaunch - respect launchOnScan setting
+        { source: "passive" },
       ).catch((error) => {
         logger.error("Passive NFC listener: runToken error", error, {
           category: "nfc",

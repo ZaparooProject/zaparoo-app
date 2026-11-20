@@ -428,7 +428,7 @@ Examples:
 Shared behaviour:
 
 - Core settings are written through `useCoreSettingsUpdate`; typed values that save as you go use `useDebouncedSave`
-- errors: an action or save failure shows one toast; form validation is inline on the field. Never both for one failure, and never silent
+- errors: an action or save failure shows one toast; form validation is inline on the field. Never both for one failure, and never silent. A failure with a control of its own to show it shows it there instead: Zap's Tap a tag shows a failed scan or launch on its button (see Reader activity), not a toast
 - loading: `Skeleton` for a pending value in a known slot (reader list, connection subtitle, stat values, switch); `InlineLoading` for a pending list or panel
 - dates and times use `formatAppDate` / `formatAppDateTime` from `src/lib/formatDate.ts`
 - `CoreOutdatedNotice` is a polite `role="status"` Card with a warning border and visible warning wash
@@ -627,6 +627,7 @@ Physical NFC waits stay in context instead of opening an app-owned modal. `Reade
 - waiting latches the physical button down and adds a broad, slow blue halo outside its edge; do not draw an illuminated line inside the button face
 - a required re-tap uses an external amber double pulse
 - verification failure swaps to an explicit Retry/Cancel pair: Retry stays latched (pressed face) inside a static red halo with the failure text inside its face, and Cancel is an outline button; nothing pulses. The pair uses `.wui-action-grid`, the intrinsic two-action grid (9rem minimum tracks) also used by the manual-entry footer and mapping capture: equal-width faces while they fit, stacked at narrow or enlarged-text widths
+- Zap's Tap a tag uses the same pair for a failed scan or launch (from NFC or the one-shot camera), with the failure (`errorText`) inside Retry's face. A tag Core has nothing to run for reads "Not set up yet", and Map it (`errorAction`) takes Cancel's place and opens a new mapping prefilled with that tag. Starting another scan clears the error. On iOS the scan sheet stays open, saying "Launching...", until Core answers, and closes with the same error
 - width follows ordinary full-width buttons (see Button); the halo paints outside the face without adding layout padding
 - status sits inside the button beneath its main label, in smaller sentence-case text that inherits the face's contrasting text color. Compact reader buttons have a 72px minimum height for both idle and active states; Zap keeps its larger face. Content can grow for translated labels and text zoom rather than clipping. Do not reserve an empty status row below the button
 - pressing the latched waiting control again cancels the session; visible status copy says “Press again to cancel” so it cannot be mistaken for another NFC-card tap
@@ -643,7 +644,39 @@ Game-detail and deck action rails use `ReaderActivityAction`, not the full-size 
 - reader rails include halo gutters in the intrinsic scrolling content width, not padding around overflowing grid tracks. Keep clearance at both scroll ends and below the depressed face; preserve normal scrolling boundaries and focus targets
 - contextual writes never enqueue a detached global write; cancel owned work when its details close or selection/device changes
 
-Queue or deep-link writes without a visible source control use the compact reader activity strip above the measured footer clearance. Native iOS NFC system UI may still appear because it is OS-owned. Do not add spinner, orbit, fake percentage, or app-owned full-screen reader overlays. The dev-only App preview simulator (`docs/capacitor.md`) stays as the way to review these states without hardware.
+Queue or deep-link writes without a visible source control use the compact reader activity strip above the measured footer clearance. Native iOS NFC system UI may still appear because it is OS-owned. Do not add spinner, orbit, fake percentage, or app-owned full-screen reader overlays. The continuous camera scanner below is the one exception, because the camera preview is the screen. The dev-only App preview simulator (`docs/capacitor.md`) stays as the way to review these states without hardware.
+
+Launch feedback (`src/lib/launchFeedback.ts`) is the single source for the launch moment on every reader path (NFC, camera, passive taps, shake, queue): a light impact when a token is read (skipped on Android NFC, where the OS already buzzes), then a success or error notification when Core answers. Success lands on Core's `media.started`, or on the run resolving when nothing starts within 5 seconds. Callers do not play their own read, success or error haptics.
+
+### Continuous camera scanner
+
+With Settings → Readers → Continuous camera on, Camera opens `CameraScannerOverlay` over the live camera feed (`useContinuousCamera`). With it off, Camera keeps the plugin's one-shot scanner.
+
+- the WebView goes transparent while it runs (`body.barcode-scanner-active` hides `.app-frame`); always remove the class on stop and unmount
+- no reticle. A heading at the top, a torch button when the device has one, and a bottom bar with the last result and Done
+- the scanned code is outlined from the plugin's corner points: `--interaction` while launching, `--status-green` when launched (game name, then “Launched · system”), `--status-red` on failure. A code Core has nothing to run for reads “Not set up yet”, with Map it beside Done
+- a code is ignored while it stays in view, and counts again after about 2 seconds out of frame
+- after 1 minute without a scan the camera stops and Zap shows “Camera stopped after 1 minute without a scan” under the Camera button. No toast
+- the heading takes focus, results are announced through the overlay's live region, and Android Back closes it
+
+### Shake sheet
+
+`ShakeSheet` (mounted in the root layout) shows every shake-to-launch from any screen. It reuses SlideModal's sheet surface, but it is non-modal: no scrim, no focus trap and no modal registration, so focus never moves. Status is announced through its own `role="status"` region.
+
+- shake is ignored while a text field has focus, a SlideModal or the Pro purchase sheet is open, a write is waiting, or an NFC scan is running
+- the charge is a `ProgressBar` that fills with each counted shake
+- random commands add a cover reel above the bar. It starts spinning with the first shake and keeps spinning until launch feedback reports the real game (it lands on that cover, name and system) or a failure. It never stops early. Covers come from recently played media, with plain artwork plates when there are none
+- other commands show the charge, then “Launching…”, then the result
+- a launch dismisses itself after 4 seconds; a failure stays until Close
+- reduced motion: the reel does not spin and shows static states
+
+### Pro guide
+
+`ProGuide` is a one-time SlideModal shown when Pro first becomes active (a trial or a purchase), after the first-run tour and when no other dialog is open. If another dialog replaces it, it returns once that dialog closes; only Skip, Done or a user close mark it seen. Steps: what Pro unlocks, tap or scan, the antenna spot, shake. Steps for hardware the phone lacks are left out.
+
+- the antenna step places a spot on a plain device outline: from `getAntennaInfo` on Android 14+, the top edge on iPhone, and a broad area on the back, telling the user to slide the tag slowly, otherwise
+- Try a tag runs a live read that confirms “Tag read” and launches nothing; the session stops when the step is left or the guide closes
+- App preview (Settings → Advanced) can show the guide with each antenna layout for review without hardware
 
 ### Confirm modals
 
@@ -996,7 +1029,7 @@ Patterns:
 - `src/components/ProgressBar.tsx` is the only bar: a `h-[10px]` `rounded-full` track with `border-border bg-background`, and an `h-[8px]` `bg-primary` fill (`animate-pulse` for indeterminate work)
 - status rows use `StatRow`
 
-Do not use progress bars outside real progress work.
+Do not use progress bars outside real progress work. The shake sheet's charge counts real shakes toward the launch, so it uses `ProgressBar` too (see Shake sheet).
 
 ## Lists and rows
 
