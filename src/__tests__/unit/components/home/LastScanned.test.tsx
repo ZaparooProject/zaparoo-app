@@ -21,12 +21,14 @@ describe("LastScanned", () => {
     sessionManager.setLaunchOnScan(true);
   });
 
-  it("should show nothing before a tag has been scanned", () => {
+  it("should show an empty state before a tag has been scanned", () => {
     render(<LastScanned />);
 
     expect(
-      screen.queryByRole("heading", { name: "scan.lastScannedHeading" }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("heading", { name: "scan.lastScannedHeading" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("scan.lastScannedEmpty")).toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
   it("should show the ID of a tag scanned without launching", async () => {
@@ -49,6 +51,7 @@ describe("LastScanned", () => {
       screen.getByRole("heading", { name: "scan.lastScannedHeading" }),
     ).toBeInTheDocument();
     expect(screen.getByText("04a1b2c3d4e5f6")).toBeInTheDocument();
+    expect(screen.queryByText("scan.lastScannedEmpty")).not.toBeInTheDocument();
     expect(runSpy).not.toHaveBeenCalled();
   });
 

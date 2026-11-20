@@ -770,6 +770,7 @@
       "mediaResume": "继续",
       "mediaControlError": "无法控制媒体",
       "lastScannedHeading": "上次扫描",
+      "lastScannedEmpty": "尚未扫描任何内容",
       "lastScannedUid": "ID：{{uid}}",
       "historyTitle": "历史记录",
       "historyReplay": "重新执行扫描",
@@ -2143,7 +2144,8 @@
         "controls": "控制",
         "readers": "读卡器",
         "favourites": "收藏",
-        "recents": "最近玩过"
+        "recents": "最近玩过",
+        "lastScanned": "上次扫描"
       },
       "places": {
         "main": "主列",

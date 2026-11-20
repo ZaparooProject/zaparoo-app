@@ -431,8 +431,6 @@ export function Index({
       {!customLayout && !(remoteDocked && remoteFeature.available) && (
         <GatedFeature featureId="remoteInput">{launcherButton}</GatedFeature>
       )}
-
-      <LastScanned />
     </div>
   );
 
@@ -512,6 +510,7 @@ export function Index({
         onSelect={setSelectedCoverEntry}
       />
     ),
+    lastScanned: <LastScanned key="lastScanned" />,
   };
   const renderWidget = (id: ZapWidgetId): ReactNode => {
     const button = zapButtonOf(layout, id);

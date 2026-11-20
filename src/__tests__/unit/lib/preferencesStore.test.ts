@@ -112,7 +112,7 @@ describe("usePreferencesStore", () => {
         main: ["scan", "nowPlaying"],
         side: ["controls"],
         bottom: ["favourites", "recents"],
-        hidden: ["readers"],
+        hidden: ["readers", "lastScanned"],
       });
     });
 

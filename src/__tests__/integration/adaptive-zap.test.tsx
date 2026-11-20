@@ -30,6 +30,7 @@ import { responsiveWindow } from "@/test-utils/responsiveWindow";
 import {
   defaultZapLayout,
   hideZapWidget,
+  showZapWidget,
   moveZapWidget,
   newZapButton,
   newZapCollection,
@@ -704,7 +705,67 @@ describe("Adaptive Zap", () => {
       ).not.toBeInTheDocument();
       expect(
         usePreferencesStore.getState().zapLayouts[activeKey()]?.places.hidden,
-      ).toEqual(["nowPlaying"]);
+      ).toEqual(["lastScanned", "nowPlaying"]);
+    });
+
+    // GitHub #302: the tag ID is back as a widget the user adds.
+    it("should add Last scanned from the editor and show the scanned tag's ID", async () => {
+      responsiveWindow(1440);
+      const user = userEvent.setup();
+      useStatusStore.setState({
+        lastToken: {
+          type: "ntag",
+          uid: "04a1b2c3d4e5f6",
+          text: "",
+          data: "",
+          scanTime: "2026-11-20T01:02:03Z",
+        },
+      });
+      await renderZap();
+      expect(
+        screen.queryByRole("region", { name: "scan.lastScannedHeading" }),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText("04a1b2c3d4e5f6")).not.toBeInTheDocument();
+
+      await user.click(
+        screen.getByRole("button", { name: "zapLayout.customise" }),
+      );
+      await user.click(
+        within(frameOf("lastScanned")).getByRole("button", {
+          name: "zapLayout.showWidget",
+        }),
+      );
+      await user.click(screen.getByRole("button", { name: "zapLayout.done" }));
+
+      expect(
+        usePreferencesStore.getState().zapLayouts[activeKey()]?.places,
+      ).toEqual({
+        main: ["nowPlaying", "scan", "lastScanned"],
+        side: ["controls", "readers"],
+        bottom: ["favourites", "recents"],
+        hidden: [],
+      });
+      const widget = screen.getByRole("region", {
+        name: "scan.lastScannedHeading",
+      });
+      expect(within(widget).getByText("04a1b2c3d4e5f6")).toBeInTheDocument();
+    });
+
+    it("should show Last scanned with an empty state before the first scan", async () => {
+      responsiveWindow(390);
+      usePreferencesStore.setState({
+        zapLayouts: {
+          [activeKey()]: showZapWidget(defaultZapLayout(), "lastScanned"),
+        },
+      });
+      await renderZap();
+
+      const widget = screen.getByRole("region", {
+        name: "scan.lastScannedHeading",
+      });
+      expect(
+        within(widget).getByText("scan.lastScannedEmpty"),
+      ).toBeInTheDocument();
     });
 
     it("should discard edits on cancel", async () => {

@@ -770,6 +770,7 @@
       "mediaResume": "Hervatten",
       "mediaControlError": "Media konden niet worden bediend",
       "lastScannedHeading": "Laatst gescand",
+      "lastScannedEmpty": "Nog niets gescand",
       "lastScannedUid": "ID: {{uid}}",
       "historyTitle": "Geschiedenis",
       "historyReplay": "Scan herhalen",
@@ -2143,7 +2144,8 @@
         "controls": "Bediening",
         "readers": "Lezers",
         "favourites": "Favorieten",
-        "recents": "Onlangs gespeeld"
+        "recents": "Onlangs gespeeld",
+        "lastScanned": "Laatst gescand"
       },
       "places": {
         "main": "Hoofdkolom",

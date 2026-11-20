@@ -770,6 +770,7 @@
       "mediaResume": "재개",
       "mediaControlError": "미디어를 제어하지 못했습니다",
       "lastScannedHeading": "마지막 스캔",
+      "lastScannedEmpty": "아직 스캔한 항목이 없습니다",
       "lastScannedUid": "ID: {{uid}}",
       "historyTitle": "기록",
       "historyReplay": "스캔 다시 실행",
@@ -2143,7 +2144,8 @@
         "controls": "컨트롤",
         "readers": "리더",
         "favourites": "즐겨찾기",
-        "recents": "최근 플레이"
+        "recents": "최근 플레이",
+        "lastScanned": "마지막 스캔"
       },
       "places": {
         "main": "메인 열",

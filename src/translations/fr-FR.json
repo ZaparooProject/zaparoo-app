@@ -770,6 +770,7 @@
       "mediaResume": "Reprendre",
       "mediaControlError": "Impossible de contrôler le média",
       "lastScannedHeading": "Dernier scan",
+      "lastScannedEmpty": "Rien n’a encore été scanné",
       "lastScannedUid": "ID : {{uid}}",
       "historyTitle": "Historique",
       "historyReplay": "Relancer le scan",
@@ -2143,7 +2144,8 @@
         "controls": "Commandes",
         "readers": "Lecteurs",
         "favourites": "Favoris",
-        "recents": "Joués récemment"
+        "recents": "Joués récemment",
+        "lastScanned": "Dernier scan"
       },
       "places": {
         "main": "Colonne principale",

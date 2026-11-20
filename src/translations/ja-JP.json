@@ -770,6 +770,7 @@
       "mediaResume": "再開",
       "mediaControlError": "メディアを操作できませんでした",
       "lastScannedHeading": "最後にスキャン",
+      "lastScannedEmpty": "まだ何もスキャンされていません",
       "lastScannedUid": "ID: {{uid}}",
       "historyTitle": "履歴",
       "historyReplay": "スキャンを再実行",
@@ -2143,7 +2144,8 @@
         "controls": "コントロール",
         "readers": "リーダー",
         "favourites": "お気に入り",
-        "recents": "最近プレイ"
+        "recents": "最近プレイ",
+        "lastScanned": "最後にスキャン"
       },
       "places": {
         "main": "メイン列",

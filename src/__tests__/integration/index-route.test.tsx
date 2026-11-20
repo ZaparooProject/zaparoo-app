@@ -663,9 +663,9 @@ describe("Index Route Integration", () => {
     });
   });
 
-  // GitHub #302: the Zap page stopped showing a scanned tag's ID in v2.
+  // GitHub #302: Last scanned is an optional widget, not part of the page.
   describe("Last scanned", () => {
-    it("should show the ID of the last scanned tag", () => {
+    it("should not be on the default page, even after a scan", () => {
       useStatusStore.setState({
         lastToken: {
           type: "ntag",
@@ -683,21 +683,9 @@ describe("Index Route Integration", () => {
       );
 
       expect(
-        screen.getByRole("heading", { name: "scan.lastScannedHeading" }),
-      ).toBeInTheDocument();
-      expect(screen.getByText("04a1b2c3d4e5f6")).toBeInTheDocument();
-    });
-
-    it("should stay hidden until a tag has been scanned", () => {
-      render(
-        <TestWrapper>
-          <Index />
-        </TestWrapper>,
-      );
-
-      expect(
         screen.queryByRole("heading", { name: "scan.lastScannedHeading" }),
       ).not.toBeInTheDocument();
+      expect(screen.queryByText("04a1b2c3d4e5f6")).not.toBeInTheDocument();
     });
   });
 

@@ -70,8 +70,65 @@ describe("zapLayout", () => {
         main: ["scan", "nowPlaying"],
         side: ["controls", "readers"],
         bottom: ["favourites", "recents"],
-        hidden: [],
+        hidden: ["lastScanned"],
       });
+    });
+
+    // GitHub #302: Last scanned is optional, so adding it to the app must
+    // not change a page the user already has.
+    it("should keep an optional widget a stored layout predates off the page", () => {
+      const stored = {
+        version: 1,
+        places: {
+          main: ["scan", "nowPlaying"],
+          side: ["readers"],
+          bottom: ["recents", "favourites"],
+          hidden: ["controls"],
+        },
+        buttons: {},
+        collections: {},
+      };
+      const layout = normaliseZapLayout(stored);
+      expect(layout?.places).toEqual({
+        ...stored.places,
+        hidden: ["controls", "lastScanned"],
+      });
+    });
+
+    it("should still read a stored copy of the old default as the default", () => {
+      const layout = normaliseZapLayout({
+        version: 1,
+        places: {
+          main: ["nowPlaying", "scan"],
+          side: ["controls", "readers"],
+          bottom: ["favourites", "recents"],
+          hidden: [],
+        },
+        buttons: {},
+        collections: {},
+      });
+      expect(isDefaultZapLayout(layout as ZapLayout)).toBe(true);
+    });
+  });
+
+  describe("optional widgets", () => {
+    it("should leave Last scanned out of the default page", () => {
+      const layout = defaultZapLayout();
+      expect(findZapPlace(layout, "lastScanned").place).toBe("hidden");
+    });
+
+    it("should add Last scanned to the end of the main column when shown", () => {
+      const shown = showZapWidget(defaultZapLayout(), "lastScanned");
+      expect(shown.places.main).toEqual(["nowPlaying", "scan", "lastScanned"]);
+      expect(shown.places.hidden).toEqual([]);
+      expect(isDefaultZapLayout(shown)).toBe(false);
+    });
+
+    it("should be the default layout again once Last scanned is hidden", () => {
+      const shown = showZapWidget(defaultZapLayout(), "lastScanned");
+      expect(isDefaultZapLayout(hideZapWidget(shown, "lastScanned"))).toBe(
+        true,
+      );
     });
   });
 
@@ -114,12 +171,16 @@ describe("zapLayout", () => {
 
     it("should hide a widget and bring it back to its default place", () => {
       const hidden = hideZapWidget(defaultZapLayout(), "controls");
-      expect(hidden.places.hidden).toEqual(["controls"]);
+      expect(hidden.places.hidden).toEqual(["lastScanned", "controls"]);
       expect(hidden.places.side).toEqual(["readers"]);
       expect(moveZapWidgetBy(hidden, "controls", 1)).toEqual(hidden);
       expect(showZapWidget(hidden, "controls")).toEqual({
         ...hidden,
-        places: { ...hidden.places, hidden: [], side: ["readers", "controls"] },
+        places: {
+          ...hidden.places,
+          hidden: ["lastScanned"],
+          side: ["readers", "controls"],
+        },
       });
     });
   });
@@ -184,7 +245,7 @@ describe("zapLayout", () => {
       });
 
       expect(layout?.places.main).toEqual(["button:a", "nowPlaying", "scan"]);
-      expect(layout?.places.hidden).toEqual(["button:b"]);
+      expect(layout?.places.hidden).toEqual(["lastScanned", "button:b"]);
       expect(layout?.buttons.a).toMatchObject({
         id: "a",
         label: "Mute",
@@ -283,7 +344,7 @@ describe("zapLayout", () => {
       expect(layout?.collections.d).toBeUndefined();
       expect(layout?.places.bottom).toContain("collection:a");
       expect(layout?.places.bottom).not.toContain("collection:gone");
-      expect(layout?.places.hidden).toEqual(["collection:b"]);
+      expect(layout?.places.hidden).toEqual(["lastScanned", "collection:b"]);
     });
 
     it("should give copied collection rows new ids", () => {

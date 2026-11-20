@@ -660,7 +660,7 @@ Keep them concise. Do not add extra cards, icons or status badges.
 Home is the phone-as-reader screen: scanning is the primary action and the one
 Pro is sold on, and everything below it is the connected device's live state.
 
-Order: header (logo, device pill, history) → scan actions → Remote Keyboard → last scanned → Now Playing →
+Order: header (logo, device pill, history) → scan actions → Remote Keyboard → Now Playing →
 background slot → favourites → recently played → reader strip.
 
 Patterns:
@@ -679,11 +679,16 @@ Patterns:
   switch to the scanning/stop state and it carries `aria-pressed`.
 - Remote Keyboard is a full-width secondary `Button` below the scan actions,
   behind the `remoteInput` feature gate and disabled while disconnected.
-- Last scanned (`LastScanned`) sits below Remote Keyboard in the scan widget and
-  is hidden until there is a token. It shows the latest token from the phone or
-  a device reader as a History row does: value, muted time, and the tag ID as a
-  low-priority detail, each with a `CopyButton`. A scan that launches nothing
-  reaches no history, so this is the only place its ID appears.
+- Last scanned (`LastScanned`) is an optional built-in widget (`lastScanned`).
+  It is not part of the default page: it starts in the layout editor's Hidden
+  list and Show adds it to the end of the main column. It shows the latest
+  token from the phone or a device reader as a History row does: value with a
+  `CopyButton`, muted time, and the tag ID as a low-priority detail with its own
+  `CopyButton`. Before the first scan it keeps its heading and card with a
+  compact `EmptyState` ("Nothing scanned yet") so it never appears and
+  disappears. A scan that launches nothing reaches no history, so this is the
+  only place its ID appears. Optional built-ins join `hidden` in stored layouts
+  that predate them, so adding one never changes an existing page.
 - Device identity is a `StatusPill` in the Home header actions, opening a
   `SlideModal` device sheet. Pair is an unframed `ghost` icon action on the
   connected-device status row, matching Refresh below with a 48px square target.
