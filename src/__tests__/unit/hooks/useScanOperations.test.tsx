@@ -46,6 +46,21 @@ vi.mock("@/hooks/useHaptics", () => ({
   useHaptics: () => mockHaptics,
 }));
 
+/**
+ * Camera access refused on Android, where a single scan falls back to
+ * Google's scanner sheet. Granted access opens the app's own camera view,
+ * covered in useScanOperations.continuousCamera.test.tsx.
+ */
+const refuseCameraAccess = () => {
+  vi.mocked(Capacitor.getPlatform).mockReturnValue("android");
+  vi.mocked(BarcodeScanner.checkPermissions).mockResolvedValueOnce({
+    camera: "denied",
+  });
+  vi.mocked(BarcodeScanner.requestPermissions).mockResolvedValueOnce({
+    camera: "denied",
+  });
+};
+
 const createMockBarcode = (rawValue: string): Barcode => ({
   rawValue,
   displayValue: rawValue,
@@ -266,8 +281,9 @@ describe("useScanOperations", () => {
     });
   });
 
-  describe("handleCameraScan", () => {
+  describe("handleCameraScan with the system scanner sheet", () => {
     it("should call barcode scanner", async () => {
+      refuseCameraAccess();
       // Arrange
       vi.mocked(BarcodeScanner.scan).mockResolvedValue({
         barcodes: [createMockBarcode("**launch.system:snes")],
@@ -284,6 +300,7 @@ describe("useScanOperations", () => {
     });
 
     it("offers to map a code Core can't run, on the scan control", async () => {
+      refuseCameraAccess();
       const toastError = vi.spyOn(toast, "error");
       vi.spyOn(CoreAPI, "run").mockRejectedValue(
         new CoreApiError("no media", 1, { category: "media_not_found" }),
@@ -320,6 +337,7 @@ describe("useScanOperations", () => {
     });
 
     it("should process barcode value and call setLastToken", async () => {
+      refuseCameraAccess();
       // Arrange
       vi.mocked(BarcodeScanner.scan).mockResolvedValue({
         barcodes: [createMockBarcode("game:mario")],
@@ -343,6 +361,7 @@ describe("useScanOperations", () => {
     });
 
     it("should handle write command barcodes", async () => {
+      refuseCameraAccess();
       // Arrange
       vi.mocked(BarcodeScanner.scan).mockResolvedValue({
         barcodes: [createMockBarcode("**write:Some NFC content")],
@@ -403,6 +422,7 @@ describe("useScanOperations", () => {
     });
 
     it("should not report denied camera access", async () => {
+      refuseCameraAccess();
       vi.useRealTimers();
       try {
         vi.mocked(BarcodeScanner.scan).mockRejectedValue(
@@ -510,6 +530,7 @@ describe("useScanOperations", () => {
     });
 
     it("should open the pro purchase modal from the camera for a camera scan", async () => {
+      refuseCameraAccess();
       sessionManager.launchOnScan = true;
       vi.mocked(BarcodeScanner.scan).mockResolvedValue({
         barcodes: [createMockBarcode("**launch.system:snes")],

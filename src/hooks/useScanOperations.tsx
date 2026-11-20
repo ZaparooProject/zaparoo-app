@@ -423,9 +423,24 @@ export function useScanOperations({
     // scanner plugin to open.
     if (!Capacitor.isNativePlatform()) return;
 
-    if (continuousCameraEnabled) {
-      await startContinuousCamera().catch(handleCameraError);
+    // Both modes use the app's own camera view. Without continuous camera it
+    // closes after the first code that launches.
+    try {
+      await startContinuousCamera({ single: !continuousCameraEnabled });
       return;
+    } catch (error) {
+      // Google's scanner sheet needs no camera permission, so Android can
+      // still scan one code after camera access was refused.
+      const denied =
+        wrapBarcodeScannerError(error) instanceof BarcodePermissionDeniedError;
+      if (
+        !denied ||
+        continuousCameraEnabled ||
+        Capacitor.getPlatform() !== "android"
+      ) {
+        handleCameraError(error);
+        return;
+      }
     }
 
     await BarcodeScanner.scan()

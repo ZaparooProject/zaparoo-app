@@ -86,23 +86,13 @@ describe("Home Page Scan Flows", () => {
         name: "leads with NFC when both are available",
         nfc: true,
         camera: true,
-        last: null,
         leading: "nfc",
         alternate: "camera",
-      },
-      {
-        name: "leads with the camera once it is the mode in use",
-        nfc: true,
-        camera: true,
-        last: "camera" as const,
-        leading: "camera",
-        alternate: "nfc",
       },
       {
         name: "shows one action when only NFC is available",
         nfc: true,
         camera: false,
-        last: null,
         leading: "nfc",
         alternate: null,
       },
@@ -110,12 +100,11 @@ describe("Home Page Scan Flows", () => {
         name: "shows one action when only the camera is available",
         nfc: false,
         camera: true,
-        last: "camera" as const,
         leading: "camera",
         alternate: null,
       },
-    ])("$name", ({ nfc, camera, last, leading, alternate }) => {
-      const layout = resolveScanLayout(nfc, camera, last, true);
+    ])("$name", ({ nfc, camera, leading, alternate }) => {
+      const layout = resolveScanLayout(nfc, camera, true);
 
       expect(layout.leading).toBe(leading);
       expect(layout.alternate).toBe(alternate);
@@ -123,26 +112,21 @@ describe("Home Page Scan Flows", () => {
     });
 
     it("offers no scan control when the phone has neither reader", () => {
-      const layout = resolveScanLayout(false, false, null, true);
+      const layout = resolveScanLayout(false, false, true);
 
       expect(layout.canScan).toBe(false);
       expect(layout.showEmptyState).toBe(true);
     });
 
-    it("does not re-order while the page is open", () => {
+    it("keeps Tap a tag first after the camera has been used", () => {
+      usePreferencesStore.setState({ lastScanMode: "camera" });
       const { result } = renderHook(() => useHomeScanLayout());
-      expect(result.current.leading).toBe("nfc");
 
-      act(() => {
-        usePreferencesStore.setState({ lastScanMode: "camera" });
-      });
-
-      // The action the user just used must not grow under their finger; the new
-      // order lands on the next visit.
       expect(result.current.leading).toBe("nfc");
+      expect(result.current.alternate).toBe("camera");
     });
 
-    it("re-orders when the phone's capabilities change", () => {
+    it("drops an action when the phone loses that capability", () => {
       const { result } = renderHook(() => useHomeScanLayout());
       expect(result.current.leading).toBe("nfc");
 

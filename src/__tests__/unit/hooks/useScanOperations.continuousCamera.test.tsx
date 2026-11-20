@@ -3,6 +3,7 @@ import { renderHook, act } from "../../../test-utils";
 import { useScanOperations } from "@/hooks/useScanOperations";
 import {
   CAMERA_IDLE_STOP_MS,
+  CAMERA_SINGLE_CLOSE_MS,
   SCANNER_BODY_CLASS,
 } from "@/hooks/useContinuousCamera";
 import { sessionManager } from "@/lib/nfc";
@@ -96,17 +97,80 @@ describe("useScanOperations continuous camera", () => {
     });
   };
 
-  it("uses the one-shot scanner when continuous camera is off", async () => {
-    usePreferencesStore.setState({ continuousCamera: false });
-    const { result } = renderHook(() => useScanOperations(props));
-
-    await act(async () => {
-      await result.current.handleCameraScan();
+  describe("with continuous camera off", () => {
+    beforeEach(() => {
+      usePreferencesStore.setState({ continuousCamera: false });
     });
 
-    expect(BarcodeScanner.scan).toHaveBeenCalled();
-    expect(BarcodeScanner.startScan).not.toHaveBeenCalled();
-    expect(result.current.continuousCamera.active).toBe(false);
+    it("opens the app's own camera view, not the system sheet", async () => {
+      const { result } = await openCamera();
+
+      expect(BarcodeScanner.startScan).toHaveBeenCalled();
+      expect(BarcodeScanner.scan).not.toHaveBeenCalled();
+      expect(result.current.continuousCamera.active).toBe(true);
+    });
+
+    it("closes shortly after the first code launches", async () => {
+      const { result } = await openCamera();
+
+      await emit("game-a");
+      expect(runSpy).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        launchFeedback.mediaStarted({
+          name: "Game A",
+          systemId: "SNES",
+          systemName: "SNES",
+          path: "SNES/Game A.sfc",
+        });
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(result.current.continuousCamera.result?.phase).toBe("launched");
+      expect(result.current.continuousCamera.active).toBe(true);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(CAMERA_SINGLE_CLOSE_MS);
+      });
+      expect(result.current.continuousCamera.active).toBe(false);
+      expect(BarcodeScanner.stopScan).toHaveBeenCalled();
+    });
+
+    it("ignores other codes while the first is launching", async () => {
+      await openCamera();
+
+      await emit("game-a");
+      await emit("game-b");
+
+      expect(runSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it("stays open after a failed code so another can be scanned", async () => {
+      runSpy.mockRejectedValueOnce(new Error("launcher not found"));
+      const { result } = await openCamera();
+
+      await emit("game-a");
+      expect(result.current.continuousCamera.result?.phase).toBe("failed");
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(CAMERA_SINGLE_CLOSE_MS);
+      });
+      expect(result.current.continuousCamera.active).toBe(true);
+
+      await emit("game-b");
+      expect(runSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it("falls back to the system sheet on Android when camera access is refused", async () => {
+      vi.mocked(BarcodeScanner.checkPermissions).mockResolvedValueOnce({
+        camera: "denied",
+      });
+      vi.mocked(BarcodeScanner.requestPermissions).mockResolvedValueOnce({
+        camera: "denied",
+      });
+      const { result } = await openCamera();
+
+      expect(BarcodeScanner.scan).toHaveBeenCalled();
+      expect(BarcodeScanner.startScan).not.toHaveBeenCalled();
+      expect(result.current.continuousCamera.active).toBe(false);
+    });
   });
 
   it("starts the live camera behind a transparent app when on", async () => {

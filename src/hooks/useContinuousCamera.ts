@@ -25,6 +25,8 @@ export const SCANNER_BODY_CLASS = "barcode-scanner-active";
 export const CAMERA_REARM_MS = 2000;
 /** The camera closes itself after this long without a new code. */
 export const CAMERA_IDLE_STOP_MS = 60_000;
+/** A single scan shows its result for this long before the camera closes. */
+export const CAMERA_SINGLE_CLOSE_MS = 900;
 /** The outline hides when its code has not been seen for this long. */
 const OUTLINE_HIDE_MS = 500;
 
@@ -49,7 +51,11 @@ export interface ContinuousCamera {
   torchOn: boolean;
   /** The camera closed itself after a minute without a scan. */
   idleStopped: boolean;
-  start: () => Promise<void>;
+  /**
+   * Opens the camera. `single` closes it after the first code that launches
+   * or is recorded; a code that fails leaves it open to try another.
+   */
+  start: (options?: { single?: boolean }) => Promise<void>;
   stop: () => void;
   toggleTorch: () => void;
 }
@@ -124,6 +130,10 @@ export function useContinuousCamera({
   const scanIdRef = useRef(0);
   const launchIdRef = useRef<number | null>(null);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const singleRef = useRef(false);
+  // In single mode one code is in hand until it fails; others are ignored.
+  const singleBusyRef = useRef(false);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const outlineTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const stopSession = useCallback((idle: boolean) => {
@@ -134,8 +144,11 @@ export function useContinuousCamera({
     cleanupsRef.current = [];
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     if (outlineTimerRef.current) clearTimeout(outlineTimerRef.current);
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
     idleTimerRef.current = null;
     outlineTimerRef.current = null;
+    closeTimerRef.current = null;
+    singleBusyRef.current = false;
     seenRef.current.clear();
     currentCodeRef.current = null;
     launchIdRef.current = null;
@@ -159,6 +172,15 @@ export function useContinuousCamera({
       idleTimerRef.current = null;
       stopSession(true);
     }, CAMERA_IDLE_STOP_MS);
+  }, [stopSession]);
+
+  /** A single scan is done: leave its result up briefly, then close. */
+  const closeAfterSingle = useCallback(() => {
+    if (!singleRef.current || closeTimerRef.current) return;
+    closeTimerRef.current = setTimeout(() => {
+      closeTimerRef.current = null;
+      stopSession(false);
+    }, CAMERA_SINGLE_CLOSE_MS);
   }, [stopSession]);
 
   const showOutline = useCallback((points: CameraPoint[] | null) => {
@@ -187,6 +209,7 @@ export function useContinuousCamera({
 
       const scanId = ++scanIdRef.current;
       launchIdRef.current = null;
+      singleBusyRef.current = singleRef.current;
       setResult({
         phase: "launching",
         code,
@@ -211,6 +234,8 @@ export function useContinuousCamera({
           source: "camera",
           onError: (error) => {
             if (scanIdRef.current !== scanId || !activeRef.current) return;
+            // A failed code frees the camera to try another.
+            singleBusyRef.current = false;
             setResult({
               phase: "failed",
               code,
@@ -238,9 +263,10 @@ export function useContinuousCamera({
         setResult((current) =>
           current?.code === code ? { ...current, phase: "scanned" } : current,
         );
+        closeAfterSingle();
       });
     },
-    [armIdleTimer, stopSession],
+    [armIdleTimer, closeAfterSingle, stopSession],
   );
 
   const handleBarcodes = useCallback(
@@ -265,6 +291,7 @@ export function useContinuousCamera({
       }
 
       if (!fresh) return;
+      if (singleBusyRef.current) return;
       currentCodeRef.current = fresh.code;
       showOutline(fresh.points);
       launchCode(fresh.code);
@@ -272,73 +299,79 @@ export function useContinuousCamera({
     [launchCode, showOutline],
   );
 
-  const start = useCallback(async () => {
-    if (activeRef.current) return;
-    activeRef.current = true;
-    const session = ++sessionRef.current;
-    setIdleStopped(false);
-    setResult(null);
-    setOutline(null);
-    document.body.classList.add(SCANNER_BODY_CLASS);
-    setActive(true);
+  const start = useCallback(
+    async (options?: { single?: boolean }) => {
+      if (activeRef.current) return;
+      activeRef.current = true;
+      singleRef.current = options?.single ?? false;
+      singleBusyRef.current = false;
+      const session = ++sessionRef.current;
+      setIdleStopped(false);
+      setResult(null);
+      setOutline(null);
+      document.body.classList.add(SCANNER_BODY_CLASS);
+      setActive(true);
 
-    cleanupsRef.current.push(
-      launchFeedback.subscribe((event) => {
-        if (event.kind === "read" || event.source !== "camera") return;
-        if (event.kind === "started") {
-          launchIdRef.current = event.id;
-        } else if (
-          event.kind === "launched" &&
-          event.id === launchIdRef.current
-        ) {
-          setResult((current) =>
-            current?.phase === "launching"
-              ? { ...current, phase: "launched", media: event.media }
-              : current,
-          );
-        }
-      }),
-    );
-
-    try {
-      await ensureCameraPermission();
-      if (sessionRef.current !== session) return;
-
-      const handles: PluginListenerHandle[] = await Promise.all([
-        BarcodeScanner.addListener("barcodesScanned", handleBarcodes),
-        BarcodeScanner.addListener("scanError", (event) => {
-          logger.debug("Camera scan error:", event.message);
+      cleanupsRef.current.push(
+        launchFeedback.subscribe((event) => {
+          if (event.kind === "read" || event.source !== "camera") return;
+          if (event.kind === "started") {
+            launchIdRef.current = event.id;
+          } else if (
+            event.kind === "launched" &&
+            event.id === launchIdRef.current
+          ) {
+            setResult((current) =>
+              current?.phase === "launching"
+                ? { ...current, phase: "launched", media: event.media }
+                : current,
+            );
+            closeAfterSingle();
+          }
         }),
-      ]);
-      const removeHandles = () => {
-        for (const handle of handles) {
-          handle.remove().catch((error: unknown) => {
-            logger.debug("Failed to remove camera listener:", error);
-          });
+      );
+
+      try {
+        await ensureCameraPermission();
+        if (sessionRef.current !== session) return;
+
+        const handles: PluginListenerHandle[] = await Promise.all([
+          BarcodeScanner.addListener("barcodesScanned", handleBarcodes),
+          BarcodeScanner.addListener("scanError", (event) => {
+            logger.debug("Camera scan error:", event.message);
+          }),
+        ]);
+        const removeHandles = () => {
+          for (const handle of handles) {
+            handle.remove().catch((error: unknown) => {
+              logger.debug("Failed to remove camera listener:", error);
+            });
+          }
+        };
+        if (sessionRef.current !== session) {
+          removeHandles();
+          return;
         }
-      };
-      if (sessionRef.current !== session) {
-        removeHandles();
-        return;
+        cleanupsRef.current.push(removeHandles);
+
+        await BarcodeScanner.startScan();
+        if (sessionRef.current !== session) return;
+        armIdleTimer();
+
+        BarcodeScanner.isTorchAvailable()
+          .then(({ available }) => {
+            if (sessionRef.current === session) setTorchAvailable(available);
+          })
+          .catch((error) => {
+            logger.debug("Torch availability check failed:", error);
+          });
+      } catch (error) {
+        if (sessionRef.current === session) stopSession(false);
+        throw error;
       }
-      cleanupsRef.current.push(removeHandles);
-
-      await BarcodeScanner.startScan();
-      if (sessionRef.current !== session) return;
-      armIdleTimer();
-
-      BarcodeScanner.isTorchAvailable()
-        .then(({ available }) => {
-          if (sessionRef.current === session) setTorchAvailable(available);
-        })
-        .catch((error) => {
-          logger.debug("Torch availability check failed:", error);
-        });
-    } catch (error) {
-      if (sessionRef.current === session) stopSession(false);
-      throw error;
-    }
-  }, [armIdleTimer, handleBarcodes, stopSession]);
+    },
+    [armIdleTimer, closeAfterSingle, handleBarcodes, stopSession],
+  );
 
   const toggleTorch = useCallback(() => {
     const session = sessionRef.current;

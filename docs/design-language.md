@@ -648,9 +648,9 @@ Queue or deep-link writes without a visible source control use the compact reade
 
 Launch feedback (`src/lib/launchFeedback.ts`) is the single source for the launch moment on every reader path (NFC, camera, passive taps, shake, queue): a light impact when a token is read (skipped on Android NFC, where the OS already buzzes), then a success or error notification when Core answers. Success lands on Core's `media.started`, or on the run resolving when nothing starts within 5 seconds. Callers do not play their own read, success or error haptics.
 
-### Continuous camera scanner
+### Camera scanner
 
-With Settings → Readers → Continuous camera on, Camera opens `CameraScannerOverlay` over the live camera feed (`useContinuousCamera`). With it off, Camera keeps the plugin's one-shot scanner.
+Scan a code always opens `CameraScannerOverlay` over the live camera feed (`useContinuousCamera`). With Settings → Readers → Continuous camera off it is a single scan: it closes shortly after the first code launches or is recorded, ignores other codes while that one is launching, and stays open after a failure so the reason and Map it are shown and another code can be tried. With the setting on it stays open and launches each code until Done. The plugin's own scanner sheet is only a fallback: a single scan on Android after camera access was refused, because that sheet needs no camera permission; its result then shows on the Scan a code control.
 
 - the WebView goes transparent while it runs (`body.barcode-scanner-active` hides `.app-frame`); always remove the class on stop and unmount
 - no reticle. A heading at the top, a torch button when the device has one, and a bottom bar with the last result and Done
@@ -699,11 +699,11 @@ background slot → favourites → recently played → reader strip.
 Patterns:
 
 - Scanning is `ScanActions` (`src/components/home/ScanActions.tsx`): a stacked
-  column with the leading mode first and the other mode beneath. NFC leads
-  unless the camera is the mode last used, and a phone with one capability
-  gets a single action. There is no mode toggle. The NFC action is a
+  column in a fixed order on every platform: Tap a tag, then Scan a code, with
+  Controls beneath. The order never follows the mode last used. A phone with
+  one capability gets a single action. There is no mode toggle. The NFC action is a
   `ReaderActivityControl` (`size="lg"`, `layout="stacked"`); the camera action
-  is a secondary stacked `Button`. When NFC is disabled the NFC slot becomes a
+  is a secondary `ReaderActivityControl` that opens the app's own camera view. When NFC is disabled the NFC slot becomes a
   primary button that opens NFC settings.
 - While a queued or deep-link write is active, its `ReaderActivityControl`
   replaces the scan actions; with no reader at all the section shows an
