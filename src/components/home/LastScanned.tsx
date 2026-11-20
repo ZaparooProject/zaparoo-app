@@ -42,7 +42,10 @@ export function LastScanned() {
           <div className="min-w-0">
             <div className="text-foreground flex min-w-0 items-start gap-1 font-medium">
               <span className="min-w-0 break-all">{primaryValue}</span>
+              {/* Keyed by value: a new token must not inherit the last
+                  one's "copied" state, which blocks the next copy. */}
               <CopyButton
+                key={primaryValue}
                 text={primaryValue}
                 className="shrink-0 translate-y-0 self-center"
               />
@@ -56,6 +59,7 @@ export function LastScanned() {
                   {t("scan.lastScannedUid", { uid })}
                 </span>
                 <CopyButton
+                  key={uid}
                   text={uid}
                   className="shrink-0 translate-y-0 self-center"
                 />

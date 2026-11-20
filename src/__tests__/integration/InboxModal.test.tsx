@@ -5,7 +5,7 @@ import { render, screen, waitFor } from "../../test-utils";
 import { InboxModal } from "@/components/InboxModal";
 import { useStatusStore } from "@/lib/store";
 import { CoreAPI } from "@/lib/coreApi";
-import { InboxSeverity } from "@/lib/models";
+import { InboxSeverity, type InboxMessage } from "@/lib/models";
 import { mockInboxMessage } from "../../test-utils/factories";
 
 const { mockErrorToast } = vi.hoisted(() => ({ mockErrorToast: vi.fn() }));
@@ -208,6 +208,44 @@ describe("InboxModal", () => {
       expect(useStatusStore.getState().inboxMessages).toEqual([other]);
     });
     expect(screen.queryByText("Gone")).not.toBeInTheDocument();
+    expect(mockErrorToast).not.toHaveBeenCalled();
+  });
+
+  it("should not bring back a message removed while the inbox was being re-read", async () => {
+    const user = userEvent.setup();
+    const gone = mockInboxMessage({ id: 1, title: "Gone" });
+    const removedMeanwhile = mockInboxMessage({ id: 2, title: "Removed" });
+    vi.mocked(CoreAPI.inboxDelete)
+      .mockRejectedValueOnce(new Error("inbox message not found: 1"))
+      .mockResolvedValueOnce(undefined);
+    // Core read the inbox before the second delete reached it.
+    let finishRefresh: (value: { messages: InboxMessage[] }) => void = () =>
+      undefined;
+    vi.mocked(CoreAPI.inbox).mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishRefresh = resolve;
+      }),
+    );
+    useStatusStore.setState({
+      inboxModalOpen: true,
+      inboxMessages: [gone, removedMeanwhile],
+    });
+    render(<InboxModal />);
+
+    const deleteButtons = screen.getAllByRole("button", {
+      name: /inbox\.deleteOne/i,
+    });
+    await user.click(deleteButtons[0]!);
+    await user.click(deleteButtons[1]!);
+    await waitFor(() => {
+      expect(useStatusStore.getState().inboxMessages).toEqual([gone]);
+    });
+
+    finishRefresh({ messages: [removedMeanwhile] });
+
+    await waitFor(() => {
+      expect(useStatusStore.getState().inboxMessages).toEqual([]);
+    });
     expect(mockErrorToast).not.toHaveBeenCalled();
   });
 

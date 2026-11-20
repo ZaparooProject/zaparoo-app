@@ -174,13 +174,18 @@ export function InboxModal() {
 
   // Core does not announce removals, so the list can hold a message another
   // client already deleted. Only report a failed delete when Core still has
-  // the message.
+  // the message. Only this message is reconciled: replacing the list with the
+  // snapshot would bring back one removed while the snapshot was in flight.
   const reconcileFailedDelete = async (id: number, err: unknown) => {
     try {
       const fresh = await CoreAPI.inbox();
-      if (!isCancelled(fresh) && Array.isArray(fresh.messages)) {
-        setInboxMessages(fresh.messages);
-        if (!fresh.messages.some((message) => message.id === id)) return;
+      if (
+        !isCancelled(fresh) &&
+        Array.isArray(fresh.messages) &&
+        !fresh.messages.some((message) => message.id === id)
+      ) {
+        removeInboxMessage(id);
+        return;
       }
     } catch {
       // The original failure is the one worth reporting.

@@ -78,6 +78,27 @@ describe("LastScanned", () => {
     expect(writeToClipboard).toHaveBeenCalledWith("04a1b2c3d4e5f6");
   });
 
+  it("should copy a newly scanned tag's ID straight after copying the last one", async () => {
+    const user = userEvent.setup();
+    const token = (uid: string) => ({
+      type: "ntag",
+      uid,
+      text: "",
+      data: "",
+      scanTime: "2026-11-20T01:02:03Z",
+    });
+    useStatusStore.setState({ lastToken: token("04aaaaaaaaaaaa") });
+    render(<LastScanned />);
+
+    await user.click(screen.getByRole("button"));
+    expect(writeToClipboard).toHaveBeenLastCalledWith("04aaaaaaaaaaaa");
+
+    act(() => useStatusStore.setState({ lastToken: token("04bbbbbbbbbbbb") }));
+    await user.click(screen.getByRole("button"));
+
+    expect(writeToClipboard).toHaveBeenLastCalledWith("04bbbbbbbbbbbb");
+  });
+
   it("should not show Core's placeholder ID for a token from an API call", () => {
     useStatusStore.setState({
       lastToken: {
