@@ -656,7 +656,7 @@ Scan a code always opens `CameraScannerOverlay` over the live camera feed (`useC
 - no reticle. A heading at the top, a torch button when the device has one, and a bottom bar with the last result and Done
 - the scanned code is outlined from the plugin's corner points: `--interaction` while launching, `--status-green` when launched (game name, then “Launched · system”), `--status-red` on failure. A code Core has nothing to run for reads “Not set up yet”, with Map it beside Done
 - a code is ignored while it stays in view, and counts again after about 2 seconds out of frame
-- after 1 minute without a scan the camera stops and Zap shows “Camera stopped after 1 minute without a scan” under the Camera button. No toast
+- after 1 minute without a scan the camera closes by itself. It says nothing about it: no hint in the camera view, no notice on Zap and no toast. The result card is absent until a code has been read; do not fill it with placeholder or explanatory text
 - the heading takes focus, results are announced through the overlay's live region, and Android Back closes it
 
 ### Shake sheet

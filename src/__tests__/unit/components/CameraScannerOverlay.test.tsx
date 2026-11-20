@@ -94,14 +94,12 @@ describe("CameraScannerOverlay", () => {
     });
   };
 
-  it("opens focused on the heading with nothing scanned yet", async () => {
+  it("opens focused on the heading with no result shown", async () => {
     await openCamera();
 
     expect(
       screen.getByRole("heading", { name: "scan.cameraHeading" }),
     ).toHaveFocus();
-    expect(screen.getByText("scan.cameraIdle")).toBeInTheDocument();
-    expect(screen.getByText("scan.cameraIdleHint")).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "scan.mapIt" }),
     ).not.toBeInTheDocument();

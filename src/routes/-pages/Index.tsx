@@ -399,9 +399,6 @@ export function Index({
         onDismissScanError={clearScanError}
         cameraLaunching={cameraLaunching}
         nfcLaunching={nfcLaunching}
-        cameraNotice={
-          continuousCamera.idleStopped ? t("scan.cameraStoppedIdle") : undefined
-        }
         nfcEnabled={nfcEnabled}
         onOpenNfcSettings={openNfcSettings}
         writeActivity={

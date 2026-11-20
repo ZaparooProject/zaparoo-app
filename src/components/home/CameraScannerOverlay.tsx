@@ -61,10 +61,8 @@ function LaunchedMediaRow({ media }: { media: LaunchMedia }) {
 function resultLines(
   result: CameraScanResult | null,
   t: (key: string) => string,
-): { title: string; detail: string } {
-  if (!result) {
-    return { title: t("scan.cameraIdle"), detail: t("scan.cameraIdleHint") };
-  }
+): { title: string; detail: string } | null {
+  if (!result) return null;
   switch (result.phase) {
     case "launching":
       return { title: t("scan.launching"), detail: result.code };
@@ -202,32 +200,35 @@ function ScannerChrome({ camera }: CameraScannerOverlayProps) {
           paddingRight: `calc(${safeInsets.right} + 1rem)`,
         }}
       >
-        <Card>
-          {result?.phase === "launched" && result.media ? (
-            <LaunchedMediaRow media={result.media} />
-          ) : (
-            <div className="min-w-0">
-              <p
-                className={
-                  result?.phase === "failed"
-                    ? "text-error truncate font-semibold"
-                    : "truncate font-semibold"
-                }
-              >
-                {lines.title}
-              </p>
-              <p
-                className={
-                  result?.phase === "launched"
-                    ? "text-success truncate text-sm"
-                    : "text-muted-foreground truncate text-sm"
-                }
-              >
-                {lines.detail}
-              </p>
-            </div>
-          )}
-        </Card>
+        {/* Nothing is shown until a code has been read. */}
+        {result && (
+          <Card>
+            {result?.phase === "launched" && result.media ? (
+              <LaunchedMediaRow media={result.media} />
+            ) : (
+              <div className="min-w-0">
+                <p
+                  className={
+                    result?.phase === "failed"
+                      ? "text-error truncate font-semibold"
+                      : "truncate font-semibold"
+                  }
+                >
+                  {lines?.title}
+                </p>
+                <p
+                  className={
+                    result?.phase === "launched"
+                      ? "text-success truncate text-sm"
+                      : "text-muted-foreground truncate text-sm"
+                  }
+                >
+                  {lines?.detail}
+                </p>
+              </div>
+            )}
+          </Card>
+        )}
         <div className="flex gap-2">
           <Button
             variant="secondary"
@@ -247,7 +248,7 @@ function ScannerChrome({ camera }: CameraScannerOverlayProps) {
       </div>
 
       <div role="status" aria-live="polite" className="sr-only">
-        {result ? `${lines.title}. ${lines.detail}` : ""}
+        {lines ? `${lines.title}. ${lines.detail}` : ""}
       </div>
     </div>
   );

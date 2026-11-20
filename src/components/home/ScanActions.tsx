@@ -51,8 +51,6 @@ interface ScanActionsProps {
   cameraLaunching?: boolean;
   /** A tag was read and Core has not answered yet. */
   nfcLaunching?: boolean;
-  /** Why the camera last closed on its own, shown under its button. */
-  cameraNotice?: string;
   nfcEnabled: boolean;
   onOpenNfcSettings: () => void;
   writeActivity?: ReactNode;
@@ -69,7 +67,6 @@ export function ScanActions({
   onDismissScanError,
   cameraLaunching = false,
   nfcLaunching = false,
-  cameraNotice,
   nfcEnabled,
   onOpenNfcSettings,
   writeActivity,
@@ -150,18 +147,7 @@ export function ScanActions({
           announceStateChanges={false}
         />
       );
-      if (!cameraNotice) return cameraButton;
-      return (
-        <div key="camera" className="flex flex-col gap-2">
-          {cameraButton}
-          <p
-            role="status"
-            className="text-muted-foreground text-center text-sm"
-          >
-            {cameraNotice}
-          </p>
-        </div>
-      );
+      return cameraButton;
     }
 
     if (!nfcEnabled) {
