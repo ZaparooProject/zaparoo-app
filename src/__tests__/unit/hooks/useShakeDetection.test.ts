@@ -401,11 +401,28 @@ describe("useShakeDetection", () => {
 
       await triggerConfirmedShake();
       expect(setRunQueue).toHaveBeenCalledTimes(1);
+      // The first launch has finished and its sheet has gone.
+      act(() => {
+        useShakeSheetStore.getState().dismiss();
+      });
 
       vi.advanceTimersByTime(2500);
       await triggerConfirmedShake();
 
       expect(setRunQueue).toHaveBeenCalledTimes(2);
+    });
+
+    it("ignores a shake while the previous shake is still launching", async () => {
+      renderHook(() => useShakeDetection(PROPS));
+      await flushAsyncSetup();
+
+      await triggerConfirmedShake();
+      expect(useShakeSheetStore.getState().phase).toBe("launching");
+
+      vi.advanceTimersByTime(2500);
+      await triggerConfirmedShake();
+
+      expect(setRunQueue).toHaveBeenCalledTimes(1);
     });
   });
 

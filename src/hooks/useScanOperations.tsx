@@ -63,6 +63,10 @@ export function scanErrorFor(
 // A tag still in the field is read again as soon as the next session opens.
 // Within this window the same tag is the same tap, not a new one.
 export const SAME_TAG_COOLDOWN_MS = 2000;
+// How soon to look again while the same tag is still there. Shorter than the
+// cooldown so each look renews it; at the full cooldown a held tag would pass
+// as new on every other read and launch again.
+export const SAME_TAG_RECHECK_MS = SAME_TAG_COOLDOWN_MS / 2;
 
 interface UseScanOperationsProps {
   connected: boolean;
@@ -95,6 +99,7 @@ export function useScanOperations({
   // Android's reader session has ended by the time Core answers. iOS keeps
   // its scan sheet open instead, and a restarting session stays "scanning".
   const [nfcLaunching, setNfcLaunching] = useState(false);
+  const cameraAttemptRef = useRef(0);
   // The last tag a continuous NFC scan read, for the same-tag cooldown.
   const lastNfcReadRef = useRef<{ uid: string; at: number } | null>(null);
 
@@ -115,6 +120,9 @@ export function useScanOperations({
   // True only while a readTag() this hook started is waiting on the reader, so
   // unmount never cancels a write session another owner started.
   const ownsSessionRef = useRef(false);
+  // Counts reader sessions, so a session that ends after a newer one started
+  // cannot clear the newer one's state.
+  const sessionSeqRef = useRef(0);
   // A continuous scan restarts from inside its own promise chain, long after
   // the render that started it. Read launch conditions from here so a tap made
   // after connecting or unlocking Pro uses the current state.
@@ -228,6 +236,8 @@ export function useScanOperations({
     const ios = Capacitor.getPlatform() === "ios";
     setScanSession(true);
     ownsSessionRef.current = true;
+    const sessionSeq = ++sessionSeqRef.current;
+    const latest = () => sessionSeqRef.current === sessionSeq;
 
     const current = () => scanGenerationRef.current === generation;
 
@@ -277,6 +287,8 @@ export function useScanOperations({
 
     session
       .then((result) => {
+        // A newer session owns the reader and the scan state now.
+        if (!latest()) return;
         ownsSessionRef.current = false;
         if (result.status === Status.Cancelled) {
           // A cancelled scan is not a success - no announcement, no restart
@@ -297,7 +309,7 @@ export function useScanOperations({
           // The same tag is still at the phone: wait out the cooldown
           // rather than reading it again straight away.
           if (sessionManager.shouldRestart) {
-            restart(SAME_TAG_COOLDOWN_MS);
+            restart(SAME_TAG_RECHECK_MS);
             return;
           }
         } else {
@@ -317,6 +329,7 @@ export function useScanOperations({
         setScanSession(false);
       })
       .catch((error) => {
+        if (!latest()) return;
         ownsSessionRef.current = false;
         setScanStatus(ScanResult.Error);
         setScanSession(false);
@@ -439,6 +452,14 @@ export function useScanOperations({
         Capacitor.getPlatform() !== "android"
       ) {
         handleCameraError(error);
+        // Refused camera access has no other way to be noticed or fixed.
+        if (denied) {
+          setScanError({
+            message: t("create.mappings.editor.cameraPermissionDenied"),
+            source: "camera",
+            prefill: null,
+          });
+        }
         return;
       }
     }
@@ -468,6 +489,7 @@ export function useScanOperations({
         }
 
         const code = barcode.rawValue;
+        const attempt = ++cameraAttemptRef.current;
         setCameraLaunching(true);
         void runToken(
           code,
@@ -482,12 +504,17 @@ export function useScanOperations({
           false, // requiresLaunch
           {
             source: "camera",
-            onError: (error) =>
+            onError: (error) => {
+              // A slow failure must not replace a newer scan's result.
+              if (cameraAttemptRef.current !== attempt) return;
               setScanError(
                 scanErrorFor(error, { uid: code, text: code }, "camera", t),
-              ),
+              );
+            },
           },
-        ).finally(() => setCameraLaunching(false));
+        ).finally(() => {
+          if (cameraAttemptRef.current === attempt) setCameraLaunching(false);
+        });
       })
       .catch(handleCameraError);
   }, [

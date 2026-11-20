@@ -511,6 +511,9 @@ export function useWarpSubscription(appUserID: string) {
 
       if (await pollForActivation(controller.signal)) {
         // Warp includes Pro, so a first subscription gets the Pro guide.
+        // TODO: an activation confirmed only after this poll times out (a
+        // later refresh through loadAccount/applySubscription) never requests
+        // the guide. Move the request to a shared confirmed-activation path.
         requestProGuide();
         return "active";
       }

@@ -664,13 +664,22 @@ function watchSheetSettled(): {
   const closed = new Promise<void>((resolve) => {
     done = resolve;
   });
-  const handles = Promise.all([
+  // Settled one by one, so a listener that did register is still removed
+  // when the other one failed to.
+  const handles = Promise.allSettled([
     Nfc.addListener("scanSessionCanceled", () => done()),
     Nfc.addListener("scanSessionError", () => done()),
-  ]).catch((error) => {
-    logger.debug("Failed to watch NFC sheet dismissal:", error);
-    done();
-    return [] as PluginListenerHandle[];
+  ]).then((results) => {
+    const registered: PluginListenerHandle[] = [];
+    for (const result of results) {
+      if (result.status === "fulfilled") {
+        registered.push(result.value);
+      } else {
+        logger.debug("Failed to watch NFC sheet dismissal:", result.reason);
+        done();
+      }
+    }
+    return registered;
   });
   return {
     settled: async () => {
@@ -707,24 +716,30 @@ export async function readTagAndLaunch(
 
   let outcome: TagLaunchOutcome | null = null;
   let sheet: ReturnType<typeof watchSheetSettled> | null = null;
+  // Set once the session is over. The handler can still be between awaits
+  // then (a cancelled sheet), and must not launch or watch a sheet that has
+  // already gone.
+  let ended = false;
   try {
     const result = await withNfcSession<Result>(
       async (event) => {
         const tag = await readScannedTag(event);
-        if (tag) {
+        if (tag && !ended) {
           try {
             await Nfc.setAlertMessage({ message: options.launchingMessage });
           } catch (error) {
             logger.debug("Failed to set NFC alert message:", error);
           }
-          try {
-            outcome = await launch(tag);
-          } catch (error) {
-            logger.debug("Tag launch callback failed:", error);
-            outcome = { ok: false, errorMessage: "" };
+          if (!ended) {
+            try {
+              outcome = await launch(tag);
+            } catch (error) {
+              logger.debug("Tag launch callback failed:", error);
+              outcome = { ok: false, errorMessage: "" };
+            }
           }
         }
-        if (Capacitor.getPlatform() === "ios") {
+        if (Capacitor.getPlatform() === "ios" && !ended) {
           sheet = watchSheetSettled();
         }
         return {
@@ -743,6 +758,7 @@ export async function readTagAndLaunch(
     await (sheet as ReturnType<typeof watchSheetSettled> | null)?.settled();
     return result;
   } catch (error) {
+    ended = true;
     // Handle cancellation as a successful result with Cancelled status
     if (error instanceof NfcCancelledError) {
       return {

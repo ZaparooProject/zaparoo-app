@@ -91,6 +91,11 @@ export function useShakeDetection({
       if (status.proPurchaseModalOpen) return "the Pro purchase is open";
       if (status.writeOpen) return "a tag write is in progress";
       if (sessionManager.isScanning) return "an NFC scan is in progress";
+      // One shake launch owns the sheet until Core answers; a second one
+      // queued behind it would report into a sheet showing the first.
+      if (useShakeSheetStore.getState().phase === "launching") {
+        return "a shake launch is in progress";
+      }
       return null;
     };
 
@@ -188,6 +193,10 @@ export function useShakeDetection({
     return () => {
       isMounted = false;
       clearDrainTimer();
+      // An unfinished charge has nothing left to finish it. A launch already
+      // in flight keeps its sheet.
+      shakeTimestampsRef.current = [];
+      useShakeSheetStore.getState().drain();
       if (listener) {
         void listener.remove();
       }

@@ -231,7 +231,15 @@ describe("Home Page Scan Flows", () => {
         onDismissScanError,
       });
 
-      expect(screen.getAllByText("launcher not found")).toHaveLength(2);
+      // The reason is on the Retry face, and announced separately.
+      expect(
+        screen.getByRole("button", { name: "scan.retry" }),
+      ).toHaveTextContent("launcher not found");
+      expect(
+        screen
+          .getAllByText("launcher not found")
+          .some((node) => node.closest("[aria-live]") !== null),
+      ).toBe(true);
 
       await user.click(screen.getByRole("button", { name: "scan.retry" }));
       expect(onTapScan).toHaveBeenCalledTimes(1);

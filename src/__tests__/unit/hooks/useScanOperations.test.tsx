@@ -3,6 +3,7 @@ import { renderHook, act, waitFor } from "../../../test-utils";
 import toast from "react-hot-toast";
 import {
   SAME_TAG_COOLDOWN_MS,
+  SAME_TAG_RECHECK_MS,
   useScanOperations,
 } from "@/hooks/useScanOperations";
 import { ScanResult } from "@/lib/models";
@@ -891,7 +892,7 @@ describe("useScanOperations", () => {
       expect(Nfc.startScanSession).toHaveBeenCalledTimes(2);
 
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(SAME_TAG_COOLDOWN_MS);
+        await vi.advanceTimersByTimeAsync(SAME_TAG_RECHECK_MS);
       });
       expect(Nfc.startScanSession).toHaveBeenCalledTimes(3);
 
@@ -901,6 +902,29 @@ describe("useScanOperations", () => {
       });
       await tapTag("04abc123def456", "**launch.system:nes");
       expect(run).toHaveBeenCalledTimes(2);
+    });
+
+    it("never launches a tag again while it stays on the phone", async () => {
+      const run = vi
+        .spyOn(CoreAPI, "run")
+        .mockResolvedValue(undefined as never);
+      sessionManager.shouldRestart = true;
+      const { result } = renderHook(() => useScanOperations(defaultProps));
+
+      await startScan(result);
+      await tapTag("04abc123def456", "**launch.system:nes");
+      expect(run).toHaveBeenCalledTimes(1);
+
+      // Every new session reads the resting tag again, each time after the
+      // wait the previous read asked for.
+      for (let read = 0; read < 6; read++) {
+        await tapTag("04abc123def456", "**launch.system:nes");
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(SAME_TAG_RECHECK_MS);
+        });
+      }
+
+      expect(run).toHaveBeenCalledTimes(1);
     });
 
     it("launches a different tag straight away", async () => {

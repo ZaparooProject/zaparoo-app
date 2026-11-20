@@ -152,6 +152,8 @@ export function useContinuousCamera({
     seenRef.current.clear();
     currentCodeRef.current = null;
     launchIdRef.current = null;
+    // A launch still in flight belongs to this session, not the next one.
+    scanIdRef.current++;
     document.body.classList.remove(SCANNER_BODY_CLASS);
     setActive(false);
     setResult(null);
@@ -280,18 +282,23 @@ export function useContinuousCamera({
         const code = barcode.rawValue;
         if (!code) continue;
         const lastSeen = seen.get(code);
-        seen.set(code, now);
         const rearmed =
           lastSeen === undefined || now - lastSeen >= CAMERA_REARM_MS;
-        if (rearmed && !fresh) {
+        if (!rearmed) {
+          seen.set(code, now);
+          if (code === currentCodeRef.current) {
+            showOutline(toCssPoints(barcode.cornerPoints));
+          }
+        } else if (!fresh) {
           fresh = { code, points: toCssPoints(barcode.cornerPoints) };
-        } else if (code === currentCodeRef.current) {
-          showOutline(toCssPoints(barcode.cornerPoints));
         }
+        // A second new code in the same frame is left unseen, so it launches
+        // on a later frame instead of being suppressed while it stays in view.
       }
 
       if (!fresh) return;
       if (singleBusyRef.current) return;
+      seen.set(fresh.code, now);
       currentCodeRef.current = fresh.code;
       showOutline(fresh.points);
       launchCode(fresh.code);

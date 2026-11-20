@@ -14,14 +14,29 @@ const IPHONE_ASPECT_RATIO = 0.47;
 
 type DrawnSpot = Exclude<AntennaSpot, { kind: "broad" }>;
 
+/** Says in words where a reported antenna sits, for screen readers. */
+function placedSpotKey(spot: Extract<AntennaSpot, { kind: "placed" }>): string {
+  const y = spot.points[0]?.y ?? 0.5;
+  if (y < 1 / 3) return "proGuide.antennaSpotTop";
+  if (y < 2 / 3) return "proGuide.antennaSpotMiddle";
+  return "proGuide.antennaSpotBottom";
+}
+
 /** A phone outline with the antenna marked. Not drawn when the spot is unknown. */
 function AntennaDiagram({ spot }: { spot: DrawnSpot }) {
+  const { t } = useTranslation();
   const aspectRatio =
     spot.kind === "placed" ? spot.aspectRatio : IPHONE_ASPECT_RATIO;
+  // The iPhone hint already names the top edge; a reported position is only
+  // drawn, so it needs a text equivalent.
+  const description =
+    spot.kind === "placed" ? t(placedSpotKey(spot)) : undefined;
 
   return (
     <div
-      aria-hidden="true"
+      role={description ? "img" : undefined}
+      aria-label={description}
+      aria-hidden={description ? undefined : "true"}
       data-testid="antenna-diagram"
       data-antenna={spot.kind}
       className="border-border bg-surface-inset relative mx-auto w-28 overflow-hidden rounded-2xl border-2"

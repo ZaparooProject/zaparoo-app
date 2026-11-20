@@ -733,6 +733,11 @@ export const usePreferencesStore = create<PreferencesStore>()(
             // resume retries storage.
             _preferencesDegraded = true;
             _preferenceKeysChangedWhileDegraded.clear();
+            // The reader follows this flag, not the store, so give it the
+            // default the Readers screen is showing.
+            sessionManager.setShouldRestart(
+              usePreferencesStore.getState().restartScan,
+            );
             usePreferencesStore.setState({
               _hasHydrated: true,
               _preferencesHydrationSucceeded: false,

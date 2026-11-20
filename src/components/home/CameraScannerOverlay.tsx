@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "@tanstack/react-router";
 import { FlashlightIcon } from "lucide-react";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { Button } from "@/components/wui/Button";
 import { Card } from "@/components/wui/Card";
 import { LibraryArtworkFrame } from "@/components/library/LibraryArtworkFrame";
@@ -101,18 +102,22 @@ function ScannerChrome({ camera }: CameraScannerOverlayProps) {
   const navigate = useNavigate();
   const headingId = useId();
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const safeInsets = useStatusStore((state) => state.safeInsets);
   const { result, outline, stop } = camera;
 
+  // Keep Tab inside the scanner and the page beneath it inert while the
+  // camera is open, and hand focus back to where it was when it closes.
+  useFocusTrap({
+    isActive: true,
+    containerRef: dialogRef,
+    restoreFocus: true,
+    autoFocus: false, // The heading receives initial focus.
+    inertBackground: true,
+  });
+
   useEffect(() => {
-    const returnFocus =
-      document.activeElement instanceof HTMLElement
-        ? document.activeElement
-        : null;
     headingRef.current?.focus();
-    return () => {
-      if (returnFocus?.isConnected) returnFocus.focus();
-    };
   }, []);
 
   useBackButtonHandler(
@@ -139,6 +144,7 @@ function ScannerChrome({ camera }: CameraScannerOverlayProps) {
 
   return (
     <div
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-labelledby={headingId}

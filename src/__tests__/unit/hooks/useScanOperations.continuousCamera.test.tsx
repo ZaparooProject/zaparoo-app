@@ -173,6 +173,63 @@ describe("useScanOperations continuous camera", () => {
     });
   });
 
+  it("launches a second new code from the same frame on a later frame", async () => {
+    await openCamera();
+
+    await emit("game-a", "game-b");
+    expect(runSpy).toHaveBeenCalledTimes(1);
+
+    await emit("game-a", "game-b");
+    expect(runSpy).toHaveBeenCalledTimes(2);
+    expect(runSpy.mock.calls.map((call: unknown[]) => call[0])).toEqual([
+      expect.objectContaining({ text: "game-a" }),
+      expect.objectContaining({ text: "game-b" }),
+    ]);
+  });
+
+  it("drops a failure that lands after the camera was closed and reopened", async () => {
+    let failFirst: (error: Error) => void = () => {};
+    runSpy.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          failFirst = reject;
+        }) as never,
+    );
+    const { result } = await openCamera();
+    await emit("game-a");
+
+    await act(async () => {
+      result.current.continuousCamera.stop();
+      await result.current.handleCameraScan();
+    });
+    await act(async () => {
+      failFirst(new Error("launcher not found"));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    expect(result.current.continuousCamera.active).toBe(true);
+    expect(result.current.continuousCamera.result).toBeNull();
+  });
+
+  it("shows refused camera access on the camera control on iPhone", async () => {
+    vi.mocked(Capacitor.getPlatform).mockReturnValue("ios");
+    usePreferencesStore.setState({ continuousCamera: false });
+    vi.mocked(BarcodeScanner.checkPermissions).mockResolvedValueOnce({
+      camera: "denied",
+    });
+    vi.mocked(BarcodeScanner.requestPermissions).mockResolvedValueOnce({
+      camera: "denied",
+    });
+    const { result } = await openCamera();
+
+    expect(BarcodeScanner.scan).not.toHaveBeenCalled();
+    expect(result.current.scanError).toEqual({
+      message: "create.mappings.editor.cameraPermissionDenied",
+      source: "camera",
+      prefill: null,
+    });
+  });
+
   it("starts the live camera behind a transparent app when on", async () => {
     const { result } = await openCamera();
 

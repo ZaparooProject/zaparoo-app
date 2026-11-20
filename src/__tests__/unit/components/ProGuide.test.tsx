@@ -334,6 +334,10 @@ describe("ProGuideAntennaStep", () => {
     const point = screen.getByTestId("antenna-point");
     expect(point.style.left).toBe("50%");
     expect(point.style.top).toBe("25%");
+    // The drawn position is also said in words for screen readers.
+    expect(
+      screen.getByRole("img", { name: "proGuide.antennaSpotTop" }),
+    ).toBeInTheDocument();
   });
 
   it("shows a text tip and no picture when antenna info is unavailable", async () => {
