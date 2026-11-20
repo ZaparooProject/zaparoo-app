@@ -277,7 +277,7 @@ describe("useScanOperations continuous camera", () => {
 
     await emit("game-a");
 
-    expect(setProPurchaseModalOpen).toHaveBeenCalledWith(true);
+    expect(setProPurchaseModalOpen).toHaveBeenCalledWith(true, "camera");
     expect(result.current.continuousCamera.active).toBe(false);
   });
 

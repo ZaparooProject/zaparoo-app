@@ -12,7 +12,7 @@ export interface AntennaPoint {
  * Where to tell the user to hold a tag:
  * - `placed`: the OS reported antenna positions (Android 14+).
  * - `topEdge`: iPhone, which always reads at the top edge.
- * - `broad`: unknown, so a broad area on the back.
+ * - `broad`: unknown (Android before 14), so a text tip with no picture.
  */
 export type AntennaSpot =
   | { kind: "placed"; points: AntennaPoint[]; aspectRatio: number }
@@ -25,7 +25,7 @@ const clampFraction = (value: number) => Math.min(1, Math.max(0, value));
  * Looks up the antenna position for the guide. Android reports positions in
  * millimetres from the top-left corner with the screen facing the user;
  * `getAntennaInfo` needs Android 14, so any failure or empty answer falls back
- * to the broad area.
+ * to the text tip.
  */
 export async function getAntennaSpot(): Promise<AntennaSpot> {
   if (!Capacitor.isNativePlatform()) return { kind: "broad" };

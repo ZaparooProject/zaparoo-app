@@ -336,7 +336,7 @@ describe("ProGuideAntennaStep", () => {
     expect(point.style.top).toBe("25%");
   });
 
-  it("falls back to a broad area when antenna info is unavailable", async () => {
+  it("shows a text tip and no picture when antenna info is unavailable", async () => {
     setPlatform("android");
     nfcWithAntenna.getAntennaInfo = vi
       .fn()
@@ -346,10 +346,7 @@ describe("ProGuideAntennaStep", () => {
     expect(
       await screen.findByText("proGuide.antennaBroad"),
     ).toBeInTheDocument();
-    expect(screen.getByTestId("antenna-diagram")).toHaveAttribute(
-      "data-antenna",
-      "broad",
-    );
+    expect(screen.queryByTestId("antenna-diagram")).not.toBeInTheDocument();
   });
 
   it("confirms a live read without launching anything", async () => {

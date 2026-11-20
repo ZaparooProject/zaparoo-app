@@ -9,12 +9,15 @@ import { nfcErrorMessageKey } from "@/lib/nfcErrorMessages";
 import { launchFeedback } from "@/lib/launchFeedback";
 import { getAntennaSpot, type AntennaSpot } from "@/lib/nfcAntenna";
 
-// A typical phone outline when the OS gives no dimensions.
-const DEFAULT_ASPECT_RATIO = 0.47;
+// The iPhone outline; Android reports its own dimensions.
+const IPHONE_ASPECT_RATIO = 0.47;
 
-function AntennaDiagram({ spot }: { spot: AntennaSpot }) {
+type DrawnSpot = Exclude<AntennaSpot, { kind: "broad" }>;
+
+/** A phone outline with the antenna marked. Not drawn when the spot is unknown. */
+function AntennaDiagram({ spot }: { spot: DrawnSpot }) {
   const aspectRatio =
-    spot.kind === "placed" ? spot.aspectRatio : DEFAULT_ASPECT_RATIO;
+    spot.kind === "placed" ? spot.aspectRatio : IPHONE_ASPECT_RATIO;
 
   return (
     <div
@@ -35,9 +38,6 @@ function AntennaDiagram({ spot }: { spot: AntennaSpot }) {
         ))}
       {spot.kind === "topEdge" && (
         <span className="border-primary bg-primary-wash absolute inset-x-0 top-0 h-1/6 border-b-2" />
-      )}
-      {spot.kind === "broad" && (
-        <span className="border-primary bg-primary-wash absolute inset-x-3 top-[12%] h-1/2 rounded-lg border-2" />
       )}
     </div>
   );
@@ -126,7 +126,7 @@ export function ProGuideAntennaStep({
       <p className="text-muted-foreground">
         {spot ? t(hintKey[spot.kind]) : t("proGuide.antennaLoading")}
       </p>
-      {spot && <AntennaDiagram spot={spot} />}
+      {spot && spot.kind !== "broad" && <AntennaDiagram spot={spot} />}
       {result?.kind === "read" && (
         <p className="text-success text-center text-sm font-medium">
           {t("proGuide.tagRead")}
