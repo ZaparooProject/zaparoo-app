@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
 import {
@@ -10,7 +10,7 @@ import {
   TriangleAlertIcon,
 } from "lucide-react";
 import { useStatusStore } from "@/lib/store";
-import { CoreAPI } from "@/lib/coreApi";
+import { CoreAPI, isCancelled } from "@/lib/coreApi";
 import { InboxMessage, InboxSeverity } from "@/lib/models";
 import { logger } from "@/lib/logger";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
@@ -58,7 +58,11 @@ function formatTimestamp(iso: string): string {
   return formatAppDateTime(iso) ?? iso;
 }
 
-function InboxRow(props: { message: InboxMessage; onDelete: () => void }) {
+function InboxRow(props: {
+  message: InboxMessage;
+  deleting: boolean;
+  onDelete: () => void;
+}) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const bodyId = useId();
@@ -131,6 +135,7 @@ function InboxRow(props: { message: InboxMessage; onDelete: () => void }) {
         size="sm"
         intent="destructive"
         aria-label={t("inbox.deleteOne", { title: props.message.title })}
+        disabled={props.deleting}
         onClick={props.onDelete}
         className="-mt-1 -mr-1 shrink-0"
       />
@@ -149,18 +154,55 @@ export function InboxModal() {
   );
   const setInboxMessages = useStatusStore((state) => state.setInboxMessages);
 
+  // A delete in flight, by message ID. The ref blocks a second tap before the
+  // next render; the state disables the button.
+  const deletingRef = useRef(new Set<number>());
+  const [deletingIds, setDeletingIds] = useState<number[]>([]);
+
+  const reportDeleteFailure = (err: unknown) => {
+    logger.error("Failed to delete inbox message", err, {
+      category: "api",
+      action: "inbox.delete",
+      severity: "error",
+    });
+    showRateLimitedErrorToast(
+      t("error", {
+        msg: (err instanceof Error && err.message) || t("inbox.deleteFailed"),
+      }),
+    );
+  };
+
+  // Core does not announce removals, so the list can hold a message another
+  // client already deleted. Only report a failed delete when Core still has
+  // the message. Only this message is reconciled: replacing the list with the
+  // snapshot would bring back one removed while the snapshot was in flight.
+  const reconcileFailedDelete = async (id: number, err: unknown) => {
+    try {
+      const fresh = await CoreAPI.inbox();
+      if (
+        !isCancelled(fresh) &&
+        Array.isArray(fresh.messages) &&
+        !fresh.messages.some((message) => message.id === id)
+      ) {
+        removeInboxMessage(id);
+        return;
+      }
+    } catch {
+      // The original failure is the one worth reporting.
+    }
+    reportDeleteFailure(err);
+  };
+
   const handleDelete = (id: number) => {
+    if (deletingRef.current.has(id)) return;
+    deletingRef.current.add(id);
+    setDeletingIds((ids) => [...ids, id]);
     CoreAPI.inboxDelete({ id })
       .then(() => removeInboxMessage(id))
-      .catch((err) => {
-        logger.error("Failed to delete inbox message", err, {
-          category: "api",
-          action: "inbox.delete",
-          severity: "error",
-        });
-        showRateLimitedErrorToast(
-          t("error", { msg: err?.message || t("inbox.deleteFailed") }),
-        );
+      .catch((err: unknown) => reconcileFailedDelete(id, err))
+      .finally(() => {
+        deletingRef.current.delete(id);
+        setDeletingIds((ids) => ids.filter((other) => other !== id));
       });
   };
 
@@ -242,6 +284,7 @@ export function InboxModal() {
             <InboxRow
               key={message.id}
               message={message}
+              deleting={deletingIds.includes(message.id)}
               onDelete={() => handleDelete(message.id)}
             />
           ))}

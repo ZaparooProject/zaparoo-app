@@ -763,10 +763,14 @@
       "playlistPlay": "Afspeellijst afspelen",
       "playlistNext": "Volgend item",
       "playlistControlError": "Afspeellijst kon niet worden bediend",
+      "playlistItemError": "Item {{number}} kon niet worden afgespeeld",
+      "playlistItemNotFound": "Item {{number}} is niet gevonden op dit apparaat",
       "mediaControls": "Bediening voor {{section}}",
       "mediaPause": "Pauzeren",
       "mediaResume": "Hervatten",
       "mediaControlError": "Media konden niet worden bediend",
+      "lastScannedHeading": "Laatst gescand",
+      "lastScannedEmpty": "Nog niets gescand",
       "lastScannedUid": "ID: {{uid}}",
       "historyTitle": "Geschiedenis",
       "historyReplay": "Scan herhalen",
@@ -2140,7 +2144,8 @@
         "controls": "Bediening",
         "readers": "Lezers",
         "favourites": "Favorieten",
-        "recents": "Onlangs gespeeld"
+        "recents": "Onlangs gespeeld",
+        "lastScanned": "Laatst gescand"
       },
       "places": {
         "main": "Hoofdkolom",

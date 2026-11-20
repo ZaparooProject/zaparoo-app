@@ -663,6 +663,32 @@ describe("Index Route Integration", () => {
     });
   });
 
+  // GitHub #302: Last scanned is an optional widget, not part of the page.
+  describe("Last scanned", () => {
+    it("should not be on the default page, even after a scan", () => {
+      useStatusStore.setState({
+        lastToken: {
+          type: "ntag",
+          uid: "04a1b2c3d4e5f6",
+          text: "",
+          data: "",
+          scanTime: "2026-11-20T01:02:03Z",
+        },
+      });
+
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      expect(
+        screen.queryByRole("heading", { name: "scan.lastScannedHeading" }),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText("04a1b2c3d4e5f6")).not.toBeInTheDocument();
+    });
+  });
+
   describe("Now Playing Info", () => {
     it("should show heading and dash placeholders when nothing is playing", () => {
       render(

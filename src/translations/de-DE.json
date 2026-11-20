@@ -763,10 +763,14 @@
       "playlistPlay": "Wiedergabeliste abspielen",
       "playlistNext": "Nächstes Element",
       "playlistControlError": "Wiedergabeliste konnte nicht gesteuert werden",
+      "playlistItemError": "Element {{number}} konnte nicht abgespielt werden",
+      "playlistItemNotFound": "Element {{number}} wurde auf diesem Gerät nicht gefunden",
       "mediaControls": "Steuerung für „{{section}}“",
       "mediaPause": "Pausieren",
       "mediaResume": "Fortsetzen",
       "mediaControlError": "Medium konnte nicht gesteuert werden",
+      "lastScannedHeading": "Zuletzt gescannt",
+      "lastScannedEmpty": "Noch nichts gescannt",
       "lastScannedUid": "ID: {{uid}}",
       "historyTitle": "Verlauf",
       "historyReplay": "Scan wiederholen",
@@ -2140,7 +2144,8 @@
         "controls": "Steuerung",
         "readers": "Lesegeräte",
         "favourites": "Favoriten",
-        "recents": "Zuletzt gespielt"
+        "recents": "Zuletzt gespielt",
+        "lastScanned": "Zuletzt gescannt"
       },
       "places": {
         "main": "Hauptspalte",

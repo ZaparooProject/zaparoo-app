@@ -763,10 +763,14 @@
       "playlistPlay": "プレイリストを再生",
       "playlistNext": "次のアイテム",
       "playlistControlError": "プレイリストを操作できませんでした",
+      "playlistItemError": "アイテム{{number}}を再生できませんでした",
+      "playlistItemNotFound": "アイテム{{number}}はこのデバイスに見つかりませんでした",
       "mediaControls": "{{section}}の操作",
       "mediaPause": "一時停止",
       "mediaResume": "再開",
       "mediaControlError": "メディアを操作できませんでした",
+      "lastScannedHeading": "最後にスキャン",
+      "lastScannedEmpty": "まだ何もスキャンされていません",
       "lastScannedUid": "ID: {{uid}}",
       "historyTitle": "履歴",
       "historyReplay": "スキャンを再実行",
@@ -2140,7 +2144,8 @@
         "controls": "コントロール",
         "readers": "リーダー",
         "favourites": "お気に入り",
-        "recents": "最近プレイ"
+        "recents": "最近プレイ",
+        "lastScanned": "最後にスキャン"
       },
       "places": {
         "main": "メイン列",

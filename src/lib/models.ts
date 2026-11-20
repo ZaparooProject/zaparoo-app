@@ -89,6 +89,29 @@ export enum Notification {
   InboxAdded = "inbox.added",
   MediaScraping = "media.scraping",
   ClientsPaired = "clients.paired",
+  RunFailed = "run.failed",
+}
+
+/**
+ * Payload of `run.failed` (Core 2.18+), sent to every client for every
+ * ZapScript run that ends in failure.
+ */
+export interface RunFailedParams {
+  /** `Reader`, `API`, `Playlist`, `Hook`, `Control`, `Remote` or `GMC`. */
+  source: string;
+  /** Error category, the same values the `run` method reports. */
+  category: string;
+  /** Short English description; never a path or token contents. */
+  message: string;
+  readerId?: string;
+  /** The token's ZapScript, credentials redacted. It can hold a media path. */
+  script?: string;
+  /** Name of the command that failed. */
+  command?: string;
+  /** Set when the run was a playlist item. */
+  playlistId?: string;
+  /** Zero-based index of that item in the playlist. */
+  playlistIndex?: number;
 }
 
 export interface VersionResponse {

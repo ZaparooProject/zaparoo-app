@@ -34,6 +34,7 @@ import { PageFrame } from "@/components/PageFrame";
 import { DeviceSheet } from "@/components/home/DeviceSheet";
 import { useDeviceSheetController } from "@/hooks/useDeviceSheetController";
 import { HomeDevicePill } from "@/components/home/HomeDevicePill";
+import { LastScanned } from "@/components/home/LastScanned";
 import { ScanActions } from "@/components/home/ScanActions";
 import { MediaCoverRow } from "@/components/home/MediaCoverRow";
 import { NowPlayingCard } from "@/components/home/NowPlayingCard";
@@ -509,6 +510,7 @@ export function Index({
         onSelect={setSelectedCoverEntry}
       />
     ),
+    lastScanned: <LastScanned key="lastScanned" />,
   };
   const renderWidget = (id: ZapWidgetId): ReactNode => {
     const button = zapButtonOf(layout, id);

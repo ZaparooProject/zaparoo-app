@@ -763,10 +763,14 @@
       "playlistPlay": "Play playlist",
       "playlistNext": "Next item",
       "playlistControlError": "Could not control playlist",
+      "playlistItemError": "Could not play item {{number}}",
+      "playlistItemNotFound": "Item {{number}} was not found on this device",
       "mediaControls": "{{section}} controls",
       "mediaPause": "Pause",
       "mediaResume": "Resume",
       "mediaControlError": "Could not control media",
+      "lastScannedHeading": "Last scanned",
+      "lastScannedEmpty": "Nothing scanned yet",
       "lastScannedUid": "ID: {{uid}}",
       "historyTitle": "History",
       "historyReplay": "Replay scan",
@@ -2167,7 +2171,8 @@
         "controls": "Controls",
         "readers": "Readers",
         "favourites": "Favorites",
-        "recents": "Recently played"
+        "recents": "Recently played",
+        "lastScanned": "Last scanned"
       },
       "places": {
         "main": "Main column",

@@ -763,10 +763,14 @@
       "playlistPlay": "播放该播放列表",
       "playlistNext": "下一项",
       "playlistControlError": "无法控制播放列表",
+      "playlistItemError": "无法播放第 {{number}} 项",
+      "playlistItemNotFound": "在此设备上找不到第 {{number}} 项",
       "mediaControls": "{{section}}控件",
       "mediaPause": "暂停",
       "mediaResume": "继续",
       "mediaControlError": "无法控制媒体",
+      "lastScannedHeading": "上次扫描",
+      "lastScannedEmpty": "尚未扫描任何内容",
       "lastScannedUid": "ID：{{uid}}",
       "historyTitle": "历史记录",
       "historyReplay": "重新执行扫描",
@@ -2140,7 +2144,8 @@
         "controls": "控制",
         "readers": "读卡器",
         "favourites": "收藏",
-        "recents": "最近玩过"
+        "recents": "最近玩过",
+        "lastScanned": "上次扫描"
       },
       "places": {
         "main": "主列",

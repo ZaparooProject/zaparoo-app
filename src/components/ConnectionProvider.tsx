@@ -27,6 +27,7 @@ import {
   TriangleAlertIcon,
 } from "lucide-react";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
+import { parseRunFailed, runFailedFeedback } from "@/lib/runFailed";
 import {
   connectionManager,
   type TransportState,
@@ -1024,6 +1025,26 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             // block so lifecycle reconnects are no longer suppressed.
             logger.log("client paired notification received");
             connectionManager.clearEncryptionBlockActive();
+            break;
+          }
+
+          case Notification.RunFailed: {
+            const failure = parseRunFailed(notification.params);
+            if (!failure) {
+              logger.warn("run.failed without a usable payload");
+              break;
+            }
+            // The script can hold a media path, so it stays out of the log.
+            logger.debug("run.failed", {
+              source: failure.source,
+              category: failure.category,
+              command: failure.command,
+              playlistIndex: failure.playlistIndex,
+            });
+            const feedback = runFailedFeedback(failure);
+            if (feedback) {
+              showRateLimitedErrorToast(t(feedback.key, feedback.options));
+            }
             break;
           }
 

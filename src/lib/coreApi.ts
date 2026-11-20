@@ -1731,7 +1731,11 @@ class CoreApi {
       this.call(Method.MediaSearch, params, signal)
         .then((result) => {
           if (isCancelled(result)) {
-            resolve(result as unknown as SearchResultsResponse);
+            // Never resolve with the sentinel: it has no `results`, and an
+            // infinite query would cache it as a page.
+            reject(
+              new RequestCancelledError("Media search request was cancelled"),
+            );
             return;
           }
           try {
@@ -2902,11 +2906,9 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logApiFailure("Inbox delete API call failed:", error, {
-            category: "api",
-            action: "inbox.delete",
-            severity: "error",
-          });
+          // The caller decides whether this is a failure: a message that is
+          // already gone on Core is not one.
+          logger.debug("Inbox delete API call failed:", error);
           reject(error);
         });
     });

@@ -6,6 +6,7 @@ export const ZAP_BUILTIN_WIDGET_IDS = [
   "readers",
   "favourites",
   "recents",
+  "lastScanned",
 ] as const;
 export type ZapBuiltinWidgetId = (typeof ZAP_BUILTIN_WIDGET_IDS)[number];
 
@@ -109,7 +110,8 @@ export const DEFAULT_ZAP_LAYOUT: ZapLayout = {
     main: ["nowPlaying", "scan"],
     side: ["controls", "readers"],
     bottom: ["favourites", "recents"],
-    hidden: [],
+    // Optional widgets start here: the user adds them from the editor.
+    hidden: ["lastScanned"],
   },
   buttons: {},
   collections: {},
@@ -184,6 +186,16 @@ export function defaultZapLayout(): ZapLayout {
   return copyLayout(DEFAULT_ZAP_LAYOUT);
 }
 
+/**
+ * Where an optional built-in goes when the user shows it. It is hidden by
+ * default, so its default place cannot say.
+ */
+const OPTIONAL_WIDGET_SHOW_PLACES: Partial<
+  Record<ZapBuiltinWidgetId, Exclude<ZapPlace, "hidden">>
+> = {
+  lastScanned: "main",
+};
+
 function defaultPlaceOf(id: ZapBuiltinWidgetId): ZapPlace {
   return ZAP_PLACES.find((place) =>
     (DEFAULT_ZAP_LAYOUT.places[place] as ZapWidgetId[]).includes(id),
@@ -242,7 +254,8 @@ function normaliseCollection(id: string, value: unknown): ZapCollection | null {
  * whose definition is gone are dropped, a button placed nowhere goes to
  * `hidden` so it is not lost, and any built-in widget the stored layout
  * predates joins its default place, so widgets added in later versions appear
- * without the user doing anything. Anything that is not a layout returns null,
+ * without the user doing anything (an optional one joins `hidden`, so the page
+ * does not change). Anything that is not a layout returns null,
  * which means "use the built-in default".
  */
 export function normaliseZapLayout(value: unknown): ZapLayout | null {
@@ -404,16 +417,16 @@ export function hideZapWidget(layout: ZapLayout, id: ZapWidgetId): ZapLayout {
 }
 
 /**
- * Brings a hidden widget back: a built-in to the end of its default place, a
- * button to the end of the main column, a collection row to the end of the
- * full-width area.
+ * Brings a hidden widget back: a built-in to the end of its default place (an
+ * optional one to the end of the main column), a button to the end of the main
+ * column, a collection row to the end of the full-width area.
  */
 export function showZapWidget(layout: ZapLayout, id: ZapWidgetId): ZapLayout {
   const place = isZapButtonWidget(id)
     ? "main"
     : isZapCollectionWidget(id)
       ? "bottom"
-      : defaultPlaceOf(id);
+      : (OPTIONAL_WIDGET_SHOW_PLACES[id] ?? defaultPlaceOf(id));
   return moveZapWidget(layout, id, place, layout.places[place].length);
 }
 
