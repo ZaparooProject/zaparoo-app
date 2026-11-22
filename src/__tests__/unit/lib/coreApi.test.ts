@@ -148,6 +148,7 @@ describe("run error classification", () => {
     "playtime_limit",
     "cancelled",
     "unavailable",
+    "launch_repair",
   ])("should treat the %s run category as expected", (category) => {
     const error = new CoreApiError("any message", 1, { category });
 
