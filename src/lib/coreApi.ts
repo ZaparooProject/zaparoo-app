@@ -775,7 +775,8 @@ export type RunErrorCategory =
   | "cancelled"
   | "timeout"
   | "unavailable"
-  | "execution_failed";
+  | "execution_failed"
+  | "launch_repair";
 
 // Core sends a fixed message per category. Used only when a response carries
 // no data.category.
@@ -805,6 +806,7 @@ const EXPECTED_RUN_ERROR_CATEGORIES: ReadonlySet<string> = new Set([
   "playtime_limit",
   "cancelled",
   "unavailable",
+  "launch_repair",
 ] satisfies RunErrorCategory[]);
 
 export function getRunErrorCategory(error: unknown): string | null {
