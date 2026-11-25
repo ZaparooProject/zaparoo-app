@@ -1,21 +1,13 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# App-specific R8 rules. Capacitor and the plugins ship their own keep rules.
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Keep line numbers so Play Console can deobfuscate stack traces with the
+# mapping file the app bundle carries.
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# The Firebase Authentication plugin compiles in a Facebook sign-in handler.
+# The App only enables Google and Apple, so the Facebook SDK isn't bundled.
+-dontwarn com.facebook.**
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# slf4j looks for an optional logging backend at runtime and falls back to no-op.
+-dontwarn org.slf4j.impl.StaticLoggerBinder
