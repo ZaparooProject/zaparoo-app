@@ -63,6 +63,13 @@
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
 
+        <!-- The Bluetooth plugin runs every Bluetooth call through this service and
+             fails with "The bluetooth service not ready" without it. It is never
+             started in the foreground, so it has no foregroundServiceType. -->
+        <service
+            android:name="io.capawesome.capacitorjs.plugins.bluetoothle.BluetoothLowEnergyService"
+            android:exported="false" />
+
         <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="barcode_ui" />
         <!-- To use multiple models: android:value="face,model2,model3" -->
     </application>
