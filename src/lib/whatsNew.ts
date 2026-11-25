@@ -21,6 +21,18 @@ export type WhatsNewAnnouncement = {
 
 export const WHATS_NEW_ANNOUNCEMENTS: WhatsNewAnnouncement[] = [
   {
+    // Store release 2.2.0 build 34, the first native build with the Bluetooth
+    // plugin. Everything else in it already reached builds 30 to 33 as the
+    // 2.1.0 live update.
+    id: "release-2.2.0",
+    version: "2.2.0",
+    releaseKeys: ["native:2.2.0+34", "live:2.2.0-ota.1"],
+    title: "What's new in v2.2.0",
+    items: [
+      "Connect to a Zaparoo device over Bluetooth, no Wi-Fi network needed. Needs Zaparoo Core 2.23 or newer.",
+    ],
+  },
+  {
     // Live update on every native build that runs 2.0: 1.14.1 build 30,
     // 2.0.0 build 31, 2.0.1 build 32 and 2.0.2 build 33. None of them has the
     // Bluetooth plugin, so Bluetooth stays off there.
