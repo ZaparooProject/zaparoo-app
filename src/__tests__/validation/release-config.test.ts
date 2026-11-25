@@ -54,7 +54,7 @@ describe("release configuration", () => {
       new Set([packageJson.version]),
     );
     expect(new Set(iosBuildNumbers)).toEqual(new Set([androidVersionCode]));
-    expect(androidVersionCode).toBe(33);
+    expect(androidVersionCode).toBe(34);
   });
 
   it("should use versioned Capawesome live update channels", () => {
@@ -193,7 +193,7 @@ describe("release configuration", () => {
     expect(currentLiveUpdate?.version).toBe("2.0.0");
   });
 
-  it("should map the 2.0.3 and 2.1.0 live updates on every 2.0 native build", () => {
+  it("should map the 2.0.3 and 2.1.0 live updates and the 2.2.0 store release", () => {
     const versionFor = (releaseKey: string) =>
       WHATS_NEW_ANNOUNCEMENTS.find((announcement) =>
         announcement.releaseKeys.includes(releaseKey),
@@ -218,6 +218,9 @@ describe("release configuration", () => {
       "live:2.0.2-ota.4",
     ]) {
       expect(versionFor(releaseKey)).toBe("2.1.0");
+    }
+    for (const releaseKey of ["native:2.2.0+34", "live:2.2.0-ota.1"]) {
+      expect(versionFor(releaseKey)).toBe("2.2.0");
     }
     for (const releaseKey of [
       "native:2.0.0+31",
