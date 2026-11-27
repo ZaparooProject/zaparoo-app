@@ -8,6 +8,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(MfaAuthenticationPlugin.class);
         registerPlugin(ShakeDetectorPlugin.class);
+        registerPlugin(LocalMediaPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

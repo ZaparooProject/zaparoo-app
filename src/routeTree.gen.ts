@@ -33,6 +33,7 @@ import { Route as SettingsDevicesRouteImport } from "./routes/settings.devices";
 import { Route as SettingsHelpRouteImport } from "./routes/settings.help";
 import { Route as SettingsLanguageRegionRouteImport } from "./routes/settings.language-region";
 import { Route as SettingsLicensesRouteImport } from "./routes/settings.licenses";
+import { Route as SettingsLocalMediaRouteImport } from "./routes/settings.local-media";
 import { Route as SettingsLogsRouteImport } from "./routes/settings.logs";
 import { Route as SettingsMediaRouteImport } from "./routes/settings.media";
 import { Route as SettingsOnlineRouteImport } from "./routes/settings.online";
@@ -168,6 +169,11 @@ const SettingsLicensesRoute = SettingsLicensesRouteImport.update({
   path: "/settings/licenses",
   getParentRoute: () => rootRouteImport,
 } as any);
+const SettingsLocalMediaRoute = SettingsLocalMediaRouteImport.update({
+  id: "/settings/local-media",
+  path: "/settings/local-media",
+  getParentRoute: () => rootRouteImport,
+} as any);
 const SettingsLogsRoute = SettingsLogsRouteImport.update({
   id: "/settings/logs",
   path: "/settings/logs",
@@ -261,6 +267,7 @@ export interface FileRoutesByFullPath {
   "/settings/help": typeof SettingsHelpRoute;
   "/settings/language-region": typeof SettingsLanguageRegionRoute;
   "/settings/licenses": typeof SettingsLicensesRoute;
+  "/settings/local-media": typeof SettingsLocalMediaRoute;
   "/settings/logs": typeof SettingsLogsRoute;
   "/settings/media": typeof SettingsMediaRoute;
   "/settings/online": typeof SettingsOnlineRoute;
@@ -301,6 +308,7 @@ export interface FileRoutesByTo {
   "/settings/help": typeof SettingsHelpRoute;
   "/settings/language-region": typeof SettingsLanguageRegionRoute;
   "/settings/licenses": typeof SettingsLicensesRoute;
+  "/settings/local-media": typeof SettingsLocalMediaRoute;
   "/settings/logs": typeof SettingsLogsRoute;
   "/settings/media": typeof SettingsMediaRoute;
   "/settings/online": typeof SettingsOnlineRoute;
@@ -342,6 +350,7 @@ export interface FileRoutesById {
   "/settings/help": typeof SettingsHelpRoute;
   "/settings/language-region": typeof SettingsLanguageRegionRoute;
   "/settings/licenses": typeof SettingsLicensesRoute;
+  "/settings/local-media": typeof SettingsLocalMediaRoute;
   "/settings/logs": typeof SettingsLogsRoute;
   "/settings/media": typeof SettingsMediaRoute;
   "/settings/online": typeof SettingsOnlineRoute;
@@ -384,6 +393,7 @@ export interface FileRouteTypes {
     | "/settings/help"
     | "/settings/language-region"
     | "/settings/licenses"
+    | "/settings/local-media"
     | "/settings/logs"
     | "/settings/media"
     | "/settings/online"
@@ -424,6 +434,7 @@ export interface FileRouteTypes {
     | "/settings/help"
     | "/settings/language-region"
     | "/settings/licenses"
+    | "/settings/local-media"
     | "/settings/logs"
     | "/settings/media"
     | "/settings/online"
@@ -464,6 +475,7 @@ export interface FileRouteTypes {
     | "/settings/help"
     | "/settings/language-region"
     | "/settings/licenses"
+    | "/settings/local-media"
     | "/settings/logs"
     | "/settings/media"
     | "/settings/online"
@@ -505,6 +517,7 @@ export interface RootRouteChildren {
   SettingsHelpRoute: typeof SettingsHelpRoute;
   SettingsLanguageRegionRoute: typeof SettingsLanguageRegionRoute;
   SettingsLicensesRoute: typeof SettingsLicensesRoute;
+  SettingsLocalMediaRoute: typeof SettingsLocalMediaRoute;
   SettingsLogsRoute: typeof SettingsLogsRoute;
   SettingsMediaRoute: typeof SettingsMediaRoute;
   SettingsOnlineRoute: typeof SettingsOnlineRoute;
@@ -694,6 +707,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof SettingsLicensesRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    "/settings/local-media": {
+      id: "/settings/local-media";
+      path: "/settings/local-media";
+      fullPath: "/settings/local-media";
+      preLoaderRoute: typeof SettingsLocalMediaRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     "/settings/logs": {
       id: "/settings/logs";
       path: "/settings/logs";
@@ -817,6 +837,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsHelpRoute: SettingsHelpRoute,
   SettingsLanguageRegionRoute: SettingsLanguageRegionRoute,
   SettingsLicensesRoute: SettingsLicensesRoute,
+  SettingsLocalMediaRoute: SettingsLocalMediaRoute,
   SettingsLogsRoute: SettingsLogsRoute,
   SettingsMediaRoute: SettingsMediaRoute,
   SettingsOnlineRoute: SettingsOnlineRoute,

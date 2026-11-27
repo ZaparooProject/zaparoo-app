@@ -2269,6 +2269,33 @@
       "deleteCollection": "Eliminar colección",
       "editCollection": "Editar {{name}}",
       "moved": "{{name}} movido a {{place}}, posición {{position}} de {{count}}."
+    },
+    "localMedia": {
+      "title": "Contenido multimedia local",
+      "playOn": "Reproducir contenido en",
+      "playOnDevice": "Dispositivo conectado",
+      "playOnApp": "Esta aplicación",
+      "playOnHelp": "Si eliges esta aplicación, los tokens de audio, vídeo e imagen se reproducen aquí cuando esta aplicación tiene el archivo. Añade #app o #device a un token para elegirlo en ese token.",
+      "foldersTitle": "Carpetas multimedia",
+      "loading": "Cargando carpetas",
+      "appFolder": "Carpeta de la aplicación",
+      "linkedFolder": "Carpeta vinculada",
+      "folderUnavailable": "No se puede acceder a la carpeta",
+      "addFolder": "Añadir carpeta",
+      "removeFolder": "Quitar {{name}}",
+      "rescan": "Volver a escanear carpetas",
+      "scanning": "Escaneando",
+      "fileCount": "Archivos multimedia",
+      "lastScanned": "Último escaneo",
+      "neverScanned": "Nunca",
+      "folderError": "No se pudieron actualizar las carpetas: {{msg}}",
+      "nowPlayingHeading": "Reproduciendo en esta aplicación",
+      "stop": "Detener la reproducción en esta aplicación",
+      "viewerTitle": "Contenido multimedia",
+      "controlFailed": "No se pudo controlar la reproducción: {{msg}}",
+      "notFound": "Este contenido no está en las carpetas de esta aplicación",
+      "notPlayable": "Este token no se puede reproducir en esta aplicación",
+      "playFailed": "No se pudo reproducir este contenido"
     }
   }
 }

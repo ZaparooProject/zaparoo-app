@@ -230,6 +230,9 @@ export interface PreferencesState {
   preferRemoteWriter: boolean;
   keepScreenAwake: boolean;
 
+  /** Where tokens play when they don't ask with #app or #device. */
+  playOn: "device" | "app";
+
   // Shake to launch settings
   shakeEnabled: boolean;
   shakeMode: "random" | "custom";
@@ -344,6 +347,7 @@ export interface PreferencesActions {
   clearOnlinePremiumAccess: () => void;
   setPreferRemoteWriter: (value: boolean) => void;
   setKeepScreenAwake: (value: boolean) => void;
+  setPlayOn: (value: "device" | "app") => void;
   setShakeEnabled: (value: boolean) => void;
   setShakeMode: (value: "random" | "custom") => void;
   setShakeZapscript: (value: string) => void;
@@ -412,6 +416,7 @@ const DEFAULT_PREFERENCES: Omit<
   onlineTrialUserID: null,
   preferRemoteWriter: false,
   keepScreenAwake: true,
+  playOn: "device",
   shakeEnabled: false,
   shakeMode: "random",
   shakeZapscript: "",
@@ -455,6 +460,7 @@ function persistedPreferences(state: PreferencesStore) {
     storeVerifiedProAccess: state.storeVerifiedProAccess,
     preferRemoteWriter: state.preferRemoteWriter,
     keepScreenAwake: state.keepScreenAwake,
+    playOn: state.playOn,
     shakeEnabled: state.shakeEnabled,
     shakeMode: state.shakeMode,
     shakeZapscript: state.shakeZapscript,
@@ -592,6 +598,7 @@ export const usePreferencesStore = create<PreferencesStore>()(
         })),
       setPreferRemoteWriter: (value) => set({ preferRemoteWriter: value }),
       setKeepScreenAwake: (value) => set({ keepScreenAwake: value }),
+      setPlayOn: (value) => set({ playOn: value }),
       setShakeEnabled: (value) => set({ shakeEnabled: value }),
       setShakeMode: (value) => {
         // Clear zapscript when mode changes

@@ -55,6 +55,32 @@
             </intent-filter>
         </activity>
 
+        <!-- Full-screen video for local media playback. -->
+        <activity
+            android:name=".LocalMediaPlayerActivity"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|screenLayout|uiMode|navigation|density"
+            android:launchMode="singleTop"
+            android:theme="@style/AppTheme.LocalMediaPlayer"
+            android:exported="false" />
+
+        <!-- Full-screen images for local media playback. -->
+        <activity
+            android:name=".LocalMediaImageActivity"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|screenLayout|uiMode|navigation|density"
+            android:launchMode="singleTop"
+            android:theme="@style/AppTheme.LocalMediaPlayer"
+            android:exported="false" />
+
+        <!-- Local media playback: media notification and lock-screen controls. Not exported, only this app binds to it. -->
+        <service
+            android:name=".LocalMediaPlaybackService"
+            android:foregroundServiceType="mediaPlayback"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="androidx.media3.session.MediaSessionService" />
+            </intent-filter>
+        </service>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -102,6 +128,11 @@
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" />
+    <!-- Local media playback keeps playing audio in the background. Media session notifications do not need POST_NOTIFICATIONS. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
     <!-- Merged in by the Bluetooth plugin for its foreground service, which the app does not use. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" tools:node="remove" />
 </manifest>

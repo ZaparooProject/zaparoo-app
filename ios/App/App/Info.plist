@@ -45,6 +45,8 @@
 	<true/>
 	<key>ITSEncryptionExportComplianceCode</key>
 	<string>99e0360d-20ff-43a3-8fa2-7fef03e5caa1</string>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NFCReaderUsageDescription</key>
@@ -64,6 +66,12 @@
 	<array>
 		<string>_zaparoo._tcp</string>
 	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
+	<key>UIFileSharingEnabled</key>
+	<true/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

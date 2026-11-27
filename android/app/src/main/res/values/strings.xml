@@ -4,4 +4,6 @@
     <string name="title_activity_main">Zaparoo</string>
     <string name="package_name">dev.wizzo.tapto</string>
     <string name="custom_url_scheme">dev.wizzo.tapto</string>
+    <string name="local_media_close">Close</string>
+    <string name="local_media_image_failed">Couldn\'t open this image</string>
 </resources>

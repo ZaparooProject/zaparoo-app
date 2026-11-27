@@ -10,6 +10,8 @@ import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { ZapScriptInput } from "@/components/ZapScriptInput";
 import { useStatusStore } from "@/lib/store";
+import { buildCatalog } from "@/lib/localPlayback/catalog";
+import { useLocalPlaybackStore } from "@/lib/localPlayback/store";
 import { CoreAPI, CoreApiError } from "@/lib/coreApi";
 import { logger } from "@/lib/logger";
 import { act } from "@testing-library/react";
@@ -148,6 +150,65 @@ describe("ZapScriptInput", () => {
         name: "create.custom.runZapScript",
       });
       expect(runButton).toBeDisabled();
+    });
+
+    it("should be enabled when not connected and the app can play it", () => {
+      act(() => {
+        useStatusStore.getState().setConnected(false);
+        useLocalPlaybackStore.setState({
+          catalog: buildCatalog(
+            [
+              {
+                folderId: "app",
+                path: "Music/The Long Road.mp3",
+                uri: "https://example.com/The%20Long%20Road.mp3",
+                size: 1,
+                modified: 1,
+              },
+            ],
+            "web",
+          ),
+        });
+      });
+
+      render(
+        <ZapScriptInput
+          value="@Audio/The Long Road||#app"
+          setValue={vi.fn()}
+        />,
+      );
+
+      expect(
+        screen.getByRole("button", { name: "create.custom.runZapScript" }),
+      ).toBeEnabled();
+    });
+
+    it("should stay disabled offline for a script meant for the device", () => {
+      act(() => {
+        useStatusStore.getState().setConnected(false);
+        useLocalPlaybackStore.setState({
+          catalog: buildCatalog(
+            [
+              {
+                folderId: "app",
+                path: "Music/The Long Road.mp3",
+                uri: "https://example.com/The%20Long%20Road.mp3",
+                size: 1,
+                modified: 1,
+              },
+            ],
+            "web",
+          ),
+        });
+      });
+
+      render(
+        <ZapScriptInput value="@Audio/The Long Road" setValue={vi.fn()} />,
+      );
+
+      expect(
+        screen.getByRole("button", { name: "create.custom.runZapScript" }),
+      ).toBeDisabled();
     });
 
     describe("Core run failures", () => {

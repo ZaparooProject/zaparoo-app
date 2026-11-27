@@ -24,6 +24,7 @@ vi.mock("@capacitor-mlkit/barcode-scanning");
 vi.mock("@capawesome-team/capacitor-nfc");
 vi.mock("@capawesome-team/capacitor-bluetooth-low-energy");
 vi.mock("@/lib/shakeDetector");
+vi.mock("@/lib/localMedia");
 vi.mock("@revenuecat/purchases-capacitor");
 vi.mock("capacitor-plugin-safe-area");
 vi.mock("capacitor-zeroconf");
@@ -46,6 +47,7 @@ import { __resetNfcMock } from "../__mocks__/@capawesome-team/capacitor-nfc";
 import { __resetBluetoothMock } from "../__mocks__/@capawesome-team/capacitor-bluetooth-low-energy";
 import { __resetLiveUpdateMock } from "../__mocks__/@capawesome/capacitor-live-update";
 import { __resetSecureStorageMock } from "../__mocks__/@aparajita/capacitor-secure-storage";
+import { __resetLocalMediaMock } from "@/lib/__mocks__/localMedia";
 import { __resetDeviceCache } from "@/hooks/useNetworkScan";
 import { __resetDeviceRegistryForTests } from "@/lib/devices/deviceRegistry";
 import { resetPurchasePreviewState } from "@/lib/purchasePreviewStore";
@@ -102,6 +104,14 @@ afterEach(async () => {
   __resetZeroConfMock();
   // Reset NFC mock state between tests
   __resetNfcMock();
+  // Forget the local media index, player and native mock state
+  try {
+    const player = await import("@/lib/localPlayback/player");
+    await player.resetLocalMediaForTests();
+  } catch {
+    // localPlayback/player is mocked without the reset export in this file
+  }
+  __resetLocalMediaMock();
   // Reset Bluetooth LE mock state between tests
   __resetBluetoothMock();
   // Forget the cached Bluetooth initialization. Files that mock the module

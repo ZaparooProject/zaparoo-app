@@ -2269,6 +2269,33 @@
       "deleteCollection": "Delete collection",
       "editCollection": "Edit {{name}}",
       "moved": "{{name}} moved to {{place}}, position {{position}} of {{count}}."
+    },
+    "localMedia": {
+      "title": "Local media",
+      "playOn": "Play media on",
+      "playOnDevice": "Connected device",
+      "playOnApp": "This app",
+      "playOnHelp": "When set to this app, audio, video and image tokens play here if this app has the file. Add #app or #device to a token to choose for that token.",
+      "foldersTitle": "Media folders",
+      "loading": "Loading folders",
+      "appFolder": "App folder",
+      "linkedFolder": "Linked folder",
+      "folderUnavailable": "Folder can't be reached",
+      "addFolder": "Add folder",
+      "removeFolder": "Remove {{name}}",
+      "rescan": "Rescan folders",
+      "scanning": "Scanning",
+      "fileCount": "Media files",
+      "lastScanned": "Last scanned",
+      "neverScanned": "Never",
+      "folderError": "Couldn't update folders: {{msg}}",
+      "nowPlayingHeading": "Playing in this app",
+      "stop": "Stop playing in this app",
+      "viewerTitle": "Media",
+      "controlFailed": "Couldn't control playback: {{msg}}",
+      "notFound": "This media isn't in this app's folders",
+      "notPlayable": "This token can't play in this app",
+      "playFailed": "Couldn't play this media"
     }
   }
 }

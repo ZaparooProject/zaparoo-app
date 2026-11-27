@@ -2269,6 +2269,33 @@
       "deleteCollection": "Collectie verwijderen",
       "editCollection": "{{name}} bewerken",
       "moved": "{{name}} verplaatst naar {{place}}, positie {{position}} van {{count}}."
+    },
+    "localMedia": {
+      "title": "Lokale media",
+      "playOn": "Media afspelen op",
+      "playOnDevice": "Verbonden apparaat",
+      "playOnApp": "Deze app",
+      "playOnHelp": "Als deze app is gekozen, worden audio-, video- en afbeeldingstokens hier afgespeeld als deze app het bestand heeft. Voeg #app of #device toe aan een token om het per token te kiezen.",
+      "foldersTitle": "Mediamappen",
+      "loading": "Mappen laden",
+      "appFolder": "App-map",
+      "linkedFolder": "Gekoppelde map",
+      "folderUnavailable": "Map is niet bereikbaar",
+      "addFolder": "Map toevoegen",
+      "removeFolder": "{{name}} verwijderen",
+      "rescan": "Mappen opnieuw scannen",
+      "scanning": "Scannen",
+      "fileCount": "Mediabestanden",
+      "lastScanned": "Laatst gescand",
+      "neverScanned": "Nooit",
+      "folderError": "Mappen konden niet worden bijgewerkt: {{msg}}",
+      "nowPlayingHeading": "Afspelen in deze app",
+      "stop": "Afspelen in deze app stoppen",
+      "viewerTitle": "Media",
+      "controlFailed": "Afspelen kon niet worden bediend: {{msg}}",
+      "notFound": "Deze media staat niet in de mappen van deze app",
+      "notPlayable": "Dit token kan niet in deze app worden afgespeeld",
+      "playFailed": "Deze media kon niet worden afgespeeld"
     }
   }
 }

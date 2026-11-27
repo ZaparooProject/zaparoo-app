@@ -45,6 +45,10 @@ dependencies {
     implementation project(':capacitor-android')
     implementation "com.google.firebase:firebase-auth:$firebaseAuthVersion"
     implementation "com.squareup:seismic:1.0.3"
+    implementation "androidx.media3:media3-exoplayer:$androidxMedia3Version"
+    implementation "androidx.media3:media3-exoplayer-hls:$androidxMedia3Version"
+    implementation "androidx.media3:media3-session:$androidxMedia3Version"
+    implementation "androidx.media3:media3-ui:$androidxMedia3Version"
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

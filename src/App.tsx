@@ -11,6 +11,7 @@ import { useTrialAccessExpiry } from "@/hooks/useTrialAccessExpiry";
 import { useTheme } from "@/components/theme-provider";
 import { ErrorComponent } from "@/components/ErrorComponent.tsx";
 import { AppBadgeManager } from "@/components/AppBadgeManager";
+import { LocalMediaViewer } from "@/components/localPlayback/LocalMediaViewer";
 import { InboxModal } from "@/components/InboxModal";
 import { PAGE_SCROLL_RESTORATION_SELECTOR } from "@/components/PageFrame";
 import { StagedTokenModal } from "@/components/home/StagedTokenModal";
@@ -621,6 +622,7 @@ export default function App() {
             <InboxModal />
             <StagedTokenModal />
             <AppBadgeManager />
+            <LocalMediaViewer />
             {/* Must live inside A11yAnnouncerProvider and SlideModalProvider:
                 reader activity uses announcements and confirmation uses a SlideModal. */}
             <QueueProcessors />

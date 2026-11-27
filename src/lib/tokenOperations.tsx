@@ -14,6 +14,7 @@ import {
   type LaunchError,
   type LaunchSource,
 } from "./launchFeedback";
+import { runLocally } from "./localPlayback/route";
 
 export interface RunTokenOptions {
   /** Token type for toy tags, e.g. "Amiibo". Sent to Core with `data`. */
@@ -108,50 +109,67 @@ export const runToken = async (
       }
     }
 
-    // If not connected and can't queue commands, just store the token without launching
-    if (!connected && !canQueueCommands) {
-      logger.log("Offline scan - storing token without queueing launch");
-      return resolve(true);
-    }
+    void runLocally(text, { source, onError }).then(
+      ({ result, error }) => {
+        if (result === "device") {
+          sendToDevice();
+          return;
+        }
+        if (error && !onError) toast.error(error.message);
+        resolve(result);
+      },
+      (e: unknown) => {
+        logger.warn("local routing failed, sending to device", e);
+        sendToDevice();
+      },
+    );
 
-    // When disconnected (and queueing allowed), CoreAPI queues the request
-    // and flushes it on reconnect with its own expiry - no extra delay needed.
-    const launchId = launchFeedback.begin(source);
-    CoreAPI.run({
-      uid: uid,
-      text: text,
-      unsafe: unsafe,
-      ...(type ? { type } : {}),
-      ...(data ? { data } : {}),
-    })
-      .then(() => {
-        launchFeedback.resolved(launchId);
-        resolve(true);
+    function sendToDevice() {
+      // If not connected and can't queue commands, just store the token without launching
+      if (!connected && !canQueueCommands) {
+        logger.log("Offline scan - storing token without queueing launch");
+        return resolve(true);
+      }
+
+      // When disconnected (and queueing allowed), CoreAPI queues the request
+      // and flushes it on reconnect with its own expiry - no extra delay needed.
+      const launchId = launchFeedback.begin(source);
+      CoreAPI.run({
+        uid: uid,
+        text: text,
+        unsafe: unsafe,
+        ...(type ? { type } : {}),
+        ...(data ? { data } : {}),
       })
-      .catch((e) => {
-        // A cancelled request never reached the device; its message says so
-        // instead of showing internal error text.
-        const launchError = toLaunchError(e);
-        launchFeedback.failed(launchId, launchError);
-        if (launchError.cancelled) {
-          logger.warn("launch request cancelled", e, {
-            category: "api",
-            action: "runToken",
-          });
-        } else {
-          logRunFailure("launch error", e, {
-            action: "runToken",
-            hasUid: !!uid,
-            textPrefix: text.slice(0, 20),
-          });
-        }
-        if (onError) {
-          onError(launchError);
-        } else {
-          toast.error(launchError.message);
-        }
-        resolve(false);
-      });
+        .then(() => {
+          launchFeedback.resolved(launchId);
+          resolve(true);
+        })
+        .catch((e) => {
+          // A cancelled request never reached the device; its message says so
+          // instead of showing internal error text.
+          const launchError = toLaunchError(e);
+          launchFeedback.failed(launchId, launchError);
+          if (launchError.cancelled) {
+            logger.warn("launch request cancelled", e, {
+              category: "api",
+              action: "runToken",
+            });
+          } else {
+            logRunFailure("launch error", e, {
+              action: "runToken",
+              hasUid: !!uid,
+              textPrefix: text.slice(0, 20),
+            });
+          }
+          if (onError) {
+            onError(launchError);
+          } else {
+            toast.error(launchError.message);
+          }
+          resolve(false);
+        });
+    }
   });
 };
 
