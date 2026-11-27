@@ -2269,6 +2269,33 @@
       "deleteCollection": "컬렉션 삭제",
       "editCollection": "{{name}} 편집",
       "moved": "{{name}}을(를) {{place}}의 {{count}}개 중 {{position}}번째로 이동했습니다."
+    },
+    "localMedia": {
+      "title": "로컬 미디어",
+      "playOn": "미디어 재생 위치",
+      "playOnDevice": "연결된 기기",
+      "playOnApp": "이 앱",
+      "playOnHelp": "이 앱으로 설정하면 이 앱에 파일이 있는 경우 오디오, 동영상, 이미지 토큰이 여기에서 재생됩니다. 토큰에 #app 또는 #device를 추가하면 토큰별로 선택할 수 있습니다.",
+      "foldersTitle": "미디어 폴더",
+      "loading": "폴더를 불러오는 중",
+      "appFolder": "앱 폴더",
+      "linkedFolder": "연결된 폴더",
+      "folderUnavailable": "폴더에 접근할 수 없습니다",
+      "addFolder": "폴더 추가",
+      "removeFolder": "{{name}} 제거",
+      "rescan": "폴더 다시 스캔",
+      "scanning": "스캔 중",
+      "fileCount": "미디어 파일",
+      "lastScanned": "마지막 스캔",
+      "neverScanned": "없음",
+      "folderError": "폴더를 업데이트하지 못했습니다: {{msg}}",
+      "nowPlayingHeading": "이 앱에서 재생 중",
+      "stop": "이 앱에서 재생 중지",
+      "viewerTitle": "미디어",
+      "controlFailed": "재생을 제어하지 못했습니다: {{msg}}",
+      "notFound": "이 미디어는 이 앱의 폴더에 없습니다",
+      "notPlayable": "이 토큰은 이 앱에서 재생할 수 없습니다",
+      "playFailed": "이 미디어를 재생하지 못했습니다"
     }
   }
 }

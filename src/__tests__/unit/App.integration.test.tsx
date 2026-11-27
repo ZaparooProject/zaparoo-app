@@ -227,6 +227,10 @@ vi.mock("@/components/AppBadgeManager", () => ({
   AppBadgeManager: () => <div data-testid="app-badge-manager" />,
 }));
 
+vi.mock("@/components/localPlayback/LocalMediaViewer", () => ({
+  LocalMediaViewer: () => null,
+}));
+
 vi.mock("@/components/home/StagedTokenModal", () => ({
   StagedTokenModal: () => <div data-testid="staged-token-modal" />,
 }));

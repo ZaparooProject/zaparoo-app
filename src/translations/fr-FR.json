@@ -2269,6 +2269,33 @@
       "deleteCollection": "Supprimer la collection",
       "editCollection": "Modifier {{name}}",
       "moved": "{{name}} déplacé vers {{place}}, position {{position}} sur {{count}}."
+    },
+    "localMedia": {
+      "title": "Médias locaux",
+      "playOn": "Lire les médias sur",
+      "playOnDevice": "Appareil connecté",
+      "playOnApp": "Cette application",
+      "playOnHelp": "Si cette application est sélectionnée, les tokens audio, vidéo et image sont lus ici lorsque cette application dispose du fichier. Ajoutez #app ou #device à un token pour choisir pour ce token.",
+      "foldersTitle": "Dossiers de médias",
+      "loading": "Chargement des dossiers",
+      "appFolder": "Dossier de l’application",
+      "linkedFolder": "Dossier lié",
+      "folderUnavailable": "Dossier inaccessible",
+      "addFolder": "Ajouter un dossier",
+      "removeFolder": "Retirer {{name}}",
+      "rescan": "Rescanner les dossiers",
+      "scanning": "Scan en cours",
+      "fileCount": "Fichiers multimédias",
+      "lastScanned": "Dernier scan",
+      "neverScanned": "Jamais",
+      "folderError": "Impossible de mettre à jour les dossiers : {{msg}}",
+      "nowPlayingHeading": "Lecture dans cette application",
+      "stop": "Arrêter la lecture dans cette application",
+      "viewerTitle": "Média",
+      "controlFailed": "Impossible de contrôler la lecture : {{msg}}",
+      "notFound": "Ce média ne se trouve pas dans les dossiers de cette application",
+      "notPlayable": "Ce token ne peut pas être lu dans cette application",
+      "playFailed": "Impossible de lire ce média"
     }
   }
 }

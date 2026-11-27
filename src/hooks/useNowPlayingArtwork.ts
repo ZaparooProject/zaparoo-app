@@ -27,7 +27,11 @@ function artworkEntry(
  * Core supplies `mediaId` for anything it launched itself; media started on the
  * device lands here with only a name, so fall back to a lookup.
  */
-export function useNowPlayingArtwork(media: PlayingResponse): MediaBrowseEntry {
+export function useNowPlayingArtwork(
+  media: PlayingResponse,
+  /** False for media the app plays itself, which Core has no row for. */
+  enabled = true,
+): MediaBrowseEntry {
   const deviceKey = useActiveDeviceKey();
   const needsLookup =
     media.mediaId === undefined &&
@@ -54,7 +58,7 @@ export function useNowPlayingArtwork(media: PlayingResponse): MediaBrowseEntry {
       const match = response.match;
       return match && match.confidence >= MIN_CONFIDENCE ? match : null;
     },
-    enabled: needsLookup && deviceKey !== "",
+    enabled: enabled && needsLookup && deviceKey !== "",
     staleTime: Infinity,
     gcTime: 5 * 60 * 1000,
     // A missing match is an ordinary outcome, not something to retry or surface.

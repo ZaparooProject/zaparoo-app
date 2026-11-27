@@ -5,7 +5,9 @@ import { Button } from "@/components/wui/Button";
 import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { SlideModal } from "@/components/SlideModal";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { CoreAPI, isRequestCancelledError, logRunFailure } from "@/lib/coreApi";
+import { isRequestCancelledError, logRunFailure } from "@/lib/coreApi";
+import { LocalPlaybackError, runScript } from "@/lib/localPlayback/route";
+import { useRunsLocally } from "@/hooks/useRunsLocally";
 import { useStatusStore } from "@/lib/store";
 import { ZAP_BUTTON_ICON_COMPONENTS } from "@/components/home/zapButtonIcons";
 import type { ZapButton } from "@/lib/zapLayout";
@@ -73,6 +75,7 @@ export function ZapButtonFace({
 export function ZapButtonWidget({ button }: { button: ZapButton }) {
   const { t } = useTranslation();
   const connected = useStatusStore((state) => state.connected);
+  const runsLocally = useRunsLocally(button.script);
   const [confirming, setConfirming] = useState(false);
   const [running, setRunning] = useState(false);
   const mounted = useRef(true);
@@ -88,8 +91,12 @@ export function ZapButtonWidget({ button }: { button: ZapButton }) {
   // it is working until then; that also stops a second press starting another.
   const run = () => {
     setRunning(true);
-    CoreAPI.run({ uid: "", text: button.script })
+    runScript(button.script)
       .catch((error) => {
+        if (error instanceof LocalPlaybackError) {
+          toast.error(error.message);
+          return;
+        }
         // A cancelled request only means Core stopped waiting, so the script
         // may still have run; it is not reported as a failure.
         if (!isRequestCancelledError(error)) {
@@ -108,7 +115,7 @@ export function ZapButtonWidget({ button }: { button: ZapButton }) {
     <>
       <ZapButtonFace
         button={button}
-        disabled={!connected || button.script === ""}
+        disabled={(!connected && !runsLocally) || button.script === ""}
         running={running}
         onClick={() => (button.confirm ? setConfirming(true) : run())}
       />

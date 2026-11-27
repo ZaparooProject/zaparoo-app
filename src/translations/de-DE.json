@@ -2269,6 +2269,33 @@
       "deleteCollection": "Sammlung löschen",
       "editCollection": "{{name}} bearbeiten",
       "moved": "{{name}} nach {{place}} verschoben, Position {{position}} von {{count}}."
+    },
+    "localMedia": {
+      "title": "Lokale Medien",
+      "playOn": "Medien abspielen auf",
+      "playOnDevice": "Verbundenes Gerät",
+      "playOnApp": "Diese App",
+      "playOnHelp": "Wenn diese App ausgewählt ist, werden Audio-, Video- und Bild-Tokens hier abgespielt, sofern diese App die Datei hat. Füge einem Token #app oder #device hinzu, um es für diesen Token festzulegen.",
+      "foldersTitle": "Medienordner",
+      "loading": "Ordner werden geladen",
+      "appFolder": "App-Ordner",
+      "linkedFolder": "Verknüpfter Ordner",
+      "folderUnavailable": "Ordner nicht erreichbar",
+      "addFolder": "Ordner hinzufügen",
+      "removeFolder": "{{name}} entfernen",
+      "rescan": "Ordner neu scannen",
+      "scanning": "Wird gescannt",
+      "fileCount": "Mediendateien",
+      "lastScanned": "Zuletzt gescannt",
+      "neverScanned": "Nie",
+      "folderError": "Ordner konnten nicht aktualisiert werden: {{msg}}",
+      "nowPlayingHeading": "Wird in dieser App abgespielt",
+      "stop": "Wiedergabe in dieser App beenden",
+      "viewerTitle": "Medien",
+      "controlFailed": "Wiedergabe konnte nicht gesteuert werden: {{msg}}",
+      "notFound": "Dieses Medium ist nicht in den Ordnern dieser App",
+      "notPlayable": "Dieser Token kann nicht in dieser App abgespielt werden",
+      "playFailed": "Dieses Medium konnte nicht abgespielt werden"
     }
   }
 }

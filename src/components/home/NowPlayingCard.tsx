@@ -31,6 +31,8 @@ interface NowPlayingCardProps {
   connected: boolean;
   headingLabel?: string;
   stopButtonLabel?: string;
+  /** Media the app plays itself: no Core artwork, details or preferences. */
+  local?: boolean;
   canPausePlaylist?: boolean;
   lastPlayed?: MediaBrowseEntry | null;
   replayingLast?: boolean;
@@ -48,6 +50,7 @@ export function NowPlayingCard({
   connected,
   headingLabel,
   stopButtonLabel,
+  local = false,
   canPausePlaylist = false,
   lastPlayed = null,
   replayingLast = false,
@@ -63,7 +66,7 @@ export function NowPlayingCard({
   const deviceKey = useActiveDeviceKey();
   const showFilenames = usePreferencesStore((s) => s.showFilenames);
   const displaySystemName = useSystemName(media.systemId, media.systemName);
-  const artwork = useNowPlayingArtwork(media);
+  const artwork = useNowPlayingArtwork(media, !local);
   const handleHapticPress = useHapticPress();
   const returnOwner = `now-playing:${media.systemId}:${media.mediaPath}`;
   const detailsReturn = useMetadataDetailsReturn(returnOwner, deviceKey);
@@ -84,6 +87,7 @@ export function NowPlayingCard({
       : media.mediaName) ||
     (media.mediaPath ? filenameFromPath(media.mediaPath) : "");
   const canLoadMetadata = Boolean(
+    !local &&
     connected &&
     gamesIndexExists &&
     favoritesFeature.available &&
@@ -121,6 +125,7 @@ export function NowPlayingCard({
       maxSize={256}
       priority="detail"
       className="now-playing-artwork"
+      enabled={!local}
     />
   );
   return (

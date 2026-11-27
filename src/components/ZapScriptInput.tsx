@@ -3,9 +3,11 @@ import { useId, useRef, useState } from "react";
 import { Browser } from "@capacitor/browser";
 import { EraserIcon, PlusIcon } from "lucide-react";
 import toast from "react-hot-toast";
+import { useRunsLocally } from "@/hooks/useRunsLocally";
 import { useStatusStore } from "@/lib/store.ts";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import { CoreAPI, logRunFailure } from "@/lib/coreApi";
+import { logRunFailure } from "@/lib/coreApi";
+import { LocalPlaybackError, runScript } from "@/lib/localPlayback/route";
 import { zapCommand } from "@/lib/zapscript/catalog";
 import {
   parseZapScript,
@@ -47,6 +49,7 @@ export function ZapScriptInput(props: {
   "aria-labelledby"?: string;
 }) {
   const connected = useStatusStore((state) => state.connected);
+  const runsLocally = useRunsLocally(props.value);
   const [systemsOpen, setSystemsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [commandsOpen, setCommandsOpen] = useState(false);
@@ -308,10 +311,11 @@ export function ZapScriptInput(props: {
             <Button
               icon={<PlayIcon size="20" />}
               onClick={() => {
-                CoreAPI.run({
-                  uid: "",
-                  text: props.value,
-                }).catch((e) => {
+                runScript(props.value).catch((e) => {
+                  if (e instanceof LocalPlaybackError) {
+                    toast.error(e.message);
+                    return;
+                  }
                   toast.error(t("create.custom.failMsg"));
                   logRunFailure("ZapScript run failed:", e, {
                     action: "runZapScript",
@@ -319,7 +323,7 @@ export function ZapScriptInput(props: {
                 });
               }}
               variant="outline"
-              disabled={props.value === "" || !connected}
+              disabled={props.value === "" || (!connected && !runsLocally)}
               aria-label={t("create.custom.runZapScript")}
               label={t("create.custom.run")}
             />

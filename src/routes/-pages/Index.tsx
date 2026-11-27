@@ -39,6 +39,7 @@ import { ScanActions } from "@/components/home/ScanActions";
 import { CameraScannerOverlay } from "@/components/home/CameraScannerOverlay";
 import { MediaCoverRow } from "@/components/home/MediaCoverRow";
 import { NowPlayingCard } from "@/components/home/NowPlayingCard";
+import { LocalNowPlaying } from "@/components/localPlayback/LocalNowPlaying";
 import { ReaderStrip } from "@/components/home/ReaderStrip";
 import { ZapLayoutEditor } from "@/components/home/ZapLayoutEditor";
 import { HistoryModal } from "@/components/home/HistoryModal";
@@ -446,6 +447,7 @@ export function Index({
 
   const playback = (
     <div key="playback" className="zap-playback">
+      <LocalNowPlaying />
       <NowPlayingCard
         media={playing}
         playlist={primaryPlaylist}

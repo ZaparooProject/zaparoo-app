@@ -2269,6 +2269,33 @@
       "deleteCollection": "删除收藏集",
       "editCollection": "编辑{{name}}",
       "moved": "已将{{name}}移至{{place}}，第 {{position}} 个，共 {{count}} 个。"
+    },
+    "localMedia": {
+      "title": "本地媒体",
+      "playOn": "媒体播放位置",
+      "playOnDevice": "已连接的设备",
+      "playOnApp": "此应用",
+      "playOnHelp": "设置为此应用时，如果此应用中有对应文件，音频、视频和图片令牌会在这里播放。在令牌中添加 #app 或 #device 可为该令牌单独选择。",
+      "foldersTitle": "媒体文件夹",
+      "loading": "正在加载文件夹",
+      "appFolder": "应用文件夹",
+      "linkedFolder": "已关联的文件夹",
+      "folderUnavailable": "无法访问文件夹",
+      "addFolder": "添加文件夹",
+      "removeFolder": "移除 {{name}}",
+      "rescan": "重新扫描文件夹",
+      "scanning": "正在扫描",
+      "fileCount": "媒体文件",
+      "lastScanned": "上次扫描",
+      "neverScanned": "从未",
+      "folderError": "无法更新文件夹：{{msg}}",
+      "nowPlayingHeading": "正在此应用中播放",
+      "stop": "停止在此应用中播放",
+      "viewerTitle": "媒体",
+      "controlFailed": "无法控制播放：{{msg}}",
+      "notFound": "此媒体不在此应用的文件夹中",
+      "notPlayable": "此令牌无法在此应用中播放",
+      "playFailed": "无法播放此媒体"
     }
   }
 }

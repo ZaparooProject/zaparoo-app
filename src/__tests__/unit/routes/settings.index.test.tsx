@@ -298,6 +298,7 @@ describe("Settings Index Route", () => {
         "/settings/language-region",
         "/settings/accessibility",
         "/settings/online",
+        "/settings/local-media",
       ]);
       expect(
         support.getAllByRole("link").map((link) => link.getAttribute("href")),

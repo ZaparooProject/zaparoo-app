@@ -258,6 +258,10 @@ vi.mock("@/components/AppBadgeManager", () => ({
   AppBadgeManager: () => <div data-testid="app-badge-manager" />,
 }));
 
+vi.mock("@/components/localPlayback/LocalMediaViewer", () => ({
+  LocalMediaViewer: () => null,
+}));
+
 vi.mock("@/components/A11yAnnouncer", () => ({
   A11yAnnouncerProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="a11y-provider">{children}</div>

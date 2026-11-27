@@ -2269,6 +2269,33 @@
       "deleteCollection": "コレクションを削除",
       "editCollection": "{{name}}を編集",
       "moved": "{{name}}を{{place}}の{{count}}件中{{position}}番目に移動しました。"
+    },
+    "localMedia": {
+      "title": "ローカルメディア",
+      "playOn": "メディアの再生先",
+      "playOnDevice": "接続中のデバイス",
+      "playOnApp": "このアプリ",
+      "playOnHelp": "このアプリを選択すると、音声・動画・画像のトークンは、このアプリにファイルがある場合にここで再生されます。トークンに #app または #device を追加すると、そのトークンごとに選択できます。",
+      "foldersTitle": "メディアフォルダー",
+      "loading": "フォルダーを読み込み中",
+      "appFolder": "アプリフォルダー",
+      "linkedFolder": "リンクされたフォルダー",
+      "folderUnavailable": "フォルダーにアクセスできません",
+      "addFolder": "フォルダーを追加",
+      "removeFolder": "{{name}}を削除",
+      "rescan": "フォルダーを再スキャン",
+      "scanning": "スキャン中",
+      "fileCount": "メディアファイル",
+      "lastScanned": "最後にスキャン",
+      "neverScanned": "なし",
+      "folderError": "フォルダーを更新できませんでした: {{msg}}",
+      "nowPlayingHeading": "このアプリで再生中",
+      "stop": "このアプリでの再生を停止",
+      "viewerTitle": "メディア",
+      "controlFailed": "再生を操作できませんでした: {{msg}}",
+      "notFound": "このメディアはこのアプリのフォルダーにありません",
+      "notPlayable": "このトークンはこのアプリで再生できません",
+      "playFailed": "このメディアを再生できませんでした"
     }
   }
 }
